@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { resolveProbeProvider } from '../../src/compatibility/provider.js';
+import { resolveProbeProvider } from '../../app/adapters/provider.js';
 
 const selected = {
   HAZE_PROVIDER: 'openai-compatible',

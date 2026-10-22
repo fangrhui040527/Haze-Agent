@@ -9,8 +9,8 @@ import type {
   WorldUtilities,
 } from './ports.js';
 
-// Both src/engines and dist/engines are two levels below the repository root.
-const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
+// Both app/adapters/meterless and dist/adapters/meterless are three levels below the repository root.
+const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 type Component = 'starter' | 'hmem' | 'world_model';
 type Constructor<T> = new (options: Record<string, unknown>) => T;
 

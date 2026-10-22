@@ -37,7 +37,7 @@ roles, scheduler, full Haze evidence contracts or scientific validation.
 
 ## Workflow compatibility
 
-`src/workflow_versions.json` pins LangGraph, LangChain Core, both persistent
+`app/workflow_versions.json` pins LangGraph, LangChain Core, both persistent
 savers, the checkpoint base package and Zod. `package.json` and the committed
 root `package-lock.json` must match. Existing pins and resolved dependencies are
 preserved; use the pinned npm and `npm ci`.
@@ -61,7 +61,7 @@ applicable licenses/notices without changing their bytes, then regenerate the
 per-file and sorted-inventory hashes in `engine_sources.json`. Preserve upstream
 lockfiles even when they contain broad manifest ranges; Haze does not run those
 package managers. Review generated-loader changes and rerun all checks. For
-workflow changes, update `src/workflow_versions.json`, package pins, the root
+workflow changes, update `app/workflow_versions.json`, package pins, the root
 lockfile and graph/schema compatibility versions together as appropriate.
 
 See `THIRD_PARTY_NOTICES.md` for retained licensing and documented build changes.

@@ -7,10 +7,13 @@ import type {
   openHazeEngines,
   MemoryRecord,
   Observation,
-} from '../engines/index.js';
+} from '../adapters/meterless/index.js';
 import { VersionedCheckpointer } from '../graph.js';
 import versions from '../workflow_versions.json' with { type: 'json' };
-import type { ProbeProvider, ProviderProbeResult } from './provider.js';
+import type {
+  ProbeProvider,
+  ProviderProbeResult,
+} from '../adapters/provider.js';
 
 export const MEMORY_TEXT =
   'Always use scoped engine records as evidence and SQLite only for execution checkpoints.';

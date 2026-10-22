@@ -3,14 +3,14 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openSqliteCheckpointer } from '../checkpoints/sqlite.js';
-import { openHazeEngines } from '../engines/index.js';
+import { openHazeEngines } from '../adapters/meterless/index.js';
 import versions from '../workflow_versions.json' with { type: 'json' };
 import {
   createCompatibilityGraph,
   initialCompatibilityState,
   type CompatibilityState,
 } from './graph.js';
-import { resolveProbeProvider } from './provider.js';
+import { resolveProbeProvider } from '../adapters/provider.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 

@@ -10,6 +10,7 @@
   },
   "packageManager": "npm@11.8.0",
   "scripts": {
+    "start": "node scripts/run-example.mjs",
     "build": "npm run vendor:engines && tsc -p tsconfig.build.json",
     "vendor:engines": "node scripts/vendor-engines.mjs",
     "verify:pins": "node scripts/verify-pins.mjs",

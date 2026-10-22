@@ -75,7 +75,7 @@ single-process judging; the two workers run sequentially. Production uses
 `PostgresSaver`; `MemorySaver` remains limited to disposable tests.
 
 Graph ID `haze.compatibility`, graph revision 1 and probe schema revision 1 are pinned
-in `src/workflow_versions.json`, independently of the original checkpoint metadata
+in `app/workflow_versions.json`, independently of the original checkpoint metadata
 graph. Incompatible persisted revisions are rejected before resumption. The runner
 performs a controlled process exit/restart; it does not establish power-loss recovery,
 distributed fencing or exactly-once effects across arbitrary crashes.

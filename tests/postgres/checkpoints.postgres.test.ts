@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import {
   createCheckpointGraph,
   type ExecutionMetadata,
-} from '../../src/graph.js';
+} from '../../app/graph.js';
 import {
   CHECKPOINT_GRAPH_VERSION,
   EXECUTION_SCHEMA_VERSION,
-} from '../../src/versions.js';
+} from '../../app/versions.js';
 
 const connectionString = process.env['HAZE_TEST_POSTGRES_URL'];
 if (!connectionString) {

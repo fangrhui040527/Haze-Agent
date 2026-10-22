@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
-import workflowVersions from '../../src/workflow_versions.json' with { type: 'json' };
+import workflowVersions from '../../app/workflow_versions.json' with { type: 'json' };
 
 interface DependencyManifest {
   dependencies: Record<string, string>;

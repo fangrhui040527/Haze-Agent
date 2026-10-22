@@ -7,14 +7,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { openSqliteCheckpointer } from '../../src/checkpoints/sqlite.js';
+import { openSqliteCheckpointer } from '../../app/checkpoints/sqlite.js';
 import {
   compatibilityVersions,
   MEMORY_TEXT,
-} from '../../src/compatibility/graph.js';
-import type { runCompatibilityPhase } from '../../src/compatibility/worker.js';
-import { openHazeEngines } from '../../src/engines/index.js';
-import versions from '../../src/workflow_versions.json' with { type: 'json' };
+} from '../../app/compatibility/graph.js';
+import type { runCompatibilityPhase } from '../../app/compatibility/worker.js';
+import { openHazeEngines } from '../../app/adapters/meterless/index.js';
+import versions from '../../app/workflow_versions.json' with { type: 'json' };
 
 type PhaseReport = Awaited<ReturnType<typeof runCompatibilityPhase>>;
 const execute = promisify(execFile);

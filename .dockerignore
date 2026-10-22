@@ -10,7 +10,7 @@ tmp
 !.env.example
 .state
 state
-data
+logs
 coverage
 docs/*.pdf
 docs/*.html

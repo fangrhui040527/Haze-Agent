@@ -1,0 +1,6 @@
+{
+  "runId": "example-multiple-artifacts",
+  "artifactIds": ["observation-001", "evidence-002", "report-003"],
+  "graphVersion": 1,
+  "schemaVersion": 2
+}
