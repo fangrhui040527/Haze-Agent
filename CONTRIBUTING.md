@@ -4,24 +4,32 @@ Use the Node and npm versions pinned in `.nvmrc` and `package.json`. Start with 
 
 ## Commands
 
-| Command                  | Purpose                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| `npm run typecheck`      | Check TypeScript without emitting files.                                               |
-| `npm run lint`           | Check source and test code with ESLint.                                                |
-| `npm test`               | Run the focused local test suite.                                                      |
-| `npm run test:watch`     | Watch the local test suite while developing.                                           |
-| `npm run test:postgres`  | Run PostgreSQL saver integration tests against an explicitly configured test database. |
-| `npm run build`          | Compile the TypeScript project.                                                        |
-| `npm run verify:pins`    | Verify engine source checksums and workflow package locks.                             |
-| `npm run vendor:engines` | Materialize and compile pinned engine source without nested installs.                  |
-| `npm run test:engines`   | Run both pinned upstream conformance runners against the built implementations.        |
-| `npm run check`          | Run the standard repository checks.                                                    |
-| `npm run format:check`   | Check formatting.                                                                      |
-| `npm run format`         | Apply formatting.                                                                      |
+| Command                                       | Purpose                                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm start -- input_examples/01-minimal.json` | Run a metadata example after building; emit JSON and a local trace.                        |
+| `npm run typecheck`                           | Check TypeScript without emitting files.                                                   |
+| `npm run lint`                                | Check source and test code with ESLint.                                                    |
+| `npm test`                                    | Run the focused local test suite.                                                          |
+| `npm run test:watch`                          | Watch the local test suite while developing.                                               |
+| `npm run test:postgres`                       | Run PostgreSQL saver integration tests against an explicitly configured test database.     |
+| `npm run build`                               | Compile the TypeScript project.                                                            |
+| `npm run verify:pins`                         | Verify engine source checksums and workflow package locks.                                 |
+| `npm run vendor:engines`                      | Materialize and compile pinned engine source without nested installs.                      |
+| `npm run test:engines`                        | Run both pinned upstream conformance runners against the built implementations.            |
+| `npm run probe:compatibility`                 | Build and prove engine/SQLite compatibility across processes; probe the selected provider. |
+| `npm run check`                               | Run the standard repository checks.                                                        |
+| `npm run format:check`                        | Check formatting.                                                                          |
+| `npm run format`                              | Apply formatting.                                                                          |
 
 The default tests in `tests/unit/` run without external services or API credentials, using disposable memory and temporary SQLite state. PostgreSQL tests in `tests/postgres/` use a dedicated, disposable database configured through `HAZE_TEST_POSTGRES_URL`; see `.env.example` for a placeholder. Set the variable in your shell before running `npm run test:postgres`; the library does not load environment files. CI provisions its own test database and runs this integration suite.
 
 Run `npm run build` before unit tests to prepare the pinned local engines. Run one test file with `npm test -- tests/unit/sqlite.test.ts`. Before requesting review, run `npm run check`, which verifies pins and builds before the adapter tests and upstream conformance runners. Run `npm run test:postgres` when changing saver configuration, checkpoint behavior, or PostgreSQL dependencies. Record any check you could not run and why in the pull request.
+
+## Repository layout and examples
+
+Keep core TypeScript implementation in `app/`, external service boundaries in `app/adapters/`, helper commands in `scripts/`, and small static fixtures or data-source notes in `data/`. Preserve immutable source under `third_party/`; generated `dist/` and `vendor/` files remain ignored. Node dependencies belong in `package.json` and its lockfile.
+
+Maintain at least three inputs under `input_examples/` and matching, same-named expected outputs under `output_examples/`. After `npm run build`, run an input with `npm start -- input_examples/01-minimal.json`. Examples validate the checkpoint metadata contract and stay offline. They must not imply that the four domain roles or Zetaris integration have been implemented. Keep generated JSONL traces under ignored `logs/`, and use `--logs-dir` when a check needs a temporary trace directory.
 
 ## Change and review conventions
 

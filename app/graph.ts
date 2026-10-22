@@ -30,20 +30,25 @@ function validateCheckpointVersions(tuple: CheckpointTuple): void {
 }
 
 /** Validate persisted revisions even when a completed checkpoint has no node to run. */
-class VersionedCheckpointer extends BaseCheckpointSaver {
-  constructor(private readonly delegate: BaseCheckpointSaver) {
+export class VersionedCheckpointer extends BaseCheckpointSaver {
+  constructor(
+    private readonly delegate: BaseCheckpointSaver,
+    private readonly validate: (
+      tuple: CheckpointTuple,
+    ) => void = validateCheckpointVersions,
+  ) {
     super(delegate.serde);
   }
 
   async getTuple(...args: Parameters<BaseCheckpointSaver['getTuple']>) {
     const tuple = await this.delegate.getTuple(...args);
-    if (tuple) validateCheckpointVersions(tuple);
+    if (tuple) this.validate(tuple);
     return tuple;
   }
 
   async *list(...args: Parameters<BaseCheckpointSaver['list']>) {
     for await (const tuple of this.delegate.list(...args)) {
-      validateCheckpointVersions(tuple);
+      this.validate(tuple);
       yield tuple;
     }
   }

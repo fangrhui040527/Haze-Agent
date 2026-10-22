@@ -4,6 +4,12 @@
     "id": "haze.checkpoint",
     "version": 1
   },
+  "compatibilityProbe": {
+    "id": "haze.compatibility",
+    "graphVersion": 1,
+    "schemaVersion": 1,
+    "migrationPolicy": "explicit"
+  },
   "schemas": {
     "executionMetadata": {
       "id": "haze.execution-metadata",

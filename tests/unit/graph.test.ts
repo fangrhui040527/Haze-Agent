@@ -1,11 +1,11 @@
 import { MemorySaver } from '@langchain/langgraph-checkpoint';
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { describe, expect, it } from 'vitest';
-import { createCheckpointGraph } from '../../src/graph.js';
+import { createCheckpointGraph } from '../../app/graph.js';
 import {
   CHECKPOINT_GRAPH_VERSION,
   EXECUTION_SCHEMA_VERSION,
-} from '../../src/versions.js';
+} from '../../app/versions.js';
 
 describe('local StateGraph foundation', () => {
   it('retains execution metadata within its own thread', async () => {

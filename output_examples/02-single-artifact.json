@@ -1,0 +1,6 @@
+{
+  "runId": "example-single-artifact",
+  "artifactIds": ["observation-001"],
+  "graphVersion": 1,
+  "schemaVersion": 2
+}

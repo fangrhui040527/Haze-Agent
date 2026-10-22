@@ -12,7 +12,8 @@ coverage/
 !.env.example
 .state/
 state/
-data/
+logs/*
+!logs/.gitkeep
 *.sqlite
 *.sqlite-*
 *.db

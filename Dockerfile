@@ -12,10 +12,11 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/vendor ./vendor
+COPY --from=build /app/scripts/run-example.mjs ./scripts/run-example.mjs
+COPY --from=build /app/input_examples ./input_examples
 COPY --from=build /app/engine_sources.json /app/package.json /app/package-lock.json /app/THIRD_PARTY_NOTICES.md ./
 ENV STATE_DIR=/data
-RUN mkdir -p /data && chown node:node /data
+RUN mkdir -p /data /app/logs && chown node:node /data /app/logs
 USER node
-# The repository currently provides libraries, not the architecture's future API.
-# Exercise actual local engines by default; applications can override this command.
-CMD ["node", "--input-type=module", "-e", "import { join } from 'node:path'; import { openHazeEngines } from './dist/engines/index.js'; const engines = await openHazeEngines({ memoryDirectory: join(process.env.STATE_DIR, 'hmem'), worldDirectory: join(process.env.STATE_DIR, 'world-model'), namespace: 'haze' }); console.log(JSON.stringify(engines.provenance));"]
+# Run the same offline checkpoint example as npm start.
+CMD ["node", "scripts/run-example.mjs", "input_examples/01-minimal.json"]

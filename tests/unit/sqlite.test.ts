@@ -2,15 +2,15 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { openSqliteCheckpointer } from '../../src/checkpoints/sqlite.js';
+import { openSqliteCheckpointer } from '../../app/checkpoints/sqlite.js';
 import {
   createCheckpointGraph,
   type ExecutionMetadata,
-} from '../../src/graph.js';
+} from '../../app/graph.js';
 import {
   CHECKPOINT_GRAPH_VERSION,
   EXECUTION_SCHEMA_VERSION,
-} from '../../src/versions.js';
+} from '../../app/versions.js';
 
 describe('SQLite checkpoints', () => {
   it('reopens persisted state and resumes interrupted work', async () => {
@@ -29,6 +29,12 @@ describe('SQLite checkpoints', () => {
 
     try {
       handle = await openSqliteCheckpointer(stateDirectory);
+      expect(handle.durability).toEqual({
+        saver: 'SqliteSaver',
+        journalMode: 'wal',
+        synchronous: 2,
+        busyTimeoutMs: 5000,
+      });
       const graph = createCheckpointGraph(handle.checkpointer, {
         interruptBefore: ['checkpoint'],
       });

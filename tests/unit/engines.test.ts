@@ -9,8 +9,11 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { openHazeEngines, type Observation } from '../../src/engines/index.js';
-import { loadPinnedEngines } from '../../src/engines/loader.js';
+import {
+  openHazeEngines,
+  type Observation,
+} from '../../app/adapters/meterless/index.js';
+import { loadPinnedEngines } from '../../app/adapters/meterless/loader.js';
 
 describe('pinned engine adapters', () => {
   it('uses starter-vendored H-MEM for mining, ranked recall, feedback and durable audit', async () => {

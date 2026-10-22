@@ -3,7 +3,7 @@
   "repository": "https://github.com/Meterless/Meterless.git",
   "checksum_algorithm": "sha256",
   "tree_checksum_format": "SHA256 of UTF-8 lines sorted by relative path: <file-sha256>  <relative-path>\\n",
-  "workflow_versions": "src/workflow_versions.json",
+  "workflow_versions": "app/workflow_versions.json",
   "sources": {
     "starter": {
       "repository": "https://github.com/Meterless/Meterless.git",

@@ -9,7 +9,7 @@ docs/*.pdf
 docs/haze-architecture-v0.8.html
 .state/
 state/
-data/
+logs/
 .env*
 .codebase-memory/
 tmp/

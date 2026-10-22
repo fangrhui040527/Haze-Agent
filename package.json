@@ -10,10 +10,12 @@
   },
   "packageManager": "npm@11.8.0",
   "scripts": {
+    "start": "node scripts/run-example.mjs",
     "build": "npm run vendor:engines && tsc -p tsconfig.build.json",
     "vendor:engines": "node scripts/vendor-engines.mjs",
     "verify:pins": "node scripts/verify-pins.mjs",
     "test:engines": "node scripts/test-engines.mjs",
+    "probe:compatibility": "npm run build && node --env-file-if-exists=.env scripts/probe-compatibility.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
