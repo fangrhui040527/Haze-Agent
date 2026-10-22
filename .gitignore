@@ -1,0 +1,30 @@
+# Dependencies and build/test output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Runtime state and local credentials
+.env
+.env.*
+!.env.example
+.state/
+state/
+data/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.pem
+*.key
+credentials.json
+secrets/
+
+# Local tools and editor/OS files
+.codebase-memory/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+tmp/

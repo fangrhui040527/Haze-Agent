@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@11.8.0
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check types
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Check formatting
+        run: npm run format:check
+      - name: Run focused unit and SQLite persistence tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  postgres:
+    name: PostgreSQL saver integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.11@sha256:b8faeff7712663c2773a190181e1246e37e364b887611c04658c28b44e2408fe
+        env:
+          POSTGRES_DB: haze_test
+          POSTGRES_USER: haze_test
+          POSTGRES_PASSWORD: haze_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U haze_test -d haze_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Pin npm
+        run: npm install --global npm@11.8.0
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test PostgreSQL checkpoint persistence
+        run: npm run test:postgres
+        env:
+          HAZE_TEST_POSTGRES_URL: postgresql://haze_test:haze_test@localhost:5432/haze_test
