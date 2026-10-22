@@ -1,5 +1,6 @@
 # Dependencies and build/test output
 node_modules/
+vendor/
 dist/
 coverage/
 *.tsbuildinfo

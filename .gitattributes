@@ -1,2 +1,4 @@
 * text=auto eol=lf
 *.pdf binary
+# Preserve the exact upstream source/license/lockfile bytes used by SHA-256 pins.
+third_party/** -text

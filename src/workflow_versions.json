@@ -1,0 +1,22 @@
+{
+  "manifestVersion": 1,
+  "graph": {
+    "id": "haze.checkpoint",
+    "version": 1
+  },
+  "schemas": {
+    "executionMetadata": {
+      "id": "haze.execution-metadata",
+      "version": 2,
+      "migrationPolicy": "explicit"
+    }
+  },
+  "dependencies": {
+    "@langchain/core": "1.2.20",
+    "@langchain/langgraph": "1.5.2",
+    "@langchain/langgraph-checkpoint": "1.2.1",
+    "@langchain/langgraph-checkpoint-postgres": "1.1.2",
+    "@langchain/langgraph-checkpoint-sqlite": "1.1.0",
+    "zod": "4.6.7"
+  }
+}

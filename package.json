@@ -10,7 +10,10 @@
   },
   "packageManager": "npm@11.8.0",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npm run vendor:engines && tsc -p tsconfig.build.json",
+    "vendor:engines": "node scripts/vendor-engines.mjs",
+    "verify:pins": "node scripts/verify-pins.mjs",
+    "test:engines": "node scripts/test-engines.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
@@ -18,7 +21,7 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:postgres": "vitest run --project postgres",
-    "check": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run verify:pins && npm run format:check && npm run typecheck && npm run lint && npm run build && npm test && npm run test:engines"
   },
   "dependencies": {
     "@langchain/core": "1.2.20",

@@ -35,16 +35,20 @@ jobs:
         run: npm install --global npm@11.8.0
       - name: Install locked dependencies
         run: npm ci
+      - name: Verify engine and workflow pins
+        run: npm run verify:pins
       - name: Check types
         run: npm run typecheck
       - name: Lint
         run: npm run lint
       - name: Check formatting
         run: npm run format:check
-      - name: Run focused unit and SQLite persistence tests
-        run: npm test
       - name: Build
         run: npm run build
+      - name: Run focused unit, engine adapter and SQLite persistence tests
+        run: npm test
+      - name: Run pinned upstream engine conformance
+        run: npm run test:engines
 
   postgres:
     name: PostgreSQL saver integration
