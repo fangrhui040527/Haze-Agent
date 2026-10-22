@@ -29,6 +29,12 @@ describe('SQLite checkpoints', () => {
 
     try {
       handle = await openSqliteCheckpointer(stateDirectory);
+      expect(handle.durability).toEqual({
+        saver: 'SqliteSaver',
+        journalMode: 'wal',
+        synchronous: 2,
+        busyTimeoutMs: 5000,
+      });
       const graph = createCheckpointGraph(handle.checkpointer, {
         interruptBefore: ['checkpoint'],
       });

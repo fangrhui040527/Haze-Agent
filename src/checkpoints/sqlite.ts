@@ -12,10 +12,20 @@ export async function openSqliteCheckpointer(stateDir: string) {
   await mkdir(directory, { recursive: true });
   const databasePath = join(directory, 'checkpoint.sqlite');
   const checkpointer = SqliteSaver.fromConnString(databasePath);
+  // Explicit local durability; the saver creates/migrates its tables on first use.
+  checkpointer.db.pragma('journal_mode = WAL');
+  checkpointer.db.pragma('synchronous = FULL');
+  checkpointer.db.pragma('busy_timeout = 5000');
 
   return {
     checkpointer,
     databasePath,
+    durability: {
+      saver: 'SqliteSaver' as const,
+      journalMode: checkpointer.db.pragma('journal_mode', { simple: true }),
+      synchronous: checkpointer.db.pragma('synchronous', { simple: true }),
+      busyTimeoutMs: checkpointer.db.pragma('busy_timeout', { simple: true }),
+    },
     close(): void {
       if (checkpointer.db.open) {
         checkpointer.db.close();

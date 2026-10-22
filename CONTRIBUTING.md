@@ -4,20 +4,21 @@ Use the Node and npm versions pinned in `.nvmrc` and `package.json`. Start with 
 
 ## Commands
 
-| Command                  | Purpose                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| `npm run typecheck`      | Check TypeScript without emitting files.                                               |
-| `npm run lint`           | Check source and test code with ESLint.                                                |
-| `npm test`               | Run the focused local test suite.                                                      |
-| `npm run test:watch`     | Watch the local test suite while developing.                                           |
-| `npm run test:postgres`  | Run PostgreSQL saver integration tests against an explicitly configured test database. |
-| `npm run build`          | Compile the TypeScript project.                                                        |
-| `npm run verify:pins`    | Verify engine source checksums and workflow package locks.                             |
-| `npm run vendor:engines` | Materialize and compile pinned engine source without nested installs.                  |
-| `npm run test:engines`   | Run both pinned upstream conformance runners against the built implementations.        |
-| `npm run check`          | Run the standard repository checks.                                                    |
-| `npm run format:check`   | Check formatting.                                                                      |
-| `npm run format`         | Apply formatting.                                                                      |
+| Command                       | Purpose                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run typecheck`           | Check TypeScript without emitting files.                                                   |
+| `npm run lint`                | Check source and test code with ESLint.                                                    |
+| `npm test`                    | Run the focused local test suite.                                                          |
+| `npm run test:watch`          | Watch the local test suite while developing.                                               |
+| `npm run test:postgres`       | Run PostgreSQL saver integration tests against an explicitly configured test database.     |
+| `npm run build`               | Compile the TypeScript project.                                                            |
+| `npm run verify:pins`         | Verify engine source checksums and workflow package locks.                                 |
+| `npm run vendor:engines`      | Materialize and compile pinned engine source without nested installs.                      |
+| `npm run test:engines`        | Run both pinned upstream conformance runners against the built implementations.            |
+| `npm run probe:compatibility` | Build and prove engine/SQLite compatibility across processes; probe the selected provider. |
+| `npm run check`               | Run the standard repository checks.                                                        |
+| `npm run format:check`        | Check formatting.                                                                          |
+| `npm run format`              | Apply formatting.                                                                          |
 
 The default tests in `tests/unit/` run without external services or API credentials, using disposable memory and temporary SQLite state. PostgreSQL tests in `tests/postgres/` use a dedicated, disposable database configured through `HAZE_TEST_POSTGRES_URL`; see `.env.example` for a placeholder. Set the variable in your shell before running `npm run test:postgres`; the library does not load environment files. CI provisions its own test database and runs this integration suite.
 

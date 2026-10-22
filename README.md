@@ -4,7 +4,7 @@ Repository and development foundation for Haze Agent, based on the [v0.8 archite
 
 The scaffold uses TypeScript `StateGraph` from `@langchain/langgraph` and runs in this process. It does not require a hosted LangGraph service. LangGraph supplies orchestration and checkpoint infrastructure; Haze has four domain roles: **Manager, HazeOps, WorkerShield, and EvidenceCritic**.
 
-The [execution graph](src/graph.ts) currently validates execution metadata in one infrastructure node. It does not implement the four domain roles or call a model. This repository establishes dependency pins, saver integration, and development checks. [Engine adapters](src/engines/index.ts) delegate to the pinned Meterless references. Passing these checks verifies the tested infrastructure and engine contracts, not the full Haze domain workflow or its scientific validity.
+The [execution graph](src/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](src/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. Neither implements the four domain roles. [Engine adapters](src/engines/index.ts) delegate to the pinned Meterless references. Passing these checks verifies the tested infrastructure and engine contracts, not the full Haze domain workflow or its scientific validity.
 
 ## Develop locally
 
@@ -50,6 +50,12 @@ docker run --rm --network none haze-engines
 - SQLite is the persistent option for a single process. The [SQLite helper](src/checkpoints/sqlite.ts) requires an explicit state directory; callers close its database handle after use.
 - PostgreSQL is the production persistence path, with a dedicated integration test.
 
-Checkpoints retain graph execution state. A checkpoint ID or saved execution state is not authoritative evidence for a Haze decision; the future evidence layer must establish that separately.
+Checkpoints retain graph execution state and domain IDs. H-MEM and World Model remain the memory and evidence services; the spike reads their stores again after restart. A checkpoint ID is not authoritative evidence for a Haze decision.
+
+## Compatibility proof
+
+Set `STATE_DIR` and run `npm run probe:compatibility`. This command builds the pinned engines and starts two sequential Node processes. It records exact installed versions, engine hashes, checkpoint IDs, SQLite durability settings, restart/readback checks and provider status in `STATE_DIR/compatibility/<thread_id>/report.json`.
+
+The probe CLI reads an ignored local `.env` file. Select `HAZE_PROVIDER=nvidia` and configure `NVIDIA_API_KEY` there; optionally set `HAZE_MODEL`. NVIDIA without a key is reported as blocked and exits unsuccessfully. `HAZE_PROVIDER=offline` runs the local proof and explicitly skips inference. `SAMPLE_MODE=true` enforces offline operation. See [probe setup and recorded results](docs/compatibility-probe.md).
 
 Keep credentials in local environment variables or ignored environment files. Commit only placeholder values in `.env.example`.
