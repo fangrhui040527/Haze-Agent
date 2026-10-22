@@ -5,6 +5,10 @@ import {
   createCheckpointGraph,
   type ExecutionMetadata,
 } from '../../src/graph.js';
+import {
+  CHECKPOINT_GRAPH_VERSION,
+  EXECUTION_SCHEMA_VERSION,
+} from '../../src/versions.js';
 
 const connectionString = process.env['HAZE_TEST_POSTGRES_URL'];
 if (!connectionString) {
@@ -22,7 +26,8 @@ describe('PostgreSQL checkpoints', () => {
     const metadata = {
       runId: 'run-a',
       artifactIds: ['artifact-a'],
-      schemaVersion: 1,
+      graphVersion: CHECKPOINT_GRAPH_VERSION,
+      schemaVersion: EXECUTION_SCHEMA_VERSION,
     } satisfies ExecutionMetadata;
     let saver = PostgresSaver.fromConnString(connectionString);
     let initialized = false;
@@ -50,7 +55,8 @@ describe('PostgreSQL checkpoints', () => {
       expect((await otherGraph.getState(otherConfig)).values).toEqual({
         runId: 'run-b',
         artifactIds: [],
-        schemaVersion: 1,
+        graphVersion: CHECKPOINT_GRAPH_VERSION,
+        schemaVersion: EXECUTION_SCHEMA_VERSION,
       });
       expect((await restartedGraph.getState(config)).values).toEqual(metadata);
     } finally {

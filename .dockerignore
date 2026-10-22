@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+dist
+vendor
+tmp
+.codebase-memory
+.env
+.env.*
+!.env.example
+.state
+state
+data
+coverage
+docs/*.pdf
+docs/*.html

@@ -1,8 +1,12 @@
 node_modules/
+vendor/
+third_party/
 dist/
 coverage/
 package-lock.json
 docs/*.pdf
+# Architecture reference source is retained as supplied.
+docs/haze-architecture-v0.8.html
 .state/
 state/
 data/

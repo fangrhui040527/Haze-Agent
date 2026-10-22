@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haze Agent v0.8</title>
+<meta name="description" content="Architecture v0.8 of the Haze Agent for the Open Agent Hackathon 2026, Track 02: a 10% reduction contract, four continuing departments over a shared harness, a scoped crew exposure comparison for one Klang shift, six-day delivery, and two expansion paths for worker protection and source prevention with a damage ledger and separate evaluation.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: a sticky section index on the left and a wide figure column on the right; figures sit on quiet cards,
+   prose stays near 72 characters. Colour encodes node role and repeats across every diagram. */
+:root {
+  --bg: #f3f6f6; --surface: #ffffff; --fig: #fbfcfc; --code-bg: #edf2f2;
+  --ink: #13212b; --ink-2: #3a4b56; --muted: #5d6e79; --line: #d7dfe2; --line-2: #bfcad0;
+  --accent: #0a7865; --accent-bg: #e0f1ec;
+  --svc: #3a4b56; --svc-bg: #eef2f4;
+  --store: #5f46ab; --store-bg: #ece8f7;
+  --ext: #2862a5; --ext-bg: #e4edf8;
+  --evid: #985c0b; --evid-bg: #f9eedb;
+  --safe: #ab3636; --safe-bg: #f8e4e4;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1316; --surface: #141c21; --fig: #11191d; --code-bg: #17222a;
+    --ink: #e2e9ed; --ink-2: #a8b6bf; --muted: #8a99a4; --line: #243139; --line-2: #34444e;
+    --accent: #3ec3a3; --accent-bg: #123029;
+    --svc: #a8b6bf; --svc-bg: #1a242a;
+    --store: #a58ff0; --store-bg: #231d3a;
+    --ext: #6ea8ec; --ext-bg: #14253a;
+    --evid: #e2a84c; --evid-bg: #31250f;
+    --safe: #ee7c7c; --safe-bg: #381a1b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1316; --surface: #141c21; --fig: #11191d; --code-bg: #17222a;
+  --ink: #e2e9ed; --ink-2: #a8b6bf; --muted: #8a99a4; --line: #243139; --line-2: #34444e;
+  --accent: #3ec3a3; --accent-bg: #123029;
+  --svc: #a8b6bf; --svc-bg: #1a242a;
+  --store: #a58ff0; --store-bg: #231d3a;
+  --ext: #6ea8ec; --ext-bg: #14253a;
+  --evid: #e2a84c; --evid-bg: #31250f;
+  --safe: #ee7c7c; --safe-bg: #381a1b;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--font-sans); }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.wrap { max-width: 1500px; margin: 0 auto; padding-inline: clamp(16px, 3.2vw, 44px); padding-block: 40px 96px; }
+header.top { max-width: 1180px; }
+.eyebrow { font: 500 12px/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0; }
+h1 { font: 600 clamp(40px, 6.4vw, 72px)/1.02 var(--font-display); letter-spacing: -.012em; margin: 10px 0 16px; text-wrap: balance; }
+.lead { font-size: 19px; line-height: 1.55; max-width: 64ch; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 13px/1.5 var(--font-mono); color: var(--muted); margin: 18px 0 0; }
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px 32px; margin: 36px 0 0; padding: 0; list-style: none; }
+.principles li { border-top: 2px solid var(--ink); padding-top: 10px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.principles b { display: block; color: var(--ink); font: 600 16px/1.35 var(--font-sans); margin-bottom: 4px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 30px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 13.5px; color: var(--ink-2); }
+.lg { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 16px; height: 12px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+.sw-agent { background: var(--accent-bg); border-color: var(--accent); }
+.sw-svc { background: var(--svc-bg); border-color: var(--svc); }
+.sw-store { background: var(--store-bg); border-color: var(--store); border-radius: 50% / 30%; }
+.sw-ext { background: var(--ext-bg); border-color: var(--ext); }
+.sw-evid { background: var(--evid-bg); border-color: var(--evid); }
+.sw-safe { background: var(--safe-bg); border-color: var(--safe); }
+.sw-doc { background: var(--surface); border-color: var(--ink-2); border-radius: 0 5px 0 0; }
+.sw-user { background: var(--surface); border-color: var(--ink); }
+.ln { width: 22px; height: 0; border-top: 1.5px solid var(--ink-2); display: inline-block; }
+.ln-acc { border-top-color: var(--accent); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; margin-top: 44px; }
+nav.toc { font-size: 14px; min-width: 0; }
+.toc-h { font: 600 11px/1.4 var(--font-sans); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 0 18px; }
+nav.toc a { display: flex; gap: 10px; padding: 5px 0; color: var(--ink-2); text-decoration: none; }
+nav.toc a span { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); min-width: 2.4em; padding-top: 1px; }
+nav.toc a:hover { color: var(--accent); }
+@media (min-width: 1200px) {
+  .layout { grid-template-columns: 196px minmax(0, 1fr); gap: 44px; }
+  nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; max-height: calc(100vh - 40px); overflow: auto; }
+  nav.toc ol { grid-template-columns: 1fr; }
+}
+main { min-width: 0; }
+
+section { padding-block: 40px 8px; border-top: 1px solid var(--line); scroll-margin-top: 12px; }
+section:first-child { border-top: 0; padding-top: 0; }
+h2 { font: 600 clamp(26px, 3vw, 34px)/1.15 var(--font-display); margin: 0 0 14px; text-wrap: balance; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+h2 .sn { font: 500 14px var(--font-mono); color: var(--accent); }
+h3 { font: 600 16px/1.3 var(--font-sans); margin: 26px 0 10px; }
+p { margin: 0 0 14px; }
+.prose, main > section > p { max-width: 74ch; }
+ul.prose { padding-left: 20px; }
+ul.prose li, .two ul li { margin-bottom: 8px; }
+.two ul { padding-left: 20px; margin: 0; }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code-bg); padding: .08em .36em; border-radius: 4px; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; overflow-x: auto; font: 12.8px/1.55 var(--font-mono); margin: 0 0 18px; max-width: 100%; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 0 22px; }
+.two > * { min-width: 0; }
+
+.fig { margin: 22px 0 26px; background: var(--fig); border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px 14px; }
+.fig .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.fig svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+figcaption { margin-top: 12px; font-size: 14px; line-height: 1.55; color: var(--muted); max-width: 110ch; }
+figcaption b { color: var(--ink); font-weight: 600; }
+
+.tbl { overflow-x: auto; margin: 16px 0 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 680px; font-size: 14.5px; line-height: 1.45; }
+th { text-align: left; font: 600 11.5px/1.3 var(--font-sans); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--fig); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+td:first-child { color: var(--ink); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.callout { border: 1px solid var(--evid); background: var(--evid-bg); border-radius: 10px; padding: 14px 18px; max-width: 86ch; margin: 6px 0 18px; }
+.callout b { color: var(--evid); }
+footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+
+/* diagrams */
+.dg text { font-family: var(--font-sans); }
+.n :is(rect, path, ellipse, polygon) { stroke-width: 1.3; }
+.n-svc :is(rect, path, ellipse, polygon) { fill: var(--svc-bg); stroke: var(--svc); }
+.n-agent :is(rect, path, ellipse, polygon) { fill: var(--accent-bg); stroke: var(--accent); }
+.n-store :is(rect, path, ellipse, polygon) { fill: var(--store-bg); stroke: var(--store); }
+.n-ext :is(rect, path, ellipse, polygon) { fill: var(--ext-bg); stroke: var(--ext); }
+.n-evid :is(rect, path, ellipse, polygon) { fill: var(--evid-bg); stroke: var(--evid); }
+.n-safe :is(rect, path, ellipse, polygon) { fill: var(--safe-bg); stroke: var(--safe); }
+.n-doc :is(rect, path, ellipse, polygon) { fill: var(--surface); stroke: var(--ink-2); }
+.n-user :is(rect, path, ellipse, polygon) { fill: var(--surface); stroke: var(--ink); stroke-width: 1.7; }
+.n-doc .fold { fill: var(--line-2); }
+.n text { text-anchor: middle; }
+.n .t { font: 600 14px var(--font-sans); fill: var(--ink); }
+.n .tm { font: 600 13.5px var(--font-mono); fill: var(--ink); }
+.n .s { font: 400 11.5px var(--font-mono); fill: var(--muted); }
+.e { fill: none; stroke-width: 1.4; stroke-linejoin: round; }
+.s-ink { stroke: var(--ink-2); } .mk-ink { fill: var(--ink-2); }
+.s-accent { stroke: var(--accent); } .mk-accent { fill: var(--accent); }
+.s-store { stroke: var(--store); } .mk-store { fill: var(--store); }
+.s-ext { stroke: var(--ext); } .mk-ext { fill: var(--ext); }
+.s-evid { stroke: var(--evid); } .mk-evid { fill: var(--evid); }
+.s-safe { stroke: var(--safe); } .mk-safe { fill: var(--safe); }
+.s-muted { stroke: var(--muted); } .mk-muted { fill: var(--muted); }
+.dash { stroke-dasharray: 5 4; }
+.lbg { fill: var(--fig); }
+.el { font: 500 11px var(--font-mono); fill: var(--ink-2); }
+.el.c-accent { fill: var(--accent); } .el.c-store { fill: var(--store); } .el.c-ext { fill: var(--ext); }
+.el.c-evid { fill: var(--evid); } .el.c-safe { fill: var(--safe); } .el.c-muted { fill: var(--muted); }
+.grp rect { fill: none; stroke: var(--line-2); stroke-dasharray: 4 4; }
+.gl { font: 600 11px var(--font-sans); letter-spacing: .08em; fill: var(--muted); }
+.note { font: 400 11.5px var(--font-mono); fill: var(--muted); }
+.axis { stroke: var(--ink-2); stroke-width: 1.2; }
+.tick { font: 400 11px var(--font-mono); fill: var(--muted); }
+.axt { font: 600 12.5px var(--font-sans); fill: var(--ink-2); }
+.zone { fill: var(--accent-bg); }
+.zl { font: 600 11px var(--font-sans); letter-spacing: .06em; fill: var(--accent); }
+.thr { stroke: var(--accent); stroke-dasharray: 6 4; stroke-width: 1.4; }
+.bud { stroke: var(--ink-2); stroke-dasharray: 6 4; stroke-width: 1.3; }
+.pt-e { fill: var(--evid); stroke: var(--evid); }
+.pt-c { fill: var(--fig); stroke: var(--ext); stroke-width: 2; }
+.pl { font: 400 11.5px var(--font-mono); fill: var(--ink); }
+.life { stroke: var(--line-2); stroke-dasharray: 3 4; }
+.rule { stroke: var(--line); }
+.kt { font: 600 14px var(--font-sans); fill: var(--ink); }
+.kn { font: 500 11.5px var(--font-mono); fill: var(--ink); }
+.kn-mvp { fill: var(--accent); font-weight: 600; }
+.kv { font: 400 11.5px var(--font-mono); fill: var(--muted); }
+.dg code, figcaption code { font-size: .92em; }
+.ert { fill: var(--surface); stroke-width: 1.3; }
+.ert-user { stroke: var(--ink); } .ert-agent { stroke: var(--accent); } .ert-evid { stroke: var(--evid); } .ert-store { stroke: var(--store); }
+.erhb-user { fill: var(--svc-bg); } .erhb-agent { fill: var(--accent-bg); } .erhb-evid { fill: var(--evid-bg); } .erhb-store { fill: var(--store-bg); }
+.erh { font: 600 12.5px var(--font-mono); fill: var(--ink); }
+.err { font: 400 11.5px var(--font-mono); fill: var(--ink-2); }
+.fk { fill: var(--accent); }
+.upd { font: 600 10.5px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--evid); background: var(--evid-bg); border: 1px solid var(--evid); border-radius: 999px; padding: 4px 9px; align-self: center; }
+.statement { border-left: 3px solid var(--accent); background: var(--accent-bg); border-radius: 0 10px 10px 0; padding: 12px 18px; max-width: 86ch; margin: 6px 0 18px; font-size: 16.5px; line-height: 1.55; }
+.statement b { color: var(--accent); }
+.callout ul { margin: 8px 0 0; padding-left: 20px; }
+.callout li { margin-bottom: 8px; }
+.callout li:last-child { margin-bottom: 0; }
+.score { font-family: var(--font-mono); font-weight: 600; color: var(--ink); white-space: nowrap; }
+.mal { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+td .req { font: 600 11px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+
+</style>
+<style>
+.gate { font: 600 11px/1 var(--font-mono); color: var(--accent); background: var(--accent-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+.new { font: 600 10.5px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); background: var(--accent-bg); border: 1px solid var(--accent); border-radius: 999px; padding: 4px 9px; align-self: center; }
+td .open { font: 600 11px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--evid); }
+.two .tbl table { min-width: 0; }
+ol.prose { padding-left: 22px; } ol.prose li { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><marker id="m-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-ink" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-accent" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-store" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-store" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-ext" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-ext" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-evid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-evid" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-safe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-safe" d="M0,0.8 L10,5 L0,9.2 z"/></marker><marker id="m-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="mk-muted" d="M0,0.8 L10,5 L0,9.2 z"/></marker></defs></svg>
+<div class="wrap">
+<header class="top">
+<p class="eyebrow">Open Agent Hackathon 2026 · Architecture v0.8 · Track 02 – The Agent That Can Explain Why</p>
+<h1>Haze Agent: Evidence to Action</h1>
+<p class="lead">A programme that investigates haze harm, explains the evidence and its causes, compares feasible interventions and tests a clearly defined 10% reduction target. The hackathon builds one executable slice: a Klang maintenance crew’s 08:00–12:00 shift, planned by the four-role harness and compared against its own baseline using a named exposure proxy. Above it, four continuing departments coordinate research, planning, validation and experiments. Beyond it, two expansion paths—worker protection and source prevention—reuse the same foundation, but each one has to pass its own evidence gates.</p>
+<p class="meta"><span>Build window 22–27 Oct 2026 · deadline 28 Oct 07:45 MYT</span><span>Asia/Kuala_Lumpur (UTC+8)</span><span>Status: specified, not demonstrated · 22 Oct</span><span>9 figures</span></p>
+<ul class="principles">
+<li><b>A percentage needs a contract</b>Before any reduction claim, record the baseline, metric, population, period and accounting boundary. A zero or incomparable baseline supports no percentage.</li>
+<li><b>Infeasible is a valid answer</b>If no feasible plan reaches 10%, the system says so and explains which constraint or uncertainty blocks it.</li>
+<li><b>Projected ≠ achieved</b>Target, projection, implementation, measurement and attribution stay in separate fields, from the trace through to the dashboard.</li>
+<li><b>Departments, not more agents</b>Four continuing responsibilities reuse Manager, HazeOps, WorkerShield and EvidenceCritic. No extra model instances are claimed.</li>
+<li><b>Two meanings of “model”</b>World Model stores evidence and decisions. Exposure, health and economic models are separate scientific tools, each with its own version and review.</li>
+<li><b>Status words are precise</b>Specified means described, enabled means configured, executed means a captured run, and validated means reviewed for a stated use.</li>
+</ul>
+<div class="legend" aria-label="Diagram legend"><span class="lg"><i class="sw sw-agent"></i>Agent role / department</span><span class="lg"><i class="sw sw-svc"></i>Service / step</span><span class="lg"><i class="sw sw-store"></i>Engine or shared store</span><span class="lg"><i class="sw sw-ext"></i>Source / external</span><span class="lg"><i class="sw sw-evid"></i>Evidence / measurement</span><span class="lg"><i class="sw sw-safe"></i>Review / authority gate</span><span class="lg"><i class="sw sw-doc"></i>Typed artifact</span><span class="lg"><i class="sw sw-user"></i>User / entry point</span><span class="lg"><i class="ln"></i>task / data flow</span><span class="lg"><i class="ln ln-acc"></i>learning or rerun loop</span></div>
+</header>
+<div class="layout">
+<nav class="toc" aria-label="Sections"><p class="toc-h">Contents</p><ol><li><a href="#changes"><span>§1</span>What v0.8 changes</a></li><li><a href="#mission"><span>§2</span>Mission and system map</a></li><li><a href="#target"><span>§3</span>The 10% contract</a></li><li><a href="#departments"><span>§4</span>Four departments</a></li><li><a href="#research"><span>§5</span>Research and impact</a></li><li><a href="#scenarios"><span>§6</span>Interventions and scenarios</a></li><li><a href="#validation"><span>§7</span>Validation and experiments</a></li><li><a href="#programme"><span>§8</span>Continuing operation</a></li><li><a href="#evidence"><span>§9</span>Shared evidence</a></li><li><a href="#workspace"><span>§10</span>User workspace</a></li><li><a href="#pilot"><span>§11</span>First pilot workflow</a></li><li><a href="#capabilities"><span>§12</span>Capabilities and peers</a></li><li><a href="#runtime"><span>§13</span>Runtime, sponsors, modes</a></li><li><a href="#audit"><span>§14</span>Artifacts and audit</a></li><li><a href="#demo"><span>§15</span>Demo and acceptance</a></li><li><a href="#delivery"><span>§16</span>Six-day delivery</a></li><li><a href="#expansion"><span>§17</span>Two paths to less harm</a></li><li><a href="#evaluation"><span>§18</span>Evaluation and readiness</a></li></ol></nav>
+<main><section id="changes" aria-labelledby="h-changes"><h2 id="h-changes"><span class="sn">§1</span>What v0.8 changes<span class="upd">updated</span></h2>
+<p class="prose">v0.7 put a continuing programme on top of the v0.6 harness: four departments, source watchers, scientific tools, experiments and a workspace. v0.8 takes that design and does two things with it. It narrows the hackathon to one connected Klang story with daily exit checks, and it adds two separate expansion paths with their own contracts, so the bigger goal never inflates the pilot’s claims.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Area</th><th scope="col">v0.7</th><th scope="col">v0.8 (this document)</th><th scope="col">Why</th></tr></thead><tbody>
+<tr><td>Hackathon scope</td><td>Programme with four departments and broad monitoring</td><td><b>One connected Klang story</b>, with daily exit results across six days</td><td>One working loop beats a wide, unproven surface</td></tr>
+<tr><td>Agent value</td><td>Not compared</td><td><b>Equal-resource comparison</b> against a simple rule-based planner and, where available, competent human planning</td><td>Shows whether the agent adds anything beyond a rule</td></tr>
+<tr><td>Worker path</td><td>Simulation and protocol preview</td><td><b>Employer-led field pilot</b> protocol with implementation and measurement records</td><td>A modeled schedule is not a realized benefit</td></tr>
+<tr><td>Prevention path</td><td>PeatFire Sentinel as a later profile</td><td><b>Source-prevention programme</b>: operator, funder, action contract and field verification</td><td>Detection alone prevents nothing</td></tr>
+<tr><td>Damage</td><td>Scoped impact modules</td><td><b>Damage ledger</b> with coverage, uncertainty and overlap rules</td><td>A partial subtotal must never read as total damage</td></tr>
+<tr><td>Evaluation</td><td>Experiment lifecycle</td><td>Fire attribution, programme effect and agent added value are kept separate, plus a <b>regional reach check</b></td><td>Three different counterfactuals answer three different questions</td></tr>
+</tbody></table></div>
+<div class="callout"><b>Nothing in this revision has been demonstrated yet.</b>
+<ul>
+<li><b>Not executed:</b> source access, engine pinning, sponsor operations, independent review and acceptance cases.</li>
+<li><b>Not found:</b> no employer pilot partner, prevention operator or funder is named. Discovery is the first expansion task.</li>
+<li><b>Not validated:</b> no health, economic, climate or regional damage module has passed review.</li>
+<li><b>Not a result:</b> the 10% figure is an objective to test, and modeled crew exposure does not show regional damage reduction.</li>
+</ul></div>
+</section><section id="mission" aria-labelledby="h-mission"><h2 id="h-mission"><span class="sn">§2</span>Mission and system map</h2>
+<p class="statement"><b>Mission.</b> Investigate haze harm, explain evidence and causes, compare feasible interventions and test a clearly defined 10% reduction target. Build a reusable evidence-to-action workflow while validating each scientific model and intervention for its own scope.</p>
+<p class="prose">A department owns a continuing responsibility; a specialist run does one bounded task. Figure 1 shows how the two fit together. Arrows between departments mean coordination, not four extra model instances: HazeOps, WorkerShield, deterministic tools and review executions serve several departments, and Manager and EvidenceCritic stay crosscutting.</p>
+<figure class="fig" id="fig-1"><div class="scroll"><svg class="dg" viewBox="0 0 1180 410" role="img" aria-label="User workspace on top feeds the Programme Manager and scheduler. Source watchers on the left create bounded jobs; the manager dispatches LangGraph jobs on the right. The manager coordinates four departments: research and impact, intervention planning, independent validation, and experiments and evaluation. All four sit on a shared foundation of Zetaris, World Model, H-MEM, LangGraph and versioned tools." style="max-width:1180px;min-width:860px">
+<g class="n n-user"><rect x="340" y="20" width="500" height="56" rx="7"/><text class="t" x="590" y="43">User workspace</text><text class="s" x="590" y="60">dashboard · chat · evidence review · experiments</text></g>
+<g class="n n-agent"><rect x="340" y="110" width="500" height="56" rx="7"/><text class="t" x="590" y="133">Programme Manager + scheduler</text><text class="s" x="590" y="150">goals · backlog · budgets · priorities · dispatch</text></g>
+<g class="n n-ext"><rect x="30" y="110" width="250" height="56" rx="7"/><text class="t" x="155" y="133">Source watchers</text><text class="s" x="155" y="150">changes become bounded jobs</text></g>
+<g class="n n-svc"><rect x="900" y="110" width="250" height="56" rx="7"/><text class="t" x="1025" y="133">LangGraph job</text><text class="s" x="1025" y="150">transitions · checkpoints</text></g>
+<path class="e s-ink" d="M590,76 L590,110" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ext" d="M280,138 L340,138" marker-end="url(#m-ext)"/><path class="e s-ink" d="M840,138 L900,138" marker-end="url(#m-ink)"/>
+<path class="e s-ink" d="M590,166 L590,190"/><path class="e s-ink" d="M162.5,190 L1017.5,190"/>
+<path class="e s-ink" d="M162.5,190 L162.5,210" marker-end="url(#m-ink)"/><path class="e s-ink" d="M447.5,190 L447.5,210" marker-end="url(#m-ink)"/><path class="e s-ink" d="M732.5,190 L732.5,210" marker-end="url(#m-ink)"/><path class="e s-ink" d="M1017.5,190 L1017.5,210" marker-end="url(#m-ink)"/>
+<g class="n n-agent"><rect x="30" y="210" width="265" height="70" rx="7"/><text class="t" x="162.5" y="240">Research + impact</text><text class="s" x="162.5" y="257">evidence · exposure · damage</text></g>
+<g class="n n-agent"><rect x="315" y="210" width="265" height="70" rx="7"/><text class="t" x="447.5" y="240">Intervention planning</text><text class="s" x="447.5" y="257">scenarios · optimization</text></g>
+<g class="n n-safe"><rect x="600" y="210" width="265" height="70" rx="7"/><text class="t" x="732.5" y="240">Independent validation</text><text class="s" x="732.5" y="257">support · methods · claims</text></g>
+<g class="n n-agent"><rect x="885" y="210" width="265" height="70" rx="7"/><text class="t" x="1017.5" y="240">Experiments + evaluation</text><text class="s" x="1017.5" y="257">protocols · outcomes</text></g>
+<path class="e s-accent dash" d="M295,245 L315,245" marker-end="url(#m-accent)" marker-start="url(#m-accent)"/><path class="e s-accent dash" d="M580,245 L600,245" marker-end="url(#m-accent)" marker-start="url(#m-accent)"/><path class="e s-accent dash" d="M865,245 L885,245" marker-end="url(#m-accent)" marker-start="url(#m-accent)"/>
+<g class="n n-store"><rect x="30" y="330" width="1120" height="60" rx="7"/><text class="t" x="590" y="355">Shared evidence and execution foundation</text><text class="s" x="590" y="372">Zetaris · World Model · H-MEM · LangGraph · versioned scientific tools</text></g>
+<path class="e s-store" d="M162.5,280 L162.5,330" marker-end="url(#m-store)" marker-start="url(#m-store)"/><path class="e s-store" d="M447.5,280 L447.5,330" marker-end="url(#m-store)" marker-start="url(#m-store)"/><path class="e s-store" d="M732.5,280 L732.5,330" marker-end="url(#m-store)" marker-start="url(#m-store)"/><path class="e s-store" d="M1017.5,280 L1017.5,330" marker-end="url(#m-store)" marker-start="url(#m-store)"/>
+</svg></div><figcaption><b>Fig. 1 · Departments over a shared harness.</b> Watchers and the scheduler create bounded jobs, and LangGraph owns transitions, checkpoints and recovery inside each job. The programme queue is a work backlog, not a second retry system. Worker protection and source prevention reuse this same foundation and add no mandatory model instances.</figcaption></figure>
+<div class="tbl "><table><thead><tr><th scope="col">Layer</th><th scope="col">v0.8 design boundary</th></tr></thead><tbody>
+<tr><td>Hackathon</td><td>One outdoor maintenance crew in Klang, Selangor; <code>plan_outdoor_work</code> for 08:00–12:00 local; feasible schedules compared using a named modeled PM2.5 exposure proxy</td></tr>
+<tr><td>Worker protection</td><td>Employer-led field pilot with actual activity, implementation and suitable exposure measurements</td></tr>
+<tr><td>Source prevention</td><td>Landscape, operator and funder partnership; preventive actions connected to verified delivery and evaluated consequences</td></tr>
+<tr><td>Shared foundation</td><td>Four departments reuse the four roles, Zetaris evidence reads, local H-MEM and World Model, and LangGraph execution</td></tr>
+<tr><td>Broader damage</td><td>Scoped health, direct-loss, disruption and climate accounting as reviewed methods and inputs become available; other harms and missing coverage stay visible</td></tr>
+</tbody></table></div>
+</section><section id="target" aria-labelledby="h-target"><h2 id="h-target"><span class="sn">§3</span>The 10% contract</h2>
+<p class="prose">“Reduce harm by 10%” means nothing until it says 10% of what, for whom, over which period, against which baseline. Three outcomes are easy to confuse, and each supports a different claim.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Outcome</th><th scope="col">Meaning</th><th scope="col">Supported claim</th></tr></thead><tbody>
+<tr><td>Ambient pollution</td><td>Outdoor concentration or a defined fire-attributable environmental measure</td><td>A change in the named measure, with source attribution where claimed</td></tr>
+<tr><td>Human exposure</td><td>Concentration encountered by a defined population across locations and activities</td><td>A modeled or measured exposure change; a health benefit needs its own model</td></tr>
+<tr><td>Damage</td><td>Specified health, economic, environmental or climate consequences</td><td>A scoped estimate or evaluated change under an applicable accounting method</td></tr>
+</tbody></table></div>
+<p class="statement"><b>Hackathon default.</b> One Klang maintenance crew, 08:00–12:00 local, measured with the concentration-time exposure proxy (§6). Compare feasible plans for the same required work under the same environmental scenario, and test whether at least a 10% projected improvement is supported. If it is not, that is a valid result.</p>
+<figure class="fig" id="fig-2"><div class="scroll"><svg class="dg" viewBox="0 0 1180 250" role="img" aria-label="A ladder of five claims from left to right: target, projected reduction, implemented action, measured change and attributable effect. Under each is the evidence it needs." style="max-width:1180px;min-width:860px">
+<text class="gl" x="20" y="34" text-anchor="start">FIVE DIFFERENT RESULTS · EACH NEEDS ITS OWN EVIDENCE</text>
+<g class="n n-doc"><path d="M20,56 H209 L220,67 V120 H20 Z"/><path class="fold" d="M209,56 V67 H220"/><text class="t" x="120" y="83">Target</text><text class="s" x="120" y="100">an objective to test</text></g>
+<g class="n n-agent"><rect x="255" y="56" width="200" height="64" rx="7"/><text class="t" x="355" y="83">Projected</text><text class="s" x="355" y="100">R = (B − I) / B</text></g>
+<g class="n n-svc"><rect x="490" y="56" width="200" height="64" rx="7"/><text class="t" x="590" y="83">Implemented</text><text class="s" x="590" y="100">what was actually done</text></g>
+<g class="n n-evid"><rect x="725" y="56" width="200" height="64" rx="7"/><text class="t" x="825" y="83">Measured</text><text class="s" x="825" y="100">observed change</text></g>
+<g class="n n-safe"><rect x="960" y="56" width="200" height="64" rx="7"/><text class="t" x="1060" y="83">Attributable</text><text class="s" x="1060" y="100">effect of the action</text></g>
+<path class="e s-ink" d="M220,88 L255,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M455,88 L490,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M690,88 L725,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M925,88 L960,88" marker-end="url(#m-ink)"/>
+<path class="e s-muted dash" d="M120,120 L120,142"/><path class="e s-muted dash" d="M355,120 L355,142"/><path class="e s-muted dash" d="M590,120 L590,142"/><path class="e s-muted dash" d="M825,120 L825,142"/><path class="e s-muted dash" d="M1060,120 L1060,142"/>
+<text class="note" x="120" y="162" text-anchor="middle">target_id, metric, population,</text><text class="note" x="120" y="180" text-anchor="middle">period, baseline, boundary</text>
+<text class="note" x="355" y="162" text-anchor="middle">same metric and horizon;</text><text class="note" x="355" y="180" text-anchor="middle">B positive and comparable</text>
+<text class="note" x="590" y="162" text-anchor="middle">authorized plan vs actual</text><text class="note" x="590" y="180" text-anchor="middle">tasks, timing, deviations</text>
+<text class="note" x="825" y="162" text-anchor="middle">calibrated monitors,</text><text class="note" x="825" y="180" text-anchor="middle">coverage, missingness</text>
+<text class="note" x="1060" y="162" text-anchor="middle">comparison design, weather,</text><text class="note" x="1060" y="180" text-anchor="middle">activity, spillovers</text>
+<text class="el c-accent" x="20" y="226" text-anchor="start">An approved plan has not produced a benefit yet, and a drop after implementation is not, on its own, an effect of the intervention.</text>
+</svg></div><figcaption><b>Fig. 2 · The claim ladder.</b> A projected 10%, an observed 10% decline and at least a 10% attributable effect are three different results. The dashboard and every trace keep them in separate fields. Comparable boundaries include rescheduled work, overtime, lost service, costs and exposure transferred elsewhere across the full assessment horizon.</figcaption></figure>
+<div class="callout"><b>Record before enabling any target claim.</b> <code>target_id</code>/version, owner and objective, metric and units, geography and population, fire/event and assessment periods, baseline, accounting coverage, available actions, budget, constraints, method and model versions, uncertainty, and the review and measurement plan. Every expansion gets its own contract: a field pilot keeps its crew metric, a prevention programme defines treated sources and downwind populations, and a damage programme selects categories and valuation rules.</div>
+</section><section id="departments" aria-labelledby="h-departments"><h2 id="h-departments"><span class="sn">§4</span>Four continuing departments<span class="new">new</span></h2>
+<p class="prose">Work is organized by scientific responsibility. Each department has a charter that persists between individual worker runs: goal, supported scope, backlog, source and tool access, output artifacts, review requirements, budgets, cadence and stopping conditions.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Department</th><th scope="col">Owns</th><th scope="col">First-pilot support</th></tr></thead><tbody>
+<tr><td>Research and Impact Measurement</td><td>Questions, source discovery, evidence applicability, exposure estimates, scoped damage models</td><td>HazeOps, Manager-routed research tasks, versioned calculation tools</td></tr>
+<tr><td>Intervention Discovery and Planning</td><td>Candidate actions, comparable scenarios, feasibility, projected progress toward the target</td><td>WorkerShield with explicit scheduling, scenario and optimization tools</td></tr>
+<tr><td>Independent Validation</td><td>Independent checks of source support, methods, assumptions, models and conclusions</td><td>EvidenceCritic, deterministic checks, appropriate domain review</td></tr>
+<tr><td>Experiments and Evaluation</td><td>Hypotheses, protocols, implementation records, observations, comparative outcome reports</td><td>Manager-coordinated tests with HazeOps and WorkerShield artifacts, plus an experiment registry</td></tr>
+</tbody></table></div>
+<figure class="fig" id="fig-3"><div class="scroll"><svg class="dg" viewBox="0 0 1180 340" role="img" aria-label="A loop of four steps: research, candidate interventions, reviewed experiments and measured outcomes, which feed back into updated research. Independent validation sits in the middle with dashed links to all four steps." style="max-width:1180px;min-width:860px">
+<g class="n n-agent"><rect x="120" y="40" width="280" height="64" rx="7"/><text class="t" x="260" y="67">1 · Research</text><text class="s" x="260" y="84">questions · sources · estimates</text></g>
+<g class="n n-agent"><rect x="780" y="40" width="280" height="64" rx="7"/><text class="t" x="920" y="67">2 · Candidate interventions</text><text class="s" x="920" y="84">catalogue · scenarios · feasibility</text></g>
+<g class="n n-agent"><rect x="780" y="250" width="280" height="64" rx="7"/><text class="t" x="920" y="277">3 · Reviewed experiments</text><text class="s" x="920" y="294">protocol · simulation · pilot</text></g>
+<g class="n n-evid"><rect x="120" y="250" width="280" height="64" rx="7"/><text class="t" x="260" y="277">4 · Measured outcomes</text><text class="s" x="260" y="294">implementation · observations</text></g>
+<g class="n n-safe"><rect x="450" y="145" width="280" height="70" rx="7"/><text class="t" x="590" y="175">Independent validation</text><text class="s" x="590" y="192">applies throughout · can block</text></g>
+<path class="e s-ink" d="M400,72 L780,72" marker-end="url(#m-ink)"/><rect class="lbg" x="485" y="57" width="210" height="15" rx="3"/><text class="el" x="590" y="68" text-anchor="middle">exact artifact revisions</text>
+<path class="e s-ink" d="M920,104 L920,250" marker-end="url(#m-ink)"/>
+<path class="e s-ink" d="M780,282 L400,282" marker-end="url(#m-ink)"/>
+<path class="e s-accent" d="M260,250 L260,104" marker-end="url(#m-accent)"/><text class="el c-accent" x="268" y="180" text-anchor="start">updated research</text>
+<path class="e s-safe dash" d="M450,150 L400,104" marker-end="url(#m-safe)"/><path class="e s-safe dash" d="M730,150 L780,104" marker-end="url(#m-safe)"/><path class="e s-safe dash" d="M730,210 L780,250" marker-end="url(#m-safe)"/><path class="e s-safe dash" d="M450,210 L400,250" marker-end="url(#m-safe)"/>
+</svg></div><figcaption><b>Fig. 3 · The core loop.</b> Researchers and planners can request validation, but they cannot approve their own scientific changes. Experiment owners produce records, and independent validation reviews both design and interpretation. Every handoff carries exact artifact and evidence revisions.</figcaption></figure>
+</section><section id="research" aria-labelledby="h-research"><h2 id="h-research"><span class="sn">§5</span>Research and impact measurement</h2>
+<p class="prose">This department keeps the best supported estimate for a stated question, place, population and period. It keeps competing explanations and unresolved uncertainty visible instead of merging findings into an apparent consensus.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Building block</th><th scope="col">Required behaviour</th></tr></thead><tbody>
+<tr><td>Source discovery</td><td>Approved research APIs, official sources, environmental feeds and relevant news; full-text access, licences, rate limits and coverage stated explicitly</td></tr>
+<tr><td>Paper extraction</td><td>Title, DOI/URL, version, publication and retrieval times, exact passage, section/page, study design, population, geography, conditions, limitations</td></tr>
+<tr><td>Applicability review</td><td>Does the finding apply to this pilot? Keep association, causal claim, model assumption and effectiveness estimate apart</td></tr>
+<tr><td>Impact tools</td><td>Reviewed numerical methods returning input revisions, method version, outputs, uncertainty and missing inputs</td></tr>
+</tbody></table></div>
+<figure class="fig" id="fig-4"><div class="scroll"><svg class="dg" viewBox="0 0 1180 240" role="img" aria-label="Research evidence moves from discovered to extracted, candidate, reviewed and accepted for a stated use. From candidate onwards it can instead become rejected, superseded, withdrawn or stale, and stays retrievable." style="max-width:1180px;min-width:860px">
+<g class="n n-ext"><rect x="20" y="50" width="190" height="56" rx="7"/><text class="tm" x="115" y="74">discovered</text><text class="s" x="115" y="91">API · feed · news lead</text></g>
+<g class="n n-svc"><rect x="252" y="50" width="190" height="56" rx="7"/><text class="tm" x="347" y="74">extracted</text><text class="s" x="347" y="91">passage · design · scope</text></g>
+<g class="n n-evid"><rect x="484" y="50" width="190" height="56" rx="7"/><text class="tm" x="579" y="74">candidate</text><text class="s" x="579" y="91">not yet usable</text></g>
+<g class="n n-safe"><rect x="716" y="50" width="190" height="56" rx="7"/><text class="tm" x="811" y="74">reviewed</text><text class="s" x="811" y="91">scope + reviewer</text></g>
+<g class="n n-doc"><path d="M948,50 H1149 L1160,61 V106 H948 Z"/><path class="fold" d="M1149,50 V61 H1160"/><text class="tm" x="1054" y="74">accepted</text><text class="s" x="1054" y="91">for a stated use</text></g>
+<path class="e s-ink" d="M210,78 L252,78" marker-end="url(#m-ink)"/><path class="e s-ink" d="M442,78 L484,78" marker-end="url(#m-ink)"/><path class="e s-ink" d="M674,78 L716,78" marker-end="url(#m-ink)"/><path class="e s-ink" d="M906,78 L948,78" marker-end="url(#m-ink)"/>
+<path class="e s-muted" d="M579,106 L579,140"/><path class="e s-muted" d="M347,140 L1043,140"/>
+<path class="e s-muted" d="M347,140 L347,170" marker-end="url(#m-muted)"/><path class="e s-muted" d="M579,140 L579,170" marker-end="url(#m-muted)"/><path class="e s-muted" d="M811,140 L811,170" marker-end="url(#m-muted)"/><path class="e s-muted" d="M1043,140 L1043,170" marker-end="url(#m-muted)"/>
+<g class="n n-svc"><rect x="252" y="170" width="190" height="44" rx="7"/><text class="tm" x="347" y="197">rejected</text></g>
+<g class="n n-svc"><rect x="484" y="170" width="190" height="44" rx="7"/><text class="tm" x="579" y="197">superseded</text></g>
+<g class="n n-safe"><rect x="716" y="170" width="190" height="44" rx="7"/><text class="tm" x="811" y="197">withdrawn</text></g>
+<g class="n n-evid"><rect x="948" y="170" width="212" height="44" rx="7"/><text class="tm" x="1054" y="197">stale</text></g>
+<text class="gl" x="20" y="190" text-anchor="start">OFF-RAMPS</text><text class="note" x="20" y="208" text-anchor="start">stay retrievable</text>
+</svg></div><figcaption><b>Fig. 4 · Research evidence lifecycle.</b> Acceptance has a scope and a reviewer; it is not a universal scientific endorsement. News can point to an event or a lead, but a quantitative claim needs the underlying study or official record. For example, a new filtration study becomes candidate evidence first, and it only changes an accepted parameter after its setting has been reviewed.</figcaption></figure>
+</section><section id="scenarios" aria-labelledby="h-scenarios"><h2 id="h-scenarios"><span class="sn">§6</span>Interventions and scenarios</h2>
+<p class="prose">Scientific estimation is an explicit tool service, separate from language generation and from evidence storage. The pilot needs two formulas, both computed by versioned deterministic tools and never by a model’s prose.</p>
+<div class="two"><div><h3>Crew exposure proxy</h3><pre><code class="lang-text">E = Σ segments ( workers × duration × effective concentration )
+units: person-hours × µg/m³</code></pre>
+<p class="prose">This is a concentration-time proxy. It is not inhaled dose, a safe-duration rule or a health-damage estimate. Missing coverage stays a gap; it is never treated as a zero concentration.</p></div>
+<div><h3>Projected reduction</h3><pre><code class="lang-text">R = (B − I) / B
+B = baseline estimate, I = intervention estimate
+same metric, population and assessment horizon
+report 100 × R only when B is positive, valid, comparable</code></pre>
+<p class="prose">Overlapping controls are never added as percentages, and a study result is never carried beyond the setting it supports.</p></div></div>
+<figure class="fig" id="fig-5"><div class="scroll"><svg class="dg" viewBox="0 0 1180 380" role="img" aria-label="Horizontal bars of crew exposure proxy with synthetic values. Baseline schedule 960. Plan A task reorder 880, an 8.3 percent reduction, short of the target. Plan B reorder plus controls 820, a 14.6 percent reduction. Plan C moving the shift is infeasible and not ranked. A dashed target line marks 864, ten percent below baseline." style="max-width:1180px;min-width:860px">
+<text class="axt" x="20" y="90">Baseline schedule</text><text class="axt" x="20" y="160">A · task reorder</text><text class="axt" x="20" y="230">B · reorder + controls</text><text class="axt" x="20" y="300">C · shift moved</text>
+<g class="n n-svc"><rect x="200" y="70" width="864" height="30" rx="4"/></g><text class="pl" x="1056" y="90" text-anchor="end">960 · reference B</text>
+<g class="n n-agent"><rect x="200" y="140" width="792" height="30" rx="4"/></g><text class="pl" x="984" y="160" text-anchor="end">880 · R = 8.3%</text>
+<g class="n n-agent"><rect x="200" y="210" width="738" height="30" rx="4"/></g><text class="pl" x="930" y="230" text-anchor="end">820 · R = 14.6%</text>
+<g class="n n-safe"><rect class="dash" x="200" y="280" width="684" height="30" rx="4"/></g><text class="pl" x="876" y="300" text-anchor="end">needs overtime · infeasible · not ranked</text>
+<path class="thr" d="M977.6,52 L977.6,322"/><text class="zl" x="985" y="48">10% TARGET · I ≤ 864</text>
+<path class="axis" d="M200,330 L1100,330"/>
+<path class="axis" d="M200,330 V336 M380,330 V336 M560,330 V336 M740,330 V336 M920,330 V336 M1100,330 V336"/>
+<text class="tick" x="200" y="350" text-anchor="middle">0</text><text class="tick" x="380" y="350" text-anchor="middle">200</text><text class="tick" x="560" y="350" text-anchor="middle">400</text><text class="tick" x="740" y="350" text-anchor="middle">600</text><text class="tick" x="920" y="350" text-anchor="middle">800</text><text class="tick" x="1100" y="350" text-anchor="middle">1000</text>
+<text class="axt" x="650" y="374" text-anchor="middle">Crew exposure proxy E (person-hours × µg/m³) · synthetic values to illustrate R, not data</text>
+</svg></div><figcaption><b>Fig. 5 · What the planner returns.</b> Every plan finishes the same required work under the same environmental scenario. Plan A is feasible but falls short of the target. Plan B clears it, so long as its control assumptions hold. Plan C would only work by adding overtime, so it is reported as infeasible rather than ranked. Each of the planner’s four possible outcomes is shown honestly: supported candidate, needs more evidence, target infeasible under current constraints, or insufficient evidence to quantify.</figcaption></figure>
+<div class="tbl "><table><thead><tr><th scope="col">Step</th><th scope="col">Required behaviour</th></tr></thead><tbody>
+<tr><td>Fix a baseline</td><td>Version the no-intervention schedule; keep the same environmental scenario and common task requirements for every alternative</td></tr>
+<tr><td>Construct feasible actions</td><td>Explicit timing, staffing, availability, cost, capacity and guidance constraints; surface rescheduling, lost work and transferred exposure</td></tr>
+<tr><td>Estimate effects</td><td>Reviewed effectiveness assumptions run through the exposure tools; no invented safe durations, equipment or approved closures</td></tr>
+<tr><td>Compare uncertainty</td><td>Model-supported intervals or sensitivity scenarios; forecast interval, parameter uncertainty and analyst-chosen range kept distinct</td></tr>
+<tr><td>Rank and explain</td><td>Feasible alternatives, expected effect, resources, distribution of benefit and the assumption that changes the ranking</td></tr>
+</tbody></table></div>
+<p class="prose">A scenario output carries <code>scenario_id</code>/version, <code>target_id</code>, <code>baseline_ref</code>, input snapshot, model and parameter versions, actions, feasibility findings, result units, reduction, uncertainty basis, assumptions and review status. Workplace comparisons share common ambient inputs. Prevention comparisons hold exogenous weather comparable while allowing emissions and pollution to change.</p>
+<h3>Model and parameter registry</h3>
+<p class="prose">Every scientific tool records <code>model_id</code>/version, intended use, input and output schemas, references, parameter sources, applicability, review status, evaluation evidence and uncertainty method. The hackathon ships the scoped exposure proxy only. Haze attribution needs a defined non-haze counterfactual; health impact needs a reviewed relationship with baseline rates and expert support; economic impact needs a stated consequence, valuation year, horizon and accounting rules.</p>
+</section><section id="validation" aria-labelledby="h-validation"><h2 id="h-validation"><span class="sn">§7</span>Validation and experiments</h2>
+<p class="prose">EvidenceCritic keeps its authority: it independently retrieves pinned evidence through Zetaris and returns approve, revise or <code>insufficient_evidence</code>. v0.8 widens what it checks, from source support to method, calculation and interpretation. A second model’s opinion is not scientific validation on its own; checks are deterministic, reproduced, benchmarked or reviewed by an expert, and the record says which.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Review layer</th><th scope="col">What it checks</th></tr></thead><tbody>
+<tr><td>Source and claim support</td><td>Exact revisions, passage-to-claim support, source quality, conflicts, corrections, scope and freshness</td></tr>
+<tr><td>Method and model applicability</td><td>Population, geography, exposure period, study design, model assumptions, whether the method supports the inference</td></tr>
+<tr><td>Calculation correctness</td><td>Reproducible inputs, units, aggregation, baselines, missingness, uncertainty, sensitivity, valid percentages</td></tr>
+<tr><td>Experiment interpretation</td><td>Testable hypothesis, comparison method, implementation fidelity, external changes, limits of causal conclusions</td></tr>
+<tr><td>Publication and execution gate</td><td>Exact artifact binding, required reviews, current evidence, configured permissions, separate operational authorization</td></tr>
+</tbody></table></div>
+<div class="callout"><b>Supported is not authorized.</b> Being scientifically supported does not mean being operationally authorized, and permission to run a pilot does not show that its hypothesis is correct. Every review records the reviewer or review execution, the artifact, evidence and model versions, the results, any unresolved findings and its expiry. Any substantive revision invalidates an approval it is incompatible with.</div>
+<h3>Experiment lifecycle</h3>
+<p class="prose"><code>hypothesis → protocol → independent design review → simulation or authorized field pilot → implementation record → observations → comparative evaluation → independent result review → reviewed knowledge update</code></p>
+<div class="tbl "><table><thead><tr><th scope="col">Artifact</th><th scope="col">Required content</th></tr></thead><tbody>
+<tr><td>Experiment protocol</td><td>Hypothesis, metric, baseline or comparison, population, period, measurements, resources, owner, review requirements, stopping criteria</td></tr>
+<tr><td>Implementation record</td><td>What was authorized, what was actually done, when and by whom, controls used, deviations, task movement, delivery evidence</td></tr>
+<tr><td>Observation set</td><td>Measured values, calibration and coverage, units, timing, provenance, missingness, relevant environmental or operational changes</td></tr>
+<tr><td>Outcome report</td><td>Predicted effects, observed changes, comparative estimate, uncertainty, limitations, fidelity, whether attribution is justified</td></tr>
+</tbody></table></div>
+<p class="prose">A simulation tests behaviour under a model; a historical replay tests the pipeline using only information available then. Neither establishes the real-world benefit of an unimplemented intervention. Validated findings may update rankings, model assumptions or H-MEM lessons, with prior versions and the review disposition kept; rejected or uncertain findings remain retrievable as such.</p>
+</section><section id="programme" aria-labelledby="h-programme"><h2 id="h-programme"><span class="sn">§8</span>Continuing operation</h2>
+<p class="prose">The programme runs for days; individual runs stay bounded, recoverable and auditable. “Continuously operating” means scheduled checks and meaningful event triggers, never an unbounded thought loop. A run ends on completion, exhausted budget or deadline, an unresolved dependency, an explicit pause or a decision only a person can make, and work that is waiting does not hold a specialist slot.</p>
+<figure class="fig" id="fig-6"><div class="scroll"><svg class="dg" viewBox="0 0 1180 400" role="img" aria-label="Left: four stacked ownership layers, programme scheduler, LangGraph, Haze runtime and World Model plus H-MEM. Right: the source pipeline from source watcher to cursor and change detector to affected-work matcher to durable backlog, which feeds the programme scheduler." style="max-width:1180px;min-width:860px">
+<text class="gl" x="20" y="22" text-anchor="start">WHO OWNS WHAT</text><text class="gl" x="700" y="22" text-anchor="start">HOW CHANGES BECOME WORK</text>
+<g class="n n-svc"><rect x="20" y="30" width="620" height="60" rx="7"/><text class="t" x="330" y="55">Programme scheduler</text><text class="s" x="330" y="72">which job runs and when · catch-up · coalescing · priorities</text></g>
+<g class="n n-svc"><rect x="20" y="120" width="620" height="60" rx="7"/><text class="t" x="330" y="145">LangGraph</text><text class="s" x="330" y="162">typed transitions · per-thread checkpoints · retries · resume</text></g>
+<g class="n n-safe"><rect x="20" y="210" width="620" height="60" rx="7"/><text class="t" x="330" y="235">Haze runtime</text><text class="s" x="330" y="252">permissions · atomic budgets · deadlines · freshness · idempotent writes</text></g>
+<g class="n n-store"><rect x="20" y="300" width="620" height="60" rx="7"/><text class="t" x="330" y="325">World Model + H-MEM</text><text class="s" x="330" y="342">canonical evidence and decisions · reviewed memory</text></g>
+<path class="e s-ink" d="M330,90 L330,120" marker-end="url(#m-ink)"/><path class="e s-ink" d="M330,180 L330,210" marker-end="url(#m-ink)"/><path class="e s-store" d="M330,270 L330,300" marker-end="url(#m-store)" marker-start="url(#m-store)"/>
+<g class="n n-ext"><rect x="720" y="30" width="440" height="56" rx="7"/><text class="t" x="940" y="53">Source watcher</text><text class="s" x="940" y="70">source · cadence · scope · rate limit · last success</text></g>
+<g class="n n-svc"><rect x="720" y="110" width="440" height="56" rx="7"/><text class="t" x="940" y="133">Cursor + change detector</text><text class="s" x="940" y="150">new · duplicate · revised · withdrawn · deleted</text></g>
+<g class="n n-svc"><rect x="720" y="190" width="440" height="56" rx="7"/><text class="t" x="940" y="213">Affected-work matcher</text><text class="s" x="940" y="230">input edges + topic / region / time subscriptions</text></g>
+<g class="n n-svc"><rect x="720" y="270" width="440" height="56" rx="7"/><text class="t" x="940" y="293">Durable backlog</text><text class="s" x="940" y="310">priorities · leases · operation keys · bounded</text></g>
+<path class="e s-ink" d="M940,86 L940,110" marker-end="url(#m-ink)"/><path class="e s-ink" d="M940,166 L940,190" marker-end="url(#m-ink)"/><path class="e s-ink" d="M940,246 L940,270" marker-end="url(#m-ink)"/>
+<path class="e s-accent" d="M720,298 L680,298 L680,60 L640,60" marker-end="url(#m-accent)"/><text class="el c-accent" x="688" y="190" text-anchor="start" transform="rotate(90 688 190)">jobs</text>
+<text class="note" x="20" y="390" text-anchor="start">Per run: 300 s · specialist task 120 s · source call 20 s, ≤ 2 retries · hosted model 60 s · 2 specialists · 2 feedback rounds. Programme work persists through linked jobs.</text>
+</svg></div><figcaption><b>Fig. 6 · One owner per concern.</b> The scheduler decides which job runs and when, and LangGraph owns execution inside it. Haze enforces authorization, budgets, freshness and idempotent writes. Detected changes are committed to World Model as evidence before matching, and the cursor uses overlapping catch-up windows to pick up late arrivals. New information always enters as candidate evidence, and only the smallest affected set of work is rerun.</figcaption></figure>
+<div class="tbl "><table><thead><tr><th scope="col">Programme responsibility</th><th scope="col">Required behaviour</th></tr></thead><tbody>
+<tr><td>Goals and targets</td><td>Versioned target contract, supported scope, baseline and current delivery stage; unanswered questions kept apart from accepted findings</td></tr>
+<tr><td>Research backlog</td><td>Questions, hypotheses, missing evidence, candidate interventions and experiment proposals, each with owner, priority and dependencies</td></tr>
+<tr><td>Budget and scheduling</td><td>Programme and per-job resources; reserved review and synthesis capacity; cadence, deadlines, stop conditions, pause and resume</td></tr>
+<tr><td>Cross-department handoff</td><td>Bounded tasks to existing profiles and tools, exact artifact references, independent review requirements, escalation</td></tr>
+<tr><td>User accountability</td><td>Decisions needed, source gaps, failures, revisions and progress; changes to scope, metric, budget or permission become explicit programme revisions</td></tr>
+</tbody></table></div>
+<div class="callout"><b>Freshness is a visible contract.</b> For every source the workspace shows the last attempted check, the last successful check, the newest source timestamp, the accepted-through watermark, the next check and any known gaps. No monitor guarantees it will see every new paper or news item. Re-fetching an old record does not reset its observation age, and a failed source stays visibly stale or partial.</div>
+</section><section id="evidence" aria-labelledby="h-evidence"><h2 id="h-evidence"><span class="sn">§9</span>Shared evidence</h2>
+<p class="prose">There is still one canonical factual foundation. The domain is wider now: World Model holds programmes, districts, stations, observations, forecast runs, papers, guidance, scientific model versions, scenarios, experiments, implementations and conclusion revisions, all with stable IDs and rebuildable projections.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Component</th><th scope="col">Responsibility</th></tr></thead><tbody>
+<tr><td>World Model write path</td><td>Normalize, resolve stable IDs, validate provenance, append evidence revisions, rebuild projections; owns canonical evidence and decision state</td></tr>
+<tr><td>World Model read path</td><td>Scoped immutable snapshots and entity context; versioned views registered with Zetaris; projection watermarks checked before publication</td></tr>
+<tr><td>H-MEM capture</td><td>Reviewed decisions, corrections, preferences and procedural lessons with scope, review state, provenance and evidence links</td></tr>
+<tr><td>H-MEM recall and audit</td><td>Memory IDs, scope, retrieval rationale and supporting revisions; capture, read, feedback and supersession audited</td></tr>
+</tbody></table></div>
+<div class="two"><div><h3>Time semantics</h3><ul class="prose">
+<li>Observation interval, publication or issue time, applicability interval, retrieval time and system acceptance time are stored separately.</li>
+<li>UTC plus original timezone metadata on every record.</li>
+<li>Concentrations, indices and aggregation periods are never mixed.</li>
+</ul></div>
+<div><h3>Lifecycle</h3><ul class="prose">
+<li>Conclusion states: <code>current</code>, <code>needs_review</code>, <code>stale</code>, <code>superseded</code>, <code>withdrawn</code>, <code>insufficient_evidence</code>.</li>
+<li>Research acceptance is a separate state; an updated paper never silently overwrites a model or an old estimate.</li>
+<li>A correction or retraction marks affected conclusions and linked memories for review.</li>
+</ul></div></div>
+<p class="statement"><b>Reviewed memory is not live science.</b> Before factual memory is reused, its scope, validity, supporting evidence and conclusion status are checked. H-MEM ranking confidence is not scientific confidence, and automatic promotion of synthesized lessons stays off for the first pilot.</p>
+</section><section id="workspace" aria-labelledby="h-workspace"><h2 id="h-workspace"><span class="sn">§10</span>User workspace<span class="new">new</span></h2>
+<p class="prose">Users interact with one programme, and the departments coordinate behind a shared workspace. The first UI slice has four parts: an overview, an embedded chat, an activity timeline and an evidence panel. Department and experiment views extend the same workspace later.</p>
+<figure class="fig" id="fig-7"><div class="scroll"><svg class="dg" viewBox="0 0 1180 430" role="img" aria-label="Wireframe of the workspace. A header bar names the Klang pilot with scope, target, last check and controls. On the left, three tiles for conditions and coverage, exposure estimates, and projected versus measured outcomes, then a department activity timeline and an evidence panel. On the right, an ask and investigate chat with example questions." style="max-width:1180px;min-width:860px">
+<g class="n n-doc"><rect x="20" y="20" width="1140" height="390" rx="10"/></g>
+<g class="n n-svc"><rect x="40" y="36" width="1100" height="48" rx="7"/><text class="t" x="590" y="57">HAZE PROGRAMME · Klang pilot</text><text class="s" x="590" y="73">scope · target · last checked · pause / resume · budget</text></g>
+<g class="n n-ext"><rect x="40" y="104" width="220" height="80" rx="7"/><text class="t" x="150" y="138">Conditions</text><text class="s" x="150" y="156">coverage · freshness</text></g>
+<g class="n n-evid"><rect x="280" y="104" width="220" height="80" rx="7"/><text class="t" x="390" y="138">Exposure estimates</text><text class="s" x="390" y="156">baseline vs plans</text></g>
+<g class="n n-agent"><rect x="520" y="104" width="220" height="80" rx="7"/><text class="t" x="630" y="138">Projected | measured</text><text class="s" x="630" y="156">separate fields</text></g>
+<g class="n n-svc"><rect x="40" y="204" width="700" height="90" rx="7"/><text class="t" x="390" y="243">Department activity + experiments + review</text><text class="s" x="390" y="261">open work · findings · blockers · proposed tests · pending decisions</text></g>
+<g class="n n-evid"><rect x="40" y="314" width="700" height="76" rx="7"/><text class="t" x="390" y="346">Evidence panel</text><text class="s" x="390" y="364">sources · passages · inputs · assumptions · uncertainty · revisions</text></g>
+<g class="n n-user"><rect x="760" y="104" width="380" height="286" rx="7"/><text class="t" x="950" y="130">Ask / investigate</text></g>
+<g class="n n-svc"><rect x="840" y="146" width="280" height="32" rx="6"/><text class="s" x="980" y="166">Why did this change?</text></g>
+<g class="n n-agent"><rect x="780" y="190" width="300" height="32" rx="6"/><text class="s" x="930" y="210">new forecast → plan rev 2 · evidence</text></g>
+<g class="n n-svc"><rect x="840" y="234" width="280" height="32" rx="6"/><text class="s" x="980" y="254">Compare these plans.</text></g>
+<g class="n n-svc"><rect x="840" y="278" width="280" height="32" rx="6"/><text class="s" x="980" y="298">Inspect supporting evidence.</text></g>
+<g class="n n-doc"><rect x="780" y="340" width="340" height="34" rx="6"/><text class="s" x="950" y="361">bounded request · scope changes need an action</text></g>
+</svg></div><figcaption><b>Fig. 7 · First UI slice.</b> Every important result opens its sources, passages, calculation inputs, assumptions, uncertainty and revision history. The workspace always tells apart a running job, a stale source, a pending review and insufficient evidence. Activity shows progress and artifacts, never private model reasoning.</figcaption></figure>
+<div class="tbl "><table><thead><tr><th scope="col">Surface</th><th scope="col">User interaction</th></tr></thead><tbody>
+<tr><td>Overview dashboard</td><td>Conditions and coverage, scoped estimates, target, projected benefit, measured outcomes, freshness, failures, pending decisions</td></tr>
+<tr><td>Chat / investigation</td><td>Ask why, assign bounded research, compare plans, request revisions, open evidence; a scope, budget or permission change becomes a recorded action, not an implicit text instruction</td></tr>
+<tr><td>Department workspaces</td><td>Current questions, findings, backlog, blockers and handoffs</td></tr>
+<tr><td>Experiments and review</td><td>Protocols, validation findings, implementation state and outcome reports; operational authorization bound to the exact proposed action</td></tr>
+</tbody></table></div>
+</section><section id="pilot" aria-labelledby="h-pilot"><h2 id="h-pilot"><span class="sn">§11</span>First pilot workflow</h2>
+<p class="prose">The original four-role workflow is kept and extended with a scoped impact comparison. Supported contract: <code>plan_outdoor_work</code>, <code>my-selangor-klang</code>, one outdoor maintenance crew, 08:00–12:00, <code>Asia/Kuala_Lumpur</code>. Other operations and districts stay unsupported until explicitly enabled.</p>
+<figure class="fig" id="fig-8"><div class="scroll"><svg class="dg" viewBox="0 0 1180 350" role="img" aria-label="Six pilot steps: admit and recall, assess, propose and calculate, independently review, publish and learn, update and evaluate. Under each is the component that does it and the proof it saves. An arrow from the update step loops back to assess for a linked rerun." style="max-width:1180px;min-width:860px">
+<g class="n n-user"><rect x="20" y="56" width="170" height="64" rx="7"/><text class="t" x="105" y="79">1 · Admit + recall</text><text class="s" x="105" y="93.6">scope · target · B</text><text class="s" x="105" y="107.6">H-MEM + snapshot</text></g>
+<g class="n n-agent"><rect x="214" y="56" width="170" height="64" rx="7"/><text class="t" x="299" y="79">2 · Assess</text><text class="s" x="299" y="93.6">HazeOps via Zetaris</text><text class="s" x="299" y="107.6">whole-shift coverage</text></g>
+<g class="n n-agent"><rect x="408" y="56" width="170" height="64" rx="7"/><text class="t" x="493" y="79">3 · Propose + calc</text><text class="s" x="493" y="93.6">WorkerShield + tools</text><text class="s" x="493" y="107.6">baseline vs scenarios</text></g>
+<g class="n n-agent"><rect x="602" y="56" width="170" height="64" rx="7"/><text class="t" x="687" y="79">4 · Review</text><text class="s" x="687" y="93.6">EvidenceCritic</text><text class="s" x="687" y="107.6">calcs + claim support</text></g>
+<g class="n n-safe"><rect x="796" y="56" width="170" height="64" rx="7"/><text class="t" x="881" y="79">5 · Publish + learn</text><text class="s" x="881" y="93.6">gate · watermarks</text><text class="s" x="881" y="107.6">reviewed memory only</text></g>
+<g class="n n-svc"><rect x="990" y="56" width="170" height="64" rx="7"/><text class="t" x="1075" y="79">6 · Update</text><text class="s" x="1075" y="93.6">linked revision</text><text class="s" x="1075" y="107.6">labelled simulation</text></g>
+<path class="e s-ink" d="M190,88 L214,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M384,88 L408,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M578,88 L602,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M772,88 L796,88" marker-end="url(#m-ink)"/><path class="e s-ink" d="M966,88 L990,88" marker-end="url(#m-ink)"/>
+<g class="n n-svc"><rect x="20" y="170" width="170" height="58" rx="7"/><text class="t" x="105" y="197">Manager</text><text class="s" x="105" y="211.6">validate node</text></g>
+<g class="n n-ext"><rect x="214" y="170" width="170" height="58" rx="7"/><text class="t" x="299" y="197">Zetaris</text><text class="s" x="299" y="211.6">typed views</text></g>
+<g class="n n-svc"><rect x="408" y="170" width="170" height="58" rx="7"/><text class="t" x="493" y="197">Exposure tool</text><text class="s" x="493" y="211.6">E = Σ w × t × c</text></g>
+<g class="n n-ext"><rect x="602" y="170" width="170" height="58" rx="7"/><text class="t" x="687" y="197">Zetaris</text><text class="s" x="687" y="211.6">pinned re-query</text></g>
+<g class="n n-safe"><rect x="796" y="170" width="170" height="58" rx="7"/><text class="t" x="881" y="197">Haze gate</text><text class="s" x="881" y="211.6">freshness · binding</text></g>
+<g class="n n-svc"><rect x="990" y="170" width="170" height="58" rx="7"/><text class="t" x="1075" y="197">Watchers</text><text class="s" x="1075" y="211.6">tick · catch-up</text></g>
+<path class="e s-ink" d="M105,120 L105,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ink" d="M299,120 L299,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ink" d="M493,120 L493,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ink" d="M687,120 L687,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ink" d="M881,120 L881,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/><path class="e s-ink" d="M1075,120 L1075,170" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/>
+<g class="n n-evid"><path d="M20,278 H179 L190,289 V330 H20 Z"/><path class="fold" d="M179,278 V289 H190"/><text class="t" x="105" y="300">target + snapshot</text><text class="s" x="105" y="314.6">baseline_ref</text></g>
+<g class="n n-evid"><path d="M214,278 H373 L384,289 V330 H214 Z"/><path class="fold" d="M373,278 V289 H384"/><text class="t" x="299" y="300">assessment</text><text class="s" x="299" y="314.6">covered intervals</text></g>
+<g class="n n-evid"><path d="M408,278 H567 L578,289 V330 H408 Z"/><path class="fold" d="M567,278 V289 H578"/><text class="t" x="493" y="300">scenario set</text><text class="s" x="493" y="314.6">units · versions</text></g>
+<g class="n n-evid"><path d="M602,278 H761 L772,289 V330 H602 Z"/><path class="fold" d="M761,278 V289 H772"/><text class="t" x="687" y="300">critic decision</text><text class="s" x="687" y="314.6">blocking findings</text></g>
+<g class="n n-evid"><path d="M796,278 H955 L966,289 V330 H796 Z"/><path class="fold" d="M955,278 V289 H966"/><text class="t" x="881" y="300">conclusion rev</text><text class="s" x="881" y="314.6">projection watermark</text></g>
+<g class="n n-evid"><path d="M990,278 H1149 L1160,289 V330 H990 Z"/><path class="fold" d="M1149,278 V289 H1160"/><text class="t" x="1075" y="300">revision n+1</text><text class="s" x="1075" y="314.6">old/new reason</text></g>
+<path class="e s-muted dash" d="M105,228 L105,278" marker-end="url(#m-muted)"/><path class="e s-muted dash" d="M299,228 L299,278" marker-end="url(#m-muted)"/><path class="e s-muted dash" d="M493,228 L493,278" marker-end="url(#m-muted)"/><path class="e s-muted dash" d="M687,228 L687,278" marker-end="url(#m-muted)"/><path class="e s-muted dash" d="M881,228 L881,278" marker-end="url(#m-muted)"/><path class="e s-muted dash" d="M1075,228 L1075,278" marker-end="url(#m-muted)"/>
+<path class="e s-accent" d="M1075,56 L1075,30 L299,30 L299,56" marker-end="url(#m-accent)"/><rect class="lbg" x="557" y="23" width="260" height="15" rx="3"/><text class="el c-accent" x="687" y="34" text-anchor="middle">relevant evidence → linked rerun</text>
+<text class="gl" x="20" y="34" text-anchor="start">PILOT STEP</text><text class="gl" x="20" y="158" text-anchor="start">WHO DOES IT</text><text class="gl" x="20" y="266" text-anchor="start">PROOF SAVED</text>
+</svg></div><figcaption><b>Fig. 8 · Plan, explain, compare.</b> Step 3 adds the versioned exposure tool beside WorkerShield, and the critic in step 4 rechecks the calculations as well as the citations. The gate in step 5 checks that projections cover the pinned accepted evidence; if they do not, it blocks or returns partial. A forecast that covers only 10:00–12:00 cannot justify the full shift, so the revised validity names the time left unserved.</figcaption></figure>
+<div class="two"><div><h3>Pilot request</h3><pre><code class="lang-json">{ "run_id": "pilot-001",
+  "input": {
+    "operation": "plan_outdoor_work",
+    "district_id": "my-selangor-klang",
+    "timezone": "Asia/Kuala_Lumpur",
+    "time_window": {
+      "start": "2026-10-25T08:00:00+08:00",
+      "end":   "2026-10-25T12:00:00+08:00" },
+    "query": "Compare feasible crew plans; explain why." },
+  "options": { "sample_mode": true } }</code></pre></div>
+<div><h3>Binding programme context</h3><ul class="prose">
+<li><code>programme_id</code>, <code>target_id</code>, <code>baseline_ref</code> and experiment references bind through a declared schema extension or server-side programme context.</li>
+<li>An old-style request is never silently reinterpreted as an unrestricted research instruction.</li>
+<li>The first run may end in <code>insufficient_evidence</code> or an infeasible target. It is still useful when it names the missing evidence, the blocking constraint and the next useful test.</li>
+<li>This design asserts nothing about current Klang air conditions.</li>
+</ul></div></div>
+</section><section id="capabilities" aria-labelledby="h-capabilities"><h2 id="h-capabilities"><span class="sn">§12</span>Capabilities and peers</h2>
+<p class="prose">Departments own responsibilities, and specialist profiles do bounded work under explicit activation contracts. Expansion uses services before it adds profiles: switching on a profile does not supply an operator, a hydrological model, funding authority or verified delivery.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Capability</th><th scope="col">Responsibility</th><th scope="col">Activation</th></tr></thead><tbody>
+<tr><td>HazeOps</td><td>Air-quality evidence, coverage and forecast interpretation</td><td><span class="req">Klang pilot</span> · execution proof pending</td></tr>
+<tr><td>WorkerShield</td><td>Feasible workplace options, guidance and scenario comparisons</td><td><span class="req">Klang pilot</span> · field use needs the §17 protocol</td></tr>
+<tr><td>PeatFire Sentinel</td><td>Investigate fire signals, prioritize verification; later inputs to prevention planning</td><td>Later; detection supplies no intervention or impact model</td></tr>
+<tr><td>HazeShield</td><td>Community resource matching and feasible allocations</td><td>Later, with inventory, operator, benefit metric and evaluation</td></tr>
+<tr><td>HazeInfo</td><td>Audience-specific factual explanations</td><td>Later standalone; supported explanation already in current outputs</td></tr>
+<tr><td>CommunityAlert</td><td>Reviewed message preparation and delivery lifecycle</td><td>Later; no public sending in the pilot</td></tr>
+</tbody></table></div>
+<div class="tbl "><table><thead><tr><th scope="col">Peer pair</th><th scope="col">Purpose</th><th scope="col">Phase</th></tr></thead><tbody>
+<tr><td>WorkerShield ↔ HazeOps</td><td>Site and shift relevance, missing intervals, interpretation</td><td><span class="req">Pilot</span></td></tr>
+<tr><td>HazeOps ↔ PeatFire Sentinel</td><td>Fire evidence while preserving attribution limits</td><td>Later</td></tr>
+<tr><td>HazeShield ↔ HazeOps</td><td>Environmental context for allocations</td><td>Later</td></tr>
+<tr><td>WorkerShield / HazeShield ↔ CommunityAlert</td><td>Bind a reviewed action to a message and audience</td><td>Later</td></tr>
+<tr><td>HazeInfo ↔ enabled specialists</td><td>Clarify findings without silently changing conclusions</td><td>Later</td></tr>
+</tbody></table></div>
+<p class="prose">The caller persists a consult request and yields its slot. Haze validates the pair, capability status, snapshot and budget, and LangGraph schedules the target. A disabled profile returns structured <code>unsupported</code>. Ancestry cycles are rejected, peer clarification shares the two-round limit with critic revisions, and a peer deadline never exceeds its caller’s. Peer messages cannot widen scope, tools or permissions, approve a plan or authorize an effect.</p>
+</section><section id="runtime" aria-labelledby="h-runtime"><h2 id="h-runtime"><span class="sn">§13</span>Runtime, sponsors and modes</h2>
+<p class="prose">The execution contract from v0.6 is retained unchanged under the programme layer. <code>@langchain/langgraph</code> and the selected saver are pinned: persistent SQLite checkpoints for single-process judging, a tested PostgreSQL saver for production, and <code>MemorySaver</code> for disposable tests only. A supervisor finds unfinished jobs and resumes them within their original deadlines. Evidence commits, memory capture, experiment updates and publication all carry stable operation keys, because checkpoints alone give no exactly-once effects.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Sponsor</th><th scope="col">Genuine operation</th><th scope="col">Proof item</th></tr></thead><tbody>
+<tr><td>Zetaris</td><td>At least three versioned views (observations, forecasts or hotspots, reviewed guidance), extended with research, model and experiment views as implemented; typed read-only adapters</td><td>A real source query changes a supported result; an independent pinned critic query verifies or rejects it</td></tr>
+<tr><td>Meterless</td><td>Explicit modules for memory capture, recall and audit plus entity resolution, evidence append and projection reads</td><td>H-MEM recall changes reviewed context; World Model keeps versions, snapshots, projections</td></tr>
+<tr><td>Cursor</td><td>Implementation, review and debugging notes linked to actual work</td><td>Truthful notes; this document does not prove Cursor use</td></tr>
+<tr><td>NVIDIA</td><td>Configured hosted Nemotron role where useful</td><td>Model, real request and measured contribution</td></tr>
+<tr><td>Nightshift</td><td>Optional; separately labelled readiness step up to 180 s that never extends the 300 s run</td><td>Actual configured generation request and trace</td></tr>
+</tbody></table></div>
+<div class="tbl "><table><thead><tr><th scope="col">Mode</th><th scope="col">Execution</th><th scope="col">What it establishes</th></tr></thead><tbody>
+<tr><td><code>live</code></td><td>Actual local H-MEM and World Model, real Zetaris queries, configured inference</td><td>Only the operations captured in that execution</td></tr>
+<tr><td><code>cached_live</code></td><td>Local engines, versioned cached inputs through registered Zetaris views, configured inference</td><td>Repeatable evidence with genuine remote integrations</td></tr>
+<tr><td><code>offline_sample</code></td><td>Actual local engines, deterministic planning, calculations and review over fixtures</td><td>CPU-only workflow and calculation tests; Zetaris and inference skipped</td></tr>
+</tbody></table></div>
+<div class="two"><div><h3>Build and run</h3><pre><code class="lang-text">docker build -t haze-harness .
+docker run --rm -p 8000:8000 --env-file .env \
+  -e STATE_DIR=/data -v haze-state:/data haze-harness
+
+docker run --rm --network none -e SAMPLE_MODE=true \
+  haze-harness node run.mjs \
+  --input input_examples/example_1.json</code></pre></div>
+<div><h3>Interface</h3><div class="tbl "><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Behaviour</th></tr></thead><tbody>
+<tr><td><code>GET /health</code></td><td>Ready or degraded, mode, schema, adapter types; no secrets</td></tr>
+<tr><td><code>POST /run</code></td><td>One bounded graph; output and actual trace references</td></tr>
+<tr><td><code>GET /runs/{id}</code></td><td>Stored status and accessible artifacts</td></tr>
+<tr><td><code>POST /heartbeat/tick</code></td><td>One bounded refresh or replay scan</td></tr>
+<tr><td>Programme API</td><td>Proposed and versioned separately; only implemented endpoints advertised</td></tr>
+</tbody></table></div></div></div>
+<p class="prose">Sample runs compute from the input scope, time window and actual fixture records. They never match known prompts to stored answers or read <code>output_examples/</code> at runtime. Synthetic guidance, research parameters and outcomes are labelled. A provider failure stays partial or failed; a separately labelled sample run cannot pass itself off as a live fallback.</p>
+</section><section id="audit" aria-labelledby="h-audit"><h2 id="h-audit"><span class="sn">§14</span>Artifacts and audit</h2>
+<p class="prose">The trace schema now covers the continuing programme and the scientific lifecycle. Each artifact type has its own required links.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Artifact</th><th scope="col">Required links and content</th></tr></thead><tbody>
+<tr><td>Programme brief</td><td>Goal and target version, scope, baseline, constraints, budget, cadence, owner, enabled capabilities</td></tr>
+<tr><td>Research finding / impact estimate</td><td>Question, claim type, source passages, applicability, exact inputs and method, result and units, uncertainty, review, gaps</td></tr>
+<tr><td>Scenario / proposed plan</td><td>Target and baseline, actions, resources, feasibility, projected effect, assumptions, input and model versions, review</td></tr>
+<tr><td>Validation report</td><td>Reviewed artifact and version, independent execution or reviewer, checks, findings, disposition, required corrections</td></tr>
+<tr><td>Experiment / outcome report</td><td>Protocol, authorization, actual implementation, observations, comparison method, predicted, observed and attributed effect</td></tr>
+<tr><td>Decision explanation</td><td>Recommendation, supporting and conflicting evidence, alternatives, method summary, validity, change reason, prior revision</td></tr>
+</tbody></table></div>
+<div class="two"><div><h3>Common envelope</h3><pre><code class="lang-text">id, type/version, producer
+scope, place, timezone, window
+snapshot_id, world_revision
+evidence_refs, model_refs, guidance_refs
+assumptions, uncertainty_basis, missing_inputs
+status, review_status
+dependencies, subscriptions
+recheck_conditions, expiry, supersedes</code></pre></div>
+<div><h3>Trace additions in v0.8</h3><pre><code class="lang-text">programme_id, job_id, department
+target_ref, model_ref, scenario_ref, experiment_ref
+projection_watermark
+source_cursor, source_check_watermark
+# expansion, specified only:
+action_ref, operator_ref, funder_ref
+delivery_verification_ref
+ledger_boundary, counterfactual_version</code></pre></div></div>
+<p class="prose">Inputs, outputs and a redacted JSONL trace are saved for every run. Traces record a concise rationale and evidence, not private model reasoning. Retrieved documents, news and peer text are data; they carry no authority to change tools or permissions.</p>
+</section><section id="demo" aria-labelledby="h-demo"><h2 id="h-demo"><span class="sn">§15</span>Demo and acceptance</h2>
+<p class="statement"><b>Demo statement.</b> “When evidence changes, Haze Agent revises a feasible work decision and shows the consequence for crew exposure.” The demo shows a supported result even when the 10% target is infeasible. It never forces a disagreement or manufactures a winning percentage.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Scene</th><th scope="col">Visible result</th></tr></thead><tbody>
+<tr><td>1 · Plan</td><td>Supported crew request, fixed task requirements, pinned snapshot; baseline and two or three feasible alternatives with modeled exposure and operational trade-offs</td></tr>
+<tr><td>2 · Explain</td><td>Open a recommendation to its source records, guidance, units, calculation inputs, assumptions and uncertainty</td></tr>
+<tr><td>3 · Challenge</td><td>A genuine coverage gap or incompatible assumption blocks an unsupported claim; targeted retrieval returns a revised or insufficient result</td></tr>
+<tr><td>4 · Update</td><td>A later relevant observation or forecast changes the affected plan with an explicit old/new reason; an unrelated update changes nothing</td></tr>
+<tr><td>5 · Trace and test</td><td>Evidence and model revisions, critic disposition, actual integration calls, restart and recall; ends on a labelled simulation and the field-evaluation protocol</td></tr>
+</tbody></table></div>
+<h3>Acceptance gates</h3>
+<div class="tbl "><table><thead><tr><th scope="col">Gate</th><th scope="col">Required evidence</th></tr></thead><tbody>
+<tr><td><span class="gate">A1</span> Source and science</td><td>Verified access, licence, coverage; pinned versions; correct time and units; observation vs forecast; reproducible arithmetic; zero-baseline handling; no damage claim from exposure-only tools</td></tr>
+<tr><td><span class="gate">A2</span> Feasibility</td><td>Equivalent required work; valid task, staffing and control constraints; full horizon; displaced tasks, overtime, costs, transferred exposure disclosed</td></tr>
+<tr><td><span class="gate">A3</span> Review and update</td><td>Exact artifact, evidence and model binding; uncovered intervals block success; relevant changes revise, unrelated ones do not</td></tr>
+<tr><td><span class="gate">A4</span> Durable operation</td><td>Bounded checks, duplicate coalescing, outage catch-up, pause and resume, visible gaps, persistent recovery, no duplicate logical writes</td></tr>
+<tr><td><span class="gate">A5</span> Integration and modes</td><td>Actual sponsor and engine operations, independent pinned queries, transparent skips, clean network-disabled run on an unseen supported input</td></tr>
+<tr><td><span class="gate">A6</span> User and outcomes</td><td>Evidence opens from results; freshness and statuses are clear; target, projection, implementation, measurement and attribution separate</td></tr>
+<tr><td><span class="gate">A7</span> Agent added value</td><td>Same inputs, options, constraints and budget compared against a simple rule-based planner and, where available, competent human planning</td></tr>
+</tbody></table></div>
+<p class="prose">Evaluation layers stay separate. Calculation and coverage correctness, feasible completion, support, update correctness, latency and cost are measured here. Forecast validation, scientific model validation and intervention effectiveness need their own tests. Testing includes at least one negative case where no improvement is supported.</p>
+</section><section id="delivery" aria-labelledby="h-delivery"><h2 id="h-delivery"><span class="sn">§16</span>Six-day delivery</h2>
+<p class="prose">The six-day contract covers the Klang investigation and nothing wider. The full programme is a staged roadmap. The rule is to keep the architecture but bound the implementation.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Day</th><th scope="col">Focus</th><th scope="col">Planned exit result</th></tr></thead><tbody>
+<tr><td><span class="gate">D1</span></td><td>Access and scope</td><td>Usable sources and required integrations verified; crew, tasks, target, baseline and constraints fixed; licensed or captured records and an honest fallback defined</td></tr>
+<tr><td><span class="gate">D2</span></td><td>Numerical core</td><td>Evidence and snapshots persisted; baseline plus two or three feasible scenario calculations reproduced with named units and versions</td></tr>
+<tr><td><span class="gate">D3</span></td><td>Decision workflow</td><td>Manager, HazeOps, WorkerShield and independent review complete; missing coverage and infeasible or unsupported target results exercised</td></tr>
+<tr><td><span class="gate">D4</span></td><td>Evidence revision</td><td>One meaningful update creates a reviewed replacement, unrelated updates do not; restart, catch-up and memory recall shown</td></tr>
+<tr><td><span class="gate">D5</span></td><td>Usable product</td><td>Overview, chat and evidence panel, trace visibility, offline and integration checks; comparison against the simple planner</td></tr>
+<tr><td><span class="gate">D6</span></td><td>Delivery proof</td><td>Unseen supported cases run and repaired; short demo rehearsed; reproducible submission assets and truthful sponsor evidence assembled</td></tr>
+</tbody></table></div>
+<div class="callout"><b>Deferred on purpose.</b> Optional department screens, general peer protocols, additional domain profiles, broad paper monitoring, optional providers and regional damage models are all deferred. Required integrations, real engine operations, review, recovery and sample behaviour stay in. If source access fails, captured or synthetic inputs and skipped integrations are labelled as such, and forecasts are never invented.</div>
+<div class="two"><div><h3>Schedule</h3><div class="tbl "><table><thead><tr><th scope="col">Milestone</th><th scope="col">Time</th></tr></thead><tbody>
+<tr><td>Build window</td><td><span class="mal">22–27 Oct 2026</span></td></tr>
+<tr><td>Submission deadline</td><td><span class="mal">27 Oct 23:45 UTC · 28 Oct 07:45 MYT</span></td></tr>
+</tbody></table></div><p class="prose">Recheck official event and HackOS requirements before release. This plan is not organizer compliance evidence.</p></div>
+<div><h3>Submission assets</h3><ol class="prose">
+<li>Public source, setup and dependencies.</li>
+<li>A real 1–4 minute demo.</li>
+<li>Deck: users, problem, solution, architecture, stack, sponsor contribution, uniqueness, visuals, future work.</li>
+<li>Prior-work and Colab declarations as applicable; inventory of existing code, assets and licences.</li>
+</ol></div></div>
+</section><section id="expansion" aria-labelledby="h-expansion"><h2 id="h-expansion"><span class="sn">§17</span>Two paths to less harm<span class="new">new</span></h2>
+<p class="prose">After the pilot, two paths run in parallel on the same evidence and evaluation foundation. Reusing the harness does not validate a new landscape, population or profile: each needs its own applicable numerical model, feasible intervention, accountable operator and evaluation.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Path</th><th scope="col">Operational question</th><th scope="col">Next evidence</th></tr></thead><tbody>
+<tr><td>Worker protection</td><td>Can a supervisor complete the required services with lower crew exposure?</td><td>Employer partner, real activity and implementation records, suitable exposure measurements</td></tr>
+<tr><td>Source prevention</td><td>Which preventive action can an accountable operator complete before a consequential fire?</td><td>Landscape, operator and funder discovery; practical authority; feasible action; delivery verification</td></tr>
+<tr><td>Broader accounting</td><td>Which health, economic, climate and ecological consequences can we estimate credibly?</td><td>Selected methods and inputs, attribution, accounting coverage, uncertainty, scientific review</td></tr>
+</tbody></table></div>
+<figure class="fig" id="fig-9"><div class="scroll"><svg class="dg" viewBox="0 0 1180 330" role="img" aria-label="Impact pathway in six steps: evidence, feasible action, operator and resources, verified implementation, evaluated effects and scoped avoided damage. Below, a reach check bar: treated sources are 25 percent of regional baseline harm, and a 40 percent cut within them gives a 10 percent regional reduction." style="max-width:1180px;min-width:860px">
+<text class="gl" x="20" y="34" text-anchor="start">IMPACT PATHWAY · A GAP AT ONE STEP LIMITS EVERY CLAIM DOWNSTREAM</text>
+<g class="n n-ext"><rect x="20" y="50" width="170" height="64" rx="7"/><text class="t" x="105" y="77">Evidence</text><text class="s" x="105" y="94">risk · exposure</text></g>
+<g class="n n-agent"><rect x="214" y="50" width="170" height="64" rx="7"/><text class="t" x="299" y="77">Feasible action</text><text class="s" x="299" y="94">supported mechanism</text></g>
+<g class="n n-svc"><rect x="408" y="50" width="170" height="64" rx="7"/><text class="t" x="493" y="77">Operator</text><text class="s" x="493" y="94">authority · funding</text></g>
+<g class="n n-evid"><rect x="602" y="50" width="170" height="64" rx="7"/><text class="t" x="687" y="77">Verified work</text><text class="s" x="687" y="94">delivery records</text></g>
+<g class="n n-safe"><rect x="796" y="50" width="170" height="64" rx="7"/><text class="t" x="881" y="77">Evaluated effect</text><text class="s" x="881" y="94">exposure · emissions</text></g>
+<g class="n n-doc"><path d="M990,50 H1149 L1160,61 V114 H990 Z"/><path class="fold" d="M1149,50 V61 H1160"/><text class="t" x="1075" y="77">Avoided damage</text><text class="s" x="1075" y="94">scoped ledger subtotal</text></g>
+<path class="e s-ink" d="M190,82 L214,82" marker-end="url(#m-ink)"/><path class="e s-ink" d="M384,82 L408,82" marker-end="url(#m-ink)"/><path class="e s-ink" d="M578,82 L602,82" marker-end="url(#m-ink)"/><path class="e s-ink" d="M772,82 L796,82" marker-end="url(#m-ink)"/><path class="e s-ink" d="M966,82 L990,82" marker-end="url(#m-ink)"/>
+<text class="gl" x="20" y="170" text-anchor="start">REACH CHECK · ILLUSTRATIVE ARITHMETIC</text>
+<text class="axt" x="20" y="219">Regional harm</text>
+<g class="n n-svc"><rect x="200" y="200" width="900" height="28" rx="4"/></g>
+<g class="n n-ext"><rect x="200" y="200" width="225" height="28" rx="4"/></g>
+<g class="n n-agent"><rect x="335" y="200" width="90" height="28" rx="4"/></g>
+<text class="pl" x="200" y="192">treated sources = 25% of baseline harm</text>
+<text class="pl" x="335" y="248">40% cut within them</text>
+<text class="pl" x="700" y="219" text-anchor="middle">untreated sources · 75%</text>
+<text class="el c-accent" x="200" y="278" text-anchor="start">0.25 × 0.40 = 0.10 → a regional 10%, only if there is no displacement or spillover</text>
+<text class="note" x="20" y="310" text-anchor="start">A feasibility check, not an impact forecast. Proving a regional 10% may need several sites and seasons; sample size and duration come from power analysis.</text>
+</svg></div><figcaption><b>Fig. 9 · From evidence to avoided harm.</b> Each arrow is an explicit dependency, so missing evidence at any one step limits every claim after it. The reach check shows why prevention needs scale. If the treated sources cause a quarter of regional harm, they must be cut by 40% to reach a regional 10%, and displaced burning or transferred exposure lowers the result.</figcaption></figure>
+<h3>Workplace field pilot protocol</h3>
+<div class="tbl "><table><thead><tr><th scope="col">Protocol field</th><th scope="col">Required content</th></tr></thead><tbody>
+<tr><td>Partner and tasks</td><td>Named employer or supervisor; defined crew, locations, task durations, service requirements, assessment horizon</td></tr>
+<tr><td>Comparable plans</td><td>Ordinary planning and candidates complete equivalent work; timing flexibility, controls, overtime, lost service, costs, transferred exposure recorded</td></tr>
+<tr><td>Environmental inputs</td><td>Numerical access and licence, observation vs forecast, spatial and temporal coverage, issue time, freshness, worksite relevance</td></tr>
+<tr><td>Measurements</td><td>Suitable monitors and activity records; placement, calibration and co-location, coverage, data quality, missingness rules reviewed for use</td></tr>
+<tr><td>Implementation</td><td>Approved plan revision; actual tasks and timing, controls used, participation, deviations, completion evidence</td></tr>
+<tr><td>Outcome</td><td>Modeled and measured exposure kept distinct; comparable estimate, uncertainty, feasibility, service and cost consequences</td></tr>
+</tbody></table></div>
+<p class="prose">Before scaling, challenge the mechanism. Does scheduling flexibility exist? Can pollution information tell the alternatives apart? Do the rankings survive plausible forecast error? Does the agent beat a simple scheduling rule on identical inputs? The pilot uses a predefined metric and comparison, ideally a randomized, phased or matched design with expert input. It reports adherence, exposure, service completion and cost together.</p>
+<h3>Source prevention and its action contract</h3>
+<p class="prose">Start with one landscape, one feasible intervention and an operator who can carry it out. The first candidate mechanism to investigate is peatland water-management inspection, maintenance or repair with a qualified local partner, plus fire-free land preparation where locally supported. The action is chosen only after checking hydrology, land use, operating authority, livelihoods, resources and evidence of effectiveness. Restoration findings vary with climate, ecosystem and intervention type [E2].</p>
+<div class="tbl "><table><thead><tr><th scope="col">Contract group</th><th scope="col">Required fields and evidence</th></tr></thead><tbody>
+<tr><td>Identity and scope</td><td><code>action_id</code>/version; programme, target and scenario refs; place or landscape; mechanism; horizon; exact evidence and model refs</td></tr>
+<tr><td>Operator and authority</td><td>Accountable operator and responsible person; practical authority; access and land constraints; maintenance responsibility</td></tr>
+<tr><td>Action and resources</td><td>Specific work; full cost with currency and base year; staff and equipment; lead time; funder and funding status</td></tr>
+<tr><td>Expected additional benefit</td><td>Ordinary-practice counterfactual; efficacy and delivery probability; avoidable harm and units; overlaps, spillovers, distribution</td></tr>
+<tr><td>Review and authorization</td><td>Review bound to exact revisions; authorized scope and budget; decision-maker and date; conditions and expiry</td></tr>
+<tr><td>Delivery and verification</td><td>Actual work and timing; deviations; completion criteria; verifier and observations; payment status separate from physical completion</td></tr>
+<tr><td>Evaluation and learning</td><td>Primary outcome and comparison; method version; attribution limits; result review; accepted, rejected or unresolved learning</td></tr>
+</tbody></table></div>
+<div class="callout"><b>A proposal, a funding commitment, an authorization, a completed task and a prevented fire are five different records.</b> No operator, funder or execution connector is named here. Hotspots do not establish who is responsible or liable. An authorized operator does the work outside the planning profile, and delivery records come back as attributed evidence.</div>
+<h3>Damage ledger</h3>
+<div class="tbl "><table><thead><tr><th scope="col">Component</th><th scope="col">Quantity</th><th scope="col">Readiness requirement</th></tr></thead><tbody>
+<tr><td>Exposure</td><td>Defined concentration-time measure; supporting indicator</td><td>Applicable environmental and activity data; never added as a damage cost</td></tr>
+<tr><td>Health</td><td>Selected fire-attributable outcomes and justified valuations</td><td>Attribution, baseline rates, applicable epidemiology, exposure duration, expert review [S4]</td></tr>
+<tr><td>Direct loss</td><td>Burned assets, crops, infrastructure, ecosystems</td><td>Burned-area and asset evidence, loss functions, field verification</td></tr>
+<tr><td>Disruption</td><td>Production, work, school, transport consequences</td><td>Observed records, comparison strategy, overlap rules</td></tr>
+<tr><td>Climate</td><td>Estimated greenhouse-gas emissions; valuation if used</td><td>Fuel and peat assumptions, emissions method, horizon, disclosed valuation</td></tr>
+<tr><td>Other harms</td><td>Biodiversity, livelihoods, cultural consequences</td><td>Suitable assessments; nonmonetized units where valuation is unsupported</td></tr>
+</tbody></table></div>
+<p class="prose">The ledger reports a quantified subtotal and lists the categories it does not cover. Direct fire loss and smoke effects stay distinct, and overlaps are resolved, for example between asset loss and production, or between carbon-stock loss and valued emissions. Missing observations are not zero damage, and an hourly refresh does not mean every loss is observed hourly.</p>
+</section><section id="evaluation" aria-labelledby="h-evaluation"><h2 id="h-evaluation"><span class="sn">§18</span>Evaluation, activation and readiness</h2>
+<p class="prose">Three questions need three different comparisons. Keeping them apart is what stops a fire-attribution estimate from being reported as programme benefit, or a good programme from being credited to the agent.</p>
+<div class="tbl "><table><thead><tr><th scope="col">Question</th><th scope="col">Required comparison</th></tr></thead><tbody>
+<tr><td>Fire attribution</td><td>Selected consequences under justified with-fire and no-fire counterfactuals; pollution attribution covers the smoke subset only</td></tr>
+<tr><td>Programme effect</td><td>Delivered programme against ordinary management under comparable conditions, including weather and implementation differences</td></tr>
+<tr><td>Agent added value</td><td>Agent-assisted planning against simple rules or competent expert planning with the same options, evidence access and budget</td></tr>
+</tbody></table></div>
+<p class="prose">Evaluation happens in three stages. A <b>replay</b> tests behaviour using only information available at the time, and a <b>shadow</b> run checks the data, usability and the feasibility of recommendations. A <b>controlled pilot</b> then assesses delivered actions and comparative outcomes. Replay and shadow alone never establish avoided real-world harm. For peatland work, the evaluation has to account for connected hydrology, because adjacent plots may share effects.</p>
+<h3>Activation stages</h3>
+<div class="tbl "><table><thead><tr><th scope="col">Stage</th><th scope="col">Activation evidence</th></tr></thead><tbody>
+<tr><td>Workplace field pilot</td><td>Employer, reviewed protocol, feasible comparable plans, measurement readiness, configured authority, implementation and verification plan</td></tr>
+<tr><td>Prevention discovery</td><td>Partnership brief: prospective landscape, operator and funder, mechanism, authority, evidence gaps, next decision</td></tr>
+<tr><td>Prevention field pilot</td><td>Applicable method and intervention evidence, reviewed action contract, resources, authority, delivery-verification capability</td></tr>
+<tr><td>Damage module</td><td>Selected outcome and attribution method, required inputs, accounting and valuation rules, intended-use validation</td></tr>
+<tr><td>Wider scaling</td><td>Evaluated effectiveness, operating capacity, transferability, addressable-harm coverage, explicit limits on regional inference</td></tr>
+</tbody></table></div>
+<p class="prose">Scout Intent, Markovian and Nightshift remain optional later insertion points. A small router is not Scout Intent, and generic token-saving benchmarks are not this system’s measured benefit. Public messages, purchases, roster edits, field dispatch and external execution each need separately configured authority and delivery evidence. The hackathon stays at planning and labelled simulation.</p>
+<div class="callout"><b>Decisions and evidence still required.</b>
+<ul>
+<li><b>Target.</b> Adopt the crew exposure proxy as the hackathon default, then record the full programme target, baseline and constraints.</li>
+<li><b>Sources and implementation.</b> Verify Malaysian numerical access, coverage and licences (MyCMAQ, D1); pin engines; execute real operations, review, restart, sample behaviour and acceptance cases.</li>
+<li><b>Partnership and science.</b> Find an employer pilot and a prospective prevention operator and funder; select methods, measurements, accounting rules and evaluation designs.</li>
+<li><b>Operational expansion.</b> Experiments, notifications, purchases, dispatch and roster changes need configured authority, review and real implementation records.</li>
+</ul></div>
+<p class="statement"><b>Track 02 commitment.</b> Connect sources, investigate a scoped decision and provide an inspectable recommendation. When relevant evidence changes, explain what changed, what remains uncertain and why the recommendation follows.</p>
+</section>
+<footer><p>Based on <i>Haze Agent Harness Architecture v0.8</i> (22 October 2026, 41 pages), which integrates the approved expansion review into the v0.7 baseline and keeps v0.6 engine ownership, independent review, exact evidence revisions, the offline path and sponsor-integrity requirements. References: R official event rules (checked 22 October 2026); M1–M6 Meterless engines and starter; L1–L3 LangGraph; N1–N2 provider references; D1 MyCMAQ, D2 NASA FIRMS, D3 DOSH haze guidance, D4 Ministry of Health; S1–S5 research and method sources including WHO AirQ+; E1–E4 expansion evidence. All values in Fig. 5 and the reach check in Fig. 9 are illustrative arithmetic. This document is a design specification; it certifies no scientific result, organizer compliance, deployment readiness or achieved haze reduction.</p></footer>
+</main>
+</div>
+</div>
+</body>
+</html>

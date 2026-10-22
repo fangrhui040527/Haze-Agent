@@ -2,7 +2,16 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'coverage/**', '.state/**', 'tmp/**'] },
+  {
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      '.state/**',
+      'tmp/**',
+      'vendor/**',
+      'third_party/**',
+    ],
+  },
   {
     files: ['**/*.ts'],
     extends: [

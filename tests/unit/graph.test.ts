@@ -1,6 +1,11 @@
 import { MemorySaver } from '@langchain/langgraph-checkpoint';
+import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import { describe, expect, it } from 'vitest';
 import { createCheckpointGraph } from '../../src/graph.js';
+import {
+  CHECKPOINT_GRAPH_VERSION,
+  EXECUTION_SCHEMA_VERSION,
+} from '../../src/versions.js';
 
 describe('local StateGraph foundation', () => {
   it('retains execution metadata within its own thread', async () => {
@@ -16,7 +21,8 @@ describe('local StateGraph foundation', () => {
     ).toEqual({
       runId: 'run-a',
       artifactIds: ['artifact-a'],
-      schemaVersion: 1,
+      graphVersion: CHECKPOINT_GRAPH_VERSION,
+      schemaVersion: EXECUTION_SCHEMA_VERSION,
     });
     await graph.invoke({ runId: 'run-b' }, second);
     await graph.invoke({ artifactIds: ['artifact-a2'] }, first);
@@ -24,12 +30,14 @@ describe('local StateGraph foundation', () => {
     expect((await graph.getState(first)).values).toEqual({
       runId: 'run-a',
       artifactIds: ['artifact-a2'],
-      schemaVersion: 1,
+      graphVersion: CHECKPOINT_GRAPH_VERSION,
+      schemaVersion: EXECUTION_SCHEMA_VERSION,
     });
     expect((await graph.getState(second)).values).toEqual({
       runId: 'run-b',
       artifactIds: [],
-      schemaVersion: 1,
+      graphVersion: CHECKPOINT_GRAPH_VERSION,
+      schemaVersion: EXECUTION_SCHEMA_VERSION,
     });
   });
 
@@ -41,6 +49,51 @@ describe('local StateGraph foundation', () => {
         { runId: '' },
         { configurable: { thread_id: 'invalid-run' } },
       ),
+    ).rejects.toThrow();
+  });
+
+  it.each([
+    { graphVersion: CHECKPOINT_GRAPH_VERSION + 1 },
+    { schemaVersion: EXECUTION_SCHEMA_VERSION + 1 },
+    { schemaVersion: 1 },
+  ])('rejects incompatible workflow metadata %j', async (version) => {
+    const graph = createCheckpointGraph(new MemorySaver());
+
+    await expect(
+      graph.invoke(
+        { runId: 'incompatible-run', ...version },
+        { configurable: { thread_id: 'incompatible-run' } },
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('rejects completed legacy checkpoints before returning state or resuming', async () => {
+    const checkpointer = new MemorySaver();
+    const config = { configurable: { thread_id: 'completed-legacy-run' } };
+    const legacyState = Annotation.Root({
+      runId: Annotation<string>(),
+      artifactIds: Annotation<string[]>({
+        reducer: (_previous, next) => next,
+        default: () => [],
+      }),
+      schemaVersion: Annotation<number>({
+        reducer: (_previous, next) => next,
+        default: () => 1,
+      }),
+    });
+    const legacyGraph = new StateGraph(legacyState)
+      .addNode('checkpoint', (state) => state)
+      .addEdge(START, 'checkpoint')
+      .addEdge('checkpoint', END)
+      .compile({ checkpointer });
+    await legacyGraph.invoke({ runId: 'legacy-run' }, config);
+    expect((await legacyGraph.getState(config)).next).toEqual([]);
+
+    const graph = createCheckpointGraph(checkpointer);
+    await expect(graph.getState(config)).rejects.toThrow();
+    await expect(graph.invoke(null, config)).rejects.toThrow();
+    await expect(
+      graph.invoke({ runId: 'new-input' }, config),
     ).rejects.toThrow();
   });
 });
