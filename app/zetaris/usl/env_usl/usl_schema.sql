@@ -2,13 +2,15 @@
 -- USL: malaysia_env_usl
 -- Unified Semantic Layer for Malaysia environmental monitoring.
 --
--- Combines four data sources under a normalized location dimension model:
+-- Combines six data sources under a normalized location dimension model:
 --   - location_dim : 345 canonical location centroids (PK: location_index)
 --   - location_code: 440 unique codes across 5 types: St, Rc, Ds, Tn, Dv
 --                   (PK: location_code, FK: location_index -> location_dim)
 --   - air_quality_obs : Open-Meteo hourly PM2.5 / PM10 (FK -> location_dim)
 --   - active_fires    : NASA FIRMS satellite active-fires (FK -> location_dim)
 --   - power_daily     : NASA POWER 20 daily climate variables (FK -> location_dim)
+--   - windy_forecast_obs    : Windy (GFS) point weather forecast (FK -> location_dim)
+--   - windy_air_quality_obs : Windy (CAMS) point air-quality forecast (FK -> location_dim)
 --   - weather_forecast: Data.gov.my forecasts across all 5 code types (FK -> location_code)
 -- =============================================================================
 
@@ -71,6 +73,25 @@ CREATE TABLE power_daily (
     GWETPROF double,
     EVLAND double,
     TS double
+);
+CREATE TABLE windy_forecast_obs (
+    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
+    forecast_time timestamp,
+    temp_c double,
+    relative_humidity_pct double,
+    pressure_hpa double,
+    wind_speed_ms double,
+    wind_direction_deg double,
+    wind_gust_ms double
+);
+CREATE TABLE windy_air_quality_obs (
+    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
+    observation_time timestamp,
+    pm2_5_ug_m3 double,
+    pm10_ug_m3 double,
+    aqi_us double,
+    no2_ug_m3 double,
+    dust_ug_m3 double
 );
 CREATE TABLE weather_forecast (
     location_code varchar(10) FOREIGN KEY REFERENCES location_code(location_code),
