@@ -1,0 +1,3547 @@
+[
+    {
+        "id": "perlis",
+        "name": "Perlis",
+        "latitude": 6.4414,
+        "longitude": 100.19862,
+        "index": 338,
+        "codes": [
+            "Tn179"
+        ]
+    },
+    {
+        "id": "kedah",
+        "name": "Kedah",
+        "latitude": 5.81,
+        "longitude": 100.67,
+        "index": 2,
+        "codes": [
+            "St002"
+        ]
+    },
+    {
+        "id": "pulau-pinang",
+        "name": "Pulau Pinang",
+        "latitude": 3.55,
+        "longitude": 102.56667,
+        "index": 3,
+        "codes": [
+            "St003"
+        ]
+    },
+    {
+        "id": "perak",
+        "name": "Perak",
+        "latitude": 3.8682,
+        "longitude": 102.5862,
+        "index": 4,
+        "codes": [
+            "St004"
+        ]
+    },
+    {
+        "id": "kelantan",
+        "name": "Kelantan",
+        "latitude": 5.4,
+        "longitude": 102.06,
+        "index": 5,
+        "codes": [
+            "St005"
+        ]
+    },
+    {
+        "id": "terengganu",
+        "name": "Terengganu",
+        "latitude": 4.86,
+        "longitude": 102.99,
+        "index": 6,
+        "codes": [
+            "St006"
+        ]
+    },
+    {
+        "id": "pahang",
+        "name": "Pahang",
+        "latitude": 3.62,
+        "longitude": 102.6,
+        "index": 7,
+        "codes": [
+            "St007"
+        ]
+    },
+    {
+        "id": "selangor",
+        "name": "Selangor",
+        "latitude": 3.35,
+        "longitude": 101.25,
+        "index": 100,
+        "codes": [
+            "Ds049",
+            "Tn061"
+        ]
+    },
+    {
+        "id": "wp-kuala-lumpur",
+        "name": "WP Kuala Lumpur",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "wp-putrajaya",
+        "name": "WP Putrajaya",
+        "latitude": 2.93,
+        "longitude": 101.7,
+        "index": 10,
+        "codes": [
+            "St010"
+        ]
+    },
+    {
+        "id": "negeri-sembilan",
+        "name": "Negeri Sembilan",
+        "latitude": 2.78,
+        "longitude": 102.19,
+        "index": 11,
+        "codes": [
+            "St011"
+        ]
+    },
+    {
+        "id": "melaka",
+        "name": "Melaka",
+        "latitude": 2.40295,
+        "longitude": 101.85366,
+        "index": 12,
+        "codes": [
+            "St012"
+        ]
+    },
+    {
+        "id": "johor",
+        "name": "Johor",
+        "latitude": 1.4655,
+        "longitude": 103.7578,
+        "index": 141,
+        "codes": [
+            "Ds090",
+            "Tn139"
+        ]
+    },
+    {
+        "id": "sarawak",
+        "name": "Sarawak",
+        "latitude": 2.5,
+        "longitude": 112.95,
+        "index": 14,
+        "codes": [
+            "St501"
+        ]
+    },
+    {
+        "id": "sabah",
+        "name": "Sabah",
+        "latitude": 3.7698,
+        "longitude": 100.9879,
+        "index": 94,
+        "codes": [
+            "Ds043",
+            "Tn054"
+        ]
+    },
+    {
+        "id": "wp-labuan",
+        "name": "WP Labuan",
+        "latitude": 5.28,
+        "longitude": 115.23,
+        "index": 16,
+        "codes": [
+            "St503"
+        ]
+    },
+    {
+        "id": "langkawi",
+        "name": "Langkawi",
+        "latitude": 5.68333,
+        "longitude": 115.93333,
+        "index": 17,
+        "codes": [
+            "Rc001",
+            "Ds001"
+        ]
+    },
+    {
+        "id": "taman-negara-pulau-pinang",
+        "name": "Taman Negara Pulau Pinang",
+        "latitude": 5.45,
+        "longitude": 100.2,
+        "index": 18,
+        "codes": [
+            "Rc002"
+        ]
+    },
+    {
+        "id": "batu-feringgi",
+        "name": "Batu Feringgi",
+        "latitude": 5.4709,
+        "longitude": 100.24529,
+        "index": 19,
+        "codes": [
+            "Rc003"
+        ]
+    },
+    {
+        "id": "bukit-bendera",
+        "name": "Bukit Bendera",
+        "latitude": 5.42419,
+        "longitude": 100.26877,
+        "index": 20,
+        "codes": [
+            "Rc004"
+        ]
+    },
+    {
+        "id": "pulau-pangkor",
+        "name": "Pulau Pangkor",
+        "latitude": 4.22795,
+        "longitude": 100.56026,
+        "index": 21,
+        "codes": [
+            "Rc005"
+        ]
+    },
+    {
+        "id": "lumut",
+        "name": "Lumut",
+        "latitude": 4.2323,
+        "longitude": 100.6298,
+        "index": 22,
+        "codes": [
+            "Rc006"
+        ]
+    },
+    {
+        "id": "pulau-perhentian",
+        "name": "Pulau Perhentian",
+        "latitude": 5.9145,
+        "longitude": 102.7397,
+        "index": 23,
+        "codes": [
+            "Rc007"
+        ]
+    },
+    {
+        "id": "cameron-highland",
+        "name": "Cameron Highland",
+        "latitude": 4.47,
+        "longitude": 101.38,
+        "index": 305,
+        "codes": [
+            "Tn145"
+        ]
+    },
+    {
+        "id": "pulau-redang",
+        "name": "Pulau Redang",
+        "latitude": 5.77736,
+        "longitude": 103.00759,
+        "index": 25,
+        "codes": [
+            "Rc009"
+        ]
+    },
+    {
+        "id": "taman-negara-kelantan",
+        "name": "Taman Negara Kelantan",
+        "latitude": 4.77,
+        "longitude": 102.45,
+        "index": 26,
+        "codes": [
+            "Rc010"
+        ]
+    },
+    {
+        "id": "tasik-kenyir",
+        "name": "Tasik Kenyir",
+        "latitude": 5.0,
+        "longitude": 102.64,
+        "index": 27,
+        "codes": [
+            "Rc011"
+        ]
+    },
+    {
+        "id": "taman-negara-terengganu",
+        "name": "Taman Negara Terengganu",
+        "latitude": 4.81,
+        "longitude": 102.8,
+        "index": 28,
+        "codes": [
+            "Rc012"
+        ]
+    },
+    {
+        "id": "taman-negara",
+        "name": "Taman Negara",
+        "latitude": 4.767,
+        "longitude": 102.44381,
+        "index": 29,
+        "codes": [
+            "Rc013"
+        ]
+    },
+    {
+        "id": "bukit-fraser",
+        "name": "Bukit Fraser",
+        "latitude": 3.7126,
+        "longitude": 101.7412,
+        "index": 30,
+        "codes": [
+            "Rc014"
+        ]
+    },
+    {
+        "id": "pulau-kapas",
+        "name": "Pulau Kapas",
+        "latitude": 5.2214,
+        "longitude": 103.2653,
+        "index": 31,
+        "codes": [
+            "Rc015"
+        ]
+    },
+    {
+        "id": "tanah-tinggi-genting",
+        "name": "Tanah Tinggi Genting",
+        "latitude": 3.42,
+        "longitude": 101.79,
+        "index": 32,
+        "codes": [
+            "Rc016"
+        ]
+    },
+    {
+        "id": "bukit-tinggi",
+        "name": "Bukit Tinggi",
+        "latitude": 2.2448,
+        "longitude": 102.3368,
+        "index": 33,
+        "codes": [
+            "Rc017"
+        ]
+    },
+    {
+        "id": "pusat-konservasi-gajah-kebangsaan",
+        "name": "Pusat Konservasi Gajah Kebangsaan",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "tasik-bera",
+        "name": "Tasik Bera",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "tanjung-jara",
+        "name": "Tanjung Jara",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "paya-indah-wetlands",
+        "name": "Paya Indah Wetlands",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "kijal",
+        "name": "Kijal",
+        "latitude": 4.35,
+        "longitude": 103.48333,
+        "index": 38,
+        "codes": [
+            "Rc022"
+        ]
+    },
+    {
+        "id": "cherating",
+        "name": "Cherating",
+        "latitude": 4.12557,
+        "longitude": 103.39388,
+        "index": 39,
+        "codes": [
+            "Rc023"
+        ]
+    },
+    {
+        "id": "pulau-tioman",
+        "name": "Pulau Tioman",
+        "latitude": 2.7972,
+        "longitude": 104.166,
+        "index": 40,
+        "codes": [
+            "Rc024"
+        ]
+    },
+    {
+        "id": "pulau-sibu",
+        "name": "Pulau Sibu",
+        "latitude": 2.2205,
+        "longitude": 104.0668,
+        "index": 41,
+        "codes": [
+            "Rc025"
+        ]
+    },
+    {
+        "id": "desaru",
+        "name": "Desaru",
+        "latitude": 1.54,
+        "longitude": 104.26,
+        "index": 42,
+        "codes": [
+            "Rc026"
+        ]
+    },
+    {
+        "id": "taman-nasional-kinabalu",
+        "name": "Taman Nasional Kinabalu",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "pulau-sipadan",
+        "name": "Pulau Sipadan",
+        "latitude": 4.11471,
+        "longitude": 118.62871,
+        "index": 44,
+        "codes": [
+            "Rc502"
+        ]
+    },
+    {
+        "id": "kundasang",
+        "name": "Kundasang",
+        "latitude": 6.01,
+        "longitude": 116.57,
+        "index": 45,
+        "codes": [
+            "Rc503"
+        ]
+    },
+    {
+        "id": "pantai-tanjung-aru",
+        "name": "Pantai Tanjung Aru",
+        "latitude": 5.95,
+        "longitude": 116.04,
+        "index": 46,
+        "codes": [
+            "Rc504"
+        ]
+    },
+    {
+        "id": "pulau-bohey-dulang",
+        "name": "Pulau Bohey Dulang",
+        "latitude": 4.5976,
+        "longitude": 118.7867,
+        "index": 47,
+        "codes": [
+            "Rc505"
+        ]
+    },
+    {
+        "id": "pulau-mataking",
+        "name": "Pulau Mataking",
+        "latitude": 4.57581,
+        "longitude": 118.94923,
+        "index": 48,
+        "codes": [
+            "Rc506"
+        ]
+    },
+    {
+        "id": "sepilok",
+        "name": "Sepilok",
+        "latitude": 5.87734,
+        "longitude": 117.95051,
+        "index": 49,
+        "codes": [
+            "Rc507"
+        ]
+    },
+    {
+        "id": "pulau-kapalai",
+        "name": "Pulau Kapalai",
+        "latitude": 4.21972,
+        "longitude": 118.695,
+        "index": 50,
+        "codes": [
+            "Rc508"
+        ]
+    },
+    {
+        "id": "pulau-mabul",
+        "name": "Pulau Mabul",
+        "latitude": 4.24621,
+        "longitude": 118.63059,
+        "index": 51,
+        "codes": [
+            "Rc509"
+        ]
+    },
+    {
+        "id": "pulau-mantanani",
+        "name": "Pulau Mantanani",
+        "latitude": 6.7119,
+        "longitude": 116.35244,
+        "index": 52,
+        "codes": [
+            "Rc510"
+        ]
+    },
+    {
+        "id": "taman-tunku-abdul-rahman",
+        "name": "Taman Tunku Abdul Rahman",
+        "latitude": 5.98,
+        "longitude": 116.0,
+        "index": 53,
+        "codes": [
+            "Rc511"
+        ]
+    },
+    {
+        "id": "kubang-pasu",
+        "name": "Kubang Pasu",
+        "latitude": 6.27,
+        "longitude": 100.42,
+        "index": 54,
+        "codes": [
+            "Ds003"
+        ]
+    },
+    {
+        "id": "kota-setar",
+        "name": "Kota Setar",
+        "latitude": 6.12,
+        "longitude": 100.37,
+        "index": 55,
+        "codes": [
+            "Ds004"
+        ]
+    },
+    {
+        "id": "pokok-sena",
+        "name": "Pokok Sena",
+        "latitude": 6.17055,
+        "longitude": 100.51885,
+        "index": 56,
+        "codes": [
+            "Ds005",
+            "Tn004"
+        ]
+    },
+    {
+        "id": "padang-terap",
+        "name": "Padang Terap",
+        "latitude": 6.30188,
+        "longitude": 100.65759,
+        "index": 57,
+        "codes": [
+            "Ds006"
+        ]
+    },
+    {
+        "id": "yan",
+        "name": "Yan",
+        "latitude": 5.7989,
+        "longitude": 100.37264,
+        "index": 58,
+        "codes": [
+            "Ds007",
+            "Tn007"
+        ]
+    },
+    {
+        "id": "pendang",
+        "name": "Pendang",
+        "latitude": 5.99516,
+        "longitude": 100.47885,
+        "index": 59,
+        "codes": [
+            "Ds008",
+            "Tn006"
+        ]
+    },
+    {
+        "id": "kuala-muda",
+        "name": "Kuala Muda",
+        "latitude": 5.65,
+        "longitude": 100.49,
+        "index": 60,
+        "codes": [
+            "Ds009"
+        ]
+    },
+    {
+        "id": "sik",
+        "name": "Sik",
+        "latitude": 5.83333,
+        "longitude": 100.75,
+        "index": 61,
+        "codes": [
+            "Ds010",
+            "Tn011"
+        ]
+    },
+    {
+        "id": "barat-daya",
+        "name": "Barat Daya",
+        "latitude": 5.35,
+        "longitude": 100.23,
+        "index": 62,
+        "codes": [
+            "Ds011"
+        ]
+    },
+    {
+        "id": "timur-laut",
+        "name": "Timur Laut",
+        "latitude": 5.41,
+        "longitude": 100.33,
+        "index": 227,
+        "codes": [
+            "Tn013"
+        ]
+    },
+    {
+        "id": "seberang-perai-utara",
+        "name": "Seberang Perai Utara",
+        "latitude": 5.52,
+        "longitude": 100.43,
+        "index": 64,
+        "codes": [
+            "Ds013"
+        ]
+    },
+    {
+        "id": "seberang-perai-tengah",
+        "name": "Seberang Perai Tengah",
+        "latitude": 5.36,
+        "longitude": 100.47,
+        "index": 65,
+        "codes": [
+            "Ds014"
+        ]
+    },
+    {
+        "id": "baling",
+        "name": "Baling",
+        "latitude": 5.67806,
+        "longitude": 100.9177,
+        "index": 66,
+        "codes": [
+            "Ds015",
+            "Tn021"
+        ]
+    },
+    {
+        "id": "kulim",
+        "name": "Kulim",
+        "latitude": 5.36499,
+        "longitude": 100.56177,
+        "index": 67,
+        "codes": [
+            "Ds016",
+            "Tn020"
+        ]
+    },
+    {
+        "id": "seberang-perai-selatan",
+        "name": "Seberang Perai Selatan",
+        "latitude": 5.17,
+        "longitude": 100.48,
+        "index": 68,
+        "codes": [
+            "Ds017"
+        ]
+    },
+    {
+        "id": "bandar-baharu",
+        "name": "Bandar Baharu",
+        "latitude": 5.13428,
+        "longitude": 100.49549,
+        "index": 69,
+        "codes": [
+            "Ds018"
+        ]
+    },
+    {
+        "id": "kerian",
+        "name": "Kerian",
+        "latitude": 1.20321,
+        "longitude": 110.3804,
+        "index": 70,
+        "codes": [
+            "Ds019"
+        ]
+    },
+    {
+        "id": "larut-matang-dan-selama",
+        "name": "Larut, Matang Dan Selama",
+        "latitude": 4.85,
+        "longitude": 100.74,
+        "index": 71,
+        "codes": [
+            "Ds020"
+        ]
+    },
+    {
+        "id": "hulu-perak",
+        "name": "Hulu Perak",
+        "latitude": 5.43,
+        "longitude": 101.12,
+        "index": 72,
+        "codes": [
+            "Ds021"
+        ]
+    },
+    {
+        "id": "tumpat",
+        "name": "Tumpat",
+        "latitude": 6.19775,
+        "longitude": 102.17098,
+        "index": 73,
+        "codes": [
+            "Ds022",
+            "Tn031"
+        ]
+    },
+    {
+        "id": "pasir-mas",
+        "name": "Pasir Mas",
+        "latitude": 6.04934,
+        "longitude": 102.13987,
+        "index": 74,
+        "codes": [
+            "Ds023",
+            "Tn032"
+        ]
+    },
+    {
+        "id": "kota-bharu",
+        "name": "Kota Bharu",
+        "latitude": 6.12361,
+        "longitude": 102.24333,
+        "index": 75,
+        "codes": [
+            "Ds024",
+            "Tn033"
+        ]
+    },
+    {
+        "id": "jeli",
+        "name": "Jeli",
+        "latitude": 5.7,
+        "longitude": 101.83333,
+        "index": 76,
+        "codes": [
+            "Ds025",
+            "Tn034"
+        ]
+    },
+    {
+        "id": "kuala-kangsar",
+        "name": "Kuala Kangsar",
+        "latitude": 4.76667,
+        "longitude": 100.93333,
+        "index": 77,
+        "codes": [
+            "Ds026",
+            "Tn035"
+        ]
+    },
+    {
+        "id": "tanah-merah",
+        "name": "Tanah Merah",
+        "latitude": 5.8,
+        "longitude": 102.15,
+        "index": 78,
+        "codes": [
+            "Ds027",
+            "Tn038"
+        ]
+    },
+    {
+        "id": "bachok",
+        "name": "Bachok",
+        "latitude": 6.06667,
+        "longitude": 102.4,
+        "index": 79,
+        "codes": [
+            "Ds028",
+            "Tn037"
+        ]
+    },
+    {
+        "id": "manjung",
+        "name": "Manjung",
+        "latitude": 4.22,
+        "longitude": 100.7,
+        "index": 80,
+        "codes": [
+            "Ds029"
+        ]
+    },
+    {
+        "id": "machang",
+        "name": "Machang",
+        "latitude": 5.76407,
+        "longitude": 102.21414,
+        "index": 81,
+        "codes": [
+            "Ds030",
+            "Tn039"
+        ]
+    },
+    {
+        "id": "pasir-puteh",
+        "name": "Pasir Puteh",
+        "latitude": 5.83333,
+        "longitude": 102.4,
+        "index": 82,
+        "codes": [
+            "Ds031",
+            "Tn042"
+        ]
+    },
+    {
+        "id": "kinta",
+        "name": "Kinta",
+        "latitude": 4.5071,
+        "longitude": 100.976,
+        "index": 83,
+        "codes": [
+            "Ds032"
+        ]
+    },
+    {
+        "id": "perak-tengah",
+        "name": "Perak Tengah",
+        "latitude": 4.38,
+        "longitude": 100.97,
+        "index": 84,
+        "codes": [
+            "Ds033"
+        ]
+    },
+    {
+        "id": "kuala-krai",
+        "name": "Kuala Krai",
+        "latitude": 5.5313,
+        "longitude": 102.19925,
+        "index": 85,
+        "codes": [
+            "Ds034",
+            "Tn045"
+        ]
+    },
+    {
+        "id": "kampar",
+        "name": "Kampar",
+        "latitude": 4.3,
+        "longitude": 101.15,
+        "index": 86,
+        "codes": [
+            "Ds035",
+            "Tn050"
+        ]
+    },
+    {
+        "id": "bagan-datuk",
+        "name": "Bagan Datuk",
+        "latitude": 3.9899,
+        "longitude": 100.7819,
+        "index": 87,
+        "codes": [
+            "Ds036",
+            "Tn049"
+        ]
+    },
+    {
+        "id": "besut",
+        "name": "Besut",
+        "latitude": 5.73,
+        "longitude": 102.49,
+        "index": 88,
+        "codes": [
+            "Ds037",
+            "Tn047"
+        ]
+    },
+    {
+        "id": "tanah-tinggi-cameron",
+        "name": "Tanah Tinggi Cameron",
+        "latitude": 4.47,
+        "longitude": 101.38,
+        "index": 305,
+        "codes": [
+            "Tn145"
+        ]
+    },
+    {
+        "id": "gua-musang",
+        "name": "Gua Musang",
+        "latitude": 4.88441,
+        "longitude": 101.96857,
+        "index": 90,
+        "codes": [
+            "Ds039",
+            "Tn053"
+        ]
+    },
+    {
+        "id": "hilir-perak",
+        "name": "Hilir Perak",
+        "latitude": 4.02,
+        "longitude": 101.02,
+        "index": 91,
+        "codes": [
+            "Ds040"
+        ]
+    },
+    {
+        "id": "batang-padang",
+        "name": "Batang Padang",
+        "latitude": 4.2,
+        "longitude": 101.27,
+        "index": 92,
+        "codes": [
+            "Ds041"
+        ]
+    },
+    {
+        "id": "setiu",
+        "name": "Setiu",
+        "latitude": 5.53,
+        "longitude": 102.77,
+        "index": 93,
+        "codes": [
+            "Ds042",
+            "Tn056"
+        ]
+    },
+    {
+        "id": "sabak-bernam",
+        "name": "Sabak Bernam",
+        "latitude": 3.7698,
+        "longitude": 100.9879,
+        "index": 94,
+        "codes": [
+            "Ds043",
+            "Tn054"
+        ]
+    },
+    {
+        "id": "lipis",
+        "name": "Lipis",
+        "latitude": 4.18,
+        "longitude": 102.05,
+        "index": 95,
+        "codes": [
+            "Ds044"
+        ]
+    },
+    {
+        "id": "muallim",
+        "name": "Muallim",
+        "latitude": 3.68,
+        "longitude": 101.52,
+        "index": 96,
+        "codes": [
+            "Ds045"
+        ]
+    },
+    {
+        "id": "kuala-nerus",
+        "name": "Kuala Nerus",
+        "latitude": 5.37293,
+        "longitude": 103.02053,
+        "index": 97,
+        "codes": [
+            "Ds046",
+            "Tn058"
+        ]
+    },
+    {
+        "id": "hulu-terengganu",
+        "name": "Hulu Terengganu",
+        "latitude": 5.07,
+        "longitude": 103.01,
+        "index": 98,
+        "codes": [
+            "Ds047"
+        ]
+    },
+    {
+        "id": "kuala-terengganu",
+        "name": "Kuala Terengganu",
+        "latitude": 5.3302,
+        "longitude": 103.1408,
+        "index": 99,
+        "codes": [
+            "Ds048",
+            "Tn059"
+        ]
+    },
+    {
+        "id": "kuala-selangor",
+        "name": "Kuala Selangor",
+        "latitude": 3.35,
+        "longitude": 101.25,
+        "index": 100,
+        "codes": [
+            "Ds049",
+            "Tn061"
+        ]
+    },
+    {
+        "id": "raub",
+        "name": "Raub",
+        "latitude": 3.7899,
+        "longitude": 101.857,
+        "index": 101,
+        "codes": [
+            "Ds050",
+            "Tn062"
+        ]
+    },
+    {
+        "id": "hulu-selangor",
+        "name": "Hulu Selangor",
+        "latitude": 3.56,
+        "longitude": 101.66,
+        "index": 102,
+        "codes": [
+            "Ds051"
+        ]
+    },
+    {
+        "id": "marang",
+        "name": "Marang",
+        "latitude": 5.2056,
+        "longitude": 103.2059,
+        "index": 103,
+        "codes": [
+            "Ds052",
+            "Tn182"
+        ]
+    },
+    {
+        "id": "jerantut",
+        "name": "Jerantut",
+        "latitude": 3.936,
+        "longitude": 102.3626,
+        "index": 104,
+        "codes": [
+            "Ds053",
+            "Tn068"
+        ]
+    },
+    {
+        "id": "klang",
+        "name": "Klang",
+        "latitude": 3.03667,
+        "longitude": 101.44333,
+        "index": 105,
+        "codes": [
+            "Ds054",
+            "Tn181"
+        ]
+    },
+    {
+        "id": "gombak",
+        "name": "Gombak",
+        "latitude": 3.24177,
+        "longitude": 101.53296,
+        "index": 106,
+        "codes": [
+            "Ds055"
+        ]
+    },
+    {
+        "id": "dungun",
+        "name": "Dungun",
+        "latitude": 4.775,
+        "longitude": 103.4162,
+        "index": 107,
+        "codes": [
+            "Ds056",
+            "Tn082"
+        ]
+    },
+    {
+        "id": "petaling",
+        "name": "Petaling",
+        "latitude": 3.08333,
+        "longitude": 101.66667,
+        "index": 108,
+        "codes": [
+            "Ds057"
+        ]
+    },
+    {
+        "id": "kuala-lumpur",
+        "name": "Kuala Lumpur",
+        "latitude": 3.1412,
+        "longitude": 101.68653,
+        "index": 109,
+        "codes": [
+            "Ds058",
+            "Tn079"
+        ]
+    },
+    {
+        "id": "bentong",
+        "name": "Bentong",
+        "latitude": 3.5316,
+        "longitude": 101.9038,
+        "index": 110,
+        "codes": [
+            "Ds059",
+            "Tn072"
+        ]
+    },
+    {
+        "id": "kuala-langat",
+        "name": "Kuala Langat",
+        "latitude": 2.81,
+        "longitude": 101.5,
+        "index": 111,
+        "codes": [
+            "Ds060"
+        ]
+    },
+    {
+        "id": "temerloh",
+        "name": "Temerloh",
+        "latitude": 3.4506,
+        "longitude": 102.4176,
+        "index": 112,
+        "codes": [
+            "Ds061",
+            "Tn095"
+        ]
+    },
+    {
+        "id": "putrajaya",
+        "name": "Putrajaya",
+        "latitude": 2.93527,
+        "longitude": 101.69112,
+        "index": 113,
+        "codes": [
+            "Ds062",
+            "Tn088"
+        ]
+    },
+    {
+        "id": "hulu-langat",
+        "name": "Hulu Langat",
+        "latitude": 3.1137,
+        "longitude": 101.8142,
+        "index": 114,
+        "codes": [
+            "Ds063"
+        ]
+    },
+    {
+        "id": "sepang",
+        "name": "Sepang",
+        "latitude": 2.6931,
+        "longitude": 101.7498,
+        "index": 115,
+        "codes": [
+            "Ds064",
+            "Tn097"
+        ]
+    },
+    {
+        "id": "kemaman",
+        "name": "Kemaman",
+        "latitude": 4.23333,
+        "longitude": 103.45,
+        "index": 116,
+        "codes": [
+            "Ds065",
+            "Tn098"
+        ]
+    },
+    {
+        "id": "maran",
+        "name": "Maran",
+        "latitude": 3.586,
+        "longitude": 102.773,
+        "index": 117,
+        "codes": [
+            "Ds066",
+            "Tn103"
+        ]
+    },
+    {
+        "id": "jelebu",
+        "name": "Jelebu",
+        "latitude": 2.9395,
+        "longitude": 102.0704,
+        "index": 282,
+        "codes": [
+            "Tn099"
+        ]
+    },
+    {
+        "id": "seremban",
+        "name": "Seremban",
+        "latitude": 2.7297,
+        "longitude": 101.9381,
+        "index": 119,
+        "codes": [
+            "Ds068",
+            "Tn104"
+        ]
+    },
+    {
+        "id": "kuantan",
+        "name": "Kuantan",
+        "latitude": 3.8077,
+        "longitude": 103.326,
+        "index": 120,
+        "codes": [
+            "Ds069",
+            "Tn108"
+        ]
+    },
+    {
+        "id": "port-dickson",
+        "name": "Port Dickson",
+        "latitude": 2.52462,
+        "longitude": 101.79651,
+        "index": 121,
+        "codes": [
+            "Ds070",
+            "Tn105"
+        ]
+    },
+    {
+        "id": "bera",
+        "name": "Bera",
+        "latitude": 2.2117,
+        "longitude": 103.1732,
+        "index": 122,
+        "codes": [
+            "Ds071",
+            "Tn102"
+        ]
+    },
+    {
+        "id": "kuala-pilah",
+        "name": "Kuala Pilah",
+        "latitude": 2.7389,
+        "longitude": 102.2487,
+        "index": 123,
+        "codes": [
+            "Ds072",
+            "Tn106"
+        ]
+    },
+    {
+        "id": "rembau",
+        "name": "Rembau",
+        "latitude": 2.5897,
+        "longitude": 102.0913,
+        "index": 124,
+        "codes": [
+            "Ds073",
+            "Tn107"
+        ]
+    },
+    {
+        "id": "jempol",
+        "name": "Jempol",
+        "latitude": 2.8026,
+        "longitude": 102.3682,
+        "index": 125,
+        "codes": [
+            "Ds074",
+            "Tn109"
+        ]
+    },
+    {
+        "id": "alor-gajah",
+        "name": "Alor Gajah",
+        "latitude": 2.3804,
+        "longitude": 102.2089,
+        "index": 126,
+        "codes": [
+            "Ds075",
+            "Tn112"
+        ]
+    },
+    {
+        "id": "pekan",
+        "name": "Pekan",
+        "latitude": 3.4836,
+        "longitude": 103.3996,
+        "index": 127,
+        "codes": [
+            "Ds076",
+            "Tn114"
+        ]
+    },
+    {
+        "id": "tampin",
+        "name": "Tampin",
+        "latitude": 2.4701,
+        "longitude": 102.2302,
+        "index": 128,
+        "codes": [
+            "Ds077",
+            "Tn110"
+        ]
+    },
+    {
+        "id": "melaka-tengah",
+        "name": "Melaka Tengah",
+        "latitude": 2.1674,
+        "longitude": 102.3273,
+        "index": 129,
+        "codes": [
+            "Ds078"
+        ]
+    },
+    {
+        "id": "jasin",
+        "name": "Jasin",
+        "latitude": 2.3096,
+        "longitude": 102.4281,
+        "index": 130,
+        "codes": [
+            "Ds079",
+            "Tn120"
+        ]
+    },
+    {
+        "id": "rompin",
+        "name": "Rompin",
+        "latitude": 2.7083,
+        "longitude": 102.5047,
+        "index": 131,
+        "codes": [
+            "Ds080"
+        ]
+    },
+    {
+        "id": "tangkak",
+        "name": "Tangkak",
+        "latitude": 2.2673,
+        "longitude": 102.5453,
+        "index": 132,
+        "codes": [
+            "Ds081",
+            "Tn121"
+        ]
+    },
+    {
+        "id": "segamat",
+        "name": "Segamat",
+        "latitude": 2.5148,
+        "longitude": 102.8158,
+        "index": 133,
+        "codes": [
+            "Ds082",
+            "Tn123"
+        ]
+    },
+    {
+        "id": "muar",
+        "name": "Muar",
+        "latitude": 2.0442,
+        "longitude": 102.5689,
+        "index": 134,
+        "codes": [
+            "Ds083",
+            "Tn124"
+        ]
+    },
+    {
+        "id": "batu-pahat",
+        "name": "Batu Pahat",
+        "latitude": 1.8548,
+        "longitude": 102.9325,
+        "index": 135,
+        "codes": [
+            "Ds084",
+            "Tn129"
+        ]
+    },
+    {
+        "id": "kluang",
+        "name": "Kluang",
+        "latitude": 2.03046,
+        "longitude": 103.31689,
+        "index": 136,
+        "codes": [
+            "Ds085",
+            "Tn131"
+        ]
+    },
+    {
+        "id": "mersing",
+        "name": "Mersing",
+        "latitude": 2.4312,
+        "longitude": 103.8405,
+        "index": 137,
+        "codes": [
+            "Ds086",
+            "Tn132"
+        ]
+    },
+    {
+        "id": "pontian",
+        "name": "Pontian",
+        "latitude": 1.5059,
+        "longitude": 103.3816,
+        "index": 138,
+        "codes": [
+            "Ds087",
+            "Tn134"
+        ]
+    },
+    {
+        "id": "kulai",
+        "name": "Kulai",
+        "latitude": 1.6561,
+        "longitude": 103.6032,
+        "index": 139,
+        "codes": [
+            "Ds088",
+            "Tn135"
+        ]
+    },
+    {
+        "id": "kota-tinggi",
+        "name": "Kota Tinggi",
+        "latitude": 1.7381,
+        "longitude": 103.8999,
+        "index": 140,
+        "codes": [
+            "Ds089",
+            "Tn137"
+        ]
+    },
+    {
+        "id": "johor-bahru",
+        "name": "Johor Bahru",
+        "latitude": 1.4655,
+        "longitude": 103.7578,
+        "index": 141,
+        "codes": [
+            "Ds090",
+            "Tn139"
+        ]
+    },
+    {
+        "id": "selama",
+        "name": "Selama",
+        "latitude": 5.2236,
+        "longitude": 100.69262,
+        "index": 142,
+        "codes": [
+            "Ds092",
+            "Tn025"
+        ]
+    },
+    {
+        "id": "tebedu",
+        "name": "Tebedu",
+        "latitude": 1.02656,
+        "longitude": 110.36331,
+        "index": 143,
+        "codes": [
+            "Ds501"
+        ]
+    },
+    {
+        "id": "bau",
+        "name": "Bau",
+        "latitude": 1.41667,
+        "longitude": 110.15,
+        "index": 144,
+        "codes": [
+            "Ds502"
+        ]
+    },
+    {
+        "id": "lundu",
+        "name": "Lundu",
+        "latitude": 1.67439,
+        "longitude": 109.85171,
+        "index": 145,
+        "codes": [
+            "Ds503"
+        ]
+    },
+    {
+        "id": "kuching",
+        "name": "Kuching",
+        "latitude": 1.55,
+        "longitude": 110.33333,
+        "index": 146,
+        "codes": [
+            "Ds504",
+            "Tn187",
+            "Dv501"
+        ]
+    },
+    {
+        "id": "serian",
+        "name": "Serian",
+        "latitude": 1.16667,
+        "longitude": 110.56667,
+        "index": 147,
+        "codes": [
+            "Ds505",
+            "Dv502"
+        ]
+    },
+    {
+        "id": "samarahan",
+        "name": "Samarahan",
+        "latitude": 1.46,
+        "longitude": 110.49,
+        "index": 148,
+        "codes": [
+            "Ds506",
+            "Dv503"
+        ]
+    },
+    {
+        "id": "asajaya",
+        "name": "Asajaya",
+        "latitude": 1.55,
+        "longitude": 110.75,
+        "index": 149,
+        "codes": [
+            "Ds507"
+        ]
+    },
+    {
+        "id": "simunjan",
+        "name": "Simunjan",
+        "latitude": 1.38333,
+        "longitude": 110.75,
+        "index": 150,
+        "codes": [
+            "Ds508"
+        ]
+    },
+    {
+        "id": "sri-aman",
+        "name": "Sri Aman",
+        "latitude": 1.24722,
+        "longitude": 111.45278,
+        "index": 151,
+        "codes": [
+            "Ds509",
+            "Tn188",
+            "Dv504"
+        ]
+    },
+    {
+        "id": "pusa",
+        "name": "Pusa",
+        "latitude": 1.58333,
+        "longitude": 111.25,
+        "index": 152,
+        "codes": [
+            "Ds510"
+        ]
+    },
+    {
+        "id": "betong",
+        "name": "Betong",
+        "latitude": 1.4,
+        "longitude": 111.51667,
+        "index": 153,
+        "codes": [
+            "Ds511",
+            "Dv505"
+        ]
+    },
+    {
+        "id": "saratok",
+        "name": "Saratok",
+        "latitude": 1.73333,
+        "longitude": 111.33333,
+        "index": 154,
+        "codes": [
+            "Ds512"
+        ]
+    },
+    {
+        "id": "kabong",
+        "name": "Kabong",
+        "latitude": 1.83333,
+        "longitude": 111.16667,
+        "index": 155,
+        "codes": [
+            "Ds513"
+        ]
+    },
+    {
+        "id": "lubok-antu",
+        "name": "Lubok Antu",
+        "latitude": 1.04186,
+        "longitude": 111.83398,
+        "index": 156,
+        "codes": [
+            "Ds514"
+        ]
+    },
+    {
+        "id": "pakan",
+        "name": "Pakan",
+        "latitude": 1.88333,
+        "longitude": 111.68333,
+        "index": 157,
+        "codes": [
+            "Ds515"
+        ]
+    },
+    {
+        "id": "sarikei",
+        "name": "Sarikei",
+        "latitude": 2.11667,
+        "longitude": 111.51667,
+        "index": 158,
+        "codes": [
+            "Ds516",
+            "Tn189",
+            "Dv506"
+        ]
+    },
+    {
+        "id": "tanjung-manis",
+        "name": "Tanjung Manis",
+        "latitude": 2.17784,
+        "longitude": 111.202,
+        "index": 159,
+        "codes": [
+            "Ds517"
+        ]
+    },
+    {
+        "id": "julau",
+        "name": "Julau",
+        "latitude": 2.01667,
+        "longitude": 111.91667,
+        "index": 160,
+        "codes": [
+            "Ds518"
+        ]
+    },
+    {
+        "id": "meradong",
+        "name": "Meradong",
+        "latitude": 2.0,
+        "longitude": 111.5,
+        "index": 161,
+        "codes": [
+            "Ds519"
+        ]
+    },
+    {
+        "id": "daro",
+        "name": "Daro",
+        "latitude": 2.51688,
+        "longitude": 111.43002,
+        "index": 162,
+        "codes": [
+            "Ds520"
+        ]
+    },
+    {
+        "id": "sibu",
+        "name": "Sibu",
+        "latitude": 2.3,
+        "longitude": 111.81667,
+        "index": 163,
+        "codes": [
+            "Ds521",
+            "Tn190",
+            "Dv507"
+        ]
+    },
+    {
+        "id": "kanowit",
+        "name": "Kanowit",
+        "latitude": 2.1,
+        "longitude": 112.15,
+        "index": 164,
+        "codes": [
+            "Ds522"
+        ]
+    },
+    {
+        "id": "song",
+        "name": "Song",
+        "latitude": 2.01667,
+        "longitude": 112.55,
+        "index": 165,
+        "codes": [
+            "Ds523"
+        ]
+    },
+    {
+        "id": "matu",
+        "name": "Matu",
+        "latitude": 2.68333,
+        "longitude": 111.53333,
+        "index": 166,
+        "codes": [
+            "Ds524"
+        ]
+    },
+    {
+        "id": "dalat",
+        "name": "Dalat",
+        "latitude": 2.66667,
+        "longitude": 112.08333,
+        "index": 167,
+        "codes": [
+            "Ds525"
+        ]
+    },
+    {
+        "id": "selangau",
+        "name": "Selangau",
+        "latitude": 2.52477,
+        "longitude": 112.32543,
+        "index": 168,
+        "codes": [
+            "Ds526"
+        ]
+    },
+    {
+        "id": "mukah",
+        "name": "Mukah",
+        "latitude": 2.89435,
+        "longitude": 112.09145,
+        "index": 169,
+        "codes": [
+            "Ds527",
+            "Tn191",
+            "Dv508"
+        ]
+    },
+    {
+        "id": "kapit",
+        "name": "Kapit",
+        "latitude": 1.99546,
+        "longitude": 112.93254,
+        "index": 170,
+        "codes": [
+            "Ds528",
+            "Tn192",
+            "Dv509"
+        ]
+    },
+    {
+        "id": "bukit-mabong",
+        "name": "Bukit Mabong",
+        "latitude": 2.06667,
+        "longitude": 113.66667,
+        "index": 171,
+        "codes": [
+            "Ds529"
+        ]
+    },
+    {
+        "id": "tatau",
+        "name": "Tatau",
+        "latitude": 2.88333,
+        "longitude": 112.85,
+        "index": 172,
+        "codes": [
+            "Ds530"
+        ]
+    },
+    {
+        "id": "bintulu",
+        "name": "Bintulu",
+        "latitude": 3.16667,
+        "longitude": 113.03333,
+        "index": 173,
+        "codes": [
+            "Ds531",
+            "Tn193",
+            "Dv510"
+        ]
+    },
+    {
+        "id": "sebauh",
+        "name": "Sebauh",
+        "latitude": 3.11667,
+        "longitude": 113.26667,
+        "index": 174,
+        "codes": [
+            "Ds532"
+        ]
+    },
+    {
+        "id": "belaga",
+        "name": "Belaga",
+        "latitude": 2.7,
+        "longitude": 113.78333,
+        "index": 175,
+        "codes": [
+            "Ds533"
+        ]
+    },
+    {
+        "id": "subis",
+        "name": "Subis",
+        "latitude": 4.4,
+        "longitude": 114.1,
+        "index": 176,
+        "codes": [
+            "Ds534"
+        ]
+    },
+    {
+        "id": "beluru",
+        "name": "Beluru",
+        "latitude": 3.98333,
+        "longitude": 114.1,
+        "index": 177,
+        "codes": [
+            "Ds535"
+        ]
+    },
+    {
+        "id": "telang-usan",
+        "name": "Telang Usan",
+        "latitude": 3.7,
+        "longitude": 114.4,
+        "index": 178,
+        "codes": [
+            "Ds536"
+        ]
+    },
+    {
+        "id": "miri",
+        "name": "Miri",
+        "latitude": 4.39928,
+        "longitude": 113.99163,
+        "index": 179,
+        "codes": [
+            "Ds537",
+            "Tn194",
+            "Dv511"
+        ]
+    },
+    {
+        "id": "marudi",
+        "name": "Marudi",
+        "latitude": 4.18333,
+        "longitude": 114.31667,
+        "index": 180,
+        "codes": [
+            "Ds538"
+        ]
+    },
+    {
+        "id": "limbang",
+        "name": "Limbang",
+        "latitude": 4.75477,
+        "longitude": 115.01011,
+        "index": 181,
+        "codes": [
+            "Ds539",
+            "Tn195",
+            "Dv512"
+        ]
+    },
+    {
+        "id": "lawas",
+        "name": "Lawas",
+        "latitude": 4.8604,
+        "longitude": 115.409,
+        "index": 182,
+        "codes": [
+            "Ds540"
+        ]
+    },
+    {
+        "id": "sipitang",
+        "name": "Sipitang",
+        "latitude": 5.07903,
+        "longitude": 115.54964,
+        "index": 183,
+        "codes": [
+            "Ds541"
+        ]
+    },
+    {
+        "id": "tenom",
+        "name": "Tenom",
+        "latitude": 5.11922,
+        "longitude": 115.93719,
+        "index": 184,
+        "codes": [
+            "Ds543"
+        ]
+    },
+    {
+        "id": "kuala-penyu",
+        "name": "Kuala Penyu",
+        "latitude": 5.5714,
+        "longitude": 115.5984,
+        "index": 185,
+        "codes": [
+            "Ds544"
+        ]
+    },
+    {
+        "id": "beaufort",
+        "name": "Beaufort",
+        "latitude": 5.3473,
+        "longitude": 115.7455,
+        "index": 186,
+        "codes": [
+            "Ds545"
+        ]
+    },
+    {
+        "id": "nabawan",
+        "name": "Nabawan",
+        "latitude": 5.6,
+        "longitude": 116.3,
+        "index": 187,
+        "codes": [
+            "Ds546"
+        ]
+    },
+    {
+        "id": "keningau",
+        "name": "Keningau",
+        "latitude": 5.3378,
+        "longitude": 116.1602,
+        "index": 188,
+        "codes": [
+            "Ds547",
+            "Tn197"
+        ]
+    },
+    {
+        "id": "papar",
+        "name": "Papar",
+        "latitude": 5.73333,
+        "longitude": 115.93333,
+        "index": 189,
+        "codes": [
+            "Ds548"
+        ]
+    },
+    {
+        "id": "putatan",
+        "name": "Putatan",
+        "latitude": 5.9258,
+        "longitude": 116.06094,
+        "index": 190,
+        "codes": [
+            "Ds549"
+        ]
+    },
+    {
+        "id": "penampang",
+        "name": "Penampang",
+        "latitude": 6.45,
+        "longitude": 116.5,
+        "index": 191,
+        "codes": [
+            "Ds550"
+        ]
+    },
+    {
+        "id": "tambunan",
+        "name": "Tambunan",
+        "latitude": 5.71667,
+        "longitude": 116.4,
+        "index": 192,
+        "codes": [
+            "Ds551"
+        ]
+    },
+    {
+        "id": "tawau",
+        "name": "Tawau",
+        "latitude": 4.24482,
+        "longitude": 117.89115,
+        "index": 193,
+        "codes": [
+            "Ds552",
+            "Tn199",
+            "Dv516"
+        ]
+    },
+    {
+        "id": "tongod",
+        "name": "Tongod",
+        "latitude": 5.3,
+        "longitude": 117.1,
+        "index": 194,
+        "codes": [
+            "Ds553"
+        ]
+    },
+    {
+        "id": "kota-kinabalu",
+        "name": "Kota Kinabalu",
+        "latitude": 5.9749,
+        "longitude": 116.0724,
+        "index": 195,
+        "codes": [
+            "Ds554",
+            "Tn196"
+        ]
+    },
+    {
+        "id": "tuaran",
+        "name": "Tuaran",
+        "latitude": 6.1774,
+        "longitude": 116.2314,
+        "index": 196,
+        "codes": [
+            "Ds555",
+            "Tn198"
+        ]
+    },
+    {
+        "id": "ranau",
+        "name": "Ranau",
+        "latitude": 5.9538,
+        "longitude": 116.6641,
+        "index": 197,
+        "codes": [
+            "Ds556"
+        ]
+    },
+    {
+        "id": "kunak",
+        "name": "Kunak",
+        "latitude": 4.68577,
+        "longitude": 118.24908,
+        "index": 198,
+        "codes": [
+            "Ds557"
+        ]
+    },
+    {
+        "id": "kota-belud",
+        "name": "Kota Belud",
+        "latitude": 6.351,
+        "longitude": 116.4305,
+        "index": 199,
+        "codes": [
+            "Ds558"
+        ]
+    },
+    {
+        "id": "semporna",
+        "name": "Semporna",
+        "latitude": 4.48178,
+        "longitude": 118.61119,
+        "index": 200,
+        "codes": [
+            "Ds559"
+        ]
+    },
+    {
+        "id": "telupid",
+        "name": "Telupid",
+        "latitude": 5.65,
+        "longitude": 117.11667,
+        "index": 201,
+        "codes": [
+            "Ds560"
+        ]
+    },
+    {
+        "id": "kota-marudu",
+        "name": "Kota Marudu",
+        "latitude": 6.55,
+        "longitude": 116.75,
+        "index": 202,
+        "codes": [
+            "Ds561"
+        ]
+    },
+    {
+        "id": "lahad-datu",
+        "name": "Lahad Datu",
+        "latitude": 5.02298,
+        "longitude": 118.32897,
+        "index": 203,
+        "codes": [
+            "Ds562",
+            "Tn201"
+        ]
+    },
+    {
+        "id": "kinabatangan",
+        "name": "Kinabatangan",
+        "latitude": 5.58602,
+        "longitude": 117.85083,
+        "index": 204,
+        "codes": [
+            "Ds563"
+        ]
+    },
+    {
+        "id": "beluran",
+        "name": "Beluran",
+        "latitude": 5.8956,
+        "longitude": 117.5557,
+        "index": 205,
+        "codes": [
+            "Ds564"
+        ]
+    },
+    {
+        "id": "sandakan",
+        "name": "Sandakan",
+        "latitude": 5.8402,
+        "longitude": 118.1179,
+        "index": 206,
+        "codes": [
+            "Ds565",
+            "Tn200",
+            "Dv517"
+        ]
+    },
+    {
+        "id": "pitas",
+        "name": "Pitas",
+        "latitude": 6.72779,
+        "longitude": 117.05779,
+        "index": 207,
+        "codes": [
+            "Ds566"
+        ]
+    },
+    {
+        "id": "kudat",
+        "name": "Kudat",
+        "latitude": 6.88732,
+        "longitude": 116.82364,
+        "index": 208,
+        "codes": [
+            "Ds567",
+            "Dv518"
+        ]
+    },
+    {
+        "id": "membakut",
+        "name": "Membakut",
+        "latitude": 5.4748,
+        "longitude": 115.803,
+        "index": 209,
+        "codes": [
+            "Ds568"
+        ]
+    },
+    {
+        "id": "labuk-sugut",
+        "name": "Labuk & Sugut",
+        "latitude": 5.4,
+        "longitude": 117.2,
+        "index": 210,
+        "codes": [
+            "Ds570"
+        ]
+    },
+    {
+        "id": "kalabakan",
+        "name": "Kalabakan",
+        "latitude": 4.41667,
+        "longitude": 117.48333,
+        "index": 211,
+        "codes": [
+            "Ds571"
+        ]
+    },
+    {
+        "id": "sook",
+        "name": "Sook",
+        "latitude": 5.141,
+        "longitude": 116.3088,
+        "index": 212,
+        "codes": [
+            "Ds572"
+        ]
+    },
+    {
+        "id": "sebuyau",
+        "name": "Sebuyau",
+        "latitude": 1.51667,
+        "longitude": 110.93333,
+        "index": 213,
+        "codes": [
+            "Ds573"
+        ]
+    },
+    {
+        "id": "gedong",
+        "name": "Gedong",
+        "latitude": 1.23333,
+        "longitude": 110.68333,
+        "index": 214,
+        "codes": [
+            "Ds574"
+        ]
+    },
+    {
+        "id": "pantu",
+        "name": "Pantu",
+        "latitude": 1.13968,
+        "longitude": 111.11771,
+        "index": 215,
+        "codes": [
+            "Ds575"
+        ]
+    },
+    {
+        "id": "lingga",
+        "name": "Lingga",
+        "latitude": 1.35,
+        "longitude": 111.16667,
+        "index": 216,
+        "codes": [
+            "Ds576"
+        ]
+    },
+    {
+        "id": "siburan",
+        "name": "Siburan",
+        "latitude": 1.36667,
+        "longitude": 110.4,
+        "index": 217,
+        "codes": [
+            "Ds577"
+        ]
+    },
+    {
+        "id": "labuan",
+        "name": "Labuan",
+        "latitude": 5.28028,
+        "longitude": 115.2475,
+        "index": 218,
+        "codes": [
+            "Ds578",
+            "Dv519"
+        ]
+    },
+    {
+        "id": "bario",
+        "name": "Bario",
+        "latitude": 3.74042,
+        "longitude": 115.46395,
+        "index": 219,
+        "codes": [
+            "Ds579"
+        ]
+    },
+    {
+        "id": "jitra",
+        "name": "Jitra",
+        "latitude": 6.26812,
+        "longitude": 100.42167,
+        "index": 220,
+        "codes": [
+            "Tn002"
+        ]
+    },
+    {
+        "id": "alor-star",
+        "name": "Alor Star",
+        "latitude": 6.12104,
+        "longitude": 100.36014,
+        "index": 221,
+        "codes": [
+            "Tn003"
+        ]
+    },
+    {
+        "id": "kuala-nerang",
+        "name": "Kuala Nerang",
+        "latitude": 6.25844,
+        "longitude": 100.61264,
+        "index": 222,
+        "codes": [
+            "Tn005"
+        ]
+    },
+    {
+        "id": "sungai-petani",
+        "name": "Sungai Petani",
+        "latitude": 5.647,
+        "longitude": 100.48772,
+        "index": 223,
+        "codes": [
+            "Tn008"
+        ]
+    },
+    {
+        "id": "balik-pulau",
+        "name": "Balik Pulau",
+        "latitude": 5.34916,
+        "longitude": 100.23938,
+        "index": 224,
+        "codes": [
+            "Tn009"
+        ]
+    },
+    {
+        "id": "ayer-itam",
+        "name": "Ayer Itam",
+        "latitude": 5.40158,
+        "longitude": 100.27815,
+        "index": 225,
+        "codes": [
+            "Tn010"
+        ]
+    },
+    {
+        "id": "kepala-batas",
+        "name": "Kepala Batas",
+        "latitude": 5.51707,
+        "longitude": 100.4265,
+        "index": 226,
+        "codes": [
+            "Tn012"
+        ]
+    },
+    {
+        "id": "georgetown",
+        "name": "Georgetown",
+        "latitude": 5.41,
+        "longitude": 100.33,
+        "index": 227,
+        "codes": [
+            "Tn013"
+        ]
+    },
+    {
+        "id": "butterworth",
+        "name": "Butterworth",
+        "latitude": 5.3991,
+        "longitude": 100.36382,
+        "index": 228,
+        "codes": [
+            "Tn014"
+        ]
+    },
+    {
+        "id": "bayan-lepas",
+        "name": "Bayan Lepas",
+        "latitude": 5.29992,
+        "longitude": 100.26052,
+        "index": 229,
+        "codes": [
+            "Tn015"
+        ]
+    },
+    {
+        "id": "perai",
+        "name": "Perai",
+        "latitude": 5.38333,
+        "longitude": 100.38333,
+        "index": 230,
+        "codes": [
+            "Tn016"
+        ]
+    },
+    {
+        "id": "bukit-tengah",
+        "name": "Bukit Tengah",
+        "latitude": 5.34605,
+        "longitude": 100.43917,
+        "index": 231,
+        "codes": [
+            "Tn017"
+        ]
+    },
+    {
+        "id": "bukit-mertajam",
+        "name": "Bukit Mertajam",
+        "latitude": 5.36301,
+        "longitude": 100.4667,
+        "index": 232,
+        "codes": [
+            "Tn018"
+        ]
+    },
+    {
+        "id": "batu-kawan",
+        "name": "Batu Kawan",
+        "latitude": 5.25822,
+        "longitude": 100.42876,
+        "index": 233,
+        "codes": [
+            "Tn019"
+        ]
+    },
+    {
+        "id": "nibong-tebal",
+        "name": "Nibong Tebal",
+        "latitude": 5.16586,
+        "longitude": 100.47793,
+        "index": 234,
+        "codes": [
+            "Tn022"
+        ]
+    },
+    {
+        "id": "serdang",
+        "name": "Serdang",
+        "latitude": 5.20372,
+        "longitude": 100.62476,
+        "index": 235,
+        "codes": [
+            "Tn023",
+            "Tn164"
+        ]
+    },
+    {
+        "id": "parit-buntar",
+        "name": "Parit Buntar",
+        "latitude": 5.12671,
+        "longitude": 100.49316,
+        "index": 236,
+        "codes": [
+            "Tn024"
+        ]
+    },
+    {
+        "id": "bagan-serai",
+        "name": "Bagan Serai",
+        "latitude": 5.0108,
+        "longitude": 100.54101,
+        "index": 237,
+        "codes": [
+            "Tn026"
+        ]
+    },
+    {
+        "id": "gerik",
+        "name": "Gerik",
+        "latitude": 5.41667,
+        "longitude": 101.13333,
+        "index": 238,
+        "codes": [
+            "Tn027"
+        ]
+    },
+    {
+        "id": "lenggong",
+        "name": "Lenggong",
+        "latitude": 5.10633,
+        "longitude": 100.96792,
+        "index": 239,
+        "codes": [
+            "Tn028"
+        ]
+    },
+    {
+        "id": "taiping",
+        "name": "Taiping",
+        "latitude": 4.85,
+        "longitude": 100.73333,
+        "index": 240,
+        "codes": [
+            "Tn029"
+        ]
+    },
+    {
+        "id": "rantau-panjang",
+        "name": "Rantau Panjang",
+        "latitude": 6.0219,
+        "longitude": 101.9767,
+        "index": 241,
+        "codes": [
+            "Tn030"
+        ]
+    },
+    {
+        "id": "sungai-siput",
+        "name": "Sungai Siput",
+        "latitude": 4.3945,
+        "longitude": 101.1947,
+        "index": 242,
+        "codes": [
+            "Tn036"
+        ]
+    },
+    {
+        "id": "sitiawan",
+        "name": "Sitiawan",
+        "latitude": 4.2168,
+        "longitude": 100.6996,
+        "index": 243,
+        "codes": [
+            "Tn040"
+        ]
+    },
+    {
+        "id": "ipoh",
+        "name": "Ipoh",
+        "latitude": 4.5841,
+        "longitude": 101.0829,
+        "index": 244,
+        "codes": [
+            "Tn041"
+        ]
+    },
+    {
+        "id": "batu-gajah",
+        "name": "Batu Gajah",
+        "latitude": 4.46916,
+        "longitude": 101.04107,
+        "index": 245,
+        "codes": [
+            "Tn043"
+        ]
+    },
+    {
+        "id": "seri-iskandar",
+        "name": "Seri Iskandar",
+        "latitude": 4.35993,
+        "longitude": 100.98491,
+        "index": 246,
+        "codes": [
+            "Tn044"
+        ]
+    },
+    {
+        "id": "gopeng",
+        "name": "Gopeng",
+        "latitude": 4.4715,
+        "longitude": 101.1663,
+        "index": 247,
+        "codes": [
+            "Tn046"
+        ]
+    },
+    {
+        "id": "jerteh",
+        "name": "Jerteh",
+        "latitude": 5.7336,
+        "longitude": 102.4897,
+        "index": 310,
+        "codes": [
+            "Tn150"
+        ]
+    },
+    {
+        "id": "teluk-intan",
+        "name": "Teluk Intan",
+        "latitude": 4.02219,
+        "longitude": 101.02083,
+        "index": 249,
+        "codes": [
+            "Tn051"
+        ]
+    },
+    {
+        "id": "tapah",
+        "name": "Tapah",
+        "latitude": 4.18333,
+        "longitude": 101.26667,
+        "index": 250,
+        "codes": [
+            "Tn052"
+        ]
+    },
+    {
+        "id": "bandar-permaisuri",
+        "name": "Bandar Permaisuri",
+        "latitude": 5.52241,
+        "longitude": 102.74854,
+        "index": 251,
+        "codes": [
+            "Tn055"
+        ]
+    },
+    {
+        "id": "slim-river",
+        "name": "Slim River",
+        "latitude": 3.83333,
+        "longitude": 101.4,
+        "index": 252,
+        "codes": [
+            "Tn057"
+        ]
+    },
+    {
+        "id": "kuala-lipis",
+        "name": "Kuala Lipis",
+        "latitude": 4.1842,
+        "longitude": 102.0468,
+        "index": 253,
+        "codes": [
+            "Tn060"
+        ]
+    },
+    {
+        "id": "kuala-kubu-bharu",
+        "name": "Kuala Kubu Bharu",
+        "latitude": 3.5638,
+        "longitude": 101.6581,
+        "index": 254,
+        "codes": [
+            "Tn063"
+        ]
+    },
+    {
+        "id": "rawang",
+        "name": "Rawang",
+        "latitude": 3.3213,
+        "longitude": 101.5767,
+        "index": 255,
+        "codes": [
+            "Tn064"
+        ]
+    },
+    {
+        "id": "selayang",
+        "name": "Selayang",
+        "latitude": 3.2549,
+        "longitude": 101.6668,
+        "index": 256,
+        "codes": [
+            "Tn065"
+        ]
+    },
+    {
+        "id": "pelabuhan-klang",
+        "name": "Pelabuhan Klang",
+        "latitude": 2.99959,
+        "longitude": 101.39287,
+        "index": 257,
+        "codes": [
+            "Tn066"
+        ]
+    },
+    {
+        "id": "kepong",
+        "name": "Kepong",
+        "latitude": 3.21398,
+        "longitude": 101.64018,
+        "index": 258,
+        "codes": [
+            "Tn067"
+        ]
+    },
+    {
+        "id": "batu-caves",
+        "name": "Batu Caves",
+        "latitude": 3.238,
+        "longitude": 101.682,
+        "index": 259,
+        "codes": [
+            "Tn069"
+        ]
+    },
+    {
+        "id": "shah-alam",
+        "name": "Shah Alam",
+        "latitude": 3.08507,
+        "longitude": 101.53281,
+        "index": 260,
+        "codes": [
+            "Tn070"
+        ]
+    },
+    {
+        "id": "sentul",
+        "name": "Sentul",
+        "latitude": 3.18333,
+        "longitude": 101.68333,
+        "index": 261,
+        "codes": [
+            "Tn071"
+        ]
+    },
+    {
+        "id": "jalan-duta",
+        "name": "Jalan Duta",
+        "latitude": 3.17,
+        "longitude": 101.68,
+        "index": 262,
+        "codes": [
+            "Tn073"
+        ]
+    },
+    {
+        "id": "damansara",
+        "name": "Damansara",
+        "latitude": 3.066,
+        "longitude": 101.548,
+        "index": 263,
+        "codes": [
+            "Tn074"
+        ]
+    },
+    {
+        "id": "setapak",
+        "name": "Setapak",
+        "latitude": 3.207,
+        "longitude": 101.727,
+        "index": 264,
+        "codes": [
+            "Tn075"
+        ]
+    },
+    {
+        "id": "petaling-jaya",
+        "name": "Petaling Jaya",
+        "latitude": 3.10726,
+        "longitude": 101.60671,
+        "index": 265,
+        "codes": [
+            "Tn076"
+        ]
+    },
+    {
+        "id": "subang-jaya",
+        "name": "Subang Jaya",
+        "latitude": 3.04384,
+        "longitude": 101.58062,
+        "index": 266,
+        "codes": [
+            "Tn077"
+        ]
+    },
+    {
+        "id": "bangsar",
+        "name": "Bangsar",
+        "latitude": 3.12945,
+        "longitude": 101.67004,
+        "index": 267,
+        "codes": [
+            "Tn078"
+        ]
+    },
+    {
+        "id": "bukit-bintang",
+        "name": "Bukit Bintang",
+        "latitude": 5.63052,
+        "longitude": 102.6479,
+        "index": 268,
+        "codes": [
+            "Tn080"
+        ]
+    },
+    {
+        "id": "ampang",
+        "name": "Ampang",
+        "latitude": 3.15,
+        "longitude": 101.76667,
+        "index": 269,
+        "codes": [
+            "Tn081"
+        ]
+    },
+    {
+        "id": "sungai-besi",
+        "name": "Sungai Besi",
+        "latitude": 3.05,
+        "longitude": 101.7,
+        "index": 270,
+        "codes": [
+            "Tn083"
+        ]
+    },
+    {
+        "id": "banting",
+        "name": "Banting",
+        "latitude": 2.8136,
+        "longitude": 101.50185,
+        "index": 271,
+        "codes": [
+            "Tn084"
+        ]
+    },
+    {
+        "id": "seri-kembangan",
+        "name": "Seri Kembangan",
+        "latitude": 3.03333,
+        "longitude": 101.71667,
+        "index": 272,
+        "codes": [
+            "Tn085"
+        ]
+    },
+    {
+        "id": "cheras",
+        "name": "Cheras",
+        "latitude": 3.108,
+        "longitude": 101.726,
+        "index": 273,
+        "codes": [
+            "Tn086"
+        ]
+    },
+    {
+        "id": "cyberjaya",
+        "name": "Cyberjaya",
+        "latitude": 2.92281,
+        "longitude": 101.65718,
+        "index": 274,
+        "codes": [
+            "Tn087"
+        ]
+    },
+    {
+        "id": "paka",
+        "name": "Paka",
+        "latitude": 4.6374,
+        "longitude": 103.4368,
+        "index": 275,
+        "codes": [
+            "Tn089"
+        ]
+    },
+    {
+        "id": "kajang",
+        "name": "Kajang",
+        "latitude": 2.99424,
+        "longitude": 101.78875,
+        "index": 276,
+        "codes": [
+            "Tn090"
+        ]
+    },
+    {
+        "id": "mentakab",
+        "name": "Mentakab",
+        "latitude": 3.4854,
+        "longitude": 102.3484,
+        "index": 277,
+        "codes": [
+            "Tn091"
+        ]
+    },
+    {
+        "id": "bangi",
+        "name": "Bangi",
+        "latitude": 2.9,
+        "longitude": 101.78333,
+        "index": 278,
+        "codes": [
+            "Tn092"
+        ]
+    },
+    {
+        "id": "semenyih",
+        "name": "Semenyih",
+        "latitude": 2.9516,
+        "longitude": 101.843,
+        "index": 279,
+        "codes": [
+            "Tn093"
+        ]
+    },
+    {
+        "id": "kertih",
+        "name": "Kertih",
+        "latitude": 4.5141,
+        "longitude": 103.4483,
+        "index": 280,
+        "codes": [
+            "Tn094"
+        ]
+    },
+    {
+        "id": "nilai",
+        "name": "Nilai",
+        "latitude": 2.82,
+        "longitude": 101.8,
+        "index": 281,
+        "codes": [
+            "Tn096"
+        ]
+    },
+    {
+        "id": "kuala-klawang",
+        "name": "Kuala Klawang",
+        "latitude": 2.9395,
+        "longitude": 102.0704,
+        "index": 282,
+        "codes": [
+            "Tn099"
+        ]
+    },
+    {
+        "id": "triang",
+        "name": "Triang",
+        "latitude": 3.2462,
+        "longitude": 102.4155,
+        "index": 283,
+        "codes": [
+            "Tn101"
+        ]
+    },
+    {
+        "id": "masjid-tanah",
+        "name": "Masjid Tanah",
+        "latitude": 2.3585,
+        "longitude": 102.1029,
+        "index": 284,
+        "codes": [
+            "Tn111"
+        ]
+    },
+    {
+        "id": "tangga-batu",
+        "name": "Tangga Batu",
+        "latitude": 2.2601,
+        "longitude": 102.1523,
+        "index": 285,
+        "codes": [
+            "Tn113"
+        ]
+    },
+    {
+        "id": "durian-tunggal",
+        "name": "Durian Tunggal",
+        "latitude": 2.3125,
+        "longitude": 102.2805,
+        "index": 286,
+        "codes": [
+            "Tn115"
+        ]
+    },
+    {
+        "id": "muadzam-shah",
+        "name": "Muadzam Shah",
+        "latitude": 3.0627,
+        "longitude": 103.0892,
+        "index": 287,
+        "codes": [
+            "Tn116"
+        ]
+    },
+    {
+        "id": "gemas",
+        "name": "Gemas",
+        "latitude": 2.5832,
+        "longitude": 102.6117,
+        "index": 288,
+        "codes": [
+            "Tn117"
+        ]
+    },
+    {
+        "id": "ayer-keroh",
+        "name": "Ayer Keroh",
+        "latitude": 2.2654,
+        "longitude": 102.2801,
+        "index": 289,
+        "codes": [
+            "Tn118"
+        ]
+    },
+    {
+        "id": "bandaraya-melaka",
+        "name": "Bandaraya Melaka",
+        "latitude": 2.19,
+        "longitude": 102.25,
+        "index": 290,
+        "codes": [
+            "Tn119"
+        ]
+    },
+    {
+        "id": "merlimau",
+        "name": "Merlimau",
+        "latitude": 2.1449,
+        "longitude": 102.4251,
+        "index": 291,
+        "codes": [
+            "Tn122"
+        ]
+    },
+    {
+        "id": "pagoh",
+        "name": "Pagoh",
+        "latitude": 2.1495,
+        "longitude": 102.7704,
+        "index": 292,
+        "codes": [
+            "Tn125"
+        ]
+    },
+    {
+        "id": "labis",
+        "name": "Labis",
+        "latitude": 2.385,
+        "longitude": 103.021,
+        "index": 293,
+        "codes": [
+            "Tn126"
+        ]
+    },
+    {
+        "id": "kuala-rompin",
+        "name": "Kuala Rompin",
+        "latitude": 2.81667,
+        "longitude": 103.48333,
+        "index": 294,
+        "codes": [
+            "Tn127"
+        ]
+    },
+    {
+        "id": "yong-peng",
+        "name": "Yong Peng",
+        "latitude": 2.0136,
+        "longitude": 103.0659,
+        "index": 295,
+        "codes": [
+            "Tn128"
+        ]
+    },
+    {
+        "id": "ayer-hitam",
+        "name": "Ayer Hitam",
+        "latitude": 1.915,
+        "longitude": 103.1808,
+        "index": 296,
+        "codes": [
+            "Tn130"
+        ]
+    },
+    {
+        "id": "simpang-renggam",
+        "name": "Simpang Renggam",
+        "latitude": 1.825,
+        "longitude": 103.3107,
+        "index": 297,
+        "codes": [
+            "Tn133"
+        ]
+    },
+    {
+        "id": "senai",
+        "name": "Senai",
+        "latitude": 1.6006,
+        "longitude": 103.6419,
+        "index": 298,
+        "codes": [
+            "Tn136"
+        ]
+    },
+    {
+        "id": "iskandar-puteri",
+        "name": "Iskandar Puteri",
+        "latitude": 1.39324,
+        "longitude": 103.62322,
+        "index": 299,
+        "codes": [
+            "Tn138"
+        ]
+    },
+    {
+        "id": "pasir-gudang",
+        "name": "Pasir Gudang",
+        "latitude": 1.462,
+        "longitude": 103.9053,
+        "index": 300,
+        "codes": [
+            "Tn140"
+        ]
+    },
+    {
+        "id": "lojing",
+        "name": "Lojing",
+        "latitude": 4.55,
+        "longitude": 101.9,
+        "index": 301,
+        "codes": [
+            "Tn141"
+        ]
+    },
+    {
+        "id": "penawar",
+        "name": "Penawar",
+        "latitude": 1.62,
+        "longitude": 104.15,
+        "index": 302,
+        "codes": [
+            "Tn142"
+        ]
+    },
+    {
+        "id": "kuah",
+        "name": "Kuah",
+        "latitude": 6.32649,
+        "longitude": 99.8432,
+        "index": 303,
+        "codes": [
+            "Tn143"
+        ]
+    },
+    {
+        "id": "kubang-kerian",
+        "name": "Kubang Kerian",
+        "latitude": 6.09123,
+        "longitude": 102.27938,
+        "index": 304,
+        "codes": [
+            "Tn144"
+        ]
+    },
+    {
+        "id": "tanah-rata-brinchang",
+        "name": "Tanah Rata - Brinchang",
+        "latitude": 4.47,
+        "longitude": 101.38,
+        "index": 305,
+        "codes": [
+            "Tn145"
+        ]
+    },
+    {
+        "id": "tanjong-malim",
+        "name": "Tanjong Malim",
+        "latitude": 3.681,
+        "longitude": 101.5198,
+        "index": 306,
+        "codes": [
+            "Tn146"
+        ]
+    },
+    {
+        "id": "meru",
+        "name": "Meru",
+        "latitude": 3.13622,
+        "longitude": 101.4394,
+        "index": 307,
+        "codes": [
+            "Tn147"
+        ]
+    },
+    {
+        "id": "kelana-jaya",
+        "name": "Kelana Jaya",
+        "latitude": 3.1,
+        "longitude": 101.6,
+        "index": 308,
+        "codes": [
+            "Tn148"
+        ]
+    },
+    {
+        "id": "bandar-baru-salak-tinggi",
+        "name": "Bandar Baru Salak Tinggi",
+        "latitude": 2.81232,
+        "longitude": 101.73562,
+        "index": 309,
+        "codes": [
+            "Tn149"
+        ]
+    },
+    {
+        "id": "jertih",
+        "name": "Jertih",
+        "latitude": 5.7336,
+        "longitude": 102.4897,
+        "index": 310,
+        "codes": [
+            "Tn150"
+        ]
+    },
+    {
+        "id": "pekan-nenas",
+        "name": "Pekan Nenas",
+        "latitude": 1.51,
+        "longitude": 103.5141,
+        "index": 311,
+        "codes": [
+            "Tn151"
+        ]
+    },
+    {
+        "id": "bandar-tun-abdul-razak-jengka",
+        "name": "Bandar Tun Abdul Razak, Jengka",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "ulu-tiram",
+        "name": "Ulu Tiram",
+        "latitude": 1.6,
+        "longitude": 103.81667,
+        "index": 313,
+        "codes": [
+            "Tn153"
+        ]
+    },
+    {
+        "id": "tanjong-karang",
+        "name": "Tanjong Karang",
+        "latitude": 3.4291,
+        "longitude": 101.179,
+        "index": 314,
+        "codes": [
+            "Tn154"
+        ]
+    },
+    {
+        "id": "gombak-taman-perwira",
+        "name": "Gombak (Taman Perwira )",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "bandar-baru-seri-manjung",
+        "name": "Bandar Baru Seri Manjung",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "kuala-kedah",
+        "name": "Kuala Kedah",
+        "latitude": 6.1,
+        "longitude": 100.3,
+        "index": 317,
+        "codes": [
+            "Tn157"
+        ]
+    },
+    {
+        "id": "sri-gombak",
+        "name": "Sri Gombak",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "skudai",
+        "name": "Skudai",
+        "latitude": 1.53741,
+        "longitude": 103.65779,
+        "index": 319,
+        "codes": [
+            "Tn159"
+        ]
+    },
+    {
+        "id": "bayan-baru",
+        "name": "Bayan Baru",
+        "latitude": 5.33,
+        "longitude": 100.28,
+        "index": 320,
+        "codes": [
+            "Tn160"
+        ]
+    },
+    {
+        "id": "gurun",
+        "name": "Gurun",
+        "latitude": 5.81717,
+        "longitude": 100.47381,
+        "index": 321,
+        "codes": [
+            "Tn161"
+        ]
+    },
+    {
+        "id": "serendah",
+        "name": "Serendah",
+        "latitude": 3.3646,
+        "longitude": 101.6041,
+        "index": 322,
+        "codes": [
+            "Tn162"
+        ]
+    },
+    {
+        "id": "sungai-udang",
+        "name": "Sungai Udang",
+        "latitude": 2.269,
+        "longitude": 102.1427,
+        "index": 323,
+        "codes": [
+            "Tn163"
+        ]
+    },
+    {
+        "id": "batu-berendam",
+        "name": "Batu Berendam",
+        "latitude": 2.2487,
+        "longitude": 102.246,
+        "index": 324,
+        "codes": [
+            "Tn165"
+        ]
+    },
+    {
+        "id": "telok-panglima-garang",
+        "name": "Telok Panglima Garang",
+        "latitude": 2.90796,
+        "longitude": 101.46877,
+        "index": 325,
+        "codes": [
+            "Tn166"
+        ]
+    },
+    {
+        "id": "sungai-dua-sungai-nibong",
+        "name": "Sungai Dua - Sungai Nibong",
+        "latitude": 3.14,
+        "longitude": 101.69,
+        "index": 326,
+        "codes": [
+            "Tn167"
+        ]
+    },
+    {
+        "id": "bahau",
+        "name": "Bahau",
+        "latitude": 2.8079,
+        "longitude": 102.4049,
+        "index": 327,
+        "codes": [
+            "Tn168"
+        ]
+    },
+    {
+        "id": "sabak",
+        "name": "Sabak",
+        "latitude": 6.16974,
+        "longitude": 102.32655,
+        "index": 328,
+        "codes": [
+            "Tn169"
+        ]
+    },
+    {
+        "id": "gelugor",
+        "name": "Gelugor",
+        "latitude": 5.36,
+        "longitude": 100.3,
+        "index": 329,
+        "codes": [
+            "Tn170"
+        ]
+    },
+    {
+        "id": "puchong",
+        "name": "Puchong",
+        "latitude": 3.0,
+        "longitude": 101.61667,
+        "index": 330,
+        "codes": [
+            "Tn171"
+        ]
+    },
+    {
+        "id": "tanjung-bungah",
+        "name": "Tanjung Bungah",
+        "latitude": 5.46491,
+        "longitude": 100.28165,
+        "index": 331,
+        "codes": [
+            "Tn172"
+        ]
+    },
+    {
+        "id": "tanjung-tokong",
+        "name": "Tanjung Tokong",
+        "latitude": 5.46061,
+        "longitude": 100.30742,
+        "index": 332,
+        "codes": [
+            "Tn173"
+        ]
+    },
+    {
+        "id": "bandar-utama",
+        "name": "Bandar Utama",
+        "latitude": 3.14818,
+        "longitude": 101.61407,
+        "index": 333,
+        "codes": [
+            "Tn174"
+        ]
+    },
+    {
+        "id": "sungai-ara",
+        "name": "Sungai Ara",
+        "latitude": 1.18333,
+        "longitude": 111.88333,
+        "index": 334,
+        "codes": [
+            "Tn175"
+        ]
+    },
+    {
+        "id": "juru",
+        "name": "Juru",
+        "latitude": 5.31201,
+        "longitude": 100.44229,
+        "index": 335,
+        "codes": [
+            "Tn176"
+        ]
+    },
+    {
+        "id": "jawi",
+        "name": "Jawi",
+        "latitude": 5.21525,
+        "longitude": 100.49211,
+        "index": 336,
+        "codes": [
+            "Tn177"
+        ]
+    },
+    {
+        "id": "sungai-besar",
+        "name": "Sungai Besar",
+        "latitude": 3.6746,
+        "longitude": 100.9867,
+        "index": 337,
+        "codes": [
+            "Tn178"
+        ]
+    },
+    {
+        "id": "kangar",
+        "name": "Kangar",
+        "latitude": 6.4414,
+        "longitude": 100.19862,
+        "index": 338,
+        "codes": [
+            "Tn179"
+        ]
+    },
+    {
+        "id": "ulu-kelang",
+        "name": "Ulu Kelang",
+        "latitude": 3.18,
+        "longitude": 101.773,
+        "index": 339,
+        "codes": [
+            "Tn180"
+        ]
+    },
+    {
+        "id": "kuala-berang",
+        "name": "Kuala Berang",
+        "latitude": 5.0734,
+        "longitude": 103.0114,
+        "index": 340,
+        "codes": [
+            "Tn183"
+        ]
+    },
+    {
+        "id": "kampong-raja",
+        "name": "Kampong Raja",
+        "latitude": 6.28333,
+        "longitude": 100.65,
+        "index": 341,
+        "codes": [
+            "Tn184"
+        ]
+    },
+    {
+        "id": "bandar-al-muktafi-billah-shah",
+        "name": "Bandar Al-Muktafi Billah Shah",
+        "latitude": 4.6111,
+        "longitude": 103.2092,
+        "index": 342,
+        "codes": [
+            "Tn185"
+        ]
+    },
+    {
+        "id": "cukai",
+        "name": "Cukai",
+        "latitude": 4.25,
+        "longitude": 103.41667,
+        "index": 343,
+        "codes": [
+            "Tn186"
+        ]
+    },
+    {
+        "id": "pedalaman",
+        "name": "Pedalaman",
+        "latitude": 5.4,
+        "longitude": 116.0,
+        "index": 344,
+        "codes": [
+            "Dv514"
+        ]
+    },
+    {
+        "id": "pantai-barat",
+        "name": "Pantai Barat",
+        "latitude": 5.95,
+        "longitude": 116.05,
+        "index": 345,
+        "codes": [
+            "Dv515"
+        ]
+    }
+]
