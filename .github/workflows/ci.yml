@@ -45,6 +45,8 @@ jobs:
         run: npm run format:check
       - name: Build
         run: npm run build
+      - name: Verify v2 schemas and matching contract fixtures
+        run: npm run contracts:check
       - name: Run focused unit, engine adapter and SQLite persistence tests
         run: npm test
       - name: Run pinned upstream engine conformance

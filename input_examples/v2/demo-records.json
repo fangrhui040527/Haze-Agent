@@ -1,0 +1,244 @@
+[
+  {
+    "ref": {
+      "id": "demo:fictional-administration-service",
+      "revision": 1,
+      "sha256": "1af435394e2bbc97a4d0b6eed43c2d6055bc2f999ecaa6453f9aa5ed58682e53"
+    },
+    "record": {
+      "id": "demo:fictional-administration-service",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-attestation",
+      "revision": 1,
+      "sha256": "9db218d559552391fb094be5ad64e3ee22e24e69921bc91f315b7d615618f440"
+    },
+    "record": {
+      "id": "demo:fictional-attestation",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-inspection-service",
+      "revision": 1,
+      "sha256": "190741ad14dffc4ef1f88a8c1e92788c059cd4b06e757af5eccbc3948e080e7a"
+    },
+    "record": {
+      "id": "demo:fictional-inspection-service",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-maintenance-service",
+      "revision": 1,
+      "sha256": "6af23b4b9cc8e69ab646f54d83dc8f168bd5448125499dc5be08254efb750d64"
+    },
+    "record": {
+      "id": "demo:fictional-maintenance-service",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-method",
+      "revision": 1,
+      "sha256": "268cf07edf06f5c3ad9126abaef157960facaf748a69ed78c43fc9b33bd3a6ac"
+    },
+    "record": {
+      "id": "demo:fictional-method",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-no-bottlenecks",
+      "revision": 1,
+      "sha256": "f54dba501c5f2460438f98a31513ab34cbce3e3138f2c9dcb28dc07adb8a9a68"
+    },
+    "record": {
+      "id": "demo:fictional-no-bottlenecks",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-no-controls",
+      "revision": 1,
+      "sha256": "f3b818c6819335e951d8ed1bae52c3364537b74eb886fe2cc9b4c9ab7c62cfd0"
+    },
+    "record": {
+      "id": "demo:fictional-no-controls",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-no-travel-setup",
+      "revision": 1,
+      "sha256": "7e02bf11f01ba80652415d2919b9134c0e8b032d26eb1a9250df24665835257e"
+    },
+    "record": {
+      "id": "demo:fictional-no-travel-setup",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-office-no-controls",
+      "revision": 1,
+      "sha256": "138dca952609aad4791f2d4dfb8e279ba55b9c8f0d061ad71be0f0d3b792f50d"
+    },
+    "record": {
+      "id": "demo:fictional-office-no-controls",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-office-support",
+      "revision": 1,
+      "sha256": "159c2684c8c8af857d6f7ebdd25a32c5fd6e17f3c82327a2f18e6afed0c16acc"
+    },
+    "record": {
+      "id": "demo:fictional-office-support",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-ordinary-baseline",
+      "revision": 1,
+      "sha256": "ea547f1d43c43285926f5557978c2379186bfb3ed697c4ecc2ec97f1a1bec1c4"
+    },
+    "record": {
+      "id": "demo:fictional-ordinary-baseline",
+      "revision": 1,
+      "assignments": [
+        {
+          "activity_id": "inspection",
+          "start": "2026-10-25T08:00:00+08:00"
+        },
+        {
+          "activity_id": "maintenance",
+          "start": "2026-10-25T09:00:00+08:00"
+        },
+        {
+          "activity_id": "administration",
+          "start": "2026-10-25T10:00:00+08:00"
+        }
+      ],
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-ordinary-practice",
+      "revision": 1,
+      "sha256": "5ba15365d4aeb53b79645406270db50f22078b6de6aca8cc0a9232aef0418d59"
+    },
+    "record": {
+      "id": "demo:fictional-ordinary-practice",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-policy",
+      "revision": 1,
+      "sha256": "f1a9849f93fdcad8794c6730f6aa1d8db0b94a8050c1cdcf8adbd812a9c3b9b3"
+    },
+    "record": {
+      "id": "demo:fictional-policy",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-target",
+      "revision": 1,
+      "sha256": "cfd1b55286561c781f71c707d8fe3a742d76e852c6ca97964bda31ac946e2c4d"
+    },
+    "record": {
+      "id": "demo:fictional-target",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-yard-no-controls",
+      "revision": 1,
+      "sha256": "e491aef69cbce64bdbb35bf1bba8b34c03a2919f7515c3e5f5d78fb2738c68d3"
+    },
+    "record": {
+      "id": "demo:fictional-yard-no-controls",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:fictional-yard-support",
+      "revision": 1,
+      "sha256": "227a6cf1c357dca834954360c01c58e51485cc0b5f3d6de39917d2a7f60ac5ba"
+    },
+    "record": {
+      "id": "demo:fictional-yard-support",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:no-quantified-comparison",
+      "revision": 1,
+      "sha256": "cfd972aac04b128975b545cb0fb451b47189104fdb987cbc01f56f50cf6ea81c"
+    },
+    "record": {
+      "id": "demo:no-quantified-comparison",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:unquantified-costs",
+      "revision": 1,
+      "sha256": "1c774ccbfd20b288e5f8eba7178f85dc129ecee37027082c4f035a2724e7eb8f"
+    },
+    "record": {
+      "id": "demo:unquantified-costs",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  },
+  {
+    "ref": {
+      "id": "demo:unresolved-gate",
+      "revision": 1,
+      "sha256": "90d69561a6c655a786b0d3fa32e0376a1da65a3c2e3cbb45f2ebd3998c5566d0"
+    },
+    "record": {
+      "id": "demo:unresolved-gate",
+      "revision": 1,
+      "notice": "Fictional contract specimen only; not accepted authority or evidence."
+    }
+  }
+]
