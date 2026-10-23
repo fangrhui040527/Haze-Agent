@@ -10,16 +10,25 @@ Operational execution guide and cross-source SQL queries for the Zetaris Unified
 When setting up a fresh environment with no existing tables or databases:
 
 ```bash
-# Complete end-to-end setup (all sources, compiles & activates USL)
+# Bootstrap BOTH Environmental USL + Law USL (default — no flag needed)
 node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts
 # or using npx tsx:
 npx tsx app/zetaris/usl/bootstrap_usl.ts
 
+# Bootstrap ONLY the Environmental USL (malaysia_env_usl)
+node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only
+npx tsx app/zetaris/usl/bootstrap_usl.ts --env-only
+
+# Bootstrap ONLY the Law USL (malaysia_law_usl)
+node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --law-only
+npx tsx app/zetaris/usl/bootstrap_usl.ts --law-only
+
 # Fast bootstrap (skips 345 NASA POWER tables for quicker test deployment)
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --skip-power
+node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
 
 # Preview execution steps without applying changes
 node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --dry-run
+node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
 ```
 
 ---

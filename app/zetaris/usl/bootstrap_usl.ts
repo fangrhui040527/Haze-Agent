@@ -1,31 +1,28 @@
 #!/usr/bin/env node
 /**
- * Malaysia Environmental Unified Semantic Layer (USL) — End-to-End Initializer
+ * Malaysia Unified Semantic Layer (USL) — End-to-End Initializer
  * ==============================================================================
- * Single-command initialization for the entire Malaysian Environmental
- * Intelligence Layer. Use this script on a fresh deployment when NO tables,
- * databases, or data exist.
+ * Single-command initialization for the Malaysian Environmental & Legal
+ * Intelligence Layers.
  *
- * What this initializer performs end-to-end:
- * ------------------------------------------
- * 1. [Locations]  Copies 345 canonical location CSVs to Docker volume.
- * 2. [Weather]    Fetches nationwide forecasts from Data.gov.my & registers REST table.
- * 3. [FIRMS]      Downloads NASA VIIRS fire detections, copies flat CSVs to Docker.
- * 4. [AirQual]    Registers 345 Open-Meteo REST endpoints & compiles unified view.
- * 5. [Climate]    Registers 345 NASA POWER REST endpoints & compiles unified view.
- * 6. [USL Schema] Deploys namespace, compiles USL data model with PK/FK graph,
- *                 and activates all 6 semantic entities:
- *                   - location_dim, location_code
- *                   - weather_forecast, active_fires
- *                   - air_quality_obs, power_daily
- * 7. [Health]     Executes a federated verification query to confirm everything is live.
+ * Target selection flags:
+ * -----------------------
+ *   --env-only       Bootstrap ONLY the Environmental USL (malaysia_env_usl)
+ *   --law-only       Bootstrap ONLY the Law USL (malaysia_law_usl)
+ *   (default)        Bootstrap BOTH Environmental and Law USLs
  *
- * Usage:
- * ------
+ * Additional options:
+ * -------------------
+ *   --skip-power     Skip 345 NASA POWER tables for fast test bootstrapping
+ *   --dry-run        Print actions and SQL commands without running them
+ *
+ * Examples:
+ * ---------
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts
- *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --skip-power
- *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --dry-run
- *   npx tsx app/zetaris/usl/bootstrap_usl.ts
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --law-only
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
+ *   npx tsx app/zetaris/usl/bootstrap_usl.ts --law-only
  */
 
 import { spawn } from "node:child_process";
@@ -43,6 +40,7 @@ const RUN_SQL = path.join(ZETARIS_ROOT, "scripts", "run_sql.py");
 
 const LOCATIONS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/locations";
 const FIRMS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/firms_flat";
+const LAW_CONTAINER_PATH = "/home/zetaris/customer-data/shared/law";
 
 const PYTHON_BIN =
   process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
@@ -76,7 +74,6 @@ function runCommand(
 
 /**
  * Copy local files into a running Docker container.
- * Equivalent to: docker exec <container> mkdir -p <dst> && docker cp <src>/. <container>:<dst>/
  */
 async function dockerCp(
   src: string,
@@ -149,7 +146,6 @@ async function runTsScript(
   console.log(`  ==> Ingestion: ${rel} ${allArgs.join(" ")}`);
   const t0 = Date.now();
 
-  // Prefer tsx if available, fall back to node --experimental-strip-types
   const useNode = ["node", ["--experimental-strip-types", scriptPath, ...allArgs]];
   const useTsx = ["npx", ["tsx", scriptPath, ...allArgs]];
   const [cmd, args] = process.env.USE_TSX === "1" ? useTsx : useNode;
@@ -163,12 +159,12 @@ async function runTsScript(
 }
 
 // ---------------------------------------------------------------------------
-// Health check
+// Health checks
 // ---------------------------------------------------------------------------
 
-async function verifyUsl(): Promise<void> {
-  console.log("\n  ==> Running federated USL verification health check...");
-  const testSql = `
+async function verifyEnvUsl(): Promise<void> {
+  console.log("\n  ==> Running federated Environmental USL verification health check...");
+  const envTestSql = `
     SELECT
         loc.location_index,
         loc.location_name,
@@ -185,12 +181,37 @@ async function verifyUsl(): Promise<void> {
   try {
     await runCommand(
       PYTHON_BIN,
-      [RUN_SQL, "--limit", "5", "-e", testSql],
+      [RUN_SQL, "--limit", "5", "-e", envTestSql],
       ZETARIS_ROOT,
     );
-    console.log("  ✓ USL Health Check: Federated join verified successfully!");
+    console.log("  ✓ Environmental USL: Federated join verified successfully!");
   } catch (err) {
-    console.warn(`  ⚠ Health check warning: ${(err as Error).message}`);
+    console.warn(`  ⚠ Environmental health check warning: ${(err as Error).message}`);
+  }
+}
+
+async function verifyLawUsl(): Promise<void> {
+  console.log("\n  ==> Running Law USL verification health check...");
+  const lawTestSql = `
+    SELECT
+        doc.document_id,
+        doc.instrument_code,
+        p.page_number,
+        p.is_provenance_page
+    FROM lightning.metastore.malaysia_law.malaysia_law_usl.law_documents doc
+    JOIN lightning.metastore.malaysia_law.malaysia_law_usl.law_pages p
+      ON doc.document_id = p.document_id
+    LIMIT 3;
+  `;
+  try {
+    await runCommand(
+      PYTHON_BIN,
+      [RUN_SQL, "--limit", "3", "-e", lawTestSql],
+      ZETARIS_ROOT,
+    );
+    console.log("  ✓ Law USL: Join verified successfully!");
+  } catch (err) {
+    console.warn(`  ⚠ Law health check warning: ${(err as Error).message}`);
   }
 }
 
@@ -198,9 +219,32 @@ async function verifyUsl(): Promise<void> {
 // CLI argument parsing
 // ---------------------------------------------------------------------------
 
-function parseArgs(): { skipPower: boolean; dryRun: boolean } {
+interface CliOptions {
+  runEnv: boolean;
+  runLaw: boolean;
+  skipPower: boolean;
+  dryRun: boolean;
+}
+
+function parseArgs(): CliOptions {
   const argv = process.argv.slice(2);
+  const envOnly = argv.includes("--env-only") || argv.includes("--env");
+  const lawOnly = argv.includes("--law-only") || argv.includes("--law");
+
+  let runEnv = true;
+  let runLaw = true;
+
+  if (envOnly && !lawOnly) {
+    runEnv = true;
+    runLaw = false;
+  } else if (lawOnly && !envOnly) {
+    runEnv = false;
+    runLaw = true;
+  }
+
   return {
+    runEnv,
+    runLaw,
     skipPower: argv.includes("--skip-power"),
     dryRun: argv.includes("--dry-run"),
   };
@@ -211,123 +255,125 @@ function parseArgs(): { skipPower: boolean; dryRun: boolean } {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { skipPower, dryRun } = parseArgs();
+  const { runEnv, runLaw, skipPower, dryRun } = parseArgs();
   const t0 = Date.now();
 
   console.log("=".repeat(70));
-  console.log(" MALAYSIA ENVIRONMENTAL USL — COMPLETE ALL-IN-ONE INITIALIZER ");
+  console.log(" MALAYSIA UNIFIED SEMANTIC LAYERS (USL) — INITIALIZER ");
   console.log("=".repeat(70));
-  console.log("1. [Dimensions] Canonical Location centroids (345) & Codes (440)");
-  console.log("2. [Weather]    Data.gov.my Official Forecasts (Nationwide array)");
-  console.log("3. [FIRMS]      NASA Active Fires (VIIRS Satellite Hotspots)");
-  console.log("4. [Air Quality] Open-Meteo Hourly PM2.5/PM10 (345 REST endpoints)");
-  console.log(
-    skipPower
-      ? "5. [NASA POWER]  [SKIPPED via --skip-power]"
-      : "5. [NASA POWER]  Daily Climate 20 variables (345 REST endpoints)",
-  );
-  console.log("6. [USL Layer]   Compile & Activate all 6 Semantic Tables");
+  console.log(`Execution Mode: ${runEnv && runLaw ? "ALL (Environmental + Law)" : runEnv ? "ENVIRONMENTAL ONLY (--env-only)" : "LAW ONLY (--law-only)"}`);
+  if (runEnv) {
+    console.log("  • Environmental USL (malaysia_env_usl): Locations, Weather, FIRMS, Air Quality" + (skipPower ? " [POWER skipped]" : ", POWER"));
+  }
+  if (runLaw) {
+    console.log("  • Law USL (malaysia_law_usl): Documents, Full-text Pages");
+  }
   console.log("=".repeat(70));
 
-  // -------------------------------------------------------------------------
-  // Step 1: Copy canonical location CSVs into Docker container
-  // -------------------------------------------------------------------------
-  console.log("\n[Step 1/6] Preparing Canonical Location Dimensions...");
-  const locationDir = path.join(USL_ROOT, "..", "sources", "location");
-  await dockerCp(locationDir, "zetaris-driver-1", LOCATIONS_CONTAINER_PATH, dryRun);
+  // =========================================================================
+  // SECTION 1: ENVIRONMENTAL USL
+  // =========================================================================
+  if (runEnv) {
+    console.log("\n>>> [1/2] BOOTSTRAPPING ENVIRONMENTAL USL (malaysia_env_usl) <<<");
 
-  // -------------------------------------------------------------------------
-  // Step 2: Data.gov.my Weather Ingestion
-  // -------------------------------------------------------------------------
-  console.log("\n[Step 2/6] Bootstrapping Data.gov.my Weather Forecasts...");
-  await runTsScript(path.join(SRC_ROOT, "weather", "fetch_weather.ts"), [], dryRun);
+    // 1. Locations
+    console.log("\n[Env Step 1/6] Preparing Canonical Location Dimensions...");
+    const locationDir = path.join(SRC_ROOT, "location");
+    await dockerCp(locationDir, "zetaris-driver-1", LOCATIONS_CONTAINER_PATH, dryRun);
 
-  // -------------------------------------------------------------------------
-  // Step 3: NASA FIRMS Active Fires Ingestion
-  // -------------------------------------------------------------------------
-  console.log("\n[Step 3/6] Bootstrapping NASA FIRMS Active Fire Hotspots (Past 5 Days)...");
-  await runTsScript(
-    path.join(SRC_ROOT, "nasa_firms", "fetch_nasa_firms.ts"),
-    ["--day-range", "5"],
-    dryRun,
-  );
-  const firmsFlatDir = path.join(SRC_ROOT, "nasa_firms", "data", "firms_flat");
-  if (fs.existsSync(firmsFlatDir)) {
-    await dockerCp(firmsFlatDir, "zetaris-driver-1", FIRMS_CONTAINER_PATH, dryRun);
+    // 2. Weather
+    console.log("\n[Env Step 2/6] Bootstrapping Data.gov.my Weather Forecasts...");
+    await runTsScript(path.join(SRC_ROOT, "weather", "fetch_weather.ts"), [], dryRun);
+
+    // 3. FIRMS Active Fires
+    console.log("\n[Env Step 3/6] Bootstrapping NASA FIRMS Active Fires (Past 5 Days)...");
+    await runTsScript(
+      path.join(SRC_ROOT, "nasa_firms", "fetch_nasa_firms.ts"),
+      ["--day-range", "5"],
+      dryRun,
+    );
+    const firmsFlatDir = path.join(SRC_ROOT, "nasa_firms", "data", "firms_flat");
+    if (fs.existsSync(firmsFlatDir)) {
+      await dockerCp(firmsFlatDir, "zetaris-driver-1", FIRMS_CONTAINER_PATH, dryRun);
+    }
+
+    // 4. Open-Meteo Air Quality
+    console.log("\n[Env Step 4/6] Bootstrapping Open-Meteo Air Quality (345 Locations)...");
+    await runTsScript(path.join(SRC_ROOT, "air_quality", "fetch_air_quality.ts"), [], dryRun);
+
+    // 5. NASA POWER Daily Climate (optional)
+    if (!skipPower) {
+      console.log("\n[Env Step 5/6] Bootstrapping NASA POWER Daily Climate (345 Locations)...");
+      await runTsScript(path.join(SRC_ROOT, "nasa_power", "fetch_nasa_power.ts"), [], dryRun);
+    } else {
+      console.log("\n[Env Step 5/6] Skipping NASA POWER registration (--skip-power flag set).");
+    }
+
+    // 6. Compilation & Activation
+    console.log("\n[Env Step 6/6] Compiling & Activating Environmental USL...");
+    await runSqlFile(path.join(SRC_ROOT, "location", "sql", "loc_register.sql"), dryRun, true);
+    await runSqlFile(path.join(SRC_ROOT, "nasa_firms", "sql", "firms_register.sql"), dryRun, true);
+    await runSqlFile(path.join(USL_ROOT, "env_usl", "usl_schema.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "location", "sql", "loc_activate.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "weather", "sql", "weather_activate.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "nasa_firms", "sql", "firms_activate.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "air_quality", "sql", "aq_activate.sql"), dryRun);
+    if (!skipPower) {
+      await runSqlFile(path.join(SRC_ROOT, "nasa_power", "sql", "power_activate.sql"), dryRun);
+    }
+  }
+
+  // =========================================================================
+  // SECTION 2: LAW USL
+  // =========================================================================
+  if (runLaw) {
+    console.log("\n>>> [2/2] BOOTSTRAPPING LAW USL (malaysia_law_usl) <<<");
+
+    // 1. Flatten & Copy
+    console.log("\n[Law Step 1/2] Flattening Law JSON & Copying to Docker...");
+    await runTsScript(path.join(SRC_ROOT, "law", "flatten_law_json.ts"), [], dryRun);
+    const lawDataDir = path.join(SRC_ROOT, "law", "data");
+    if (fs.existsSync(lawDataDir)) {
+      await dockerCp(lawDataDir, "zetaris-driver-1", LAW_CONTAINER_PATH, dryRun);
+    }
+
+    // 2. Register, Compile & Activate
+    console.log("\n[Law Step 2/2] Registering, Compiling & Activating Law USL...");
+    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_register.sql"), dryRun, true);
+    await runSqlFile(path.join(USL_ROOT, "law_usl", "usl_schema.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_activate.sql"), dryRun);
   }
 
   // -------------------------------------------------------------------------
-  // Step 4: Open-Meteo Air Quality (345 locations)
-  // -------------------------------------------------------------------------
-  console.log("\n[Step 4/6] Bootstrapping Open-Meteo Air Quality (345 Locations)...");
-  await runTsScript(path.join(SRC_ROOT, "air_quality", "fetch_air_quality.ts"), [], dryRun);
-
-  // -------------------------------------------------------------------------
-  // Step 5: NASA POWER Daily Climate (345 locations) — optional
-  // -------------------------------------------------------------------------
-  if (!skipPower) {
-    console.log("\n[Step 5/6] Bootstrapping NASA POWER Daily Climate (345 Locations)...");
-    await runTsScript(path.join(SRC_ROOT, "nasa_power", "fetch_nasa_power.ts"), [], dryRun);
-  } else {
-    console.log("\n[Step 5/6] Skipping NASA POWER registration (--skip-power flag set).");
-  }
-
-  // -------------------------------------------------------------------------
-  // Step 6: USL Compilation & Activation
-  // -------------------------------------------------------------------------
-  console.log("\n[Step 6/6] Compiling & Activating Malaysia Environmental USL...");
-
-  // A. Register FileStore tables (location + FIRMS CSVs)
-  await runSqlFile(
-    path.join(USL_ROOT, "..", "sources", "location", "sql", "loc_register.sql"),
-    dryRun,
-    true,
-  );
-  await runSqlFile(
-    path.join(SRC_ROOT, "nasa_firms", "sql", "firms_register.sql"),
-    dryRun,
-    true,
-  );
-
-  // B. Compile master USL schema & FK graph
-  await runSqlFile(path.join(USL_ROOT, "usl_schema.sql"), dryRun);
-
-  // C. Activate dimension tables
-  await runSqlFile(
-    path.join(USL_ROOT, "..", "sources", "location", "sql", "loc_activate.sql"),
-    dryRun,
-  );
-
-  // D. Activate fact tables
-  await runSqlFile(path.join(SRC_ROOT, "weather", "sql", "weather_activate.sql"), dryRun);
-  await runSqlFile(path.join(SRC_ROOT, "nasa_firms", "sql", "firms_activate.sql"), dryRun);
-  await runSqlFile(path.join(SRC_ROOT, "air_quality", "sql", "aq_activate.sql"), dryRun);
-  if (!skipPower) {
-    await runSqlFile(path.join(SRC_ROOT, "nasa_power", "sql", "power_activate.sql"), dryRun);
-  }
-
-  // -------------------------------------------------------------------------
-  // Summary
+  // Summary & Health Checks
   // -------------------------------------------------------------------------
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log("\n" + "=".repeat(70));
-  console.log(`🎉 USL Initialization completed in ${elapsed}s!`);
+  console.log(`🎉 Bootstrap completed in ${elapsed}s!`);
 
   if (!dryRun) {
-    await verifyUsl();
+    if (runEnv) await verifyEnvUsl();
+    if (runLaw) await verifyLawUsl();
   }
 
-  console.log("\nActive Entities in lightning.metastore.malaysia_env.malaysia_env_usl:");
-  console.log("  • location_dim     (Primary Key: location_index)");
-  console.log("  • location_code    (Primary Key: location_code, FK: location_index)");
-  console.log("  • weather_forecast (FK: location_code)");
-  console.log("  • active_fires     (FK: location_index)");
-  console.log("  • air_quality_obs  (FK: location_index)");
-  if (!skipPower) {
-    console.log("  • power_daily      (FK: location_index)");
+  if (runEnv) {
+    console.log("\nActive Entities in lightning.metastore.malaysia_env.malaysia_env_usl:");
+    console.log("  • location_dim     (Primary Key: location_index)");
+    console.log("  • location_code    (Primary Key: location_code, FK: location_index)");
+    console.log("  • weather_forecast (FK: location_code)");
+    console.log("  • active_fires     (FK: location_index)");
+    console.log("  • air_quality_obs  (FK: location_index)");
+    if (!skipPower) {
+      console.log("  • power_daily      (FK: location_index)");
+    }
   }
-  console.log("\nTo run daily updates only:");
-  console.log("  node --experimental-strip-types app/zetaris/usl/daily_update.ts");
+
+  if (runLaw) {
+    console.log("\nActive Entities in lightning.metastore.malaysia_law.malaysia_law_usl:");
+    console.log("  • law_documents    (Primary Key: document_id)");
+    console.log("  • law_pages        (Primary Key: (document_id, page_number), FK: document_id)");
+  }
+
   console.log("=".repeat(70));
 }
 
