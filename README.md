@@ -4,7 +4,7 @@ Repository and development foundation for Haze Agent. The reference design is th
 
 The scaffold uses TypeScript `StateGraph` from `@langchain/langgraph` and runs in this process. It does not require a hosted LangGraph service. LangGraph supplies orchestration and checkpoint infrastructure; Haze has four domain roles: **Manager, HazeOps, WorkerShield, and EvidenceCritic**.
 
-The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph.
+The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph. The [demo review package](docs/demo-contract-review.md) adds a deterministic section 23 historical engineering trace, supplemental handoff schemas and independent calculation checks, with human review pending and publication disabled.
 
 ## Repository structure
 
@@ -82,6 +82,17 @@ The closed [JSON Schemas](schemas/) use Draft 2020-12 and are generated from the
 
 [Planning input](input_examples/v2/planning.json), [run request](input_examples/v2/run.json) and [result](output_examples/v2/result.json) are matching **synthetic contract fixtures**. Their demo-local references and hashes describe local fixtures, not accepted canonical records. The result illustrates a historical, publication-disabled response with explicit gaps. It was not produced by a planner, agent, independent numerical checker or provider call. `contracts:validate` validates a file; it does not admit or execute a planning job. See [demo-scope.md](docs/demo-scope.md) for the scope, invariants and remaining implementation boundaries.
 
+## Check the demo review package
+
+The separate [review fixture](examples/demo-review/package.json) traces the section 23 baseline and both alternatives, an essential-evidence gap and a search cutoff with a verified incumbent through Evidence & Inputs, Planner, Verification and typed WorkerShield inputs. It uses the existing v2 envelopes and small [handoff contracts](app/contracts/handoffs.ts). Its producer and separate engineering checker recompute fixed-work/full-occupancy constraints, interval values, worker/activity protections, fictional policy qualification and movement ranking.
+
+```sh
+npm run build
+npm run demo:check
+```
+
+Use `npm run demo:generate` to deliberately regenerate the review package after changing its source. Generation captures a timestamp and fresh immutable IDs; `demo:check` replays the saved timestamp and verifies the committed bytes, bindings, calculation and error cases. These commands make no provider calls and do not execute WorkerShield. Every record is fictional and demo-local; exact human review and contract sign-off remain pending. All results keep publication disabled and operational eligibility false. The [review document](docs/demo-contract-review.md) contains the actual entry-point inventory, handoff/owner table, concise review checklist and decisions blocking shared integration or operating use. No agreement is claimed and no members are contacted.
+
 ## Pinned engines and workflow
 
 [engine_sources.json](engine_sources.json) records immutable revisions, source
@@ -125,6 +136,7 @@ Keep credentials in local environment variables or ignored environment files. Co
 ## Limitations
 
 - Manager, HazeOps, WorkerShield and EvidenceCritic remain architecture roles; their domain workflows are not implemented.
+- The new local producer/checker executes only the bounded fictional review case. It does not supply a general scheduler, HTTP admission, exact human review or canonical publication/current-read capability.
 - The integration layer currently contains Meterless engines and an explicitly selected provider probe. Zetaris integration is not implemented.
 - The example runner uses disposable memory checkpoints. Persistent restart proof is a separate compatibility command; SQLite supports a single process, while PostgreSQL has a dedicated integration test.
 - Passing samples, compatibility checks or upstream conformance tests establishes only the tested infrastructure and engine contracts. It does not validate haze science or establish production readiness.

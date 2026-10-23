@@ -2,12 +2,31 @@ import { z } from 'zod';
 import { canonicalJson, CANONICAL_SERIALIZER_VERSION } from './json.js';
 import { planningSchema, planningShape, runSchema } from './planning.js';
 import { resultSchema, resultShape } from './result.js';
+import { HANDOFF_VERSIONS, handoffSchemas, handoffShapes } from './handoffs.js';
 
 export { planningSchema, planningShape, runSchema } from './planning.js';
 export { resultSchema, resultShape } from './result.js';
 export type { PlanningBundle, Activity, RunRequest } from './planning.js';
 export type { Result } from './result.js';
 export type { ImmutableReference } from './common.js';
+export {
+  HANDOFF_VERSIONS,
+  handoffSchemas,
+  handoffShapes,
+  sourceLocatorShape,
+} from './handoffs.js';
+export type {
+  HandoffKind,
+  EvidenceHandoff,
+  ScenarioHandoff,
+  PolicyHandoff,
+  SnapshotHandoff,
+  InputDraftHandoff,
+  PlannerInputHandoff,
+  CalculationHandoff,
+  IndependentCheckHandoff,
+  WorkerShieldInputHandoff,
+} from './handoffs.js';
 export {
   parseContractJson,
   canonicalJson,
@@ -20,6 +39,7 @@ export const CONTRACT_VERSIONS = {
   planning: 'haze.planning.v2',
   run: 'haze.run.v2',
   result: 'haze.result.v2',
+  ...HANDOFF_VERSIONS,
 } as const;
 export type ContractKind = keyof typeof CONTRACT_VERSIONS;
 export type ExecutionSurface = 'canonical' | 'historical_harness';
@@ -50,11 +70,13 @@ export function validateContract(
       supported_versions: [CONTRACT_VERSIONS[kind]],
     });
   }
-  const schema = {
+  const schemas: Record<ContractKind, z.ZodType> = {
     planning: planningSchema,
     run: runSchema,
     result: resultSchema,
-  }[kind];
+    ...handoffSchemas,
+  };
+  const schema = schemas[kind];
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw new ContractError(
@@ -86,6 +108,7 @@ export function exportContractSchemas() {
     planning: planningShape,
     run: runSchema,
     result: resultShape,
+    ...handoffShapes,
   };
   return Object.fromEntries(
     (Object.keys(shapes) as ContractKind[]).map(

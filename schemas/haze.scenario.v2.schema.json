@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "revision": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "haze.scenario.v2"
+    },
+    "scenario_id": {
+      "type": "string",
+      "enum": ["nominal", "plus20"]
+    },
+    "base_scenario_ref": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+            },
+            "revision": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": ["id", "revision", "sha256"],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "base_scenario_reason": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+            },
+            "explanation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          "required": ["code", "explanation"],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_kind": {
+      "type": "string",
+      "const": "synthetic_fixture"
+    },
+    "support": {
+      "type": "string",
+      "const": "fictional_engineering_perturbation"
+    },
+    "pollutant": {
+      "type": "string",
+      "const": "PM2.5"
+    },
+    "unit": {
+      "type": "string",
+      "const": "ug/m3"
+    },
+    "native_temporal_resolution_minutes": {
+      "type": "number",
+      "const": 60
+    },
+    "allocation": {
+      "type": "string",
+      "const": "piecewise_constant"
+    },
+    "transformation": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["identity", "add_constant"]
+        },
+        "delta_ug_m3": {
+          "anyOf": [
+            {
+              "type": "number",
+              "const": 0
+            },
+            {
+              "type": "number",
+              "const": 20
+            }
+          ]
+        },
+        "applies_to": {
+          "type": "string",
+          "const": "all_locations_all_intervals"
+        }
+      },
+      "required": ["kind", "delta_ug_m3", "applies_to"],
+      "additionalProperties": false
+    },
+    "evidence_refs": {
+      "minItems": 1,
+      "maxItems": 256,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": ["id", "revision", "sha256"],
+        "additionalProperties": false
+      }
+    },
+    "intervals": {
+      "minItems": 1,
+      "maxItems": 1024,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          },
+          "location_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality_flag": {
+            "type": "string",
+            "enum": ["fictional", "missing"]
+          }
+        },
+        "required": ["start", "end", "location_id", "value", "quality_flag"],
+        "additionalProperties": false
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "const": "not_operationally_reviewed"
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "schema_version",
+    "scenario_id",
+    "base_scenario_ref",
+    "base_scenario_reason",
+    "source_kind",
+    "support",
+    "pollutant",
+    "unit",
+    "native_temporal_resolution_minutes",
+    "allocation",
+    "transformation",
+    "evidence_refs",
+    "intervals",
+    "review_status"
+  ],
+  "additionalProperties": false,
+  "$id": "urn:haze:schema:haze.scenario.v2",
+  "title": "haze.scenario.v2",
+  "description": "Haze architecture v0.13 structural contract. Also run the runtime semantic validator; a schema pass grants no operating authority.",
+  "x-canonical-serializer": "haze.canonical-json.v1"
+}

@@ -47,6 +47,8 @@ jobs:
         run: npm run build
       - name: Verify v2 schemas and matching contract fixtures
         run: npm run contracts:check
+      - name: Verify demo contract handoffs and independent section 23 trace
+        run: npm run demo:check
       - name: Run focused unit, engine adapter and SQLite persistence tests
         run: npm test
       - name: Run pinned upstream engine conformance
