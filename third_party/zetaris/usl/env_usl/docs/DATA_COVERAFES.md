@@ -13,6 +13,8 @@
 | 🌫️ **Air Quality** | No date → API default | `2026-10-22T00:00` → `2026-10-26T23:00` | 120 hourly | Today + Forecast | ❌ Live on query |
 | 🔥 **FIRMS** | `--day-range 5` via `bootstrap_usl.ts` | `2026-10-17` → `2026-10-21` | Varies (fires only) | Historical | ✅ Daily |
 | 🛰️ **NASA POWER** | `today − 4 days`, single day | `2026-10-18` only | 1 daily | Historical | ✅ Daily |
+| 💨 **Windy GFS** | Default KL point, on demand | `2026-10-23T03:00Z` → 80 hourly steps | ~80 (KL only) | Forecast (point) | ✅ On demand |
+| 💨 **Windy CAMS** | Default KL point, on demand | `2026-10-23T00:00Z` → 33 hourly steps | ~33 (KL only) | Forecast (point) | ✅ On demand |
 
 ---
 
@@ -29,6 +31,8 @@ Air Qual                                         [==============================
                                                   ^ today T00:00                          ^ +5 days
 Weather                                          [==============================================]
                                                   ^ today                                 ^ today+6
+Windy                                            [==============================================]
+                                                  ^ refresh time (single KL point, frozen)
          PAST <----------------------------------------- TODAY ------------------------------> FUTURE
 ```
 
@@ -45,6 +49,10 @@ Both sources use live **REST tables** in Zetaris. Every `SELECT` query triggers 
 ### Why FIRMS & NASA POWER DO Need Daily Updates
 * **NASA FIRMS (FileStore CSV):** Satellites output raw unmapped coordinates. Python must run nearest-neighbor spatial matching against all 345 centroids to assign `location_index` and copy the resulting CSV into `/home/zetaris/customer-data/shared/firms_flat/`.
 * **NASA POWER (Date-Keyed JSON):** Upstream NASA returns parameter objects where the keys are literal date strings (e.g. `properties.parameter.T2M."20261018"`). As the calendar advances, the view definition must be recompiled to target the new date key (`today − 4 days`).
+
+### Why Windy Needs an On-Demand Refresh
+Windy is neither a live REST table nor a daily pipeline job. `sources/windy/fetch_windy.ts` fetches the current point forecast once, writes one CSV per model (`windy_gfs.csv`, `windy_cams.csv`), copies them into the Zetaris driver container and registers them as **FileStore** tables:
+* **Windy (FileStore CSV):** the snapshot is frozen until the next run, so queries keep returning the same rows. The Point Forecast key is on the free **Testing** tier (500 requests/day), so `daily_update.ts` intentionally excludes Windy and it is refreshed by hand, on demand.
 
 ---
 
@@ -85,3 +93,21 @@ acq_date   | acq_myt (MYT)        | region        | satellite | confidence | frp
 2026-10-21 | 2026-10-21 13:48 MYT | Pulau Sipadan | N20       | nominal    |  10.03
 ```
 > *Note on FIRMS:* FIRMS is event-based. Locations with no active fire detections return 0 rows.
+
+### 💨 Windy GFS (Kuala Lumpur — 2026-10-23, units converted)
+```
+forecast_time (UTC)   | temp_c | rh (%) | pressure_hpa | wind_speed_ms | wind_dir_deg | gust_ms
+----------------------+--------+--------+--------------+---------------+--------------+--------
+2026-10-23T03:00Z     |  27.55 |  88.64 |   1009.45    |      1.34     |     337.2    |   2.95
+2026-10-23T06:00Z     |  24.43 |  95.91 |   1011.85    |      0.75     |       9.2    |   0.36
+```
+> *Note on Windy:* raw API values are Kelvin, Pascal and a `wind_u`/`wind_v` vector; the CSV stores converted °C, hPa, speed and direction.
+
+### 💨 Windy CAMS (Kuala Lumpur — 2026-10-23)
+```
+observation_time (UTC) | pm2_5_ug_m3 | pm10_ug_m3 | aqi_us | no2_ug_m3 | dust_ug_m3
+-----------------------+-------------+------------+--------+-----------+------------
+2026-10-23T00:00Z      |    18.35    |    11.52   | 103.97 |   48.08   |    0.00
+2026-10-23T06:00Z      |    26.83    |    26.96   | 115.35 |   76.59   |    0.00
+```
+> *Note on Windy:* the free Testing-tier key perturbs these values. They are for pipeline testing only and must not be used as evidence.

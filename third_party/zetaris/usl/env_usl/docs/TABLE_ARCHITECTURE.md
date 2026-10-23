@@ -1,6 +1,6 @@
 # Malaysia Environmental USL: Table Architecture & Raw Topology
 
-This document explains why certain data sources require 345 individual REST tables in Zetaris while others require only 1, and how the virtualization layer combines them into 6 clean semantic tables.
+This document explains why certain data sources require 345 individual REST tables in Zetaris while others require only 1, and how the virtualization layer combines them into 8 clean semantic tables.
 
 ---
 
@@ -12,12 +12,14 @@ This document explains why certain data sources require 345 individual REST tabl
 | **NASA POWER Climate** | **345** | `power_<loc>_raw` | **Point-based coordinate API** (`?latitude=X&longitude=Y`). Requires a separate endpoint per coordinate; combined into 1 view via `UNION ALL`. |
 | **Data.gov.my Weather** | **1** | `forecasts_raw` | **Nationwide bulk API**. Single API response returns forecasts for all 440 Malaysian locations in one JSON array. |
 | **NASA FIRMS Fires** | **1** | `active_fires` | **Bulk Bounding Box CSV**. Downloads nationwide satellite fire hotspots directly into a single CSV on disk. |
+| **Windy Point Forecast** | **2** | `windy_gfs_raw`, `windy_cams_raw` | **FileStore CSV snapshot**. `fetch_windy.ts` writes one CSV per model (GFS weather, CAMS air quality) for a single point and registers them as FileStore tables. |
 | **Location Dimension** | **2** | `location_dim`, `location_code` | **Canonical Reference Files**. Read directly from local static CSV reference datasets in FileStore. |
 
 > **Summary:**
 > * **Point-based coordinate APIs** (Open-Meteo & NASA POWER) 👉 **345 tables each** (690 total raw REST tables).
 > * **Nationwide / bulk APIs** (Data.gov.my & NASA FIRMS) 👉 **1 table each**.
-> * **Total**: **694 Physical Raw Tables** (690 REST + 4 FileStore) → Virtualized into **6 clean semantic layer entities** in `lightning.metastore.malaysia_env_usl`.
+> * **Windy Point Forecast** 👉 **2 FileStore CSV tables** (one per model, single point).
+> * **Total**: **696 Physical Raw Tables** (690 REST + 6 FileStore) → Virtualized into **8 clean semantic layer entities** in `lightning.metastore.malaysia_env_usl`.
 
 ---
 

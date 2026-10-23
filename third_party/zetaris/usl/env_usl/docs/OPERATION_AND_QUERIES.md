@@ -31,6 +31,8 @@ node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --dry-run
 node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
 ```
 
+> **Windy in the bootstrap:** `bootstrap_usl.ts` builds Windy at `[Env Step 6/7]`. It runs `windy_register.sql` (filling the `${WINDY_API_KEY}` placeholder from `.env.local`), then `windy_view.sql`, and activates the two Windy USL tables during step 7. If `WINDY_API_KEY` is not set, Windy registration is skipped with a warning and the rest of the bootstrap continues.
+
 ---
 
 ### Daily Morning Routine
@@ -42,10 +44,16 @@ node --experimental-strip-types app/zetaris/sources/nasa_firms/fetch_nasa_firms.
 
 # Refresh NASA POWER Climate (shifts target date to today - 4 days):
 node --experimental-strip-types app/zetaris/sources/nasa_power/fetch_nasa_power.ts
+
+# Refresh Windy Point Forecast (KL point; not part of daily_update.ts, run on demand):
+node --experimental-strip-types app/zetaris/sources/windy/fetch_windy.ts --all
 ```
 
 > **Note on Weather & Air Quality:**
 > Data.gov.my and Open-Meteo use live REST tables in Zetaris. They update **automatically on query execution** without running any daily update scripts.
+>
+> **Note on Windy:**
+> The two `windy_*` tables read from a FileStore CSV snapshot, not a live REST feed, so they do **not** update on query. Refresh them with `fetch_windy.ts` on demand; `daily_update.ts` excludes Windy because its Testing-tier key allows only 500 requests/day.
 
 ---
 
@@ -104,6 +112,51 @@ LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.power_daily p
   ON loc.location_index = p.location_index
 WHERE aq.pm2_5_ug_m3 > 50.0
 ORDER BY f.frp DESC;
+```
+
+---
+
+### Windy Point Forecast Query (Kuala Lumpur)
+Read the Windy GFS weather point forecast and join it through the canonical location dimension:
+
+```sql
+SELECT
+    loc.location_index,
+    loc.location_id,
+    loc.location_name,
+    w.forecast_time,
+    w.temp_c,
+    w.relative_humidity_pct,
+    w.pressure_hpa,
+    w.wind_speed_ms,
+    w.wind_direction_deg,
+    w.wind_gust_ms
+FROM lightning.metastore.malaysia_env.malaysia_env_usl.windy_forecast_obs w
+JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
+  ON w.location_index = loc.location_index
+WHERE loc.location_id = 'kuala-lumpur'
+ORDER BY w.forecast_time DESC
+LIMIT 10;
+```
+
+### Windy Air-Quality Forecast Query (Kuala Lumpur)
+Read the Windy CAMS air-quality point forecast (PM2.5, PM10, AQI, NO2, dust):
+
+```sql
+SELECT
+    loc.location_name,
+    c.observation_time,
+    c.pm2_5_ug_m3,
+    c.pm10_ug_m3,
+    c.aqi_us,
+    c.no2_ug_m3,
+    c.dust_ug_m3
+FROM lightning.metastore.malaysia_env.malaysia_env_usl.windy_air_quality_obs c
+JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
+  ON c.location_index = loc.location_index
+WHERE loc.location_id = 'kuala-lumpur'
+ORDER BY c.observation_time DESC
+LIMIT 10;
 ```
 
 ---

@@ -10,7 +10,7 @@ The `app/zetaris/usl` directory contains the complete source code, dimensional d
 
 * **Namespace in Zetaris:** `lightning.metastore.malaysia_env.malaysia_env_usl`
 * **Coverage:** 345 canonical Malaysian locations (state capitals, districts, towns, rural centers) across Peninsular and East Malaysia.
-* **Core Value:** Unifies 4 disparate upstream environmental APIs (REST, JSON, bulk CSV) into a normalized dimensional star schema where all entities join seamlessly via `location_index` or `location_code`.
+* **Core Value:** Unifies 5 disparate upstream environmental sources (REST, JSON, bulk CSV, and a point-forecast FileStore snapshot) into a normalized dimensional star schema where all entities join seamlessly via `location_index` or `location_code`.
 
 ---
 
@@ -36,9 +36,12 @@ app/zetaris/
 │   ├── nasa_firms/            # 🔥 NASA VIIRS Active Fire Hotspots
 │   │   ├── fetch_nasa_firms.ts# Downloads satellite CSV, computes spatial join
 │   │   └── sql/               # firms_register.sql, firms_activate.sql
-│   └── nasa_power/            # 🛰️ NASA POWER Daily Climate (20 variables)
-│       ├── fetch_nasa_power.ts# Registers 345 coordinate endpoints & daily view
-│       └── sql/               # power_register.sql, power_activate.sql
+│   ├── nasa_power/            # 🛰️ NASA POWER Daily Climate (20 variables)
+│   │   ├── fetch_nasa_power.ts# Registers 345 coordinate endpoints & daily view
+│   │   └── sql/               # power_register.sql, power_activate.sql
+│   └── windy/                 # 💨 Windy Point Forecast (GFS weather + CAMS air quality)
+│       ├── fetch_windy.ts     # Fetches one point-forecast CSV, registers FileStore tables
+│       └── sql/               # windy_register.sql, windy_view.sql, windy_activate.sql
 ├── usl/
 │   ├── bootstrap_usl.ts       # Day-0 end-to-end setup script (TypeScript)
 │   ├── usl_schema.sql         # Master USL schema, dimension registration & FK graph
@@ -51,7 +54,7 @@ app/zetaris/
 
 ## 3. What the Data Looks Like (Data Contract)
 
-The semantic layer exposes **6 unified entities**. Agents querying or generating SQL for these tables should expect the following schemas:
+The semantic layer exposes **8 unified entities**. Agents querying or generating SQL for these tables should expect the following schemas:
 
 ### A. `location_dim` (Canonical Location Dimension)
 * **Role:** Primary entity representing 345 geographic centroids across Malaysia.
@@ -167,6 +170,43 @@ The semantic layer exposes **6 unified entities**. Agents querying or generating
   }
   ```
 
+### G. `windy_forecast_obs` (Windy GFS Point Weather Forecast)
+* **Role:** Point weather forecast (temperature, humidity, pressure, wind speed/direction/gust) from the Windy Point Forecast API, backed by the NOAA GFS model and converted to metric units at ingestion.
+* **Foreign Key:** `location_index` → `location_dim(location_index)` (currently resolved to Kuala Lumpur, `location_index` 14).
+* **Tense:** Forecast (model horizon from issue time).
+* **Sample Record (units converted from Kelvin / Pascal / m·s⁻¹):**
+  ```json
+  {
+    "location_index": 14,
+    "forecast_time": "2026-10-23T03:00:00Z",
+    "temp_c": 27.55,
+    "relative_humidity_pct": 88.64,
+    "pressure_hpa": 1009.45,
+    "wind_speed_ms": 1.34,
+    "wind_direction_deg": 337.2,
+    "wind_gust_ms": 2.95
+  }
+  ```
+  *(Note: `forecast_time` is stored in UTC; add 8 hours for MYT. The GFS `wind` vector is converted to speed and direction at ingestion.)*
+
+### H. `windy_air_quality_obs` (Windy CAMS Point Air-Quality Forecast)
+* **Role:** Point air-quality forecast (PM2.5, PM10, US AQI, NO2, dust) from the Copernicus CAMS model served through the Windy Point Forecast API.
+* **Foreign Key:** `location_index` → `location_dim(location_index)` (currently resolved to Kuala Lumpur, `location_index` 14).
+* **Tense:** Forecast (model horizon from issue time).
+* **Sample Record:**
+  ```json
+  {
+    "location_index": 14,
+    "observation_time": "2026-10-23T00:00:00Z",
+    "pm2_5_ug_m3": 18.35,
+    "pm10_ug_m3": 11.52,
+    "aqi_us": 103.97,
+    "no2_ug_m3": 48.08,
+    "dust_ug_m3": 0.00
+  }
+  ```
+  *(Note: `observation_time` is the forecast timestamp in UTC. Values come from Windy's free Testing tier and are deliberately perturbed; see rule 5 below.)*
+
 ---
 
 ## 4. How External Systems & Agents Query This Data
@@ -234,6 +274,12 @@ You are the Malaysian Environmental Intelligence Assistant. You have real-time a
 6. `power_daily` (FK: location_index -> location_dim)
    - Columns: location_index, observation_date, T2M (temp °C), T2M_MAX, T2M_MIN, T2MDEW, T2MWET, TS, RH2M (humidity %), QV2M, PRECTOTCORR (rain mm/day), PS, WS2M, WS10M, WS10M_MAX, WD10M, WS50M, WD50M, GWETTOP, GWETROOT, GWETPROF, EVLAND
    - Coverage: Historical observations (lagged 4 days from today).
+7. `windy_forecast_obs` (FK: location_index -> location_dim)
+   - Columns: location_index, forecast_time, temp_c (temp °C), relative_humidity_pct (%), pressure_hpa, wind_speed_ms, wind_direction_deg, wind_gust_ms
+   - Coverage: Windy (GFS) point weather forecast. Currently the Kuala Lumpur point only, not all 345 locations.
+8. `windy_air_quality_obs` (FK: location_index -> location_dim)
+   - Columns: location_index, observation_time, pm2_5_ug_m3, pm10_ug_m3, aqi_us, no2_ug_m3, dust_ug_m3
+   - Coverage: Windy (CAMS) point air-quality forecast. Currently the Kuala Lumpur point only. Values are from the free Testing tier and must not be treated as evidence.
 
 ### SQL Generation Rules:
 - Always use fully qualified names: `lightning.metastore.malaysia_env.malaysia_env_usl.<table_name>`.
@@ -260,4 +306,6 @@ You are the Malaysian Environmental Intelligence Assistant. You have real-time a
    * *Ribut petir di beberapa tempat* = Thunderstorms in several places
    * *Hujan di satu dua tempat* = Rain in one or two places
    * *Tiada hujan* = No rain / Clear weather
-   * *Kawasan pantai / pedalaman* = Coastal / Inland areas
+   * *Kawasan pantai / pedalaman* = Coastal / inland areas
+5. **Windy Is a Single-Point, Testing-Tier Source:**
+   `windy_forecast_obs` and `windy_air_quality_obs` are built from one FileStore CSV snapshot fetched for a single coordinate (default Kuala Lumpur, `wp-kuala-lumpur`), so their coverage is one point, not 345 locations. The Point Forecast key is on Windy's free **Testing** tier, whose responses are randomly shuffled and slightly modified: the numbers are for wiring up and testing only and must not be used as evidence in the Haze Agent. Temperatures are stored in °C (converted from Kelvin) and pressure in hPa (converted from Pascal).

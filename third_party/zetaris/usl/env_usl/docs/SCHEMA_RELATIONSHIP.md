@@ -1,6 +1,6 @@
 # Malaysia Environmental USL: Schema & Foreign Keys
 
-Federated environmental intelligence layer deployed in Zetaris (`malaysia_env_usl`), unifying four live environmental data sources under a normalized **Location Dimension Model** across 345 canonical Malaysian locations.
+Federated environmental intelligence layer deployed in Zetaris (`malaysia_env_usl`), unifying five environmental data sources under a normalized **Location Dimension Model** across 345 canonical Malaysian locations.
 
 ---
 
@@ -12,6 +12,8 @@ erDiagram
     LOCATION_DIM ||--o{ AIR_QUALITY_OBS : "FK: location_index"
     LOCATION_DIM ||--o{ ACTIVE_FIRES : "FK: location_index"
     LOCATION_DIM ||--o{ POWER_DAILY : "FK: location_index"
+    LOCATION_DIM ||--o{ WINDY_FORECAST_OBS : "FK: location_index"
+    LOCATION_DIM ||--o{ WINDY_AIR_QUALITY_OBS : "FK: location_index"
     LOCATION_CODE ||--o{ WEATHER_FORECAST : "FK: location_code"
 
     LOCATION_DIM {
@@ -84,6 +86,27 @@ erDiagram
         double GWETPROF "Profile Soil Moisture (0-1)"
         double EVLAND "Evaporation Land (MJ/m2/day)"
     }
+
+    WINDY_FORECAST_OBS {
+        int location_index FK "References location_dim(location_index)"
+        timestamp forecast_time
+        double temp_c "Temperature (°C)"
+        double relative_humidity_pct "Relative Humidity (%)"
+        double pressure_hpa "Surface Pressure (hPa)"
+        double wind_speed_ms "Wind Speed (m/s)"
+        double wind_direction_deg "Wind Direction (deg)"
+        double wind_gust_ms "Wind Gust (m/s)"
+    }
+
+    WINDY_AIR_QUALITY_OBS {
+        int location_index FK "References location_dim(location_index)"
+        timestamp observation_time
+        double pm2_5_ug_m3 "PM2.5 (µg/m³)"
+        double pm10_ug_m3 "PM10 (µg/m³)"
+        double aqi_us "US AQI (unitless)"
+        double no2_ug_m3 "Nitrogen Dioxide (µg/m³)"
+        double dust_ug_m3 "Dust (µg/m³)"
+    }
 ```
 
 ---
@@ -98,6 +121,8 @@ erDiagram
 | **`air_quality_obs`** | *(composite on query)* | `location_index` → `location_dim(location_index)` | 4 | 120-hour hourly PM2.5 & PM10 from Open-Meteo |
 | **`active_fires`** | *(composite on query)* | `location_index` → `location_dim(location_index)` | 12 | NASA FIRMS VIIRS satellite thermal hotspots |
 | **`power_daily`** | *(composite on query)* | `location_index` → `location_dim(location_index)` | **22** (2 meta + **20 parameters**) | NASA POWER daily solar & climate variables |
+| **`windy_forecast_obs`** | *(composite on query)* | `location_index` → `location_dim(location_index)` | 8 | Windy (GFS) point weather forecast |
+| **`windy_air_quality_obs`** | *(composite on query)* | `location_index` → `location_dim(location_index)` | 7 | Windy (CAMS) point air-quality forecast |
 
 ---
 
@@ -127,3 +152,36 @@ erDiagram
 | **Precipitation & Land**| `PRECTOTCORR`| Precipitation Corrected | mm/day |
 | | `EVLAND` | Evaporation Land | MJ/m²/day |
 | **Pressure** | `PS` | Surface Pressure | kPa |
+
+---
+
+## 4. Windy Point Forecast Specification
+
+Both Windy tables are point forecasts for a single coordinate (currently Kuala Lumpur, `location_index` 14) served from a FileStore CSV snapshot, and they join to `location_dim` on `location_index`.
+
+### `windy_forecast_obs` (Windy GFS weather)
+
+| Column | Unit | Notes |
+| :--- | :--- | :--- |
+| `location_index` | int | FK → `location_dim(location_index)` |
+| `forecast_time` | timestamp | Stored in UTC; add 8 hours for MYT |
+| `temp_c` | °C | Converted from the API's Kelvin value |
+| `relative_humidity_pct` | % | As returned by the API |
+| `pressure_hpa` | hPa | Converted from the API's Pascal value |
+| `wind_speed_ms` | m/s | Derived from the `wind_u` / `wind_v` vector |
+| `wind_direction_deg` | Degrees | Derived from the `wind_u` / `wind_v` vector |
+| `wind_gust_ms` | m/s | `gust-surface` from the API |
+
+### `windy_air_quality_obs` (Windy CAMS air quality)
+
+| Column | Unit | Notes |
+| :--- | :--- | :--- |
+| `location_index` | int | FK → `location_dim(location_index)` |
+| `observation_time` | timestamp | Forecast timestamp in UTC |
+| `pm2_5_ug_m3` | µg/m³ | `pm2p5-surface` from the API |
+| `pm10_ug_m3` | µg/m³ | `pm10-surface` from the API |
+| `aqi_us` | *(unitless)* | `aqi_us-surface` from the API |
+| `no2_ug_m3` | µg/m³ | `no2-surface` from the API |
+| `dust_ug_m3` | µg/m³ | `chem_dustsm-surface` from the API |
+
+> **Provenance limit:** the Windy key is on the free **Testing** tier, whose responses are randomly shuffled and slightly modified. These values are for pipeline testing only and must not be used as evidence.
