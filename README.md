@@ -1,10 +1,10 @@
 # Haze Agent
 
-Repository and development foundation for Haze Agent, based on the [v0.8 architecture](docs/Haze_Agent_Architecture_v0.8.pdf), especially pages 20, 23, and 25.
+Repository and development foundation for Haze Agent. The reference design is the supplied [v0.13 architecture](docs/Haze_Agent_Architecture_v0.13.pdf). The [demo scope and implementation status](docs/demo-scope.md) define the bounded slice and the limits of the code delivered here. The earlier [compatibility spike](docs/compatibility-probe.md) retains its original v0.8 scope; its results do not establish the new domain workflow.
 
 The scaffold uses TypeScript `StateGraph` from `@langchain/langgraph` and runs in this process. It does not require a hosted LangGraph service. LangGraph supplies orchestration and checkpoint infrastructure; Haze has four domain roles: **Manager, HazeOps, WorkerShield, and EvidenceCritic**.
 
-The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references.
+The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph.
 
 ## Repository structure
 
@@ -13,12 +13,14 @@ Haze-Agent/
 ├── app/                  # Core TypeScript agent and checkpoint infrastructure
 │   ├── adapters/         # Meterless engines and provider integrations
 │   ├── checkpoints/      # Persistent saver helpers
-│   └── compatibility/    # Engine, provider and restart proof
+│   ├── compatibility/    # Engine, provider and restart proof
+│   └── contracts/        # Closed v2 domain contracts and semantic validation
 ├── data/                 # Small static data and data-source notes
 ├── scripts/              # Build, verification and example helpers
 ├── Dockerfile            # Reproducible Node build and offline example
-├── input_examples/       # At least three sample metadata inputs
-├── output_examples/      # Matching expected JSON outputs
+├── input_examples/       # Metadata samples and synthetic v2 planning/run fixtures
+├── output_examples/      # Metadata outputs and a synthetic v2 result fixture
+├── schemas/              # Generated Draft 2020-12 domain schemas
 ├── logs/                 # Local JSONL execution traces (ignored)
 ├── .env.example          # Placeholder configuration; no real keys
 ├── README.md             # Setup, usage, dependencies, architecture and limitations
@@ -63,7 +65,22 @@ To save a result and choose the trace directory:
 npm start -- input_examples/01-minimal.json --output result.json --logs-dir logs
 ```
 
-The runner writes local JSONL execution traces under `logs/` by default. Trace files are ignored by Git. The examples exercise metadata validation and checkpoint wiring; they do not execute the compatibility probe or the Haze domain roles.
+The runner writes local JSONL execution traces under `logs/` by default. Trace files are ignored by Git. The examples exercise metadata validation and checkpoint wiring; they do not execute the compatibility probe or the Haze domain roles. Their numeric `schemaVersion: 2` is an execution-metadata version, not `haze.planning.v2`, `haze.run.v2` or `haze.result.v2`.
+
+## Validate the v0.13 contracts
+
+After building, validate the shared synthetic examples and their bindings:
+
+```sh
+npm run contracts:check
+npm run contracts:validate -- planning input_examples/v2/planning.json
+npm run contracts:validate -- run input_examples/v2/run.json --surface historical_harness
+npm run contracts:validate -- result output_examples/v2/result.json
+```
+
+The closed [JSON Schemas](schemas/) use Draft 2020-12 and are generated from the [Zod contracts](app/contracts/index.ts). Runtime validation also enforces formats and domain relationships that a standalone schema pass cannot establish. Regenerate schemas with `npm run contracts:generate` after a deliberate contract change and rebuild first when TypeScript source has changed.
+
+[Planning input](input_examples/v2/planning.json), [run request](input_examples/v2/run.json) and [result](output_examples/v2/result.json) are matching **synthetic contract fixtures**. Their demo-local references and hashes describe local fixtures, not accepted canonical records. The result illustrates a historical, publication-disabled response with explicit gaps. It was not produced by a planner, agent, independent numerical checker or provider call. `contracts:validate` validates a file; it does not admit or execute a planning job. See [demo-scope.md](docs/demo-scope.md) for the scope, invariants and remaining implementation boundaries.
 
 ## Pinned engines and workflow
 

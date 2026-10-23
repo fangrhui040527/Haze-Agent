@@ -23,7 +23,11 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:postgres": "vitest run --project postgres",
-    "check": "npm run verify:pins && npm run format:check && npm run typecheck && npm run lint && npm run build && npm test && npm run test:engines"
+    "check": "npm run verify:pins && npm run format:check && npm run typecheck && npm run lint && npm run build && npm run contracts:check && npm test && npm run test:engines",
+    "contracts:generate": "npm run build && node scripts/contracts.mjs generate && prettier --write schemas/*.json",
+    "contracts:check": "node scripts/contracts.mjs check",
+    "contracts:validate": "node scripts/contracts.mjs validate",
+    "contracts:fixtures": "node scripts/contracts.mjs fixtures && prettier --write input_examples/v2/*.json output_examples/v2/*.json"
   },
   "dependencies": {
     "@langchain/core": "1.2.20",

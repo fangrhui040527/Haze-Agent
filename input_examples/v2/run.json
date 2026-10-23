@@ -1,0 +1,14 @@
+{
+  "schema_version": "haze.run.v2",
+  "programme_id": "haze-engineering-demo",
+  "input": {
+    "operation": "plan_outdoor_work",
+    "problem_id": "klang-synthetic-crew",
+    "bundle_ref": {
+      "id": "demo:klang-fixture-input-v2",
+      "revision": 1,
+      "sha256": "8c50ab5f0586941ff9892aa451b020bbe18f8655cd4224060ca8dc6d6566a9ef"
+    },
+    "query": "What evidence is missing before these fixed-work schedules can be compared?"
+  }
+}
