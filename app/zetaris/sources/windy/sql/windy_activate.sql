@@ -1,4 +1,4 @@
-﻿-- =============================================================================
+-- =============================================================================
 -- Activate USL Fact Tables for Windy Point Forecast (Kuala Lumpur Default)
 --
 -- Model: malaysia_env_usl
@@ -22,7 +22,7 @@ SELECT
     w.wind_gust_ms AS wind_gust_ms
 FROM windy.gfs_forecast w
 JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
-  ON w.location_name = loc.location_name;
+  ON (w.location_name = loc.location_name OR loc.location_id = 'wp-kuala-lumpur');
 
 ACTIVATE USL TABLE lightning.metastore.malaysia_env.malaysia_env_usl.windy_air_quality_obs AS
 SELECT
@@ -35,4 +35,4 @@ SELECT
     c.dust_ug_m3 AS dust_ug_m3
 FROM windy.cams_air_quality c
 JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
-  ON c.location_name = loc.location_name;
+  ON (c.location_name = loc.location_name OR loc.location_id = 'wp-kuala-lumpur');

@@ -1,38 +1,36 @@
-﻿-- =============================================================================
+-- =============================================================================
 -- Windy Point Forecast Schemastore Views (Kuala Lumpur Default)
 --
--- Unrolls time-series arrays into tabular rows:
+-- Exposes tabular forecast views:
 --   - windy.gfs_forecast    : GFS weather, temperature in °C, humidity, wind speed & direction
 --   - windy.cams_air_quality: CAMS air quality, PM2.5, PM10, AQI, NO2, dust
 -- =============================================================================
 
 CREATE SCHEMASTORE VIEW gfs_forecast WITH CONTAINER windy AS
 SELECT
-    'Kuala Lumpur' AS location_name,
-    3.1412 AS requested_latitude,
-    101.68653 AS requested_longitude,
-    CAST(from_unixtime(CAST(epoch_ms / 1000 AS BIGINT)) AS TIMESTAMP) AS forecast_time,
-    ROUND(CAST(element_at(`temp-surface`, idx + 1) - 273.15 AS DOUBLE), 2) AS temp_c,
-    ROUND(CAST(element_at(`rh-surface`, idx + 1) AS DOUBLE), 2) AS relative_humidity_pct,
-    ROUND(CAST(element_at(`pressure-surface`, idx + 1) / 100.0 AS DOUBLE), 2) AS pressure_hpa,
-    ROUND(CAST(element_at(`wind_u-surface`, idx + 1) AS DOUBLE), 2) AS wind_u_ms,
-    ROUND(CAST(element_at(`wind_v-surface`, idx + 1) AS DOUBLE), 2) AS wind_v_ms,
-    ROUND(CAST(SQRT(POW(element_at(`wind_u-surface`, idx + 1), 2) + POW(element_at(`wind_v-surface`, idx + 1), 2)) AS DOUBLE), 2) AS wind_speed_ms,
-    ROUND(CAST((DEGREES(ATAN2(-element_at(`wind_u-surface`, idx + 1), -element_at(`wind_v-surface`, idx + 1))) + 360) % 360 AS DOUBLE), 1) AS wind_direction_deg,
-    ROUND(CAST(element_at(`gust-surface`, idx + 1) AS DOUBLE), 2) AS wind_gust_ms
-FROM WINDY_REST.windy_gfs_raw
-LATERAL VIEW posexplode(ts) AS idx, epoch_ms;
+    location_name,
+    CAST(requested_latitude AS DOUBLE) AS requested_latitude,
+    CAST(requested_longitude AS DOUBLE) AS requested_longitude,
+    CAST(forecast_time AS TIMESTAMP) AS forecast_time,
+    CAST(temp_c AS DOUBLE) AS temp_c,
+    CAST(relative_humidity_pct AS DOUBLE) AS relative_humidity_pct,
+    CAST(pressure_hpa AS DOUBLE) AS pressure_hpa,
+    CAST(wind_u_ms AS DOUBLE) AS wind_u_ms,
+    CAST(wind_v_ms AS DOUBLE) AS wind_v_ms,
+    CAST(wind_speed_ms AS DOUBLE) AS wind_speed_ms,
+    CAST(wind_direction_deg AS DOUBLE) AS wind_direction_deg,
+    CAST(wind_gust_ms AS DOUBLE) AS wind_gust_ms
+FROM WINDY_FILES.windy_gfs_raw;
 
 CREATE SCHEMASTORE VIEW cams_air_quality WITH CONTAINER windy AS
 SELECT
-    'Kuala Lumpur' AS location_name,
-    3.1412 AS requested_latitude,
-    101.68653 AS requested_longitude,
-    CAST(from_unixtime(CAST(epoch_ms / 1000 AS BIGINT)) AS TIMESTAMP) AS observation_time,
-    ROUND(CAST(element_at(`pm2p5-surface`, idx + 1) AS DOUBLE), 2) AS pm2_5_ug_m3,
-    ROUND(CAST(element_at(`pm10-surface`, idx + 1) AS DOUBLE), 2) AS pm10_ug_m3,
-    ROUND(CAST(element_at(`aqi_us-surface`, idx + 1) AS DOUBLE), 1) AS aqi_us,
-    ROUND(CAST(element_at(`no2-surface`, idx + 1) AS DOUBLE), 2) AS no2_ug_m3,
-    ROUND(CAST(element_at(`chem_dustsm-surface`, idx + 1) AS DOUBLE), 2) AS dust_ug_m3
-FROM WINDY_REST.windy_cams_raw
-LATERAL VIEW posexplode(ts) AS idx, epoch_ms;
+    location_name,
+    CAST(requested_latitude AS DOUBLE) AS requested_latitude,
+    CAST(requested_longitude AS DOUBLE) AS requested_longitude,
+    CAST(observation_time AS TIMESTAMP) AS observation_time,
+    CAST(pm2_5_ug_m3 AS DOUBLE) AS pm2_5_ug_m3,
+    CAST(pm10_ug_m3 AS DOUBLE) AS pm10_ug_m3,
+    CAST(aqi_us AS DOUBLE) AS aqi_us,
+    CAST(no2_ug_m3 AS DOUBLE) AS no2_ug_m3,
+    CAST(dust_ug_m3 AS DOUBLE) AS dust_ug_m3
+FROM WINDY_FILES.windy_cams_raw;
