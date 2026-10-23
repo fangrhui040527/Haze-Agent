@@ -423,6 +423,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       cwd,
       stdio: "inherit",
       windowsHide: true,
+      shell: process.platform === "win32",
     });
 
     child.on("error", (err) => reject(err));
@@ -437,10 +438,13 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
 }
 
 async function publishToContainer(flatDir: string, container: string): Promise<void> {
+  const parentPath = path.posix.dirname(CONTAINER_PATH);
   try {
-    await runCommand("docker", ["exec", container, "mkdir", "-p", CONTAINER_PATH], ZETARIS_ROOT);
-    await runCommand("docker", ["exec", container, "sh", "-c", `rm -rf ${CONTAINER_PATH}/*`], ZETARIS_ROOT);
-    await runCommand("docker", ["cp", `${flatDir}${path.sep}.`, `${container}:${CONTAINER_PATH}/`], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "mkdir", "-p", parentPath], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "rm", "-rf", CONTAINER_PATH], ZETARIS_ROOT);
+    await runCommand("docker", ["cp", flatDir, `${container}:${parentPath}/`], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "chown", "-R", "zetaris:zetaris", CONTAINER_PATH], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "chmod", "-R", "777", CONTAINER_PATH], ZETARIS_ROOT);
     console.log(`[Step] Published FIRMS flat CSVs to ${container}:${CONTAINER_PATH}/`);
   } catch (e) {
     console.log(`Note: Could not copy FIRMS CSVs to docker (${e instanceof Error ? e.message : e}). Ensure files exist at ${CONTAINER_PATH}/`);
@@ -448,6 +452,21 @@ async function publishToContainer(flatDir: string, container: string): Promise<v
 }
 
 async function registerTable(dryRun: boolean): Promise<void> {
+  if (!dryRun) {
+    try {
+      const dropDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-firms-drop-"));
+      const dropFile = path.join(dropDir, "drop_table.sql");
+      try {
+        await fs.writeFile(dropFile, "DROP LIGHTNING DATABASE TABLE NASA_FIRMS_FILES.active_fires;\n", "utf-8");
+        await runCommand(PYTHON_BIN, ["scripts/run_sql.py", dropFile], ZETARIS_ROOT);
+      } finally {
+        await fs.rm(dropDir, { recursive: true, force: true });
+      }
+    } catch {
+      // Table may not exist yet; safe to ignore
+    }
+  }
+
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-firms-"));
   const sqlFile = path.join(tempDir, "firms_register.sql");
 
@@ -551,6 +570,15 @@ async function main(): Promise<void> {
   console.log(`Flattening CSV partitions to ${FLAT_DIR}...`);
   const count = await flattenCsv(CSV_DIR, FLAT_DIR);
   console.log(`Flattened ${count} CSV files.`);
+
+  // If no fire records were fetched, write a header-only placeholder so Zetaris
+  // can always infer the schema from the FileStore table (avoids UNRESOLVED_COLUMN).
+  if (count === 0 && !dryRun) {
+    const placeholder = path.join(FLAT_DIR, "_empty_placeholder.csv");
+    const header = "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight,source,region,location_id,acq_utc,acq_myt";
+    await fs.writeFile(placeholder, header + "\n", "utf-8");
+    console.log("  ✓ No active fires found — wrote header-only placeholder CSV for schema inference.");
+  }
 
   if (dryRun) {
     console.log("[Dry run] Registration statements:");

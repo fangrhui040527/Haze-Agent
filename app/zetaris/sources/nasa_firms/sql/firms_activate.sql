@@ -25,4 +25,5 @@ SELECT
     CAST(f.daynight AS VARCHAR(1)) AS daynight
 FROM NASA_FIRMS_FILES.active_fires f
 JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
-  ON f.region = loc.location_name;
+  ON f.region = loc.location_name
+  OR f.location_id = loc.location_id;

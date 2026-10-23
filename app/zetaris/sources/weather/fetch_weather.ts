@@ -70,6 +70,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       cwd,
       stdio: "inherit",
       windowsHide: true,
+      shell: process.platform === "win32",
     });
 
     child.on("error", (err) => reject(err));
@@ -122,13 +123,16 @@ async function main(): Promise<void> {
 
   console.log("Refreshing weather.forecasts_all view across all 5 code types...");
   try {
-    await runCommand(
-      PYTHON_BIN,
-      ["scripts/run_sql.py", "-e", `DROP VIEW IF EXISTS ${VIEW_NAME}`],
-      ZETARIS_ROOT,
-    );
+    const dropDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-weather-drop-"));
+    const dropFile = path.join(dropDir, "drop_view.sql");
+    try {
+      await fs.writeFile(dropFile, `DROP VIEW IF EXISTS ${VIEW_NAME};`, "utf-8");
+      await runCommand(PYTHON_BIN, ["scripts/run_sql.py", dropFile], ZETARIS_ROOT);
+    } finally {
+      await fs.rm(dropDir, { recursive: true, force: true });
+    }
   } catch {
-    // Drop view may report warning if it does not exist yet; ignore and continue
+    // Drop view may fail if it does not exist yet; ignore and continue
   }
 
   await runSqlText(VIEW_SQL, { dryRun: false });

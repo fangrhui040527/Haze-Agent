@@ -14,6 +14,8 @@
  * Additional options:
  * -------------------
  *   --skip-power     Skip 345 NASA POWER tables for fast test bootstrapping
+ *   --test           Test mode: only ingest KL weather/FIRMS/air-quality/POWER
+ *                    (1 location instead of all 345) for a fast smoke test
  *   --dry-run        Print actions and SQL commands without running them
  *
  * Examples:
@@ -22,12 +24,14 @@
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --law-only
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --test
  *   npx tsx app/zetaris/usl/bootstrap_usl.ts --law-only
  */
 
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,6 +45,15 @@ const RUN_SQL = path.join(ZETARIS_ROOT, "scripts", "run_sql.py");
 const LOCATIONS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/locations";
 const FIRMS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/firms_flat";
 const LAW_CONTAINER_PATH = "/home/zetaris/customer-data/shared/law";
+
+// Windy register SQL carries a `${WINDY_API_KEY}` placeholder that must be
+// filled from .env.local before it is sent. The key is never printed or logged.
+const WINDY_SQL_DIR = path.join(SRC_ROOT, "windy", "sql");
+const WINDY_API_KEY_PLACEHOLDER = "${WINDY_API_KEY}";
+
+// Test mode (--test) limits per-location ingestion to this single location so a
+// full bootstrap can be smoke-tested quickly instead of pulling all 345.
+const TEST_LOCATION_ID = "kuala-lumpur";
 
 const PYTHON_BIN =
   process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
@@ -86,8 +99,10 @@ async function dockerCp(
     return;
   }
   try {
-    await runCommand("docker", ["exec", container, "mkdir", "-p", dst]);
+    await runCommand("docker", ["exec", "-u", "root", container, "mkdir", "-p", dst]);
     await runCommand("docker", ["cp", `${src}/.`, `${container}:${dst}/`]);
+    await runCommand("docker", ["exec", "-u", "root", container, "chown", "-R", "zetaris:zetaris", dst]);
+    await runCommand("docker", ["exec", "-u", "root", container, "chmod", "-R", "777", dst]);
     console.log(`  ✓ Copied ${src} → ${container}:${dst}`);
   } catch (err) {
     console.warn(`  ⚠ docker cp failed (${dst}): ${(err as Error).message}`);
@@ -119,6 +134,80 @@ async function runSqlFile(
     await runCommand(PYTHON_BIN, args, ZETARIS_ROOT);
   } catch (err) {
     console.error(`  ✗ Failed ${path.basename(sqlFile)}: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Read one value from the first .env.local found (repo root, then the enclosing
+ * checkout). Returns undefined when the file or key is missing. Never logs the
+ * value, so it is safe for secrets such as WINDY_API_KEY.
+ */
+function loadEnvLocalValue(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  const candidates = [
+    path.join(ZETARIS_ROOT, ".env.local"),
+    path.join(ZETARIS_ROOT, "..", ".env.local"),
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    for (const raw of fs.readFileSync(file, "utf-8").split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#") || !line.includes("=")) continue;
+      const idx = line.indexOf("=");
+      if (line.slice(0, idx).trim() !== name) continue;
+      let value = line.slice(idx + 1).trim();
+      if (
+        value.length >= 2 &&
+        value[0] === value[value.length - 1] &&
+        (value[0] === '"' || value[0] === "'")
+      ) {
+        value = value.slice(1, -1);
+      }
+      return value;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Run the Windy register SQL, substituting the `${WINDY_API_KEY}` placeholder
+ * with the value from .env.local. The filled SQL is written to a temp file, run
+ * through scripts/run_sql.py, then deleted. The key is never printed or logged.
+ */
+async function runWindyRegister(dryRun: boolean): Promise<void> {
+  const sqlFile = path.join(WINDY_SQL_DIR, "windy_register.sql");
+  if (!fs.existsSync(sqlFile)) {
+    console.error(`  ✗ SQL file not found: ${sqlFile}`);
+    return;
+  }
+  console.log(`  ==> SQL: ${path.relative(USL_ROOT, sqlFile)} (WINDY_API_KEY injected)`);
+
+  const text = fs.readFileSync(sqlFile, "utf-8");
+
+  if (dryRun) {
+    console.log(
+      `[DRY-RUN] Would run windy_register.sql with ${WINDY_API_KEY_PLACEHOLDER} filled from .env.local`,
+    );
+    return;
+  }
+
+  const key = loadEnvLocalValue("WINDY_API_KEY");
+  if (!key) {
+    console.error("  ✗ WINDY_API_KEY is not set (.env.local or environment) — skipping Windy registration.");
+    return;
+  }
+
+  const tempFile = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-windy-")),
+    "windy_register.sql",
+  );
+  try {
+    fs.writeFileSync(tempFile, text.split(WINDY_API_KEY_PLACEHOLDER).join(key), "utf-8");
+    await runCommand(PYTHON_BIN, [RUN_SQL, "--skip-exists", tempFile], ZETARIS_ROOT);
+  } catch (err) {
+    console.error(`  ✗ Failed windy_register.sql: ${(err as Error).message}`);
+  } finally {
+    fs.rmSync(path.dirname(tempFile), { recursive: true, force: true });
   }
 }
 
@@ -164,54 +253,44 @@ async function runTsScript(
 
 async function verifyEnvUsl(): Promise<void> {
   console.log("\n  ==> Running federated Environmental USL verification health check...");
-  const envTestSql = `
-    SELECT
-        loc.location_index,
-        loc.location_name,
-        loc.latitude,
-        loc.longitude,
-        w.morning_forecast
-    FROM lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
-    LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_code lc
-      ON loc.location_index = lc.location_index
-    LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.weather_forecast w
-      ON lc.location_code = w.location_code
-    LIMIT 5;
-  `;
+  const envTestSql = [
+    "SELECT loc.location_index, loc.location_name, loc.latitude, loc.longitude, w.morning_forecast",
+    "FROM lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc",
+    "LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_code lc ON loc.location_index = lc.location_index",
+    "LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.weather_forecast w ON lc.location_code = w.location_code",
+    "LIMIT 5;",
+  ].join(" ");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-env-"));
+  const tmpFile = path.join(tmpDir, "verify.sql");
   try {
-    await runCommand(
-      PYTHON_BIN,
-      [RUN_SQL, "--limit", "5", "-e", envTestSql],
-      ZETARIS_ROOT,
-    );
+    fs.writeFileSync(tmpFile, envTestSql, "utf-8");
+    await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
     console.log("  ✓ Environmental USL: Federated join verified successfully!");
   } catch (err) {
     console.warn(`  ⚠ Environmental health check warning: ${(err as Error).message}`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
 async function verifyLawUsl(): Promise<void> {
   console.log("\n  ==> Running Law USL verification health check...");
-  const lawTestSql = `
-    SELECT
-        doc.document_id,
-        doc.instrument_code,
-        p.page_number,
-        p.is_provenance_page
-    FROM lightning.metastore.malaysia_law.malaysia_law_usl.law_documents doc
-    JOIN lightning.metastore.malaysia_law.malaysia_law_usl.law_pages p
-      ON doc.document_id = p.document_id
-    LIMIT 3;
-  `;
+  const lawTestSql = [
+    "SELECT doc.document_id, doc.instrument_code, p.page_number, p.is_provenance_page",
+    "FROM lightning.metastore.malaysia_law.malaysia_law_usl.law_documents doc",
+    "JOIN lightning.metastore.malaysia_law.malaysia_law_usl.law_pages p ON doc.document_id = p.document_id",
+    "LIMIT 3;",
+  ].join(" ");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-law-"));
+  const tmpFile = path.join(tmpDir, "verify.sql");
   try {
-    await runCommand(
-      PYTHON_BIN,
-      [RUN_SQL, "--limit", "3", "-e", lawTestSql],
-      ZETARIS_ROOT,
-    );
+    fs.writeFileSync(tmpFile, lawTestSql, "utf-8");
+    await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
     console.log("  ✓ Law USL: Join verified successfully!");
   } catch (err) {
     console.warn(`  ⚠ Law health check warning: ${(err as Error).message}`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
@@ -223,6 +302,7 @@ interface CliOptions {
   runEnv: boolean;
   runLaw: boolean;
   skipPower: boolean;
+  testMode: boolean;
   dryRun: boolean;
 }
 
@@ -246,6 +326,7 @@ function parseArgs(): CliOptions {
     runEnv,
     runLaw,
     skipPower: argv.includes("--skip-power"),
+    testMode: argv.includes("--test"),
     dryRun: argv.includes("--dry-run"),
   };
 }
@@ -255,15 +336,18 @@ function parseArgs(): CliOptions {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { runEnv, runLaw, skipPower, dryRun } = parseArgs();
+  const { runEnv, runLaw, skipPower, testMode, dryRun } = parseArgs();
   const t0 = Date.now();
 
   console.log("=".repeat(70));
   console.log(" MALAYSIA UNIFIED SEMANTIC LAYERS (USL) — INITIALIZER ");
   console.log("=".repeat(70));
   console.log(`Execution Mode: ${runEnv && runLaw ? "ALL (Environmental + Law)" : runEnv ? "ENVIRONMENTAL ONLY (--env-only)" : "LAW ONLY (--law-only)"}`);
+  if (testMode) {
+    console.log(`Test Mode: ON (--test) — per-location ingestion limited to "${TEST_LOCATION_ID}"`);
+  }
   if (runEnv) {
-    console.log("  • Environmental USL (malaysia_env_usl): Locations, Weather, FIRMS, Air Quality" + (skipPower ? " [POWER skipped]" : ", POWER"));
+    console.log("  • Environmental USL (malaysia_env_usl): Locations, Weather, FIRMS, Air Quality, Windy" + (skipPower ? " [POWER skipped]" : ", POWER"));
   }
   if (runLaw) {
     console.log("  • Law USL (malaysia_law_usl): Documents, Full-text Pages");
@@ -277,40 +361,59 @@ async function main(): Promise<void> {
     console.log("\n>>> [1/2] BOOTSTRAPPING ENVIRONMENTAL USL (malaysia_env_usl) <<<");
 
     // 1. Locations
-    console.log("\n[Env Step 1/6] Preparing Canonical Location Dimensions...");
+    console.log("\n[Env Step 1/7] Preparing Canonical Location Dimensions...");
     const locationDir = path.join(SRC_ROOT, "location");
     await dockerCp(locationDir, "zetaris-driver-1", LOCATIONS_CONTAINER_PATH, dryRun);
 
     // 2. Weather
-    console.log("\n[Env Step 2/6] Bootstrapping Data.gov.my Weather Forecasts...");
+    // (Data.gov.my weather is a single nationwide REST feed, so there is no
+    //  per-location download to limit in test mode.)
+    console.log("\n[Env Step 2/7] Bootstrapping Data.gov.my Weather Forecasts...");
     await runTsScript(path.join(SRC_ROOT, "weather", "fetch_weather.ts"), [], dryRun);
 
     // 3. FIRMS Active Fires
-    console.log("\n[Env Step 3/6] Bootstrapping NASA FIRMS Active Fires (Past 5 Days)...");
+    // NOTE: FIRMS uses two national bounding boxes (peninsular + east Malaysia) and does
+    // NOT create per-location tables, so --location is never passed even in test mode.
+    console.log("\n[Env Step 3/7] Bootstrapping NASA FIRMS Active Fires (Past 5 Days)...");
     await runTsScript(
       path.join(SRC_ROOT, "nasa_firms", "fetch_nasa_firms.ts"),
       ["--day-range", "5"],
       dryRun,
     );
-    const firmsFlatDir = path.join(SRC_ROOT, "nasa_firms", "data", "firms_flat");
-    if (fs.existsSync(firmsFlatDir)) {
-      await dockerCp(firmsFlatDir, "zetaris-driver-1", FIRMS_CONTAINER_PATH, dryRun);
-    }
 
     // 4. Open-Meteo Air Quality
-    console.log("\n[Env Step 4/6] Bootstrapping Open-Meteo Air Quality (345 Locations)...");
-    await runTsScript(path.join(SRC_ROOT, "air_quality", "fetch_air_quality.ts"), [], dryRun);
+    console.log(
+      `\n[Env Step 4/7] Bootstrapping Open-Meteo Air Quality ` +
+        (testMode ? `(${TEST_LOCATION_ID} only)...` : "(345 Locations)..."),
+    );
+    await runTsScript(
+      path.join(SRC_ROOT, "air_quality", "fetch_air_quality.ts"),
+      testMode ? ["--location", TEST_LOCATION_ID] : [],
+      dryRun,
+    );
 
     // 5. NASA POWER Daily Climate (optional)
     if (!skipPower) {
-      console.log("\n[Env Step 5/6] Bootstrapping NASA POWER Daily Climate (345 Locations)...");
-      await runTsScript(path.join(SRC_ROOT, "nasa_power", "fetch_nasa_power.ts"), [], dryRun);
+      console.log(
+        `\n[Env Step 5/7] Bootstrapping NASA POWER Daily Climate ` +
+          (testMode ? `(${TEST_LOCATION_ID} only)...` : "(345 Locations)..."),
+      );
+      await runTsScript(
+        path.join(SRC_ROOT, "nasa_power", "fetch_nasa_power.ts"),
+        testMode ? ["--location", TEST_LOCATION_ID] : [],
+        dryRun,
+      );
     } else {
-      console.log("\n[Env Step 5/6] Skipping NASA POWER registration (--skip-power flag set).");
+      console.log("\n[Env Step 5/7] Skipping NASA POWER registration (--skip-power flag set).");
     }
 
-    // 6. Compilation & Activation
-    console.log("\n[Env Step 6/6] Compiling & Activating Environmental USL...");
+    // 6. Windy Point Forecast (GFS weather + CAMS air quality, KL point)
+    console.log("\n[Env Step 6/7] Bootstrapping Windy Point Forecast REST Tables & Views...");
+    await runWindyRegister(dryRun);
+    await runSqlFile(path.join(WINDY_SQL_DIR, "windy_view.sql"), dryRun, true);
+
+    // 7. Compilation & Activation
+    console.log("\n[Env Step 7/7] Compiling & Activating Environmental USL...");
     await runSqlFile(path.join(SRC_ROOT, "location", "sql", "loc_register.sql"), dryRun, true);
     await runSqlFile(path.join(SRC_ROOT, "nasa_firms", "sql", "firms_register.sql"), dryRun, true);
     await runSqlFile(path.join(USL_ROOT, "env_usl", "usl_schema.sql"), dryRun);
@@ -321,6 +424,7 @@ async function main(): Promise<void> {
     if (!skipPower) {
       await runSqlFile(path.join(SRC_ROOT, "nasa_power", "sql", "power_activate.sql"), dryRun);
     }
+    await runSqlFile(path.join(WINDY_SQL_DIR, "windy_activate.sql"), dryRun);
   }
 
   // =========================================================================
@@ -350,6 +454,9 @@ async function main(): Promise<void> {
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
   console.log("\n" + "=".repeat(70));
   console.log(`🎉 Bootstrap completed in ${elapsed}s!`);
+  if (testMode) {
+    console.log(`⚠ Test mode was enabled: per-location ingestion covered "${TEST_LOCATION_ID}" only.`);
+  }
 
   if (!dryRun) {
     if (runEnv) await verifyEnvUsl();
@@ -366,6 +473,8 @@ async function main(): Promise<void> {
     if (!skipPower) {
       console.log("  • power_daily      (FK: location_index)");
     }
+    console.log("  • windy_forecast_obs    (FK: location_index)");
+    console.log("  • windy_air_quality_obs (FK: location_index)");
   }
 
   if (runLaw) {

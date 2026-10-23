@@ -14,7 +14,7 @@ CREATE LIGHTNING FILESTORE TABLE location_ref
 FROM LOCATION_REF_DATA
 FORMAT CSV
 OPTIONS (
-    PATH "/home/zetaris/customer-data/shared/locations/locations.csv",
+    PATH "/home/zetaris/customer-data/shared/locations/location.csv",
     header "true",
     inferSchema "true"
 );

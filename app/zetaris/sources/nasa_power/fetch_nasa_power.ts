@@ -151,6 +151,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       cwd,
       stdio: "inherit",
       windowsHide: true,
+      shell: process.platform === "win32",
     });
 
     child.on("error", (err) => reject(err));
@@ -255,13 +256,16 @@ ${selects.join(" UNION ALL ")};
 
   console.log(`Refreshing ${VIEW_NAME} view...`);
   try {
-    await runCommand(
-      PYTHON_BIN,
-      ["scripts/run_sql.py", "-e", `DROP VIEW IF EXISTS ${VIEW_NAME}`],
-      ZETARIS_ROOT,
-    );
+    const dropDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-np-drop-"));
+    const dropFile = path.join(dropDir, "drop_view.sql");
+    try {
+      await fs.writeFile(dropFile, `DROP VIEW IF EXISTS ${VIEW_NAME};`, "utf-8");
+      await runCommand(PYTHON_BIN, ["scripts/run_sql.py", dropFile], ZETARIS_ROOT);
+    } finally {
+      await fs.rm(dropDir, { recursive: true, force: true });
+    }
   } catch {
-    // Drop view may report warning if it does not exist yet; ignore and continue
+    // Drop view may fail if it does not exist yet; ignore and continue
   }
 
   await runSqlText(viewSql, { dryRun: false });
