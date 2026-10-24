@@ -36,14 +36,14 @@
 .field select {
   min-height: 36px;
   padding: 0 var(--space-3);
-  border: 1.5px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
+  background: var(--color-surface-2);
   font-size: var(--text-sm);
   font-weight: 600;
   max-width: 190px;
   box-shadow: none;
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  transition: box-shadow var(--duration-fast);
 }
 
 .field input:focus,
@@ -115,12 +115,12 @@
   letter-spacing: 0.05em;
   color: var(--color-muted);
   white-space: nowrap;
-  border-bottom: 1.5px solid var(--color-border);
+  border-bottom: none;
 }
 
 .table td {
   padding: var(--space-2) var(--space-3);
-  border-top: 1px solid var(--color-border);
+  border-top: none;
   vertical-align: middle;
 }
 
@@ -177,14 +177,14 @@
 .scoreButton {
   min-width: 52px;
   padding: 3px var(--space-2);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
+  background: var(--color-surface-2);
   font-family: var(--font-mono);
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color var(--duration-fast), background var(--duration-fast);
+  transition: background var(--duration-fast);
 }
 
 .scoreButton:hover {
@@ -276,10 +276,11 @@
   display: grid;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: 14px;
   background: var(--color-surface);
   font-size: var(--text-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .card > a {
