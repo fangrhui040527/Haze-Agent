@@ -69,6 +69,17 @@ uncertainty or an operational uncertainty policy. The architecture's pollution
 example uses native hourly intervals and a piecewise-constant convention; a
 15-minute planning grid does not create quarter-hour pollution measurements.
 
+### Hourly values on the planning grid
+
+Each hourly concentration applies as a piecewise-constant value over its
+half-open source interval `[start, end)`. When an activity covers only part of
+an hour, use that interval's value for the overlapping duration. For example,
+an activity from 08:45 to 09:15 uses 15 minutes of the 08:00 hourly value and
+15 minutes of the 09:00 hourly value. Do not interpolate between hourly
+values, fill gaps, or create independent quarter-hour readings. The fixture
+tests this boundary behavior only; they do not implement an exposure
+calculation.
+
 ### Fixture-only assumptions
 
 - Worker IDs, locations, services, policy, constraints, and schedule records are

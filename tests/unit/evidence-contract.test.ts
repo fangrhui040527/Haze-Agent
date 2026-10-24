@@ -220,6 +220,7 @@ function plus20Fixture() {
   ) as {
     scenario_id: string;
     scenario_kind: string;
+    timezone: string;
     source_ref: { id: string; revision: number; sha256: string };
     transformation: typeof evidence.transformation;
     series: EnvironmentalSeries[];
@@ -231,6 +232,31 @@ function plus20Fixture() {
     ),
   );
   return { evidence, series, source };
+}
+
+function planningGridSamples(
+  series: EnvironmentalSeries,
+  start: number,
+  durationMinutes: number,
+  stepMinutes: number,
+) {
+  const stepMilliseconds = stepMinutes * 60_000;
+  return Array.from({ length: durationMinutes / stepMinutes }, (_, index) => {
+    const sampleStart = start + index * stepMilliseconds;
+    const sampleEnd = sampleStart + stepMilliseconds;
+    const interval = series.intervals.find(
+      ({ start: intervalStart, end: intervalEnd }) =>
+        Date.parse(intervalStart) <= sampleStart &&
+        Date.parse(intervalEnd) >= sampleEnd,
+    );
+    if (interval?.value === null || interval?.value === undefined)
+      throw new Error('test_fixture_missing_piecewise_constant_value');
+    return {
+      start: new Date(sampleStart).toISOString(),
+      end: new Date(sampleEnd).toISOString(),
+      value: interval.value,
+    };
+  });
 }
 
 describe('environmental evidence contracts', () => {
@@ -408,6 +434,146 @@ describe('environmental evidence contracts', () => {
     ).toContain(
       'Office values are independently fictional, not derived from yard values or a filtration assumption.',
     );
+  });
+
+  it('binds complete nonnegative hourly coverage and immutable fictional records in both scenarios', () => {
+    const nominal = nominalFixture();
+    const plus20 = plus20Fixture();
+    const expectedIntervals = [
+      ['2026-10-25T00:00:00Z', '2026-10-25T01:00:00Z'],
+      ['2026-10-25T01:00:00Z', '2026-10-25T02:00:00Z'],
+      ['2026-10-25T02:00:00Z', '2026-10-25T03:00:00Z'],
+      ['2026-10-25T03:00:00Z', '2026-10-25T04:00:00Z'],
+    ];
+    const scenarios = [
+      {
+        timezone: nominal.series.timezone,
+        records: nominal.evidence.records,
+        source: nominal.source,
+        series: nominal.series.series,
+        values: new Map([
+          ['yard', [100, 80, 50, 30]],
+          ['office', [20, 20, 20, 20]],
+        ]),
+      },
+      {
+        timezone: plus20.series.timezone,
+        records: plus20.evidence.records,
+        source: plus20.source,
+        series: plus20.series.series,
+        values: new Map([
+          ['yard', [120, 100, 70, 50]],
+          ['office', [40, 40, 40, 40]],
+        ]),
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      expect(scenario.timezone).toBe('Asia/Kuala_Lumpur');
+      expect(scenario.records).toHaveLength(2);
+      expect(scenario.series).toHaveLength(2);
+      const sourceHash = createHash('sha256')
+        .update(scenario.source)
+        .digest('hex');
+      const expectedLocations = [...scenario.values.keys()].sort();
+      expect(
+        scenario.series.map(({ location_id }) => location_id).sort(),
+      ).toEqual(expectedLocations);
+
+      for (const entry of scenario.series) {
+        const parsed = environmentalSeriesSchema.parse(entry);
+        const expectedValues = scenario.values.get(parsed.location_id);
+        expect(expectedValues).toBeDefined();
+        expect(parsed.native_temporal_resolution).toEqual({
+          value: 1,
+          unit: 'hour',
+        });
+        expect(parsed.valid_interval).toEqual({
+          start: expectedIntervals[0]?.[0],
+          end: expectedIntervals.at(-1)?.[1],
+        });
+        expect(parsed.intervals).toHaveLength(4);
+        expect(parsed.intervals.map(({ start, end }) => [start, end])).toEqual(
+          expectedIntervals,
+        );
+        expect(parsed.intervals.map(({ value }) => value)).toEqual(
+          expectedValues,
+        );
+        for (const interval of parsed.intervals) {
+          expect(interval.value).not.toBeNull();
+          if (interval.value === null)
+            throw new Error('test_fixture_missing_hourly_value');
+          expect(Number.isFinite(interval.value)).toBe(true);
+          expect(interval.value).toBeGreaterThanOrEqual(0);
+          expect(Date.parse(interval.end) - Date.parse(interval.start)).toBe(
+            3_600_000,
+          );
+        }
+        expect(parsed.source_ref.sha256).toBe(sourceHash);
+
+        const record = scenario.records.find(
+          ({ evidence_id }) => evidence_id === parsed.evidence_ref.id,
+        );
+        if (!record) throw new Error('test_fixture_missing_evidence_record');
+        expect(record.revision).toBe(parsed.evidence_ref.revision);
+        expect(record.raw_sha256).toBe(sourceHash);
+        expect(record.source_kind).toBe('synthetic_fixture');
+        expect(record.input_origin).toBe('synthetic_fixture');
+        expect(record.original_timezone).toBe('Asia/Kuala_Lumpur');
+        expect(record.disposition).toBe('not_assessed');
+        expect(record.accepted_at).toBeNull();
+        expect(record.permitted_uses).toEqual(['fictional_fixture_validation']);
+        expect(contractHash(record)).toBe(parsed.evidence_ref.sha256);
+        expect(parsed.source_kind).toBe('synthetic_fixture');
+        expect(parsed.accepted_at).toBeNull();
+      }
+
+      expect(
+        scenario.records.map(({ evidence_id }) => evidence_id).sort(),
+      ).toEqual(
+        scenario.series.map(({ evidence_ref }) => evidence_ref.id).sort(),
+      );
+    }
+  });
+
+  it('applies hourly values as piecewise constant without creating quarter-hour readings', () => {
+    const nominalYard = environmentalSeriesSchema.parse(
+      nominalFixture().series.series.find(
+        ({ location_id }) => location_id === 'yard',
+      ),
+    );
+    const samples = planningGridSamples(
+      nominalYard,
+      Date.parse('2026-10-25T08:45:00+08:00'),
+      30,
+      15,
+    );
+
+    expect(samples).toEqual([
+      {
+        start: '2026-10-25T00:45:00.000Z',
+        end: '2026-10-25T01:00:00.000Z',
+        value: 100,
+      },
+      {
+        start: '2026-10-25T01:00:00.000Z',
+        end: '2026-10-25T01:15:00.000Z',
+        value: 80,
+      },
+    ]);
+    expect(samples.reduce((sum, sample) => sum + sample.value * 15, 0)).toBe(
+      2700,
+    );
+    expect(nominalYard.native_temporal_resolution).toEqual({
+      value: 1,
+      unit: 'hour',
+    });
+    expect(nominalYard.intervals).toHaveLength(4);
+    expect(
+      nominalYard.intervals.every(
+        ({ start, end }) => Date.parse(end) - Date.parse(start) === 3_600_000,
+      ),
+    ).toBe(true);
   });
 
   it('preserves nominal hourly intervals through the pinned fictional +20 transformation', () => {
