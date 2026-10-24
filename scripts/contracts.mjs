@@ -192,6 +192,25 @@ async function checkFixtures() {
       throw new Error('verification_schedule_duplicate_activity');
     }
   }
+  const policyRecord = records.find(
+    ({ ref }) => ref.id === planning.policy_ref.id,
+  )?.record;
+  if (
+    !policyRecord ||
+    policyRecord.approval_status !== 'not_approved' ||
+    policyRecord.operational_use_allowed !== false ||
+    policyRecord.minimum_benefit?.threshold !== 0.1 ||
+    JSON.stringify(policyRecord.minimum_benefit?.required_scenarios) !==
+      JSON.stringify(['nominal', 'plus_20_sensitivity']) ||
+    policyRecord.disruption_limits
+      ?.maximum_total_absolute_timing_movement_minutes !== 360 ||
+    policyRecord.disruption_limits?.maximum_changed_activities !== 3 ||
+    policyRecord.disruption_limits
+      ?.maximum_per_activity_absolute_timing_movement_minutes !== 120 ||
+    planning.evidence_refs.length !== 0
+  ) {
+    throw new Error('fictional_policy_or_evidence_boundary_mismatch');
+  }
   const digest = contractHash(planning);
   const known = new Map(
     records.map(({ ref, record }) => {
@@ -238,7 +257,9 @@ async function checkFixtures() {
     planning.input_origin !== 'synthetic_fixture' ||
     result.input_origin !== planning.input_origin ||
     result.execution_surface !== 'historical_harness' ||
-    result.result.recommendation_eligible !== false
+    result.result.recommendation_eligible !== false ||
+    result.result.publication_status !== 'publication_disabled' ||
+    result.decision_ref.publication_ref !== null
   ) {
     throw new Error('fixture_surface_or_origin_mismatch');
   }

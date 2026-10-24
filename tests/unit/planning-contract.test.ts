@@ -6,6 +6,7 @@ import {
   runSchema,
   type PlanningBundle,
 } from '../../app/contracts/planning.js';
+import { resultSchema } from '../../app/contracts/result.js';
 
 const referenceSchema = z.strictObject({
   id: z.string(),
@@ -75,6 +76,16 @@ function verificationSchedules() {
     ),
   );
   return verificationSchedulesSchema.parse(value);
+}
+
+function exampleResult() {
+  const value: unknown = JSON.parse(
+    readFileSync(
+      new URL('../../output_examples/v2/result.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  return resultSchema.parse(value);
 }
 
 const t = (hour: number, minute = 0) =>
@@ -389,6 +400,7 @@ describe('v0.13 closed planning contract', () => {
         const scheduledEnd =
           scheduledStart + activity.duration_minutes * 60_000;
         expect(scheduledEnd).toBeLessThanOrEqual(Date.parse(activity.deadline));
+        expect(activity.resource_demands).toEqual([]);
         for (const predecessorId of activity.predecessor_ids) {
           const predecessor = bundle.activities.find(
             ({ activity_id }) => activity_id === predecessorId,
@@ -423,6 +435,18 @@ describe('v0.13 closed planning contract', () => {
         expect(cursor).toBe(Date.parse(bundle.assessment.end));
       }
     }
+  });
+
+  it('keeps the synthetic example publication-disabled and ineligible', () => {
+    const result = exampleResult();
+    expect(result.input_origin).toBe('synthetic_fixture');
+    expect(result.execution_surface).toBe('historical_harness');
+    expect(result.result.recommendation_eligible).toBe(false);
+    expect(result.result.publication_status).toBe('publication_disabled');
+    expect(result.decision_ref.publication_ref).toBeNull();
+    expect(result.decision_ref.candidate_ref).toBeNull();
+    expect(result.result.evidence_status).toBe('insufficient');
+    expect(result.result.decision_outcome).toBe('insufficient_evidence');
   });
 
   it.each<{
