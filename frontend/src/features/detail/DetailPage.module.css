@@ -6,11 +6,29 @@
   margin: 0 auto;
 }
 
+/* ── Back button: pill + hard offset shadow ── */
 .back {
   align-self: flex-start;
-  font-weight: 600;
+  font-weight: 700;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+  box-shadow: var(--shadow-btn);
+  transition:
+    transform var(--duration-fast),
+    box-shadow var(--duration-fast);
 }
 
+.back:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-btn-hover);
+  color: var(--color-text);
+}
+
+/* ── Notice banner: highlight background + orange offset shadow ── */
 .notice {
   display: flex;
   flex-wrap: wrap;
@@ -19,17 +37,52 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-highlight);
+  box-shadow: var(--shadow-1);
 }
 
+/* ── Panel block: no internal padding, let children control their own ── */
 .block {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+/* ── Tinted header strip: fills edge-to-edge within the panel card ── */
+.block > header {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-2);
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* ── Section headings used as block headers ── */
+.block > h2 {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-2);
+  box-sizing: border-box;
+}
+
+/* All other direct children get side + top padding */
+.block > *:not(header):not(h2) {
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+.block > *:last-child {
+  padding-bottom: var(--space-4);
 }
 
 .block h3 {
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
 }
 
 .header {
@@ -81,6 +134,7 @@
   }
 }
 
+/* ── Measurements table: zebra striped ── */
 .numbers {
   font-size: var(--text-sm);
   width: 100%;
@@ -94,22 +148,42 @@
   text-align: left;
 }
 
+.numbers tbody tr:nth-child(even) td,
+.numbers tbody tr:nth-child(even) th {
+  background: var(--color-surface-2);
+}
+
+/* ── Stat fact mini-cards ── */
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: var(--space-2);
   margin: 0;
   font-size: var(--text-sm);
 }
 
+.facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+
 .facts dt {
   color: var(--color-muted);
   font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .facts dd {
   margin: 0;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: var(--text-md);
 }
 
 .list {
@@ -119,9 +193,11 @@
   gap: var(--space-1);
 }
 
+/* ── Sources: tinted shadow cards ── */
 .sources {
   margin: 0;
-  padding-left: var(--space-5);
+  padding-left: 0;
+  list-style: none;
   display: grid;
   gap: var(--space-3);
 }
@@ -130,10 +206,15 @@
   display: grid;
   gap: var(--space-1);
   overflow-wrap: anywhere;
+  padding: var(--space-3);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
 }
 
 .quote {
   font-style: italic;
+  color: var(--color-muted);
 }
 
 .sourceTimes {
@@ -177,11 +258,12 @@
   font-weight: 700;
 }
 
+/* ── Timeline: accent-colored left stripe with dot markers ── */
 .timeline {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 var(--space-3);
-  border-left: none;
+  padding: 0 0 0 var(--space-4);
+  border-left: 3px solid var(--color-accent);
   display: grid;
   gap: var(--space-2);
 }
@@ -190,6 +272,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  position: relative;
+}
+
+.timeline li::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--space-4) - 2px);
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(-50%);
 }
 
 .time {
