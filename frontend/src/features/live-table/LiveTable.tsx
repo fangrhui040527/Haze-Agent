@@ -1,4 +1,14 @@
-import { ArrowDown, ArrowRight, ArrowUp, FileText, Info, Minus } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowDownWideNarrow,
+  ArrowRight,
+  ArrowUp,
+  ChevronDown,
+  FileText,
+  Info,
+  Minus,
+  Search,
+} from 'lucide-react';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useLiveData } from '../../app/liveDataContext.ts';
@@ -67,8 +77,13 @@ export function LiveTable() {
     'hazewatch.table.filters',
     NO_FILTERS,
   );
+  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSearchDraft(filters.search);
+  }, [filters.search]);
 
   const ranked = useMemo(
     () => rankItems(live.items, live.locations, now),
@@ -120,63 +135,30 @@ export function LiveTable() {
           Live haze information
         </h2>
         <div className={styles.filters}>
+          <form
+            className={`${styles.field} ${styles.searchField}`}
+            onSubmit={(e) => {
+              e.preventDefault();
+              update({ search: searchDraft });
+            }}
+          >
+            <Search className={styles.fieldIcon} aria-hidden="true" />
+            <label className={styles.searchLabel}>
+              <span className="visually-hidden">Search</span>
+              <input
+                type="search"
+                placeholder="Search…"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+              />
+            </label>
+          </form>
           <label className={styles.field}>
-            <span className="visually-hidden">Search</span>
-            <input
-              type="search"
-              placeholder="Search…"
-              value={filters.search}
-              onChange={(e) => update({ search: e.target.value })}
+            <span className="visually-hidden">Sort</span>
+            <ArrowDownWideNarrow
+              className={styles.fieldIcon}
+              aria-hidden="true"
             />
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Location</span>
-            <select
-              value={filters.locationId}
-              onChange={(e) => update({ locationId: e.target.value })}
-            >
-              <option value="">All locations</option>
-              {sortedLocations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}, {l.countryCode}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Category</span>
-            <select
-              value={filters.category}
-              onChange={(e) =>
-                update({ category: e.target.value as Filters['category'] })
-              }
-            >
-              <option value="">All categories</option>
-              {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Status</span>
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                update({ status: e.target.value as Filters['status'] })
-              }
-            >
-              <option value="">All statuses</option>
-              {Object.entries(STATUS_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Sort</span>
             <select
               value={filters.sort}
               onChange={(e) =>
@@ -198,10 +180,14 @@ export function LiveTable() {
         <label className={styles.checkbox}>
           <input
             type="checkbox"
+            className={styles.checkboxInput}
             checked={live.autoApply}
             onChange={(e) => live.setAutoApply(e.target.checked)}
           />
-          Show new updates automatically
+          <span className={styles.checkboxBox} aria-hidden="true" />
+          <span className={styles.checkboxText}>
+            Show new updates automatically
+          </span>
         </label>
       </div>
 
@@ -279,13 +265,74 @@ export function LiveTable() {
                   <th scope="col">#</th>
                   <th scope="col">Score</th>
                   <th scope="col">Updated</th>
-                  <th scope="col">Location</th>
-                  <th scope="col">Category</th>
+                  <th scope="col" className={styles.locationCol}>
+                    <label className={`${styles.thFilterLabel} ${filters.locationId ? styles.thFilterActive : ''}`}>
+                      <span>Location</span>
+                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
+                      {filters.locationId && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <select
+                        aria-label="Filter by location"
+                        className={styles.thFilterOverlay}
+                        value={filters.locationId}
+                        onChange={(e) => update({ locationId: e.target.value })}
+                      >
+                        <option value="">All locations</option>
+                        {sortedLocations.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}, {l.countryCode}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
+                  <th scope="col" className={styles.categoryCol}>
+                    <label className={`${styles.thFilterLabel} ${filters.category ? styles.thFilterActive : ''}`}>
+                      <span>Category</span>
+                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
+                      {filters.category && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <select
+                        aria-label="Filter by category"
+                        className={styles.thFilterOverlay}
+                        value={filters.category}
+                        onChange={(e) =>
+                          update({ category: e.target.value as Filters['category'] })
+                        }
+                      >
+                        <option value="">All categories</option>
+                        {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
                   <th scope="col" className={styles.summary}>Summary</th>
                   <th scope="col" className={styles.airQualityCol}>Air quality</th>
                   <th scope="col" className={styles.trendCol}>Trend</th>
                   <th scope="col">Evidence</th>
-                  <th scope="col">Status</th>
+                  <th scope="col" className={styles.statusCol}>
+                    <label className={`${styles.thFilterLabel} ${filters.status ? styles.thFilterActive : ''}`}>
+                      <span>Status</span>
+                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
+                      {filters.status && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <select
+                        aria-label="Filter by status"
+                        className={styles.thFilterOverlay}
+                        value={filters.status}
+                        onChange={(e) =>
+                          update({ status: e.target.value as Filters['status'] })
+                        }
+                      >
+                        <option value="">All statuses</option>
+                        {Object.entries(STATUS_LABELS).map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
                   <th scope="col">
                     <span className="visually-hidden">Details</span>
                   </th>
@@ -326,13 +373,15 @@ export function LiveTable() {
                         <td className={styles.nowrap}>
                           <TimeAgo iso={r.item.updatedAt} prefix="Updated" />
                         </td>
-                        <td>
+                        <td className={styles.locationCol}>
                           <LocationName
                             location={r.location}
                             iso={r.item.observedAt}
                           />
                         </td>
-                        <td>{CATEGORY_LABELS[r.item.category]}</td>
+                        <td className={styles.categoryCol}>
+                          {CATEGORY_LABELS[r.item.category]}
+                        </td>
                         <td className={styles.summary} title={r.item.summary}>
                           {r.item.headline}
                         </td>
@@ -354,7 +403,7 @@ export function LiveTable() {
                         <td>
                           <EvidenceCell item={r.item} />
                         </td>
-                        <td>
+                        <td className={styles.statusCol}>
                           <StatusBadge status={r.item.status} />
                         </td>
                         <td>
