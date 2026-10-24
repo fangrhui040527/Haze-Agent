@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,24 @@ const writeJson = async (path, value) =>
 const fixtureNotice =
   'Fictional contract specimen only; not accepted authority or evidence.';
 const bundleId = 'demo:klang-fixture-input-v2';
+const environmentalScenarios = ['nominal', 'plus-20'];
+
+async function readEnvironmentalFixtures() {
+  return Promise.all(
+    environmentalScenarios.map(async (scenario) => ({
+      scenario,
+      evidence: await readJson(
+        `input_examples/v2/environmental/${scenario}-evidence.json`,
+      ),
+      series: await readJson(
+        `input_examples/v2/environmental/${scenario}-series.json`,
+      ),
+      raw: await readFile(
+        resolve(root, `input_examples/v2/environmental/${scenario}-pm25.csv`),
+      ),
+    })),
+  );
+}
 
 function visitReferences(value, visit) {
   if (value === null || typeof value !== 'object') return;
@@ -38,6 +57,18 @@ function visitReferences(value, visit) {
 async function bindFixtures() {
   const planning = await readJson('input_examples/v2/planning.json');
   const result = await readJson('output_examples/v2/result.json');
+  const environmentalPacks = await readEnvironmentalFixtures();
+  const evidenceRecords = environmentalPacks.flatMap(
+    ({ evidence }) => evidence.records,
+  );
+  const evidenceById = new Map(
+    evidenceRecords.map((record) => [record.evidence_id, record]),
+  );
+  planning.evidence_refs = evidenceRecords.map((record) => ({
+    id: record.evidence_id,
+    revision: record.revision,
+    sha256: contractHash(record),
+  }));
   const verificationSchedules = await readJson(
     'input_examples/v2/verification-schedules.json',
   );
@@ -47,7 +78,8 @@ async function bindFixtures() {
     if (!ref.id.startsWith('demo:'))
       throw new Error('fixture_reference_must_be_demo_local');
     const record =
-      ref.id === planning.baseline.ref.id
+      evidenceById.get(ref.id) ??
+      (ref.id === planning.baseline.ref.id
         ? {
             id: ref.id,
             revision: ref.revision,
@@ -102,7 +134,7 @@ async function bindFixtures() {
                     'The +20 sensitivity is a fictional engineering perturbation, not supported operational uncertainty.',
                   notice: fixtureNotice,
                 }
-              : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
+              : { id: ref.id, revision: ref.revision, notice: fixtureNotice });
     ref.sha256 = contractHash(record);
     records.set(`${ref.id}@${ref.revision}`, { ref: { ...ref }, record });
   };
@@ -159,6 +191,7 @@ async function checkFixtures() {
   const request = await readJson('input_examples/v2/run.json');
   const result = await readJson('output_examples/v2/result.json');
   const records = await readJson('input_examples/v2/demo-records.json');
+  const environmentalPacks = await readEnvironmentalFixtures();
   const verificationSchedules = await readJson(
     'input_examples/v2/verification-schedules.json',
   );
@@ -207,28 +240,115 @@ async function checkFixtures() {
     policyRecord.disruption_limits?.maximum_changed_activities !== 3 ||
     policyRecord.disruption_limits
       ?.maximum_per_activity_absolute_timing_movement_minutes !== 120 ||
-    planning.evidence_refs.length !== 0
+    planning.evidence_refs.length !==
+      environmentalPacks.reduce(
+        (count, { evidence }) => count + evidence.records.length,
+        0,
+      )
   ) {
     throw new Error('fictional_policy_or_evidence_boundary_mismatch');
+  }
+  const expectedEvidence = new Map();
+  for (const { scenario, evidence, series, raw } of environmentalPacks) {
+    const rawSha256 = createHash('sha256').update(raw).digest('hex');
+    if (
+      evidence.fixture_kind !== 'synthetic_environmental_evidence_records' ||
+      evidence.scope !== 'fictional_fixture_only' ||
+      evidence.scenario_id !==
+        (scenario === 'nominal' ? 'nominal' : 'plus_20_sensitivity') ||
+      series.fixture_kind !== 'synthetic_environmental_series' ||
+      series.scope !== 'fictional_fixture_only' ||
+      series.scenario_id !==
+        (scenario === 'nominal' ? 'nominal' : 'plus_20_sensitivity') ||
+      series.timezone !== planning.timezone ||
+      evidence.records.length !== series.series.length
+    ) {
+      throw new Error(`environmental_fixture_envelope_mismatch:${scenario}`);
+    }
+    for (const record of evidence.records) {
+      validateContract('evidence', record);
+      if (
+        record.raw_sha256 !== rawSha256 ||
+        record.raw_ref !==
+          `demo:raw-pm25-${scenario === 'nominal' ? 'nominal' : 'plus-20'}-csv` ||
+        record.input_origin !== 'synthetic_fixture' ||
+        record.source_kind !== 'synthetic_fixture'
+      ) {
+        throw new Error(
+          `environmental_evidence_source_mismatch:${record.evidence_id}`,
+        );
+      }
+      const reference = {
+        id: record.evidence_id,
+        revision: record.revision,
+        sha256: contractHash(record),
+      };
+      expectedEvidence.set(`${reference.id}@${reference.revision}`, reference);
+    }
+    for (const environmentalSeries of series.series) {
+      validateContract('environmental_series', environmentalSeries);
+      const evidenceRecord = evidence.records.find(
+        (record) => record.evidence_id === environmentalSeries.evidence_ref.id,
+      );
+      if (
+        !evidenceRecord ||
+        environmentalSeries.source_ref.id !== evidenceRecord.raw_ref ||
+        environmentalSeries.source_ref.sha256 !== rawSha256 ||
+        environmentalSeries.evidence_ref.sha256 !== contractHash(evidenceRecord)
+      ) {
+        throw new Error(
+          `environmental_series_binding_mismatch:${environmentalSeries.series_id}`,
+        );
+      }
+    }
+  }
+  const actualEvidence = new Map(
+    planning.evidence_refs.map((reference) => [
+      `${reference.id}@${reference.revision}`,
+      reference,
+    ]),
+  );
+  if (
+    actualEvidence.size !== planning.evidence_refs.length ||
+    actualEvidence.size !== expectedEvidence.size ||
+    [...expectedEvidence].some(
+      ([key, reference]) =>
+        JSON.stringify(actualEvidence.get(key)) !== JSON.stringify(reference),
+    )
+  ) {
+    throw new Error('planning_environmental_evidence_refs_mismatch');
   }
   const digest = contractHash(planning);
   const known = new Map(
     records.map(({ ref, record }) => {
+      const recordId =
+        record.schema_version === 'haze.evidence.v2'
+          ? record.evidence_id
+          : record.id;
       if (
         ref.sha256 !== contractHash(record) ||
-        ref.id !== record.id ||
+        ref.id !== recordId ||
         ref.revision !== record.revision ||
-        record.notice !== fixtureNotice
+        (record.schema_version !== 'haze.evidence.v2' &&
+          record.notice !== fixtureNotice)
       ) {
         throw new Error('fixture_record_hash_or_identity_mismatch');
       }
+      if (record.schema_version === 'haze.evidence.v2')
+        validateContract('evidence', record);
       return [`${ref.id}@${ref.revision}`, ref.sha256];
     }),
   );
   if (known.size !== records.length)
     throw new Error('duplicate_fixture_record');
   known.set(`${bundleId}@1`, digest);
-  for (const fixture of [planning, request, result, verificationSchedules])
+  for (const fixture of [
+    planning,
+    request,
+    result,
+    verificationSchedules,
+    records,
+  ])
     visitReferences(fixture, (ref) => {
       if (known.get(`${ref.id}@${ref.revision}`) !== ref.sha256)
         throw new Error('unresolved_fixture_reference');

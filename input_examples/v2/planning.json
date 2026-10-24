@@ -218,7 +218,28 @@
       "sha256": "5ba15365d4aeb53b79645406270db50f22078b6de6aca8cc0a9232aef0418d59"
     }
   },
-  "evidence_refs": [],
+  "evidence_refs": [
+    {
+      "id": "demo:pm25-yard-nominal",
+      "revision": 1,
+      "sha256": "ca1e5034bf17bb173a4655fb8532ab6f1ba042070eeab732dfa725239a9bffc1"
+    },
+    {
+      "id": "demo:pm25-office-nominal",
+      "revision": 1,
+      "sha256": "eb26dc84476f569378cd3cb5a01dfe1eb92b441f6785a148714b0c24641b4c0d"
+    },
+    {
+      "id": "demo:pm25-yard-plus-20",
+      "revision": 1,
+      "sha256": "d777a512858ef63eeb62a9d95af807fcee6ec42e7316c63df72bc74544e87eaa"
+    },
+    {
+      "id": "demo:pm25-office-plus-20",
+      "revision": 1,
+      "sha256": "06d52664d8c9aeef666b2ba22b269b363c697a26cf61af09f659841109088b1a"
+    }
+  ],
   "comparison_use_ref": {
     "id": "demo:no-quantified-comparison",
     "revision": 1,

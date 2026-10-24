@@ -2,6 +2,8 @@
   "fixture_kind": "synthetic_environmental_series",
   "scope": "fictional_fixture_only",
   "timezone": "Asia/Kuala_Lumpur",
+  "scenario_id": "nominal",
+  "scenario_kind": "nominal_fictional_example",
   "source_ref": {
     "id": "demo:raw-pm25-nominal-csv",
     "revision": 1,

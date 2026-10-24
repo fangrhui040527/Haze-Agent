@@ -92,14 +92,29 @@ const t = (hour: number, minute = 0) =>
   `2026-10-25T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+08:00`;
 
 describe('v0.13 closed planning contract', () => {
-  it('accepts the two-worker fixed-work specimen without inventing environmental evidence', () => {
+  it('binds the two-worker fixture to local nominal and sensitivity evidence records', () => {
     const bundle = fixture();
     expect(bundle.activities.map((activity) => activity.activity_id)).toEqual([
       'inspection',
       'maintenance',
       'administration',
     ]);
-    expect(bundle.evidence_refs).toEqual([]);
+    expect(bundle.evidence_refs.map(({ id }) => id)).toEqual([
+      'demo:pm25-yard-nominal',
+      'demo:pm25-office-nominal',
+      'demo:pm25-yard-plus-20',
+      'demo:pm25-office-plus-20',
+    ]);
+    expect(
+      bundle.evidence_refs.every((reference) =>
+        demoRecords().some(
+          (entry) =>
+            entry.ref.id === reference.id &&
+            entry.ref.revision === reference.revision &&
+            entry.ref.sha256 === reference.sha256,
+        ),
+      ),
+    ).toBe(true);
     expect(planningSchema.parse(bundle)).toEqual(bundle);
   });
 
@@ -325,7 +340,7 @@ describe('v0.13 closed planning contract', () => {
       uncertainty_note:
         'The +20 sensitivity is a fictional engineering perturbation, not supported operational uncertainty.',
     });
-    expect(bundle.evidence_refs).toEqual([]);
+    expect(bundle.evidence_refs).toHaveLength(4);
   });
 
   it('validates the illustrative schedules without claiming an exhaustive set', () => {

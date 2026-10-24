@@ -11,7 +11,7 @@ recommendation.
 | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | [`input_examples/v2/planning.json`](../input_examples/v2/planning.json)                             | `haze.planning.v2` bundle: fixed work, workers, assessment, baseline, and immutable demo-local references.                                |
 | [`input_examples/v2/verification-schedules.json`](../input_examples/v2/verification-schedules.json) | Two separate illustrative schedules for verification tests. The set is explicitly non-exhaustive; these schedules are not planner output. |
-| [`input_examples/v2/demo-records.json`](../input_examples/v2/demo-records.json)                     | Local record bytes and hashes for the planning bundle and illustrative schedule records.                                                  |
+| [`input_examples/v2/demo-records.json`](../input_examples/v2/demo-records.json)                     | Local record bytes and hashes for planning, nominal/sensitivity environmental evidence, and illustrative schedule records.                |
 | [`input_examples/v2/run.json`](../input_examples/v2/run.json)                                       | Historical-harness run-request shape referencing the planning bundle.                                                                     |
 | [`output_examples/v2/result.json`](../output_examples/v2/result.json)                               | Hand-authored, publication-disabled result-contract example; not a calculation from these schedules.                                      |
 
@@ -78,10 +78,12 @@ example uses native hourly intervals and a piecewise-constant convention; a
 - The no-travel/no-setup and no-relevant-resource-bottleneck records are limited
   to this fictional fixture and explicitly are not operational attestations.
 - The policy record is `not_approved` and `operational_use_allowed: false`.
-- The planning bundle currently has no pollution `evidence_refs`. No pollution
-  evidence fixture exists in the repository yet; do not add invented evidence
-  references or copy concentrations into this fixture. A quantified comparison
-  must remain unsupported until suitable evidence records are supplied.
+- The planning bundle references the demo-local nominal and fictional +20
+  yard/office evidence records in
+  [`input_examples/v2/environmental/`](../input_examples/v2/environmental/).
+  These are synthetic, not accepted evidence. Their hashes and references bind
+  fixture bytes only; they do not support a scientific or operational
+  comparison.
 - Synthetic origin and historical-harness surface remain distinct from
   execution mode. Publication is disabled and operational recommendation
   eligibility remains false.
@@ -99,15 +101,18 @@ Input:
   baseline: demo:fictional-ordinary-baseline
   policy: demo:fictional-policy
   allowed work: inspection, maintenance, administration
-  environmental evidence: none supplied
+  environmental evidence:
+    fictional demo-local yard/office nominal and +20 series;
+    not accepted for scientific or operational use
 
 Request:
   Treat worker assignments, activity IDs, services, durations, locations,
   controls, and resource assumptions as fixed. Use only each activity's
   declared allowed_starts and preserve finish-to-start maintenance precedence.
   Do not select or return either illustrative verification schedule as a
-  computed result. Since environmental evidence is absent, do not calculate or
-  claim exposure reduction or an eligible recommendation.
+  computed result. Since the supplied environmental evidence is fictional and
+  unaccepted, do not calculate or claim exposure reduction or an eligible
+  recommendation.
 ```
 
 ### Verification handoff
@@ -126,8 +131,9 @@ For each supplied schedule, independently check:
 
 Report:
   These are two illustrative fixture checks, not planner output, a proved
-  exhaustive set, canonical verification, or operational approval. Without
-  pollution evidence, report environmental comparison as unavailable.
+  exhaustive set, canonical verification, or operational approval. The
+  pollution series are fictional test inputs only; report operational
+  environmental applicability and comparison as unavailable.
 ```
 
 The repository currently provides contract validation and focused fixture

@@ -1,6 +1,8 @@
 {
   "fixture_kind": "synthetic_environmental_evidence_records",
   "scope": "fictional_fixture_only",
+  "scenario_id": "nominal",
+  "scenario_kind": "nominal_fictional_example",
   "records": [
     {
       "schema_version": "haze.evidence.v2",
