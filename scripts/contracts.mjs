@@ -293,7 +293,7 @@ try {
     if (command === 'check') await checkFixtures();
     else
       console.log(
-        'Generated three Draft 2020-12 structural schemas from the runtime contracts.',
+        `Generated ${Object.keys(CONTRACT_VERSIONS).length} Draft 2020-12 structural schemas from the runtime contracts.`,
       );
   } else if (command === 'fixtures') {
     if (positionals.length !== 1) throw new Error('unexpected_arguments');
@@ -302,7 +302,7 @@ try {
   } else if (command === 'validate') {
     if (positionals.length !== 3 || !Object.hasOwn(CONTRACT_VERSIONS, kind)) {
       throw new Error(
-        'Usage: npm run contracts:validate -- planning|run|result FILE [--surface canonical|historical_harness]',
+        `Usage: npm run contracts:validate -- ${Object.keys(CONTRACT_VERSIONS).join('|')} FILE [--surface canonical|historical_harness]`,
       );
     }
     if (!['canonical', 'historical_harness'].includes(values.surface))
