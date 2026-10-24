@@ -42,19 +42,46 @@ fixture and non-executable App/Planner/Verification/WorkerShield handoffs. The
 fixture is not accepted environmental evidence and supports no operational
 comparison or recommendation.
 
+Beyond the structural contracts, three modules make the pack usable through one
+shared boundary. [Input and evidence validation](../app/validation/index.ts)
+returns coded findings with JSON Pointers, affected record IDs and correction
+messages, and separates malformed input, invalid operating semantics and a
+completed environmental insufficiency. [The importer](../app/import/loader.ts)
+reads exact bytes, recomputes every hash, rejects stale references and hands
+Planner and Verification the identical pinned artifacts. [Evidence
+linkage](../app/evidence/linkage.ts) resolves each occupied worker/activity
+interval to the native hourly records behind it, with half-open boundaries,
+overlap durations and transformation lineage. None of them accepts evidence,
+scores a schedule or grants operational eligibility.
+
+```sh
+npm run inputs:validate                                   # coded input diagnostics
+npm run inputs:import                                     # deterministic import and pinned handoff
+npm run inputs:links -- --case valid --scenario nominal   # native-interval evidence traces
+npm run inputs:ledger                                     # every fixture case against its declared expectation
+```
+
+The [sample data pack release note](sample-data-pack.md) carries the manifest,
+the source notes for every invented value, the case matrix with expected
+outcome categories, the unavailable acceptance capabilities and the permitted
+presentation wording.
+
 `haze.canonical-json.v1` hashes UTF-8 JSON without insignificant whitespace, with object keys sorted by UTF-16 code units, array order preserved, and ECMAScript finite-number/string encoding. This serializer is versioned independently of the domain contracts. JSON input is limited to 1 MiB and nesting depth 64; duplicate keys, nonfinite numbers, implicit coercion and unknown properties are rejected. The planning representation supports at most seven days, 64 workers, 64 resources, 128 locations and 256 activities, with whole-minute `+08:00` timestamps. These are explicit engineering limits, not operating or scientific thresholds.
 
 ## Defined versus implemented
 
-| Area                              | Delivered here                                                                              | Remaining boundary                                                                                          |
-| --------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Small scope                       | Written fixed-work timing boundary, synthetic example and explicit cut lines                | Supervisor-confirmed ordinary operating case and permissible alternative                                    |
-| Planning/run/result formats       | Executable v2 contracts, generated schemas, semantic validation and matching local fixtures | Full controlled import, acceptance and authenticated API/job admission                                      |
-| Result illustration               | Synthetic historical response with explicit gaps and no operational eligibility             | Actual planner-produced comparison and captured execution/result evidence                                   |
-| Feasibility, exposure and ranking | Contract fields and validation rules                                                        | Deterministic interval integration, policy ranking, required scenarios and independent numerical checker    |
-| Agent and explanation             | Status/provenance boundaries in the result contract                                         | Bounded WorkerShield investigation, typed fact checks, controlled rendering and exact EvidenceCritic review |
-| Engines and persistence           | Existing pinned-engine/checkpoint compatibility spike                                       | v0.13 canonical accept/hold/publish/read/event capability and race/recovery proof                           |
-| Operational usefulness            | Explicitly unverified                                                                       | Real-world feasibility gate, decision-time evidence, qualified intended-use review and approved policy      |
+| Area                              | Delivered here                                                                                                                    | Remaining boundary                                                                                          |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Small scope                       | Written fixed-work timing boundary, synthetic example and explicit cut lines                                                      | Supervisor-confirmed ordinary operating case and permissible alternative                                    |
+| Planning/run/result formats       | Executable v2 contracts, generated schemas, semantic validation and matching local fixtures                                       | Acceptance and authenticated API/job admission                                                              |
+| Input and evidence validation     | Coded findings with pointers and affected IDs, occupied-coverage diagnostics, scoped candidate exclusions and negative fixtures   | Authorized evidence acceptance, qualified applicability review and policy-driven required scenarios         |
+| Controlled import boundary        | Deterministic byte-level import, recomputed hashes, stale-reference rejection and one pinned handoff for Planner and Verification | An HTTP admission surface, canonical epoch/head/publication and consumer adapters                           |
+| Evidence linkage                  | Native-interval traces with exact locators, overlap durations, transformation lineage and reported gaps                           | Planner and independent-checker consumption of those traces, and the evidence drawer that renders them      |
+| Result illustration               | Synthetic historical response with explicit gaps and no operational eligibility                                                   | Actual planner-produced comparison and captured execution/result evidence                                   |
+| Feasibility, exposure and ranking | Contract fields and validation rules                                                                                              | Deterministic interval integration, policy ranking, required scenarios and independent numerical checker    |
+| Agent and explanation             | Status/provenance boundaries in the result contract                                                                               | Bounded WorkerShield investigation, typed fact checks, controlled rendering and exact EvidenceCritic review |
+| Engines and persistence           | Existing pinned-engine/checkpoint compatibility spike                                                                             | v0.13 canonical accept/hold/publish/read/event capability and race/recovery proof                           |
+| Operational usefulness            | Explicitly unverified                                                                                                             | Real-world feasibility gate, decision-time evidence, qualified intended-use review and approved policy      |
 
 The result fixture is hand-authored contract data, not a successful agent run, a planner score, a reviewed engineering calculation or proof that pollution information distinguishes schedules. Unexecuted integrations remain labeled as such. The original `npm start` runner still validates checkpoint metadata; its `schemaVersion: 2` does not implement the v2 domain workflow.
 

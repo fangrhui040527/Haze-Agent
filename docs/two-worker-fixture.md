@@ -235,6 +235,26 @@ Boundary:
   determination.
 ```
 
-The repository currently provides contract validation and focused fixture
-tests; it does not implement the described App evidence UI, Planner,
+## Derived negative cases
+
+Four cases are derived from this valid pack by documented transformation, each
+with its own regenerable files, new evidence revisions and hashes, and a
+hand-declared expected outcome: `missing-baseline-coverage`,
+`missing-candidate-coverage`, `flat-pollution` and
+`invalid-baseline-precedence`. They live in
+[`input_examples/v2/negative/`](../input_examples/v2/negative/) with a
+[scenario matrix](../input_examples/v2/negative/scenario-matrix.json).
+Regenerate them with `npm run inputs:negative` and re-check every declared
+outcome with `npm run inputs:ledger`.
+
+## Further reading
+
+The [sample data pack release note](sample-data-pack.md) carries the file
+manifest and hashes, the source notes for every invented value, the case matrix,
+the list of unavailable acceptance capabilities, the unresolved interface
+decisions and the permitted presentation wording.
+
+The repository now also provides input and evidence validation, a deterministic
+import boundary and native-interval evidence linkage, with focused fixture
+tests. It still does not implement the described App evidence UI, Planner,
 independent numerical Verification engine or WorkerShield investigation.

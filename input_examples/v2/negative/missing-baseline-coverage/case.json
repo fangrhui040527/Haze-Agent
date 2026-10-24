@@ -1,0 +1,61 @@
+{
+  "fixture_kind": "negative_fixture_case",
+  "case_id": "missing-baseline-coverage",
+  "scope": "fictional_fixture_only",
+  "input_origin": "synthetic_fixture",
+  "operational_eligibility": false,
+  "recommendation_eligible": false,
+  "notice": "Fictional negative fixture derived from the valid sample pack; not accepted evidence and not an operating case.",
+  "intent": "A required baseline hour is absent at an occupied location, so no quantified comparison exists for either scenario. The gap is reported precisely and is never filled with zero.",
+  "derivation": {
+    "source_pack": "input_examples/v2",
+    "method_id": "fixture:negative-case-generator",
+    "method_version": "1.0.0",
+    "regenerate": "npm run inputs:negative",
+    "steps": [
+      "Drop the yard source row covering 00:00-01:00Z (08:00-09:00 local) from both scenario CSVs, matched by location and interval so the nominal and derived +20 packs lose the same hour.",
+      "Mark the matching resolved series interval as an explicit null with a reason.",
+      "Re-bind raw, selection and evidence hashes and bump each changed evidence revision."
+    ]
+  },
+  "paths": {
+    "planning": "input_examples/v2/negative/missing-baseline-coverage/planning.json",
+    "environmental": {
+      "nominal": {
+        "raw": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-pm25.csv",
+        "evidence": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-evidence.json",
+        "series": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-series.json"
+      },
+      "plus-20": {
+        "raw": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-pm25.csv",
+        "evidence": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-evidence.json",
+        "series": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-series.json"
+      }
+    }
+  },
+  "required_scenarios": ["nominal", "plus_20_sensitivity"],
+  "expected": {
+    "import_status": "imported",
+    "validation_outcome": "admitted_with_environmental_insufficiency",
+    "environmental_status": "insufficient",
+    "quantified_comparison_available": false,
+    "transport_status_hint": 200,
+    "admitted": true,
+    "required_finding_codes": ["environmental_baseline_coverage_missing"],
+    "forbidden_finding_codes": [],
+    "selected_plan": null,
+    "affected": [
+      {
+        "scenario_ids": ["nominal", "plus_20_sensitivity"],
+        "schedule_kind": "baseline",
+        "activity_id": "inspection",
+        "location_id": "yard",
+        "worker_ids": ["worker-a", "worker-b"],
+        "missing_intervals": [
+          { "start": "2026-10-25T00:00:00Z", "end": "2026-10-25T01:00:00Z" }
+        ]
+      }
+    ],
+    "notes": "Missing baseline support gives a null quantified comparison and the precise gaps. It is not zero exposure and not an improvement."
+  }
+}

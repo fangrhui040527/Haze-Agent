@@ -1,0 +1,321 @@
+{
+  "fixture_kind": "synthetic_environmental_evidence_records",
+  "scope": "fictional_fixture_only",
+  "scenario_id": "plus_20_sensitivity",
+  "scenario_kind": "fictional_engineering_sensitivity",
+  "transformation": {
+    "method_id": "fixture:pm25-add-20-ug-m3",
+    "method_version": "1.0.0",
+    "operation": "add_constant",
+    "amount": 20,
+    "unit": "ug/m3",
+    "source_scenario": "nominal",
+    "preserves_native_intervals": true,
+    "notice": "Fictional engineering sensitivity for software behavior only; not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment."
+  },
+  "records": [
+    {
+      "schema_version": "haze.evidence.v2",
+      "evidence_id": "demo:pm25-yard-plus-20",
+      "revision": 2,
+      "upstream_id": "fixture:pm25-yard-plus-20",
+      "upstream_revision": 1,
+      "raw_sha256": "de3efbc39911b3b3da07d7b688d1ff24dd9a2a2d701f05a47d373a35e030883c",
+      "raw_ref": "demo:raw-pm25-plus-20-csv",
+      "source_kind": "synthetic_fixture",
+      "input_origin": "synthetic_fixture",
+      "title": "Fictional +20 sensitivity hourly yard PM2.5 values",
+      "source_owner": "Haze Agent synthetic fixture",
+      "provenance": {
+        "description": "Fictional engineering sensitivity for software behavior only; not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment.",
+        "chain": [
+          {
+            "operation": "collection",
+            "method_id": "fixture:architecture-v0.13-example",
+            "method_version": "0.13",
+            "description": "Transcribed the fictional hourly yard series for contract testing.",
+            "input_refs": []
+          },
+          {
+            "operation": "transformation",
+            "method_id": "fixture:pm25-add-20-ug-m3",
+            "method_version": "1.0.0",
+            "description": "Added exactly 20 ug/m3 to every nominal hourly interval; location, interval boundaries, units, and native temporal resolution are unchanged.",
+            "input_refs": [
+              {
+                "id": "demo:pm25-yard-nominal",
+                "revision": 2,
+                "sha256": "f2dc162b9f5a864569b6ab7d48c13cb0b4b3a715e6a9fbabf08e435b82be65a1"
+              }
+            ]
+          }
+        ],
+        "access_permissions": ["fictional_fixture_validation"]
+      },
+      "locator": {
+        "kind": "data",
+        "series_id": "pm25-yard-plus-20",
+        "run_id": "fixture-run-plus-20",
+        "row_ids": ["yard-plus20-0800", "yard-plus20-0900", "yard-plus20-1000"],
+        "intervals": [
+          {
+            "start": "2026-10-25T00:00:00Z",
+            "end": "2026-10-25T01:00:00Z",
+            "location_id": "yard"
+          },
+          {
+            "start": "2026-10-25T01:00:00Z",
+            "end": "2026-10-25T02:00:00Z",
+            "location_id": "yard"
+          },
+          {
+            "start": "2026-10-25T02:00:00Z",
+            "end": "2026-10-25T03:00:00Z",
+            "location_id": "yard"
+          }
+        ],
+        "location_ids": ["yard"],
+        "selection_sha256": "825c5ffbc09679bd5d79703703672b38747e97850bdb26531dc0ee496091fbb7"
+      },
+      "pollutant": "PM2.5",
+      "quantity": null,
+      "unit": "ug/m3",
+      "issued_at": null,
+      "published_at": null,
+      "valid_interval": {
+        "start": "2026-10-25T00:00:00Z",
+        "end": "2026-10-25T04:00:00Z"
+      },
+      "retrieved_at": null,
+      "accepted_at": null,
+      "original_timezone": "Asia/Kuala_Lumpur",
+      "native_temporal_resolution": { "value": 1, "unit": "hour" },
+      "spatial_support": {
+        "description": "Fictional yard location; no real facility is represented.",
+        "location_ids": ["yard"]
+      },
+      "quality_ref": null,
+      "licence_ref": null,
+      "access_ref": null,
+      "permitted_uses": ["fictional_fixture_validation"],
+      "limitations": [
+        "Synthetic example only; not a measurement, forecast, or accepted environmental evidence.",
+        "Fictional engineering sensitivity for software behavior only; not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment.",
+        "Derived negative fixture case missing-candidate-coverage; see case.json for the transformation."
+      ],
+      "review_refs": [],
+      "disposition": "not_assessed",
+      "expiry": null,
+      "freshness_rule_ref": null,
+      "supersession_ref": null,
+      "withdrawal_ref": null,
+      "null_reasons": {
+        "quantity": {
+          "code": "not_applicable",
+          "explanation": "The record specifies the PM2.5 pollutant directly."
+        },
+        "issued_at": {
+          "code": "not_applicable",
+          "explanation": "The fictional source is not an issued forecast or publication."
+        },
+        "published_at": {
+          "code": "not_applicable",
+          "explanation": "The fictional source has no external publication event."
+        },
+        "retrieved_at": {
+          "code": "not_applicable",
+          "explanation": "The fixture is authored locally and was not retrieved from an external source."
+        },
+        "accepted_at": {
+          "code": "not_applicable",
+          "explanation": "The fixture has not been accepted for any operational use."
+        },
+        "quality_ref": {
+          "code": "not_applicable",
+          "explanation": "No real measurement-quality assessment applies to fictional values."
+        },
+        "licence_ref": {
+          "code": "not_applicable",
+          "explanation": "No external source licence applies to locally authored fictional data."
+        },
+        "access_ref": {
+          "code": "not_applicable",
+          "explanation": "The fictional record has no external access agreement."
+        },
+        "expiry": {
+          "code": "not_applicable",
+          "explanation": "The immutable test fixture is not a time-sensitive operating observation."
+        },
+        "freshness_rule_ref": {
+          "code": "not_applicable",
+          "explanation": "No operational freshness policy applies to a fictional test fixture."
+        },
+        "supersession_ref": {
+          "code": "not_applicable",
+          "explanation": "This record has not been superseded."
+        },
+        "withdrawal_ref": {
+          "code": "not_applicable",
+          "explanation": "This record has not been withdrawn."
+        }
+      }
+    },
+    {
+      "schema_version": "haze.evidence.v2",
+      "evidence_id": "demo:pm25-office-plus-20",
+      "revision": 2,
+      "upstream_id": "fixture:pm25-office-plus-20",
+      "upstream_revision": 1,
+      "raw_sha256": "de3efbc39911b3b3da07d7b688d1ff24dd9a2a2d701f05a47d373a35e030883c",
+      "raw_ref": "demo:raw-pm25-plus-20-csv",
+      "source_kind": "synthetic_fixture",
+      "input_origin": "synthetic_fixture",
+      "title": "Fictional +20 sensitivity hourly office PM2.5 values",
+      "source_owner": "Haze Agent synthetic fixture",
+      "provenance": {
+        "description": "Fictional engineering sensitivity for software behavior only; not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment.",
+        "chain": [
+          {
+            "operation": "collection",
+            "method_id": "fixture:architecture-v0.13-example",
+            "method_version": "0.13",
+            "description": "Transcribed the fictional hourly office series independently of the yard values.",
+            "input_refs": []
+          },
+          {
+            "operation": "transformation",
+            "method_id": "fixture:pm25-add-20-ug-m3",
+            "method_version": "1.0.0",
+            "description": "Added exactly 20 ug/m3 to every nominal hourly interval; location, interval boundaries, units, and native temporal resolution are unchanged.",
+            "input_refs": [
+              {
+                "id": "demo:pm25-office-nominal",
+                "revision": 2,
+                "sha256": "f8e0b3a15139ba13ed040dae369c0084d4035c3dc067913442ad71fe43c842df"
+              }
+            ]
+          }
+        ],
+        "access_permissions": ["fictional_fixture_validation"]
+      },
+      "locator": {
+        "kind": "data",
+        "series_id": "pm25-office-plus-20",
+        "run_id": "fixture-run-plus-20",
+        "row_ids": [
+          "office-plus20-0800",
+          "office-plus20-0900",
+          "office-plus20-1000",
+          "office-plus20-1100"
+        ],
+        "intervals": [
+          {
+            "start": "2026-10-25T00:00:00Z",
+            "end": "2026-10-25T01:00:00Z",
+            "location_id": "office"
+          },
+          {
+            "start": "2026-10-25T01:00:00Z",
+            "end": "2026-10-25T02:00:00Z",
+            "location_id": "office"
+          },
+          {
+            "start": "2026-10-25T02:00:00Z",
+            "end": "2026-10-25T03:00:00Z",
+            "location_id": "office"
+          },
+          {
+            "start": "2026-10-25T03:00:00Z",
+            "end": "2026-10-25T04:00:00Z",
+            "location_id": "office"
+          }
+        ],
+        "location_ids": ["office"],
+        "selection_sha256": "2a42c7d3741e2d92be91e773ec85d52cd4e53a68ce1c0fb31088239b4708862e"
+      },
+      "pollutant": "PM2.5",
+      "quantity": null,
+      "unit": "ug/m3",
+      "issued_at": null,
+      "published_at": null,
+      "valid_interval": {
+        "start": "2026-10-25T00:00:00Z",
+        "end": "2026-10-25T04:00:00Z"
+      },
+      "retrieved_at": null,
+      "accepted_at": null,
+      "original_timezone": "Asia/Kuala_Lumpur",
+      "native_temporal_resolution": { "value": 1, "unit": "hour" },
+      "spatial_support": {
+        "description": "Fictional office location; values are independently invented and do not represent a filtration ratio.",
+        "location_ids": ["office"]
+      },
+      "quality_ref": null,
+      "licence_ref": null,
+      "access_ref": null,
+      "permitted_uses": ["fictional_fixture_validation"],
+      "limitations": [
+        "Synthetic example only; not a measurement, forecast, or accepted environmental evidence.",
+        "Office values are independently fictional, not derived from yard values or a filtration assumption.",
+        "Fictional engineering sensitivity for software behavior only; not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment.",
+        "Derived negative fixture case missing-candidate-coverage; see case.json for the transformation."
+      ],
+      "review_refs": [],
+      "disposition": "not_assessed",
+      "expiry": null,
+      "freshness_rule_ref": null,
+      "supersession_ref": null,
+      "withdrawal_ref": null,
+      "null_reasons": {
+        "quantity": {
+          "code": "not_applicable",
+          "explanation": "The record specifies the PM2.5 pollutant directly."
+        },
+        "issued_at": {
+          "code": "not_applicable",
+          "explanation": "The fictional source is not an issued forecast or publication."
+        },
+        "published_at": {
+          "code": "not_applicable",
+          "explanation": "The fictional source has no external publication event."
+        },
+        "retrieved_at": {
+          "code": "not_applicable",
+          "explanation": "The fixture is authored locally and was not retrieved from an external source."
+        },
+        "accepted_at": {
+          "code": "not_applicable",
+          "explanation": "The fixture has not been accepted for any operational use."
+        },
+        "quality_ref": {
+          "code": "not_applicable",
+          "explanation": "No real measurement-quality assessment applies to fictional values."
+        },
+        "licence_ref": {
+          "code": "not_applicable",
+          "explanation": "No external source licence applies to locally authored fictional data."
+        },
+        "access_ref": {
+          "code": "not_applicable",
+          "explanation": "The fictional record has no external access agreement."
+        },
+        "expiry": {
+          "code": "not_applicable",
+          "explanation": "The immutable test fixture is not a time-sensitive operating observation."
+        },
+        "freshness_rule_ref": {
+          "code": "not_applicable",
+          "explanation": "No operational freshness policy applies to a fictional test fixture."
+        },
+        "supersession_ref": {
+          "code": "not_applicable",
+          "explanation": "This record has not been superseded."
+        },
+        "withdrawal_ref": {
+          "code": "not_applicable",
+          "explanation": "This record has not been withdrawn."
+        }
+      }
+    }
+  ]
+}

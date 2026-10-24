@@ -1,0 +1,295 @@
+{
+  "manifest_kind": "fictional_sample_data_pack_manifest",
+  "scope": "fictional_fixture_only",
+  "input_origin": "synthetic_fixture",
+  "surface": "historical_harness",
+  "publication_status": "publication_disabled",
+  "operational_eligibility": false,
+  "recommendation_eligible": false,
+  "notice": "Every worker, location, service, timing right, concentration, threshold and scenario in this pack is a fictional engineering choice. The pack supplies no Malaysian observation and no operating approval.",
+  "versions": {
+    "serializer": "haze.canonical-json.v1",
+    "contracts": {
+      "planning": "haze.planning.v2",
+      "run": "haze.run.v2",
+      "result": "haze.result.v2",
+      "evidence": "haze.evidence.v2",
+      "environmental_series": "haze.environmental_series.v2"
+    },
+    "source_selection_rule": "single_declared_series_per_location_v1",
+    "sensitivity_method": {
+      "method_id": "fixture:pm25-add-20-ug-m3",
+      "method_version": "1.0.0",
+      "note": "Fictional engineering perturbation; not a forecast-error distribution or supported scientific uncertainty."
+    },
+    "negative_case_generator": {
+      "method_id": "fixture:negative-case-generator",
+      "method_version": "1.0.0"
+    }
+  },
+  "environment": {
+    "timezone": "Asia/Kuala_Lumpur",
+    "window": "2026-10-25T08:00:00+08:00/2026-10-25T12:00:00+08:00",
+    "planning_step_minutes": 15,
+    "canonical_unit": "ug/m3",
+    "native_temporal_resolution": { "value": 1, "unit": "hour" },
+    "allocation_convention": "piecewise_constant_half_open"
+  },
+  "bundle_ref": {
+    "id": "demo:klang-fixture-input-v2",
+    "revision": 1,
+    "sha256": "328b00ceb6ba2df8b755ebb8d60e8103c4034c6568ea529b11a596dc134615bb"
+  },
+  "evidence_refs": [
+    {
+      "id": "demo:pm25-yard-nominal",
+      "revision": 1,
+      "sha256": "ca1e5034bf17bb173a4655fb8532ab6f1ba042070eeab732dfa725239a9bffc1"
+    },
+    {
+      "id": "demo:pm25-office-nominal",
+      "revision": 1,
+      "sha256": "eb26dc84476f569378cd3cb5a01dfe1eb92b441f6785a148714b0c24641b4c0d"
+    },
+    {
+      "id": "demo:pm25-yard-plus-20",
+      "revision": 1,
+      "sha256": "d777a512858ef63eeb62a9d95af807fcee6ec42e7316c63df72bc74544e87eaa"
+    },
+    {
+      "id": "demo:pm25-office-plus-20",
+      "revision": 1,
+      "sha256": "06d52664d8c9aeef666b2ba22b269b363c697a26cf61af09f659841109088b1a"
+    }
+  ],
+  "unavailable_capabilities": [
+    {
+      "capability": "authenticated_post_run_admission",
+      "reason": "No HTTP server exists in this repository; demo-local references are rejected on the canonical surface by the contract validator instead."
+    },
+    {
+      "capability": "evidence_acceptance_and_review",
+      "reason": "No authorized reviewer or acceptance record exists; evidence disposition stays not_assessed."
+    },
+    {
+      "capability": "canonical_epoch_head_and_publication",
+      "reason": "Canonical state, current-read and publication gates are unproved, so the historical harness is used with publication disabled."
+    },
+    {
+      "capability": "qualified_intended_use_applicability_review",
+      "reason": "Occupational-hygiene and environmental-method review are outside this slice; applicability stays not_assessed."
+    },
+    {
+      "capability": "planner_and_independent_numerical_checker",
+      "reason": "This boundary delivers pinned inputs only; no schedule is scored or selected here."
+    }
+  ],
+  "canonical": {
+    "epoch_ref": null,
+    "head_ref": null,
+    "publication_ref": null,
+    "reasons": {
+      "epoch_ref": "canonical_state_implementation_unproved",
+      "head_ref": "canonical_current_read_unproved",
+      "publication_ref": "publication_disabled_for_demo_local_records"
+    }
+  },
+  "regenerate": {
+    "fixture_bindings": "npm run contracts:fixtures",
+    "negative_cases": "npm run inputs:negative",
+    "manifest": "npm run inputs:manifest",
+    "ledger": "npm run inputs:ledger"
+  },
+  "files": [
+    {
+      "path": "input_examples/v2/planning.json",
+      "byte_length": 8347,
+      "sha256": "b738cf402b612b6938250a3593239b53e60bac81b1ff25e8e4acf7a850708541"
+    },
+    {
+      "path": "input_examples/v2/run.json",
+      "byte_length": 444,
+      "sha256": "5f09c02a5302dfb2970b751c27060cd7a797f8b9a1374a412fa5b7c125b79cf9"
+    },
+    {
+      "path": "input_examples/v2/demo-records.json",
+      "byte_length": 32882,
+      "sha256": "828b35f5b0f20d42d1959923f2606e613dc98fca9a2d3b6b39d1bf97e2a75ebb"
+    },
+    {
+      "path": "input_examples/v2/verification-schedules.json",
+      "byte_length": 1781,
+      "sha256": "9425304182bca710b23ff60c79b05cd0afa605328a16ca4f656e895073a0740b"
+    },
+    {
+      "path": "input_examples/v2/environmental/nominal-pm25.csv",
+      "byte_length": 593,
+      "sha256": "6013a15d781efff196c643af3a39f869b2767185202cfa9a0a9e89d541335b8e"
+    },
+    {
+      "path": "input_examples/v2/environmental/nominal-evidence.json",
+      "byte_length": 10385,
+      "sha256": "b8f1a77772d91994ba2bbdafadf317219525324a36e48feb779e1a2ab5cdd742"
+    },
+    {
+      "path": "input_examples/v2/environmental/nominal-series.json",
+      "byte_length": 7188,
+      "sha256": "ef55a5f10e8e6b437797c32a109bfbb50c8fea90288631e200d6727ee1e84236"
+    },
+    {
+      "path": "input_examples/v2/environmental/plus-20-pm25.csv",
+      "byte_length": 650,
+      "sha256": "a3c96e72a69daacc009023b13365243982be990a22bdb0ab2017afc0a723a208"
+    },
+    {
+      "path": "input_examples/v2/environmental/plus-20-evidence.json",
+      "byte_length": 12711,
+      "sha256": "b1e681a3d18d85f0fed72f6ec744fbf651649059e2ee3cdc26db0e39fcaeecf6"
+    },
+    {
+      "path": "input_examples/v2/environmental/plus-20-series.json",
+      "byte_length": 7644,
+      "sha256": "19ce0a9ffbaf1e411705f280cc1d2da46ecb86013bb6ec03beb338188420d75f"
+    },
+    {
+      "path": "output_examples/v2/result.json",
+      "byte_length": 16581,
+      "sha256": "6105a6fc908fd4e19726942e3b198c9f47add6f774e4fcbece9f3c829bad0505"
+    },
+    {
+      "path": "input_examples/v2/negative/scenario-matrix.json",
+      "byte_length": 2727,
+      "sha256": "ca43e78f5b454ae5961b8a04b6361a0db3ab4fca29ae155d7f69e3cba6ef4b04"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/case.json",
+      "byte_length": 2952,
+      "sha256": "17f1a57221271856dc96dab3bc1a7dec357e0f170549018b84436a2a69213868"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/planning.json",
+      "byte_length": 8281,
+      "sha256": "bfb789179101db268093318ffdc4e07ee5078a6cbf5aee462075cf1022f94b82"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-pm25.csv",
+      "byte_length": 526,
+      "sha256": "36ddf27494c0c4903049cce0a111d67d2701f94e25c93cb98aa2974061074a64"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-evidence.json",
+      "byte_length": 10393,
+      "sha256": "bc3818e74889b84c6a9350bfc906d7bda848de58141aa62eefa6fde6a9273b9a"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/nominal-series.json",
+      "byte_length": 7371,
+      "sha256": "ec21701dbc1863c2f1bc2e74c7dab094bf2d16783d602957171d392fef6eb7fa"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-pm25.csv",
+      "byte_length": 576,
+      "sha256": "6331547ea87ec4096cffc915bc548781d0b0c7f2fbe5216102496105280670b5"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-evidence.json",
+      "byte_length": 12662,
+      "sha256": "98c74214139d9944e89b247688b2d94eeef0476630dc46fea50abcbac8f3911c"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-baseline-coverage/environmental/plus-20-series.json",
+      "byte_length": 7827,
+      "sha256": "53e786f700153c8307c5a3ab577b01b2944bedaf0be723d6c9b72fd95628cf5e"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/case.json",
+      "byte_length": 3049,
+      "sha256": "769b5264c46467f390d511cf3f07d9ddc42118b163552d7fd9be32ca032df88a"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/planning.json",
+      "byte_length": 8281,
+      "sha256": "57ffc972bdd6362342adfb247b60a874b30f56a091f42cd82158ed3355122ecd"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/nominal-pm25.csv",
+      "byte_length": 527,
+      "sha256": "2689d1aa92c001035f39556fa7b3f5e00a01c6bc89e16415d955afe86d7749a5"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/nominal-evidence.json",
+      "byte_length": 10395,
+      "sha256": "773268bdf7e7d6c41e92c357935dcf28688b294dac0d9d763f473a8bcc5986c5"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/nominal-series.json",
+      "byte_length": 7373,
+      "sha256": "b685657f1e23f9c12cd9d3efd1237b82105b09e4e91fe1589b96037ddbe426b6"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/plus-20-pm25.csv",
+      "byte_length": 577,
+      "sha256": "de3efbc39911b3b3da07d7b688d1ff24dd9a2a2d701f05a47d373a35e030883c"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/plus-20-evidence.json",
+      "byte_length": 12664,
+      "sha256": "5046ad2e566182bd229e10102738364ba7a4618936ff98f2d7e8bceae4a8d39e"
+    },
+    {
+      "path": "input_examples/v2/negative/missing-candidate-coverage/environmental/plus-20-series.json",
+      "byte_length": 7829,
+      "sha256": "97ca25d44dfdc2f29c45ef2afc3189a83599366766f87dc8f93b6f62b4dcd1d3"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/case.json",
+      "byte_length": 3378,
+      "sha256": "9996aa1f075102e3832523ac133cd9941ba09c7f667737243ca21a5cef957abd"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/planning.json",
+      "byte_length": 8281,
+      "sha256": "7f83bc0b99a4f012a8a9d399a8a76cb4f0ada81d72eadb1e50836f2fddd252e7"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/nominal-pm25.csv",
+      "byte_length": 592,
+      "sha256": "7d79dde265faca5e0d126bdef5e423a22ba7c47d32912b6eb66f08e020b8098f"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/nominal-evidence.json",
+      "byte_length": 10531,
+      "sha256": "fce9779e0799b85acf03545552729afe27a221d098a698dcf58913b3b8407f85"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/nominal-series.json",
+      "byte_length": 7143,
+      "sha256": "3e45e97723e39ff8213a3642c3c456e5291e22dea654fc38356a6b72ee110dca"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/plus-20-pm25.csv",
+      "byte_length": 648,
+      "sha256": "7176bc5758dc113564fc7d29796009f9019419cdef1b2db4fa8800702ddb1dfc"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/plus-20-evidence.json",
+      "byte_length": 12857,
+      "sha256": "ba9f4077395c18317a46c6504de52764cae17c61e1833964f4025208e0442cc3"
+    },
+    {
+      "path": "input_examples/v2/negative/flat-pollution/environmental/plus-20-series.json",
+      "byte_length": 7598,
+      "sha256": "85bd7095f57f76b35524ae2882ae1096a75082ac2d5823105ab181402fffd303"
+    },
+    {
+      "path": "input_examples/v2/negative/invalid-baseline-precedence/case.json",
+      "byte_length": 2010,
+      "sha256": "30d2c48e54b869e331c8ae8b5e4fc056f945a95368a85ad99227fb1c02ee5b26"
+    },
+    {
+      "path": "input_examples/v2/negative/invalid-baseline-precedence/planning.json",
+      "byte_length": 8281,
+      "sha256": "29b6166300b887d8aa86e84dc36a2e2cd9f69f120e3f7975b78c7beec97a6965"
+    }
+  ]
+}

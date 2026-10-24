@@ -1,0 +1,51 @@
+{
+  "fixture_kind": "negative_fixture_scenario_matrix",
+  "scope": "fictional_fixture_only",
+  "input_origin": "synthetic_fixture",
+  "operational_eligibility": false,
+  "notice": "Fictional negative fixture derived from the valid sample pack; not accepted evidence and not an operating case.",
+  "valid_pack": "input_examples/v2",
+  "regenerate": "npm run inputs:negative",
+  "cases": [
+    {
+      "case_id": "missing-baseline-coverage",
+      "case_path": "input_examples/v2/negative/missing-baseline-coverage/case.json",
+      "intent": "A required baseline hour is absent at an occupied location, so no quantified comparison exists for either scenario. The gap is reported precisely and is never filled with zero.",
+      "expected_outcome": "admitted_with_environmental_insufficiency",
+      "expected_import_status": "imported",
+      "expected_environmental_status": "insufficient",
+      "quantified_comparison_available": false,
+      "required_finding_codes": ["environmental_baseline_coverage_missing"]
+    },
+    {
+      "case_id": "missing-candidate-coverage",
+      "case_path": "input_examples/v2/negative/missing-candidate-coverage/case.json",
+      "intent": "An hour the baseline does not occupy is absent, so the baseline stays covered and only the alternatives that need that hour are excluded.",
+      "expected_outcome": "admitted_with_supported_coverage",
+      "expected_import_status": "imported",
+      "expected_environmental_status": "supported",
+      "quantified_comparison_available": true,
+      "required_finding_codes": ["environmental_coverage_gap"]
+    },
+    {
+      "case_id": "flat-pollution",
+      "case_path": "input_examples/v2/negative/flat-pollution/case.json",
+      "intent": "Each fixed location is flat across the whole window with complete coverage, so moving fixed-duration activities cannot reduce the integral. Location levels still differ.",
+      "expected_outcome": "admitted_with_supported_coverage",
+      "expected_import_status": "imported",
+      "expected_environmental_status": "supported",
+      "quantified_comparison_available": true,
+      "required_finding_codes": []
+    },
+    {
+      "case_id": "invalid-baseline-precedence",
+      "case_path": "input_examples/v2/negative/invalid-baseline-precedence/case.json",
+      "intent": "The baseline places maintenance before its inspection predecessor. Operating input is invalid, so diagnostics are returned and no plan is produced.",
+      "expected_outcome": "operating_input_invalid",
+      "expected_import_status": "draft_rejected",
+      "expected_environmental_status": "not_assessed",
+      "quantified_comparison_available": false,
+      "required_finding_codes": ["precedence_violation"]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ Repository and development foundation for Haze Agent. The reference design is th
 
 The scaffold uses TypeScript `StateGraph` from `@langchain/langgraph` and runs in this process. It does not require a hosted LangGraph service. LangGraph supplies orchestration and checkpoint infrastructure; Haze has four domain roles: **Manager, HazeOps, WorkerShield, and EvidenceCritic**.
 
-The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph.
+The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph. On top of them, [input and evidence validation](app/validation/index.ts), [a deterministic import boundary](app/import/loader.ts) and [native-interval evidence linkage](app/evidence/linkage.ts) make the fictional sample pack loadable through one shared boundary; the [sample data pack release note](docs/sample-data-pack.md) records its manifest, source notes and limits.
 
 ## Repository structure
 
@@ -14,12 +14,15 @@ Haze-Agent/
 │   ├── adapters/         # Meterless engines and provider integrations
 │   ├── checkpoints/      # Persistent saver helpers
 │   ├── compatibility/    # Engine, provider and restart proof
-│   └── contracts/        # Closed v2 domain contracts and semantic validation
+│   ├── contracts/        # Closed v2 domain contracts and semantic validation
+│   ├── evidence/         # Interval arithmetic, source selection and evidence linkage
+│   ├── import/           # Deterministic sample-pack import boundary
+│   └── validation/       # Coded input and evidence findings
 ├── data/                 # Small static data and data-source notes
 ├── scripts/              # Build, verification and example helpers
 ├── Dockerfile            # Reproducible Node build and offline example
-├── input_examples/       # Metadata samples and synthetic v2 planning/run fixtures
-├── output_examples/      # Metadata outputs and a synthetic v2 result fixture
+├── input_examples/       # Metadata samples, synthetic v2 fixtures and derived negative cases
+├── output_examples/      # Metadata outputs, a synthetic v2 result fixture and the case ledger
 ├── schemas/              # Generated Draft 2020-12 domain schemas
 ├── logs/                 # Local JSONL execution traces (ignored)
 ├── .env.example          # Placeholder configuration; no real keys

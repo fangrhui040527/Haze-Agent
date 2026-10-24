@@ -1,0 +1,47 @@
+{
+  "fixture_kind": "negative_fixture_case",
+  "case_id": "invalid-baseline-precedence",
+  "scope": "fictional_fixture_only",
+  "input_origin": "synthetic_fixture",
+  "operational_eligibility": false,
+  "recommendation_eligible": false,
+  "notice": "Fictional negative fixture derived from the valid sample pack; not accepted evidence and not an operating case.",
+  "intent": "The baseline places maintenance before its inspection predecessor. Operating input is invalid, so diagnostics are returned and no plan is produced.",
+  "derivation": {
+    "source_pack": "input_examples/v2",
+    "method_id": "fixture:negative-case-generator",
+    "method_version": "1.0.0",
+    "regenerate": "npm run inputs:negative",
+    "steps": [
+      "Move the baseline inspection start to 09:00 and the maintenance start to 08:00.",
+      "Leave every other operating field, and the whole environmental pack, byte-identical."
+    ]
+  },
+  "paths": {
+    "planning": "input_examples/v2/negative/invalid-baseline-precedence/planning.json",
+    "environmental_source": "input_examples/v2/environmental"
+  },
+  "required_scenarios": ["nominal", "plus_20_sensitivity"],
+  "expected": {
+    "import_status": "draft_rejected",
+    "validation_outcome": "operating_input_invalid",
+    "environmental_status": "not_assessed",
+    "quantified_comparison_available": false,
+    "transport_status_hint": 422,
+    "admitted": false,
+    "required_finding_codes": ["precedence_violation"],
+    "forbidden_finding_codes": ["environmental_baseline_coverage_missing"],
+    "selected_plan": null,
+    "affected": [
+      {
+        "scenario_ids": [],
+        "schedule_kind": "baseline",
+        "activity_id": "maintenance",
+        "location_id": "yard",
+        "worker_ids": ["worker-a", "worker-b"],
+        "missing_intervals": []
+      }
+    ],
+    "notes": "Invalid operating input yields field-specific diagnostics. It never yields a selected plan, and the environmental pack is not assessed because the bundle is not admitted."
+  }
+}

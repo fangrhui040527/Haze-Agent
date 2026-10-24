@@ -1,0 +1,97 @@
+{
+  "ledger_kind": "fixture_case_outcome_ledger",
+  "scope": "fictional_fixture_only",
+  "surface": "historical_harness",
+  "publication_status": "publication_disabled",
+  "recommendation_eligible": false,
+  "stages": {
+    "canonical_json_parse": "run",
+    "contract_validation": "run",
+    "input_and_evidence_validation": "run",
+    "deterministic_import": "run",
+    "evidence_linkage_trace": "run",
+    "planner": "not_run_no_implementation",
+    "independent_numerical_verification": "not_run_no_implementation",
+    "application_user_interface": "not_run_no_implementation",
+    "evidence_acceptance_review": "not_run_no_authority",
+    "canonical_publication": "not_run_publication_disabled"
+  },
+  "cases": [
+    {
+      "case_id": "valid",
+      "import_status": "imported",
+      "validation_outcome": "admitted_with_supported_coverage",
+      "environmental_status": "supported",
+      "quantified_comparison_available": true,
+      "transport_status_hint": 200,
+      "recommendation_eligible": false,
+      "finding_codes": [],
+      "agrees_with_expectation": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "missing-baseline-coverage",
+      "import_status": "imported",
+      "validation_outcome": "admitted_with_environmental_insufficiency",
+      "environmental_status": "insufficient",
+      "quantified_comparison_available": false,
+      "transport_status_hint": 200,
+      "recommendation_eligible": false,
+      "finding_codes": [
+        "environmental_baseline_coverage_missing",
+        "environmental_coverage_gap",
+        "environmental_null_interval"
+      ],
+      "agrees_with_expectation": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "missing-candidate-coverage",
+      "import_status": "imported",
+      "validation_outcome": "admitted_with_supported_coverage",
+      "environmental_status": "supported",
+      "quantified_comparison_available": true,
+      "transport_status_hint": 200,
+      "recommendation_eligible": false,
+      "finding_codes": [
+        "environmental_coverage_gap",
+        "environmental_null_interval"
+      ],
+      "agrees_with_expectation": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "flat-pollution",
+      "import_status": "imported",
+      "validation_outcome": "admitted_with_supported_coverage",
+      "environmental_status": "supported",
+      "quantified_comparison_available": true,
+      "transport_status_hint": 200,
+      "recommendation_eligible": false,
+      "finding_codes": [],
+      "agrees_with_expectation": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "invalid-baseline-precedence",
+      "import_status": "draft_rejected",
+      "validation_outcome": "operating_input_invalid",
+      "environmental_status": "not_assessed",
+      "quantified_comparison_available": false,
+      "transport_status_hint": 422,
+      "recommendation_eligible": false,
+      "finding_codes": ["precedence_violation"],
+      "agrees_with_expectation": true,
+      "mismatches": []
+    }
+  ],
+  "answer_caching_probe": {
+    "probe": "unseen_valid_fixture",
+    "intent": "A previously unseen valid bundle must import and hash to a new value, proving the pack is computed from bytes and not matched to a stored answer.",
+    "import_status": "imported",
+    "validation_outcome": "admitted_with_supported_coverage",
+    "bundle_sha256": "d9bbf176e5eceba18840aec698dc5b95b20b6040fd22b2281a0bdbe3f33fb8ac",
+    "differs_from_shipped_bundle": true,
+    "computed_not_matched": true
+  }
+}

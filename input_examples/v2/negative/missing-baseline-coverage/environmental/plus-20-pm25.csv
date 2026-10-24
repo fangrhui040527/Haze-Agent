@@ -1,0 +1,8 @@
+row_id,location_id,start_utc,end_utc,value,unit
+yard-plus20-0900,yard,2026-10-25T01:00:00Z,2026-10-25T02:00:00Z,100,ug/m3
+yard-plus20-1000,yard,2026-10-25T02:00:00Z,2026-10-25T03:00:00Z,70,ug/m3
+yard-plus20-1100,yard,2026-10-25T03:00:00Z,2026-10-25T04:00:00Z,50,ug/m3
+office-plus20-0800,office,2026-10-25T00:00:00Z,2026-10-25T01:00:00Z,40,ug/m3
+office-plus20-0900,office,2026-10-25T01:00:00Z,2026-10-25T02:00:00Z,40,ug/m3
+office-plus20-1000,office,2026-10-25T02:00:00Z,2026-10-25T03:00:00Z,40,ug/m3
+office-plus20-1100,office,2026-10-25T03:00:00Z,2026-10-25T04:00:00Z,40,ug/m3
