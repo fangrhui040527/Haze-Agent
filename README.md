@@ -135,7 +135,7 @@ Keep credentials in local environment variables or ignored environment files. Co
 
 ## Limitations
 
-- Manager, HazeOps, WorkerShield and EvidenceCritic remain architecture roles; their domain workflows are not implemented.
+- The Klang chat sample has a bounded live LangGraph workflow for Manager, HazeOps, WorkerShield and EvidenceCritic, with actual model calls and pinned World Model/H-Mem operations. These roles review independently checked fictional fixtures; general domain planning, canonical admission and publication remain unimplemented. See [crew scheduling](docs/chat-crew-scheduling.md).
 - The new local producer/checker executes only the bounded fictional review case. It does not supply a general scheduler, HTTP admission, exact human review or canonical publication/current-read capability.
 - The integration layer currently contains Meterless engines and an explicitly selected provider probe. Zetaris integration is not implemented.
 - The example runner uses disposable memory checkpoints. Persistent restart proof is a separate compatibility command; SQLite supports a single process, while PostgreSQL has a dedicated integration test.
