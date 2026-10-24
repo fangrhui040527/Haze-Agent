@@ -49,7 +49,7 @@
 
   /* Type */
   --font-ui:
-    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
   --font-mono:
     ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
@@ -60,12 +60,25 @@
   --text-xl: 1.5rem;
   --line-height: 1.5;
 
-  /* Shape */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
-  --shadow-2: 0 4px 12px rgb(0 0 0 / 0.12);
+  /* Shape & Neo-Brutalist Tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-card: 18px;
+  --radius-pill: 9999px;
+
+  --border-width: 2.5px;
+  --color-border-neo: var(--color-text);
+  --color-shadow-neo: var(--color-text);
+
+  --shadow-card: 4px 4px 0 var(--color-shadow-neo);
+  --shadow-btn: 3px 3px 0 var(--color-shadow-neo);
+  --shadow-btn-hover: 4px 4px 0 var(--color-shadow-neo);
+  --shadow-btn-active: 1px 1px 0 var(--color-shadow-neo);
+  --shadow-badge: 1.5px 1.5px 0 var(--color-shadow-neo);
+
+  --shadow-1: 3px 3px 0 var(--color-shadow-neo);
+  --shadow-2: 5px 5px 0 var(--color-shadow-neo);
 
   /* Layers */
   --z-header: 10;
@@ -110,8 +123,11 @@
     --color-info-bg: #1d2a3d;
     --color-stale-bg: #2b2d31;
 
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5);
+    --color-border-neo: #4c545e;
+    --color-shadow-neo: #050607;
+
+    --shadow-1: 3px 3px 0 var(--color-shadow-neo);
+    --shadow-2: 5px 5px 0 var(--color-shadow-neo);
   }
 }
 
