@@ -47,6 +47,7 @@
   gap: 0;
   padding: 0 !important;
   overflow: hidden;
+  background: var(--color-surface-2);
 }
 
 /* ── Tinted header strip: fills edge-to-edge within the panel card ── */
@@ -121,17 +122,14 @@
   overflow-wrap: anywhere;
 }
 
+.keyNumbers {
+  text-align: center;
+}
+
 .twoCol {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: minmax(0, 1fr);
-}
-
-@media (min-width: 900px) {
-  .twoCol {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    align-items: start;
-  }
 }
 
 /* ── Measurements table: zebra striped ── */
@@ -139,6 +137,7 @@
   font-size: var(--text-sm);
   width: 100%;
   max-width: 420px;
+  margin-inline: auto;
 }
 
 .numbers th,
@@ -155,21 +154,24 @@
 
 /* ── Stat fact mini-cards ── */
 .facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-2);
-  margin: 0;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
   font-size: var(--text-sm);
 }
 
 .facts > div {
   display: flex;
   flex-direction: column;
+  flex: 0 1 180px;
   gap: 2px;
   padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-1);
 }
 
 .facts dt {
@@ -207,9 +209,8 @@
   gap: var(--space-1);
   overflow-wrap: anywhere;
   padding: var(--space-3);
-  background: var(--color-surface-2);
+  background: var(--color-surface);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-1);
 }
 
 .quote {
