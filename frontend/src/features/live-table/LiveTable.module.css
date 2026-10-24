@@ -278,21 +278,103 @@
 .scrollBox {
   /* Contains absolutely-positioned screen-reader text; without this it stretches the whole page. */
   position: relative;
-  max-height: var(--table-height);
   min-height: 160px;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: none;
   background: var(--color-surface);
 }
 
 .table {
+  display: block;
   width: 100%;
+  min-width: 1200px;
   font-size: var(--text-sm);
+  table-layout: fixed;
+}
+
+.table thead,
+.table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table tbody {
+  display: block;
+  height: 392px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.table tbody > tr:not(.breakdownRow) {
+  height: 56px;
+}
+
+.table tbody > tr:not(.breakdownRow) > td {
+  box-sizing: border-box;
+  height: 56px;
+}
+
+.table th:nth-child(1),
+.table td:nth-child(1) {
+  width: 4%;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 6%;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 7%;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  width: 10%;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+  width: 10%;
+}
+
+.table th:nth-child(6),
+.table td:nth-child(6) {
+  width: 18%;
+}
+
+.table th:nth-child(7),
+.table td:nth-child(7) {
+  width: 12%;
+}
+
+.table th:nth-child(8),
+.table td:nth-child(8) {
+  width: 5%;
+}
+
+.table th:nth-child(9),
+.table td:nth-child(9) {
+  width: 8%;
+}
+
+.table th:nth-child(10),
+.table td:nth-child(10) {
+  width: 14%;
+  min-width: 180px;
+}
+
+.table th:nth-child(11),
+.table td:nth-child(11) {
+  width: 6%;
+  min-width: 64px;
 }
 
 .table th {
-  position: sticky;
-  top: 0;
   z-index: 1;
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-2);

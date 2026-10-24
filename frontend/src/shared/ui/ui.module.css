@@ -221,7 +221,7 @@
 }
 
 .panel {
-  background: var(--color-surface);
+  background: var(--color-panel);
   border: none;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);

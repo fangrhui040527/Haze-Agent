@@ -93,45 +93,46 @@ export function AgentOffice({
           steps are not shown.
         </p>
       )}
-      <div className={styles.popupAnchor}>
+      <div className={styles.legendRegion}>
+        <ul
+          className={`${styles.legend} ${!visible ? styles.legendSixRows : ''}`}
+          aria-label="What each agent is doing"
+        >
+          {AGENT_IDS.map((id) => (
+            <li key={id}>
+              <button
+                type="button"
+                className={styles.legendItem}
+                aria-pressed={selected === id}
+                onClick={() => toggle(id)}
+                title={AGENT_INFO[id].role}
+              >
+                <span
+                  className={styles.dot}
+                  style={{ background: LOOKS[id].palette.C }}
+                  aria-hidden="true"
+                />
+                <span className={styles.agentName}>{AGENT_INFO[id].name}</span>
+                <Badge
+                  tone={POSE_TONE[statuses[id].state]}
+                  title={statuses[id].text}
+                >
+                  {statuses[id].text}
+                </Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
         {selected && (
-          <AgentDetailPopup
-            id={selected}
-            status={statuses[selected]}
-            onClose={() => onSelect(null)}
-          />
+          <div className={styles.popupAnchor}>
+            <AgentDetailPopup
+              id={selected}
+              status={statuses[selected]}
+              onClose={() => onSelect(null)}
+            />
+          </div>
         )}
       </div>
-
-      <ul
-        className={`${styles.legend} ${!visible ? styles.legendSixRows : ''}`}
-        aria-label="What each agent is doing"
-      >
-        {AGENT_IDS.map((id) => (
-          <li key={id}>
-            <button
-              type="button"
-              className={styles.legendItem}
-              aria-pressed={selected === id}
-              onClick={() => toggle(id)}
-              title={AGENT_INFO[id].role}
-            >
-              <span
-                className={styles.dot}
-                style={{ background: LOOKS[id].palette.C }}
-                aria-hidden="true"
-              />
-              <span className={styles.agentName}>{AGENT_INFO[id].name}</span>
-              <Badge
-                tone={POSE_TONE[statuses[id].state]}
-                title={statuses[id].text}
-              >
-                {statuses[id].text}
-              </Badge>
-            </button>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }
