@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { validateContract } from '../../app/contracts/index.js';
 import {
   handoffSchemas,
   type CalculationHandoff,
@@ -466,6 +467,16 @@ describe('bounded historical handoff contracts', () => {
       limitations: ['No workplace applicability.'],
     };
     expect(handoffSchemas.evidence.safeParse(record).success).toBe(true);
+    expect(validateContract('evidence', record)).toEqual(record);
+    expect(() =>
+      validateContract('evidence', {
+        ...record,
+        locator: { ...record.locator, quote: 'Altered.' },
+      }),
+    ).toThrow('invalid_contract');
+    expect(() =>
+      validateContract('evidence', { ...record, raw_sha256: 'b'.repeat(64) }),
+    ).toThrow('invalid_contract');
     expect(
       handoffSchemas.evidence.safeParse({
         ...record,

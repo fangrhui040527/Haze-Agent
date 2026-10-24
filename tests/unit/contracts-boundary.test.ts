@@ -108,7 +108,9 @@ describe('v2 contract boundary', () => {
       expect(schema.$schema).toBe(
         'https://json-schema.org/draft/2020-12/schema',
       );
-      expect(schema.additionalProperties).toBe(false);
+      for (const shape of schema.anyOf ?? [schema]) {
+        expect(shape.additionalProperties).toBe(false);
+      }
       expect(schema['x-canonical-serializer']).toBe('haze.canonical-json.v1');
     }
   });

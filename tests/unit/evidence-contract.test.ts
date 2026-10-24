@@ -266,7 +266,10 @@ describe('environmental evidence contracts', () => {
       'haze.environmental_series.v2',
     );
     const schemas = exportContractSchemas();
-    expect(schemas['haze.evidence.v2']).toBeDefined();
+    const evidenceFormats = schemas['haze.evidence.v2']?.anyOf;
+    expect(evidenceFormats).toHaveLength(2);
+    expect(evidenceFormats?.[0]?.required).toContain('evidence_id');
+    expect(evidenceFormats?.[1]?.required).toContain('id');
     expect(schemas['haze.environmental_series.v2']).toBeDefined();
   });
 
@@ -282,6 +285,9 @@ describe('environmental evidence contracts', () => {
     const missingReason = evidenceRecord();
     delete missingReason.null_reasons.quantity;
     expect(evidenceSchema.safeParse(missingReason).success).toBe(false);
+    expect(() => validateContract('evidence', missingReason)).toThrow(
+      'invalid_contract',
+    );
 
     const unrelatedReason = evidenceRecord();
     unrelatedReason.null_reasons.unused_field = nullReason;
@@ -311,6 +317,9 @@ describe('environmental evidence contracts', () => {
       throw new Error('test_fixture_missing_second_interval');
     secondInterval.start = '2026-10-25T00:30:00Z';
     expect(environmentalSeriesSchema.safeParse(overlap).success).toBe(false);
+    expect(() => validateContract('environmental_series', overlap)).toThrow(
+      'invalid_contract',
+    );
   });
 
   it('requires explicit reasons for missing environmental measurements', () => {

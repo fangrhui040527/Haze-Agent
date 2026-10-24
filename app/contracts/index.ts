@@ -49,7 +49,6 @@ export {
 export { CONTRACT_LIMITS } from './common.js';
 
 export const CONTRACT_VERSIONS = {
-  evidence: 'haze.evidence.v2',
   environmental_series: 'haze.environmental_series.v2',
   planning: 'haze.planning.v2',
   run: 'haze.run.v2',
@@ -90,6 +89,9 @@ export function validateContract(
     run: runSchema,
     result: resultSchema,
     ...handoffSchemas,
+    // Both published evidence formats share v2; retain each format's refinements.
+    evidence: z.union([evidenceSchema, handoffSchemas.evidence]),
+    environmental_series: environmentalSeriesSchema,
   };
   const schema = schemas[kind];
   const parsed = schema.safeParse(value);
@@ -120,12 +122,12 @@ export function validateContract(
 /** Structural schemas deliberately leave cross-record predicates to validateContract. */
 export function exportContractSchemas() {
   const shapes = {
-    evidence: evidenceShape,
     environmental_series: environmentalSeriesShape,
     planning: planningShape,
     run: runSchema,
     result: resultShape,
     ...handoffShapes,
+    evidence: z.union([evidenceShape, handoffShapes.evidence]),
   };
   return Object.fromEntries(
     (Object.keys(shapes) as ContractKind[]).map(
