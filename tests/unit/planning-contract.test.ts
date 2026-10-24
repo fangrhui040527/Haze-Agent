@@ -1,10 +1,45 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   planningSchema,
   runSchema,
   type PlanningBundle,
 } from '../../app/contracts/planning.js';
+
+const referenceSchema = z.strictObject({
+  id: z.string(),
+  revision: z.number().int(),
+  sha256: z.string(),
+});
+const demoRecordsSchema = z.array(
+  z.strictObject({
+    ref: referenceSchema,
+    record: z.record(z.string(), z.unknown()),
+  }),
+);
+const verificationSchedulesSchema = z.strictObject({
+  fixture_kind: z.literal('verification_schedule_examples'),
+  scope: z.literal('illustrative_only'),
+  exhaustive: z.literal(false),
+  schedules: z.array(
+    z.strictObject({
+      ref: referenceSchema,
+      record: z.strictObject({
+        id: z.string(),
+        revision: z.number().int(),
+        example_kind: z.literal('illustrative_verification_only'),
+        assignments: z.array(
+          z.strictObject({
+            activity_id: z.string(),
+            start: z.string(),
+          }),
+        ),
+        notice: z.string(),
+      }),
+    }),
+  ),
+});
 
 function fixture(): PlanningBundle {
   const value: unknown = JSON.parse(
@@ -17,15 +52,29 @@ function fixture(): PlanningBundle {
 }
 
 function demoRecords(): {
-  ref: { id: string };
+  ref: { id: string; revision: number; sha256: string };
   record: Record<string, unknown>;
 }[] {
-  return JSON.parse(
+  const value: unknown = JSON.parse(
     readFileSync(
       new URL('../../input_examples/v2/demo-records.json', import.meta.url),
       'utf8',
     ),
   );
+  return demoRecordsSchema.parse(value);
+}
+
+function verificationSchedules() {
+  const value: unknown = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../input_examples/v2/verification-schedules.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+  return verificationSchedulesSchema.parse(value);
 }
 
 const t = (hour: number, minute = 0) =>
@@ -231,6 +280,114 @@ describe('v0.13 closed planning contract', () => {
       no_relevant_resource_bottlenecks_assumed: true,
       operational_attestation: false,
     });
+  });
+
+  it('validates the illustrative schedules without claiming an exhaustive set', () => {
+    const bundle = fixture();
+    const examples = verificationSchedules();
+    expect(examples).toMatchObject({
+      fixture_kind: 'verification_schedule_examples',
+      scope: 'illustrative_only',
+      exhaustive: false,
+    });
+    expect(
+      examples.schedules.map(({ record }) => ({
+        id: record.id,
+        example_kind: record.example_kind,
+        assignments: record.assignments,
+      })),
+    ).toEqual([
+      {
+        id: 'demo:verification-less-disruption',
+        example_kind: 'illustrative_verification_only',
+        assignments: [
+          { activity_id: 'inspection', start: t(8) },
+          { activity_id: 'administration', start: t(9) },
+          { activity_id: 'maintenance', start: t(11) },
+        ],
+      },
+      {
+        id: 'demo:verification-lower-proxy',
+        example_kind: 'illustrative_verification_only',
+        assignments: [
+          { activity_id: 'administration', start: t(8) },
+          { activity_id: 'inspection', start: t(10) },
+          { activity_id: 'maintenance', start: t(11) },
+        ],
+      },
+    ]);
+
+    const knownRecords = new Map(
+      demoRecords().map(({ ref, record }) => [ref.id, record]),
+    );
+    const expectedActivityIds = bundle.activities
+      .map((activity) => activity.activity_id)
+      .sort();
+    for (const { ref, record } of examples.schedules) {
+      expect(ref.id).toBe(record.id);
+      expect(ref.revision).toBe(record.revision);
+      expect(knownRecords.get(ref.id)).toEqual(record);
+      expect(record.example_kind).toBe('illustrative_verification_only');
+      expect(
+        record.assignments.map(({ activity_id }) => activity_id).sort(),
+      ).toEqual(expectedActivityIds);
+
+      const starts = new Map(
+        record.assignments.map(({ activity_id, start }) => [
+          activity_id,
+          Date.parse(start),
+        ]),
+      );
+      for (const activity of bundle.activities) {
+        const scheduledStart = starts.get(activity.activity_id)!;
+        const assignment = record.assignments.find(
+          ({ activity_id }) => activity_id === activity.activity_id,
+        )!;
+        expect(activity.allowed_starts).toContain(assignment.start);
+        expect(
+          (scheduledStart - Date.parse(bundle.assessment.start)) %
+            (bundle.assessment.planning_step_minutes * 60_000),
+        ).toBe(0);
+        expect(scheduledStart).toBeGreaterThanOrEqual(
+          Date.parse(activity.release),
+        );
+        const scheduledEnd =
+          scheduledStart + activity.duration_minutes * 60_000;
+        expect(scheduledEnd).toBeLessThanOrEqual(Date.parse(activity.deadline));
+        for (const predecessorId of activity.predecessor_ids) {
+          const predecessor = bundle.activities.find(
+            ({ activity_id }) => activity_id === predecessorId,
+          )!;
+          expect(scheduledStart).toBeGreaterThanOrEqual(
+            starts.get(predecessorId)! + predecessor.duration_minutes * 60_000,
+          );
+        }
+      }
+
+      for (const worker of bundle.crew.workers) {
+        const workerActivities = bundle.activities
+          .filter((activity) => activity.worker_ids.includes(worker.worker_id))
+          .map((activity) => ({
+            activity,
+            start: starts.get(activity.activity_id)!,
+          }))
+          .sort((a, b) => a.start - b.start);
+        let cursor = Date.parse(bundle.assessment.start);
+        for (const { activity, start } of workerActivities) {
+          expect(start).toBe(cursor);
+          const end = start + activity.duration_minutes * 60_000;
+          expect(
+            worker.available_intervals.some(
+              (interval) =>
+                Date.parse(interval.start) <= start &&
+                Date.parse(interval.end) >= end,
+            ),
+          ).toBe(true);
+          cursor = end;
+        }
+        expect(cursor).toBe(Date.parse(bundle.assessment.end));
+      }
+    }
   });
 
   it.each<{

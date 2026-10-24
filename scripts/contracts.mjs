@@ -38,6 +38,9 @@ function visitReferences(value, visit) {
 async function bindFixtures() {
   const planning = await readJson('input_examples/v2/planning.json');
   const result = await readJson('output_examples/v2/result.json');
+  const verificationSchedules = await readJson(
+    'input_examples/v2/verification-schedules.json',
+  );
   const records = new Map();
   const bind = (ref) => {
     if (ref.id === bundleId) return;
@@ -76,6 +79,17 @@ async function bindFixtures() {
   };
   visitReferences(planning, bind);
   visitReferences(result, bind);
+  for (const { ref, record } of verificationSchedules.schedules) {
+    if (
+      !ref.id.startsWith('demo:') ||
+      ref.id !== record.id ||
+      ref.revision !== record.revision
+    ) {
+      throw new Error('verification_schedule_identity_mismatch');
+    }
+    ref.sha256 = contractHash(record);
+    records.set(`${ref.id}@${ref.revision}`, { ref: { ...ref }, record });
+  }
   const bundleRef = {
     id: bundleId,
     revision: 1,
@@ -95,6 +109,10 @@ async function bindFixtures() {
   };
   await writeJson('input_examples/v2/planning.json', planning);
   await writeJson('input_examples/v2/run.json', request);
+  await writeJson(
+    'input_examples/v2/verification-schedules.json',
+    verificationSchedules,
+  );
   await writeJson('output_examples/v2/result.json', result);
   await writeJson(
     'input_examples/v2/demo-records.json',
@@ -112,9 +130,39 @@ async function checkFixtures() {
   const request = await readJson('input_examples/v2/run.json');
   const result = await readJson('output_examples/v2/result.json');
   const records = await readJson('input_examples/v2/demo-records.json');
+  const verificationSchedules = await readJson(
+    'input_examples/v2/verification-schedules.json',
+  );
   validateContract('planning', planning);
   validateContract('run', request, 'historical_harness');
   validateContract('result', result);
+  if (
+    verificationSchedules.fixture_kind !== 'verification_schedule_examples' ||
+    verificationSchedules.scope !== 'illustrative_only' ||
+    verificationSchedules.exhaustive !== false ||
+    !Array.isArray(verificationSchedules.schedules) ||
+    verificationSchedules.schedules.length !== 2
+  ) {
+    throw new Error('verification_schedule_scope_mismatch');
+  }
+  for (const { ref, record } of verificationSchedules.schedules) {
+    if (
+      ref.id !== record.id ||
+      ref.revision !== record.revision ||
+      ref.sha256 !== contractHash(record) ||
+      record.example_kind !== 'illustrative_verification_only' ||
+      !Array.isArray(record.assignments) ||
+      record.assignments.length !== planning.activities.length
+    ) {
+      throw new Error('verification_schedule_record_mismatch');
+    }
+    const activityIds = record.assignments.map(
+      (assignment) => assignment.activity_id,
+    );
+    if (new Set(activityIds).size !== activityIds.length) {
+      throw new Error('verification_schedule_duplicate_activity');
+    }
+  }
   const digest = contractHash(planning);
   const known = new Map(
     records.map(({ ref, record }) => {
@@ -132,7 +180,7 @@ async function checkFixtures() {
   if (known.size !== records.length)
     throw new Error('duplicate_fixture_record');
   known.set(`${bundleId}@1`, digest);
-  for (const fixture of [planning, request, result])
+  for (const fixture of [planning, request, result, verificationSchedules])
     visitReferences(fixture, (ref) => {
       if (known.get(`${ref.id}@${ref.revision}`) !== ref.sha256)
         throw new Error('unresolved_fixture_reference');
@@ -166,7 +214,7 @@ async function checkFixtures() {
     throw new Error('fixture_surface_or_origin_mismatch');
   }
   console.log(
-    'Validated v2 planning/run/result fixtures and canonical bundle hashes; no workflow executed.',
+    'Validated v2 planning/run/result fixtures, illustrative schedules, and canonical bundle hashes; no workflow executed.',
   );
 }
 
