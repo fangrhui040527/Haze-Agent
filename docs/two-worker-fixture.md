@@ -80,6 +80,50 @@ values, fill gaps, or create independent quarter-hour readings. The fixture
 tests this boundary behavior only; they do not implement an exposure
 calculation.
 
+### PM2.5 evidence fields and provenance
+
+The environmental pack follows the `haze.evidence.v2` and
+`haze.environmental_series.v2` contracts described in Architecture v0.13
+§§4-5, 17 and 23. Its files are:
+
+| File                                                                                                                                                                                                | Contents                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`environmental/nominal-pm25.csv`](../input_examples/v2/environmental/nominal-pm25.csv)                                                                                                             | Synthetic nominal yard and office rows at native hourly resolution.                                                                        |
+| [`environmental/nominal-evidence.json`](../input_examples/v2/environmental/nominal-evidence.json) and [`environmental/nominal-series.json`](../input_examples/v2/environmental/nominal-series.json) | Per-location evidence metadata and resolved hourly intervals for nominal values.                                                           |
+| [`environmental/plus-20-pm25.csv`](../input_examples/v2/environmental/plus-20-pm25.csv)                                                                                                             | Synthetic output rows from the pinned +20 transformation.                                                                                  |
+| [`environmental/plus-20-evidence.json`](../input_examples/v2/environmental/plus-20-evidence.json) and [`environmental/plus-20-series.json`](../input_examples/v2/environmental/plus-20-series.json) | Per-location output evidence and intervals, including transformation lineage back to the corresponding nominal evidence revision and hash. |
+
+In each evidence record, `evidence_id` and `revision` identify the immutable
+record; `raw_ref` and `raw_sha256` bind the complete CSV bytes; and
+`provenance.chain` describes authoring and, for +20, the transformation and
+its nominal input reference. The `locator` identifies the exact series, run,
+CSV row IDs, selected location and interval boundaries; `selection_sha256`
+binds the selected rows. `valid_interval` is the complete four-hour period,
+while `native_temporal_resolution` remains one hour. Timestamps use UTC for
+interval comparison; `original_timezone` and the pack's `timezone` preserve
+`Asia/Kuala_Lumpur`.
+
+The series record resolves each location to PM2.5 values in `ug/m3`, retaining
+the source/evidence references, interval boundaries and explicit
+`quality_flag`. Yard nominal values are 100, 80, 50 and 30; office nominal
+values are independently invented as 20 for each hour. The +20 values are
+120, 100, 70, 50 for the yard and 40 for each office hour. Office values are
+not derived from yard values and do not imply filtration. The pinned
+`fixture:pm25-add-20-ug-m3` version `1.0.0` adds exactly 20 to each nominal
+location-hour. This is a software sensitivity example, not a forecast-error
+distribution or supported scientific uncertainty.
+
+Null fields in these synthetic records have corresponding `null_reasons`;
+for example, acceptance, retrieval, quality, licence, applicability,
+freshness and uncertainty references are inapplicable, not silently omitted.
+The records use `source_kind` and `input_origin` `synthetic_fixture`,
+`permitted_uses: ["fictional_fixture_validation"]`, and
+`disposition: "not_assessed"`. Their `accepted_at` is null and the local hashes
+establish fixture integrity only. They are not measurements or forecasts, do
+not establish scientific applicability or operating practice, and must not
+support an operational comparison or recommendation. The +20 case must not be
+presented as forecast uncertainty.
+
 ### Fixture-only assumptions
 
 - Worker IDs, locations, services, policy, constraints, and schedule records are
@@ -101,8 +145,31 @@ calculation.
 
 ## Handoff examples
 
-These examples describe the intended boundary between future roles. They are
-not implemented Planner or Verification executions.
+These examples describe intended input boundaries, not executed agent
+handoffs, review decisions or approvals. The environmental contracts are
+loadable and validated, but no Haze domain role currently consumes them for an
+operational decision.
+
+### App handoff
+
+```text
+Load:
+  planning bundle: input_examples/v2/planning.json
+  environmental evidence and series: input_examples/v2/environmental/
+
+Validate:
+  retain the exact evidence_ref, revision and hash bindings;
+  validate each evidence and series record against the shared v2 contracts;
+  preserve raw source bytes, exact row/interval locators, UTC boundaries,
+  original timezone, hourly resolution and explicit null reasons.
+
+Display:
+  label both scenarios as fictional fixture data;
+  distinguish nominal from the pinned +20 engineering sensitivity;
+  expose not_assessed / not operationally accepted status and limitations.
+  Do not present the values as live conditions, forecasts or an approved
+  recommendation.
+```
 
 ### Planner handoff
 
@@ -147,6 +214,27 @@ Report:
   environmental applicability and comparison as unavailable.
 ```
 
+### WorkerShield handoff
+
+```text
+Inputs:
+  planning bundle: input_examples/v2/planning.json
+  environmental evidence and series: input_examples/v2/environmental/
+
+Use:
+  treat these records only as fictional fixtures for checking that worker-
+  protection input boundaries preserve source identity, location, valid time,
+  native hourly resolution and explicit limitations;
+  do not infer a person's exposure, health status, indoor protection,
+  acceptable risk or worker consent from these values.
+
+Boundary:
+  no worker investigation, contact, or review decision is represented here.
+  Surface unresolved real-world evidence and human-review needs for authorized
+  decision-makers; do not self-approve or treat the fixture as a safety
+  determination.
+```
+
 The repository currently provides contract validation and focused fixture
-tests; it does not implement the Planner or an independent numerical
-Verification engine described by these handoff examples.
+tests; it does not implement the described App evidence UI, Planner,
+independent numerical Verification engine or WorkerShield investigation.
