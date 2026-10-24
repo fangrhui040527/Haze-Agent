@@ -34,7 +34,13 @@ npm run contracts:validate -- result output_examples/v2/result.json
 
 Use `npm run contracts:generate` after rebuilding a deliberate schema change. Check the generated schemas and matching fixture hashes into the same change. `contracts:check` detects schema drift, validates the fixtures and checks their bindings. `contracts:validate` reads and validates JSON; it does not run the solver, admit a job or publish a result. A run fixture requires the explicit historical surface because demo-local references are invalid on the canonical surface.
 
-The local record manifest is [demo-records.json](../input_examples/v2/demo-records.json). It supplies the exact fictional bytes behind fixture references; the baseline record includes its assignments. Other records are explicit placeholders, not implementations of policy, method, attestation or review artifacts. After deliberately editing the fixture, `npm run contracts:fixtures` refreshes these local reference hashes and the request/result bundle bindings. It never creates canonical records or computes a result.
+The local record manifest is [demo-records.json](../input_examples/v2/demo-records.json). It supplies the exact fictional bytes behind fixture references; the baseline record includes its assignments, and the policy record contains only the explicitly fictional thresholds for the engineering example. Other method, attestation and review records remain placeholders, not accepted authority or evidence. After deliberately editing the fixture, `npm run contracts:fixtures` refreshes these local reference hashes and the request/result bundle bindings. It never creates canonical records or computes a result.
+
+The [two-worker fixture guide](two-worker-fixture.md) documents source mapping,
+illustrative schedules, local hash regeneration, the synthetic hourly PM2.5
+fixture and non-executable App/Planner/Verification/WorkerShield handoffs. The
+fixture is not accepted environmental evidence and supports no operational
+comparison or recommendation.
 
 `haze.canonical-json.v1` hashes UTF-8 JSON without insignificant whitespace, with object keys sorted by UTF-16 code units, array order preserved, and ECMAScript finite-number/string encoding. This serializer is versioned independently of the domain contracts. JSON input is limited to 1 MiB and nesting depth 64; duplicate keys, nonfinite numbers, implicit coercion and unknown properties are rejected. The planning representation supports at most seven days, 64 workers, 64 resources, 128 locations and 256 activities, with whole-minute `+08:00` timestamps. These are explicit engineering limits, not operating or scientific thresholds.
 

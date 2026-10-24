@@ -1,10 +1,23 @@
 import { z } from 'zod';
 import { canonicalJson, CANONICAL_SERIALIZER_VERSION } from './json.js';
+import {
+  environmentalSeriesSchema,
+  environmentalSeriesShape,
+  evidenceSchema,
+  evidenceShape,
+} from './evidence.js';
 import { planningSchema, planningShape, runSchema } from './planning.js';
 import { resultSchema, resultShape } from './result.js';
 
+export {
+  environmentalSeriesSchema,
+  environmentalSeriesShape,
+  evidenceSchema,
+  evidenceShape,
+} from './evidence.js';
 export { planningSchema, planningShape, runSchema } from './planning.js';
 export { resultSchema, resultShape } from './result.js';
+export type { EvidenceRecord, EnvironmentalSeries } from './evidence.js';
 export type { PlanningBundle, Activity, RunRequest } from './planning.js';
 export type { Result } from './result.js';
 export type { ImmutableReference } from './common.js';
@@ -17,6 +30,8 @@ export {
 export { CONTRACT_LIMITS } from './common.js';
 
 export const CONTRACT_VERSIONS = {
+  evidence: 'haze.evidence.v2',
+  environmental_series: 'haze.environmental_series.v2',
   planning: 'haze.planning.v2',
   run: 'haze.run.v2',
   result: 'haze.result.v2',
@@ -51,6 +66,8 @@ export function validateContract(
     });
   }
   const schema = {
+    evidence: evidenceSchema,
+    environmental_series: environmentalSeriesSchema,
     planning: planningSchema,
     run: runSchema,
     result: resultSchema,
@@ -83,6 +100,8 @@ export function validateContract(
 /** Structural schemas deliberately leave cross-record predicates to validateContract. */
 export function exportContractSchemas() {
   const shapes = {
+    evidence: evidenceShape,
+    environmental_series: environmentalSeriesShape,
     planning: planningShape,
     run: runSchema,
     result: resultShape,

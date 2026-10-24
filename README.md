@@ -82,6 +82,10 @@ The closed [JSON Schemas](schemas/) use Draft 2020-12 and are generated from the
 
 [Planning input](input_examples/v2/planning.json), [run request](input_examples/v2/run.json) and [result](output_examples/v2/result.json) are matching **synthetic contract fixtures**. Their demo-local references and hashes describe local fixtures, not accepted canonical records. The result illustrates a historical, publication-disabled response with explicit gaps. It was not produced by a planner, agent, independent numerical checker or provider call. `contracts:validate` validates a file; it does not admit or execute a planning job. See [demo-scope.md](docs/demo-scope.md) for the scope, invariants and remaining implementation boundaries.
 
+The [fictional two-worker fixture guide](docs/two-worker-fixture.md) documents
+the source-derived example, separate illustrative schedules, fixture-only
+assumptions, hash regeneration, and Planner/Verification handoff boundaries.
+
 ## Pinned engines and workflow
 
 [engine_sources.json](engine_sources.json) records immutable revisions, source

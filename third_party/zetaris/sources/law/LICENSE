@@ -28,12 +28,36 @@ Full text: https://creativecommons.org/publicdomain/zero/1.0/
 
 The PDF files in the pdf/ folder.
 
-These are official Malaysian Government publications and, in one case, a UN FAO
-publication. They are not our work. All rights in them stay with their
-publishers. This licence grants nothing over them and takes nothing away.
+These are official Malaysian Government publications and, in one case, a UN FAO publication. They are not our work. All rights in them stay with their publishers. This licence grants nothing over them and takes nothing away.
 
-They are held for internal reference only. They must not be redistributed or
-published. Do not commit them to a public repository.
+They are held for internal reference only. They must not be redistributed or published. Do not commit them to a public repository.
+
+The rights position for each of the four documents held here, document by document:
+
+  (1) Act 127 - Environmental Quality Act 1974
+      File:   Act127_EnvironmentalQualityAct1974_asat-2006.pdf
+      Source: AGC portal, lom.agc.gov.my
+      Rights: Copyrights © 2026 All Rights Reserved by Attorney General's Chambers of Malaysia.
+
+  (2) Act A1712 - Environmental Quality (Amendment) Act 2024
+      File:   A1712_EnvironmentalQualityAmendmentAct2024.pdf
+      Source: AGC portal, lom.agc.gov.my
+      Rights: Copyrights © 2026 All Rights Reserved by Attorney General's Chambers of Malaysia.
+
+  (3) Act 341 - Fire Services Act 1988
+      File:   Act341_FireServicesAct1988_asat-2009.pdf
+      Source: AGC portal, lom.agc.gov.my
+      Rights: Copyrights © 2026 All Rights Reserved by Attorney General's Chambers of Malaysia.
+
+  (4) P.U.(A) 460/2003 - Environmental Quality (Declared Activities) (Open Burning) Order 2003
+      File:   PUA460-2003_EnvironmentalQualityOpenBurningOrder2003.pdf
+      Source: FAOLEX, UN Food and Agriculture Organization, faolex.fao.org
+      Rights: FAOLEX open data, distributed under CC BY-NC-SA 3.0 IGO and FAO's Terms and Conditions. Non-commercial use, with attribution and share-alike. Recommended citation: "FAO. FAOLEX Database. License: CC BY-NC-SA 3.0 IGO. Extracted from www.fao.org/faolex/opendata."
+
+No licence in this folder grants any right over any of these four documents.
+No rights are claimed over any of them.
+
+Whichever terms apply above, the project treats all four as internal reference material and does not redistribute them. The internal-only rule is a project policy, stricter than the FAOLEX licence in item (4) requires.
 
 
 3. WHAT THE LICENCE DOES NOT CLAIM
@@ -48,16 +72,12 @@ The basis on which these texts are used is recorded in NOTICE.md.
 ----------------------------------
 
 The metadata is provided as is, with no warranty of accuracy or fitness.
-Nothing in this folder is legal advice. The documents are reference material
-only. Always check the current revision on the source portal before relying on
-any text.
+Nothing in this folder is legal advice. The documents are reference material only. Always check the current revision on the source portal before relying on any text.
 
 
 5. PURPOSE
 ----------
 
-The project metadata was prepared for a hackathon prototype, to make the
-reference set auditable.
+The project metadata was prepared for a hackathon prototype, to make the reference set auditable.
 
-The CC0 dedication in section 1 covers the project metadata only. It does not
-extend to the PDF files in pdf/, which must not be redistributed.
+The CC0 dedication in section 1 covers the project metadata only. It does not extend to the PDF files in pdf/, which must not be redistributed.

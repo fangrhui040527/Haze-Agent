@@ -11,7 +11,7 @@
   "policy_ref": {
     "id": "demo:fictional-policy",
     "revision": 1,
-    "sha256": "f1a9849f93fdcad8794c6730f6aa1d8db0b94a8050c1cdcf8adbd812a9c3b9b3"
+    "sha256": "1e306d23979d997665359dd61d28792fb7cf688d89ef315302f96a9a15e72f44"
   },
   "method_ref": {
     "id": "demo:fictional-method",
@@ -190,7 +190,7 @@
   "resource_absence_basis_ref": {
     "id": "demo:fictional-no-bottlenecks",
     "revision": 1,
-    "sha256": "f54dba501c5f2460438f98a31513ab34cbce3e3138f2c9dcb28dc07adb8a9a68"
+    "sha256": "1b1e1ce2bf78272a2b82c73eb9b9331156c639edfac8e82cfc52b561347025ec"
   },
   "baseline": {
     "ref": {
@@ -218,7 +218,28 @@
       "sha256": "5ba15365d4aeb53b79645406270db50f22078b6de6aca8cc0a9232aef0418d59"
     }
   },
-  "evidence_refs": [],
+  "evidence_refs": [
+    {
+      "id": "demo:pm25-yard-nominal",
+      "revision": 1,
+      "sha256": "ca1e5034bf17bb173a4655fb8532ab6f1ba042070eeab732dfa725239a9bffc1"
+    },
+    {
+      "id": "demo:pm25-office-nominal",
+      "revision": 1,
+      "sha256": "eb26dc84476f569378cd3cb5a01dfe1eb92b441f6785a148714b0c24641b4c0d"
+    },
+    {
+      "id": "demo:pm25-yard-plus-20",
+      "revision": 1,
+      "sha256": "d777a512858ef63eeb62a9d95af807fcee6ec42e7316c63df72bc74544e87eaa"
+    },
+    {
+      "id": "demo:pm25-office-plus-20",
+      "revision": 1,
+      "sha256": "06d52664d8c9aeef666b2ba22b269b363c697a26cf61af09f659841109088b1a"
+    }
+  ],
   "comparison_use_ref": {
     "id": "demo:no-quantified-comparison",
     "revision": 1,
@@ -227,7 +248,7 @@
   "constraint_review_ref": {
     "id": "demo:fictional-no-travel-setup",
     "revision": 1,
-    "sha256": "7e02bf11f01ba80652415d2919b9134c0e8b032d26eb1a9250df24665835257e"
+    "sha256": "bd0a37830fb7cb59f148ee026031279bae13aba028d3d758abc4dd8957bff558"
   },
   "cost_basis_ref": {
     "id": "demo:unquantified-costs",

@@ -1,0 +1,61 @@
+{
+  "fixture_kind": "verification_schedule_examples",
+  "scope": "illustrative_only",
+  "exhaustive": false,
+  "schedules": [
+    {
+      "ref": {
+        "id": "demo:verification-less-disruption",
+        "revision": 1,
+        "sha256": "20f787c5c906077a09161a6c40ad3bc2b5c292e5f6390e9b4d92efc5aa9a07fe"
+      },
+      "record": {
+        "id": "demo:verification-less-disruption",
+        "revision": 1,
+        "example_kind": "illustrative_verification_only",
+        "assignments": [
+          {
+            "activity_id": "inspection",
+            "start": "2026-10-25T08:00:00+08:00"
+          },
+          {
+            "activity_id": "administration",
+            "start": "2026-10-25T09:00:00+08:00"
+          },
+          {
+            "activity_id": "maintenance",
+            "start": "2026-10-25T11:00:00+08:00"
+          }
+        ],
+        "notice": "Fictional contract specimen only; not accepted authority or evidence."
+      }
+    },
+    {
+      "ref": {
+        "id": "demo:verification-lower-proxy",
+        "revision": 1,
+        "sha256": "1ba7c04e872cf85f25e01e267dad8e79888f57c51e8c3e5b3c8deb0b4a54e494"
+      },
+      "record": {
+        "id": "demo:verification-lower-proxy",
+        "revision": 1,
+        "example_kind": "illustrative_verification_only",
+        "assignments": [
+          {
+            "activity_id": "administration",
+            "start": "2026-10-25T08:00:00+08:00"
+          },
+          {
+            "activity_id": "inspection",
+            "start": "2026-10-25T10:00:00+08:00"
+          },
+          {
+            "activity_id": "maintenance",
+            "start": "2026-10-25T11:00:00+08:00"
+          }
+        ],
+        "notice": "Fictional contract specimen only; not accepted authority or evidence."
+      }
+    }
+  ]
+}

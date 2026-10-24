@@ -92,9 +92,11 @@ describe('v2 contract boundary', () => {
     ).toThrow('invalid_contract');
   });
 
-  it('exports three closed Draft 2020-12 structural schemas', () => {
+  it('exports closed Draft 2020-12 structural schemas', () => {
     const schemas = exportContractSchemas();
     expect(Object.keys(schemas).sort()).toEqual([
+      'haze.environmental_series.v2',
+      'haze.evidence.v2',
       'haze.planning.v2',
       'haze.result.v2',
       'haze.run.v2',
