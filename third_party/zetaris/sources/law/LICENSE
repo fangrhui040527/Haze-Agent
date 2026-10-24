@@ -1,0 +1,63 @@
+LICENCE AND SCOPE OF USE
+========================
+
+This file records what is covered by a licence in this folder, and what is not.
+It is not a licence over the law texts. Those are not ours to license.
+
+
+1. WHAT THIS COVERS
+-------------------
+
+The project metadata in this folder:
+
+  - pdf_manifest.json
+  - NOTICE.md
+  - README.md
+  - DISCLAIMER.md
+  - the folder structure and filenames
+  - the provenance pages appended to each PDF
+
+These are released under CC0 1.0 Universal (public domain dedication).
+You may copy, change, and reuse them without asking, and without attribution.
+
+Full text: https://creativecommons.org/publicdomain/zero/1.0/
+
+
+2. WHAT THIS DOES NOT COVER
+---------------------------
+
+The PDF files in the pdf/ folder.
+
+These are official Malaysian Government publications and, in one case, a UN FAO
+publication. They are not our work. All rights in them stay with their
+publishers. This licence grants nothing over them and takes nothing away.
+
+They are held for internal reference only. They must not be redistributed or
+published. Do not commit them to a public repository.
+
+
+3. WHAT THE LICENCE DOES NOT CLAIM
+----------------------------------
+
+This file does not claim ownership of any law text.
+This file does not grant permission to use the law texts.
+The basis on which these texts are used is recorded in NOTICE.md.
+
+
+4. NO WARRANTY AND NO LEGAL ADVICE
+----------------------------------
+
+The metadata is provided as is, with no warranty of accuracy or fitness.
+Nothing in this folder is legal advice. The documents are reference material
+only. Always check the current revision on the source portal before relying on
+any text.
+
+
+5. PURPOSE
+----------
+
+The project metadata was prepared for a hackathon prototype, to make the
+reference set auditable.
+
+The CC0 dedication in section 1 covers the project metadata only. It does not
+extend to the PDF files in pdf/, which must not be redistributed.

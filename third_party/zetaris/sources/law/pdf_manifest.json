@@ -1,0 +1,117 @@
+{
+  "description": "Ingestion set: Malaysian law PDFs selected for reference use by the Haze Agent. This is a filtered subset of the full archive register.",
+  "disclaimer": {
+    "not_legal_advice": "Nothing here is advice, an opinion, or a conclusion about what the law means or requires.",
+    "not_official_text": "Website downloads, not Gazette copies printed by the Government Printer. See Interpretation Acts 1948 and 1967 (Act 388) s.61.",
+    "check_the_date": "Every document carries law_as_at. Act 127 is as at 1 January 2006 and is stale.",
+    "not_complete": "4 documents only. Other laws and guidance that apply to open burning are not included.",
+    "see": "law/DISCLAIMER.md"
+  },
+  "generated_at": "2026-10-23T06:49:23+08:00",
+  "document_count": 4,
+  "pdf_folder": "law/pdf",
+  "source_manifest": "law_agent/sources/pdf_manifest.json",
+  "selection_rule": "Include a document only if the agent will cite it or apply a rule from it. Governance/sourcing Acts and off-domain Acts are excluded.",
+  "field_notes": {
+    "ingest_role": {
+      "core_operating_rule": "The operative subsidiary rule the agent applies.",
+      "parent_act": "The parent Act the rule is made under.",
+      "amending_act": "Amendment that updates the parent Act.",
+      "definitional_dependency": "Included only so a term used by the core rule can be resolved."
+    },
+    "sha256_original": "SHA-256 of the file as downloaded, before the provenance page was appended. Printed on the last page of each PDF.",
+    "sha256_file": "SHA-256 of the file on disk now, provenance page included.",
+    "law_as_at": "Revision date of the text in the file. Cite with this date."
+  },
+  "integrity_note": "The sha256_file values here were re-hashed from the copies in this folder and match the source_manifest. Byte identity with the remote file is NOT established for any entry.",
+  "documents": [
+    {
+      "file": "PUA460-2003_EnvironmentalQualityOpenBurningOrder2003.pdf",
+      "path": "law/pdf/PUA460-2003_EnvironmentalQualityOpenBurningOrder2003.pdf",
+      "source_url": "https://faolex.fao.org/docs/pdf/mal70151.pdf",
+      "source_host": "faolex.fao.org",
+      "instrument": "Environmental Quality (Declared Activities) (Open Burning) Order 2003",
+      "instrument_code": "P.U.(A) 460/2003",
+      "law_as_at": "Made under s.29AA(1) EQA 1974; in force 1 January 2004",
+      "obtained_by": "hand",
+      "obtained_on": "2026-10-23",
+      "pages_original": 4,
+      "pages_final": 5,
+      "sha256_original": "2fff0e979530f9b76f83b57e958eea853d69e1e19c6aff8dbe3e64c72b29588d",
+      "sha256_file": "46948a0cc53bba13d1927a5d33b960c8f677654c9c5957c64e63bd4ef89ce6eb",
+      "ingest_role": "core_operating_rule",
+      "notes": "The operative open-burning rule. Source is FAOLEX (UN FAO), not the AGC portal; no AGC static link found."
+    },
+    {
+      "file": "Act127_EnvironmentalQualityAct1974_asat-2006.pdf",
+      "path": "law/pdf/Act127_EnvironmentalQualityAct1974_asat-2006.pdf",
+      "source_url": "https://lom.agc.gov.my/ilims/upload/portal/akta/LOM/EN/Act%20127.pdf",
+      "source_host": "lom.agc.gov.my",
+      "instrument": "Environmental Quality Act 1974",
+      "instrument_code": "Act 127",
+      "law_as_at": "1 January 2006",
+      "obtained_by": "hand",
+      "obtained_on": "2026-10-23",
+      "pages_original": 59,
+      "pages_final": 60,
+      "sha256_original": "cf81e145884e8631899d74fb159972a5b00044915866ae87c8b4a42dd4101bad",
+      "sha256_file": "1f09e1e215705db0b98df93093ffcf27dc70d4cddf853cc663aec31517bcb4d9",
+      "ingest_role": "parent_act",
+      "notes": "Stale text: as at 2006 and superseded by A1712 (2024) and A1793 (2026). Read with those amendments, or replace with a consolidated reprint."
+    },
+    {
+      "file": "A1712_EnvironmentalQualityAmendmentAct2024.pdf",
+      "path": "law/pdf/A1712_EnvironmentalQualityAmendmentAct2024.pdf",
+      "source_url": "https://lom.agc.gov.my/ilims/upload/portal/akta/outputaktap/2147523_BI/Act%20A1712.pdf",
+      "source_host": "lom.agc.gov.my",
+      "instrument": "Environmental Quality (Amendment) Act 2024",
+      "instrument_code": "Act A1712",
+      "law_as_at": "Royal assent 27 May 2024; gazetted 6 June 2024; in force 7 July 2024",
+      "obtained_by": "hand",
+      "obtained_on": "2026-10-23",
+      "pages_original": 14,
+      "pages_final": 15,
+      "sha256_original": "f71a0e1993a71ed9443a3ca09b51b6ca8f621d59fc782a06e84a35410898ab7a",
+      "sha256_file": "bf0506b0609f05339668bd8c432fd83ffb7923a7e444b2f86d45877f904bda21",
+      "ingest_role": "amending_act",
+      "notes": "Inserts the open burning definition; raises the s.29A/29AA penalties."
+    },
+    {
+      "file": "Act341_FireServicesAct1988_asat-2009.pdf",
+      "path": "law/pdf/Act341_FireServicesAct1988_asat-2009.pdf",
+      "source_url": "https://lom.agc.gov.my/ilims/upload/portal/akta/LOM/EN/Act%20341.pdf",
+      "source_host": "lom.agc.gov.my",
+      "instrument": "Fire Services Act 1988",
+      "instrument_code": "Act 341",
+      "law_as_at": "1 October 2009",
+      "obtained_by": "hand",
+      "obtained_on": "2026-10-23",
+      "pages_original": 49,
+      "pages_final": 50,
+      "sha256_original": "23d4ec1467893525ce31384c606fb89acc658065e11727d16244c4946569a19d",
+      "sha256_file": "8e67f811d97ea5994ad8ea67c84f8810e4e81c55ec068fab73ded1a1272ec58d",
+      "ingest_role": "definitional_dependency",
+      "notes": "Optional. Referred to by the Open Burning Order 2003 for the Fire Officer definitions; include only if Order terms must resolve."
+    }
+  ],
+  "excluded_from_ingest": {
+    "count": 10,
+    "reason_not_related": [
+      "Act171_LocalGovernmentAct1976_asat-2006.pdf",
+      "Act302_PetroleumSafetyMeasuresAct1984_asat-2013.pdf",
+      "PUA151-2014_EnvironmentalQualityCleanAirRegulations2014.pdf",
+      "PUA207-2025_EnvironmentalQualityDelegationOfPowersOrder2025.pdf"
+    ],
+    "reason_governance_not_content": [
+      "Act1_RevisionOfLawsAct1968_asat-2006.pdf",
+      "Act166_LegalProfessionAct1976_asat-2018.pdf",
+      "Act332_CopyrightAct1987_asat-2012.pdf",
+      "Act388_InterpretationActs1948And1967_asat-2006.pdf"
+    ],
+    "reason_hold_until_fixed": [
+      "Act514_OccupationalSafetyAndHealthAct1994_asat-2006.pdf",
+      "A1793_EnvironmentalQualityAmendmentAct2026.pdf"
+    ],
+    "notes": "Excluded documents remain in law_agent/sources/pdf/ and stay registered in the source_manifest. Governance Acts must never be loaded as retrievable content."
+  }
+}
