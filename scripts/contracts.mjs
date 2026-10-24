@@ -51,7 +51,17 @@ async function bindFixtures() {
             assignments: planning.baseline.assignments,
             notice: fixtureNotice,
           }
-        : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
+        : ref.id === 'demo:fictional-no-travel-setup'
+          ? {
+              id: ref.id,
+              revision: ref.revision,
+              scope: 'fictional_fixture_only',
+              no_travel_required: true,
+              no_setup_required: true,
+              operational_attestation: false,
+              notice: fixtureNotice,
+            }
+          : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
     ref.sha256 = contractHash(record);
     records.set(`${ref.id}@${ref.revision}`, { ref: { ...ref }, record });
   };

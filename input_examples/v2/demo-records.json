@@ -87,11 +87,15 @@
     "ref": {
       "id": "demo:fictional-no-travel-setup",
       "revision": 1,
-      "sha256": "7e02bf11f01ba80652415d2919b9134c0e8b032d26eb1a9250df24665835257e"
+      "sha256": "bd0a37830fb7cb59f148ee026031279bae13aba028d3d758abc4dd8957bff558"
     },
     "record": {
       "id": "demo:fictional-no-travel-setup",
       "revision": 1,
+      "scope": "fictional_fixture_only",
+      "no_travel_required": true,
+      "no_setup_required": true,
+      "operational_attestation": false,
       "notice": "Fictional contract specimen only; not accepted authority or evidence."
     }
   },

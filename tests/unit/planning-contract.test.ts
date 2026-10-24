@@ -16,6 +16,18 @@ function fixture(): PlanningBundle {
   return planningSchema.parse(value);
 }
 
+function demoRecords(): {
+  ref: { id: string };
+  record: Record<string, unknown>;
+}[] {
+  return JSON.parse(
+    readFileSync(
+      new URL('../../input_examples/v2/demo-records.json', import.meta.url),
+      'utf8',
+    ),
+  );
+}
+
 const t = (hour: number, minute = 0) =>
   `2026-10-25T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+08:00`;
 
@@ -29,6 +41,131 @@ describe('v0.13 closed planning contract', () => {
     ]);
     expect(bundle.evidence_refs).toEqual([]);
     expect(planningSchema.parse(bundle)).toEqual(bundle);
+  });
+
+  it('pins the fictional work, both workers, and complete horizon occupancy', () => {
+    const bundle = fixture();
+    expect(bundle.crew.workers.map((worker) => worker.worker_id)).toEqual([
+      'worker-a',
+      'worker-b',
+    ]);
+    for (const worker of bundle.crew.workers) {
+      expect(worker.available_intervals).toEqual([{ start: t(8), end: t(12) }]);
+      expect(worker.eligible_activity_ids).toEqual([
+        'inspection',
+        'maintenance',
+        'administration',
+      ]);
+
+      const assignments = bundle.activities
+        .filter((activity) => activity.worker_ids.includes(worker.worker_id))
+        .map((activity) => ({
+          activity,
+          start: Date.parse(
+            bundle.baseline.assignments.find(
+              (assignment) => assignment.activity_id === activity.activity_id,
+            )!.start,
+          ),
+        }))
+        .sort((a, b) => a.start - b.start);
+      expect(assignments.map(({ activity }) => activity.activity_id)).toEqual([
+        'inspection',
+        'maintenance',
+        'administration',
+      ]);
+      expect(assignments[0]!.start).toBe(Date.parse(t(8)));
+      assignments.slice(1).forEach((current, index) => {
+        const previous = assignments[index]!;
+        expect(current.start).toBe(
+          previous.start + previous.activity.duration_minutes * 60_000,
+        );
+      });
+      const last = assignments.at(-1)!;
+      expect(last.start + last.activity.duration_minutes * 60_000).toBe(
+        Date.parse(t(12)),
+      );
+    }
+
+    expect(
+      bundle.activities.map((activity) => ({
+        id: activity.activity_id,
+        kind: activity.kind,
+        location: activity.location_id,
+        duration: activity.duration_minutes,
+        service: activity.required_service_ref.id,
+        workers: activity.worker_ids,
+        predecessors: activity.predecessor_ids,
+        resources: activity.resource_demands,
+        timing: activity.timing_rule,
+      })),
+    ).toEqual([
+      {
+        id: 'inspection',
+        kind: 'work',
+        location: 'yard',
+        duration: 60,
+        service: 'demo:fictional-inspection-service',
+        workers: ['worker-a', 'worker-b'],
+        predecessors: [],
+        resources: [],
+        timing: 'movable_within_window',
+      },
+      {
+        id: 'maintenance',
+        kind: 'work',
+        location: 'yard',
+        duration: 60,
+        service: 'demo:fictional-maintenance-service',
+        workers: ['worker-a', 'worker-b'],
+        predecessors: ['inspection'],
+        resources: [],
+        timing: 'movable_within_window',
+      },
+      {
+        id: 'administration',
+        kind: 'work',
+        location: 'office',
+        duration: 120,
+        service: 'demo:fictional-administration-service',
+        workers: ['worker-a', 'worker-b'],
+        predecessors: [],
+        resources: [],
+        timing: 'movable_within_window',
+      },
+    ]);
+    expect(
+      bundle.locations.map((location) => ({
+        id: location.location_id,
+        microenvironment: location.microenvironment,
+        controls: location.existing_control_refs,
+        controlBasis: location.existing_control_basis_ref?.id,
+      })),
+    ).toEqual([
+      {
+        id: 'yard',
+        microenvironment: 'outdoor',
+        controls: [],
+        controlBasis: 'demo:fictional-yard-no-controls',
+      },
+      {
+        id: 'office',
+        microenvironment: 'indoor',
+        controls: [],
+        controlBasis: 'demo:fictional-office-no-controls',
+      },
+    ]);
+  });
+
+  it('marks the no-travel/setup assumption as fictional, not an operating attestation', () => {
+    const assumption = demoRecords().find(
+      ({ ref }) => ref.id === 'demo:fictional-no-travel-setup',
+    )?.record;
+    expect(assumption).toMatchObject({
+      scope: 'fictional_fixture_only',
+      no_travel_required: true,
+      no_setup_required: true,
+      operational_attestation: false,
+    });
   });
 
   it.each<{
