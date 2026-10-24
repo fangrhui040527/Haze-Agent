@@ -5,7 +5,7 @@
   "source_ref": {
     "id": "demo:raw-pm25-nominal-csv",
     "revision": 1,
-    "sha256": "558d862f788c05ab51a7dae14495f3972755a0e617f36c19f3d98e017383fe3c"
+    "sha256": "6013a15d781efff196c643af3a39f869b2767185202cfa9a0a9e89d541335b8e"
   },
   "series": [
     {
@@ -14,13 +14,13 @@
       "evidence_ref": {
         "id": "demo:pm25-yard-nominal",
         "revision": 1,
-        "sha256": "3fb04afaa2ee2be67676d15f1514e3bf004fca1b0d6d13eae1eb0274c9a31f95"
+        "sha256": "ca1e5034bf17bb173a4655fb8532ab6f1ba042070eeab732dfa725239a9bffc1"
       },
       "source_kind": "synthetic_fixture",
       "source_ref": {
         "id": "demo:raw-pm25-nominal-csv",
         "revision": 1,
-        "sha256": "558d862f788c05ab51a7dae14495f3972755a0e617f36c19f3d98e017383fe3c"
+        "sha256": "6013a15d781efff196c643af3a39f869b2767185202cfa9a0a9e89d541335b8e"
       },
       "run_id": "fixture-run-nominal",
       "pollutant": "PM2.5",
@@ -118,13 +118,13 @@
       "evidence_ref": {
         "id": "demo:pm25-office-nominal",
         "revision": 1,
-        "sha256": "e6c3b7c58470e37d8c7b053bee90cd90cb408e30c63cb614aac3981a455a1c9f"
+        "sha256": "eb26dc84476f569378cd3cb5a01dfe1eb92b441f6785a148714b0c24641b4c0d"
       },
       "source_kind": "synthetic_fixture",
       "source_ref": {
         "id": "demo:raw-pm25-nominal-csv",
         "revision": 1,
-        "sha256": "558d862f788c05ab51a7dae14495f3972755a0e617f36c19f3d98e017383fe3c"
+        "sha256": "6013a15d781efff196c643af3a39f869b2767185202cfa9a0a9e89d541335b8e"
       },
       "run_id": "fixture-run-nominal",
       "pollutant": "PM2.5",

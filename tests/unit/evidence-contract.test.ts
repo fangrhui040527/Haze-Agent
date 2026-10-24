@@ -185,6 +185,54 @@ function nominalFixture() {
   return { evidence, series, source };
 }
 
+function plus20Fixture() {
+  const evidence = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../input_examples/v2/environmental/plus-20-evidence.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  ) as {
+    scenario_id: string;
+    scenario_kind: string;
+    transformation: {
+      method_id: string;
+      method_version: string;
+      operation: string;
+      amount: number;
+      unit: string;
+      source_scenario: string;
+      preserves_native_intervals: boolean;
+      notice: string;
+    };
+    records: EvidenceRecord[];
+  };
+  const series = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../input_examples/v2/environmental/plus-20-series.json',
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  ) as {
+    scenario_id: string;
+    scenario_kind: string;
+    source_ref: { id: string; revision: number; sha256: string };
+    transformation: typeof evidence.transformation;
+    series: EnvironmentalSeries[];
+  };
+  const source = readFileSync(
+    new URL(
+      '../../input_examples/v2/environmental/plus-20-pm25.csv',
+      import.meta.url,
+    ),
+  );
+  return { evidence, series, source };
+}
+
 describe('environmental evidence contracts', () => {
   it('registers the architecture evidence and resolved-series versions', () => {
     expect(CONTRACT_VERSIONS.evidence).toBe('haze.evidence.v2');
@@ -254,7 +302,7 @@ describe('environmental evidence contracts', () => {
     const { evidence, series, source } = nominalFixture();
     expect(series.timezone).toBe('Asia/Kuala_Lumpur');
     expect(createHash('sha256').update(source).digest('hex')).toBe(
-      '558d862f788c05ab51a7dae14495f3972755a0e617f36c19f3d98e017383fe3c',
+      '6013a15d781efff196c643af3a39f869b2767185202cfa9a0a9e89d541335b8e',
     );
     expect(evidence.records).toHaveLength(2);
     expect(series.series).toHaveLength(2);
@@ -360,5 +408,140 @@ describe('environmental evidence contracts', () => {
     ).toContain(
       'Office values are independently fictional, not derived from yard values or a filtration assumption.',
     );
+  });
+
+  it('preserves nominal hourly intervals through the pinned fictional +20 transformation', () => {
+    const nominal = nominalFixture();
+    const transformed = plus20Fixture();
+    const rawHash = createHash('sha256')
+      .update(transformed.source)
+      .digest('hex');
+    const csvRows = transformed.source
+      .toString('utf8')
+      .trimEnd()
+      .split(/\r?\n/)
+      .slice(1);
+    const expected = new Map([
+      ['yard', [120, 100, 70, 50]],
+      ['office', [40, 40, 40, 40]],
+    ]);
+
+    expect(transformed.evidence.scenario_id).toBe('plus_20_sensitivity');
+    expect(transformed.series.scenario_id).toBe('plus_20_sensitivity');
+    expect(transformed.evidence.scenario_kind).toBe(
+      'fictional_engineering_sensitivity',
+    );
+    expect(transformed.series.scenario_kind).toBe(
+      'fictional_engineering_sensitivity',
+    );
+    expect(transformed.evidence.transformation).toEqual(
+      transformed.series.transformation,
+    );
+    expect(transformed.evidence.transformation).toMatchObject({
+      method_id: 'fixture:pm25-add-20-ug-m3',
+      method_version: '1.0.0',
+      operation: 'add_constant',
+      amount: 20,
+      unit: 'ug/m3',
+      source_scenario: 'nominal',
+      preserves_native_intervals: true,
+    });
+    expect(transformed.evidence.transformation.notice).toContain(
+      'not a forecast-error distribution, supported scientific uncertainty, or operational uncertainty treatment',
+    );
+    expect(transformed.evidence.records).toHaveLength(2);
+    expect(transformed.series.series).toHaveLength(2);
+    expect(transformed.series.source_ref.sha256).toBe(rawHash);
+
+    for (const outputRecord of transformed.evidence.records) {
+      const output = evidenceSchema.parse(outputRecord);
+      expect(output.input_origin).toBe('synthetic_fixture');
+      expect(output.source_kind).toBe('synthetic_fixture');
+      expect(output.original_timezone).toBe('Asia/Kuala_Lumpur');
+      expect(output.raw_ref).toBe('demo:raw-pm25-plus-20-csv');
+      expect(output.raw_sha256).toBe(rawHash);
+      if (output.locator.kind !== 'data')
+        throw new Error('test_fixture_expected_sensitivity_data_locator');
+      const location = output.locator.location_ids[0];
+      if (!location)
+        throw new Error('test_fixture_expected_sensitivity_location');
+      const nominalRecord = nominal.evidence.records.find(
+        (record) =>
+          record.locator.kind === 'data' &&
+          record.locator.location_ids.includes(location),
+      );
+      if (!nominalRecord)
+        throw new Error('test_fixture_missing_nominal_evidence_lineage');
+      const transformationStep = output.provenance.chain.at(-1);
+      expect(transformationStep).toMatchObject({
+        operation: 'transformation',
+        method_id: 'fixture:pm25-add-20-ug-m3',
+        method_version: '1.0.0',
+        input_refs: [
+          {
+            id: nominalRecord.evidence_id,
+            revision: nominalRecord.revision,
+            sha256: contractHash(nominalRecord),
+          },
+        ],
+      });
+      const selectedRows = csvRows.filter(
+        (row) =>
+          output.locator.kind === 'data' &&
+          output.locator.row_ids.includes(row.split(',')[0] ?? ''),
+      );
+      expect(
+        createHash('sha256')
+          .update(selectedRows.join('\n'), 'utf8')
+          .digest('hex'),
+      ).toBe(output.locator.selection_sha256);
+    }
+
+    const nominalByLocation = new Map(
+      nominal.series.series.map((entry) => [entry.location_id, entry]),
+    );
+    const outputByLocation = new Map(
+      transformed.series.series.map((entry) => [entry.location_id, entry]),
+    );
+    expect(outputByLocation.size).toBe(2);
+    for (const [location, outputValue] of expected) {
+      const output = environmentalSeriesSchema.parse(
+        outputByLocation.get(location),
+      );
+      const source = environmentalSeriesSchema.parse(
+        nominalByLocation.get(location),
+      );
+      expect(output.location_id).toBe(location);
+      expect(output.pollutant).toBe(source.pollutant);
+      expect(output.unit).toBe(source.unit);
+      expect(output.source_kind).toBe('synthetic_fixture');
+      expect(output.native_temporal_resolution).toEqual({
+        value: 1,
+        unit: 'hour',
+      });
+      expect(output.source_ref.sha256).toBe(rawHash);
+      expect(output.intervals.map(({ value }) => value)).toEqual(outputValue);
+      expect(output.intervals.map(({ start, end }) => [start, end])).toEqual(
+        source.intervals.map(({ start, end }) => [start, end]),
+      );
+      expect(
+        output.intervals.map(({ value }, index) => {
+          const nominalValue = source.intervals[index]?.value;
+          if (
+            value === null ||
+            nominalValue === null ||
+            nominalValue === undefined
+          )
+            throw new Error('test_fixture_missing_scenario_measurement');
+          return value - nominalValue;
+        }),
+      ).toEqual([20, 20, 20, 20]);
+      const outputRecord = transformed.evidence.records.find(
+        ({ evidence_id }) => evidence_id === output.evidence_ref.id,
+      );
+      if (!outputRecord)
+        throw new Error('test_fixture_missing_sensitivity_evidence_record');
+      expect(contractHash(outputRecord)).toBe(output.evidence_ref.sha256);
+    }
   });
 });
