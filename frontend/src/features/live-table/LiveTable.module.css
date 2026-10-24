@@ -1,0 +1,286 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  font-size: var(--text-lg);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.field input,
+.field select {
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  max-width: 180px;
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.pendingBar {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-highlight);
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scrollBox {
+  /* Contains absolutely-positioned screen-reader text; without this it stretches the whole page. */
+  position: relative;
+  max-height: var(--table-height);
+  min-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.table {
+  width: 100%;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2);
+  background: var(--color-surface-2);
+  text-align: left;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover td {
+  background: var(--color-surface-2);
+}
+
+.num {
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Keep "Read more" visible even when the table scrolls sideways on narrower screens. */
+.table th:last-child,
+.table td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--color-surface);
+  box-shadow: -6px 0 6px -6px rgb(0 0 0 / 0.25);
+}
+
+.table th:last-child {
+  background: var(--color-surface-2);
+  z-index: 2;
+}
+
+.summary {
+  max-width: 220px;
+  min-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.trendUp {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.trendDown {
+  color: var(--color-ok);
+  font-weight: 700;
+}
+
+.scoreButton {
+  min-width: 52px;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.scoreButton[aria-expanded='true'] {
+  border-color: var(--color-accent);
+}
+
+.fresh td,
+.fresh.card {
+  animation: freshFade 4s ease-out;
+}
+
+@keyframes freshFade {
+  from {
+    background: var(--color-highlight);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fresh td,
+  .fresh.card {
+    animation: none;
+    background: var(--color-highlight);
+  }
+}
+
+.retracted td {
+  color: var(--color-muted);
+}
+
+.retracted .summary {
+  text-decoration: line-through;
+}
+
+.breakdownRow td {
+  background: var(--color-surface-2);
+  border-top: none;
+}
+
+.breakdown ul {
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.breakdown li {
+  display: grid;
+  grid-template-columns: 90px max-content 1fr;
+  gap: var(--space-2);
+}
+
+.breakdownTitle {
+  font-weight: 700;
+}
+
+.partLabel {
+  font-weight: 600;
+}
+
+.partPoints {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.loading {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+}
+
+.card > a {
+  justify-self: end;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.cardTitle {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.cardRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}

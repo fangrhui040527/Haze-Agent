@@ -1,0 +1,513 @@
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router';
+import { useLiveData } from '../../app/liveDataContext.ts';
+import {
+  useMediaQuery,
+  useNow,
+  useSessionState,
+} from '../../shared/hooks/hooks.ts';
+import { itemBand, itemPm25 } from '../../shared/lib/bands.ts';
+import { CATEGORY_LABELS, STATUS_LABELS } from '../../shared/lib/labels.ts';
+import { formatDateTime, utcOffsetLabel } from '../../shared/lib/time.ts';
+import type {
+  CategoryId,
+  HazeItem,
+  ItemStatus,
+  Location,
+  Trend,
+} from '../../shared/types/domain.ts';
+import { BandBadge, StatusBadge } from '../../shared/ui/Badge.tsx';
+import { Button, buttonClass } from '../../shared/ui/Button.tsx';
+import { Skeleton, StateMessage } from '../../shared/ui/States.tsx';
+import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
+import styles from './LiveTable.module.css';
+import { rankItems, type RankedItem, type RankPart } from './ranking.ts';
+
+interface Filters {
+  search: string;
+  locationId: string;
+  category: CategoryId | '';
+  status: ItemStatus | '';
+  sort: 'rank' | 'newest';
+}
+
+const NO_FILTERS: Filters = {
+  search: '',
+  locationId: '',
+  category: '',
+  status: '',
+  sort: 'rank',
+};
+
+function matches(ranked: RankedItem, f: Filters): boolean {
+  const { item, location } = ranked;
+  if (f.locationId && item.locationId !== f.locationId) return false;
+  if (f.category && item.category !== f.category) return false;
+  if (f.status && item.status !== f.status) return false;
+  if (f.search) {
+    const haystack =
+      `${item.headline} ${item.summary} ${location?.name ?? ''} ${location?.country ?? ''} ${location?.region ?? ''}`.toLowerCase();
+    if (
+      !f.search
+        .toLowerCase()
+        .split(/\s+/)
+        .every((word) => haystack.includes(word))
+    )
+      return false;
+  }
+  return true;
+}
+
+export function LiveTable() {
+  const live = useLiveData();
+  const now = useNow(30_000);
+  const isNarrow = useMediaQuery('(max-width: 767px)');
+  const [filters, setFilters] = useSessionState<Filters>(
+    'hazewatch.table.filters',
+    NO_FILTERS,
+  );
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const ranked = useMemo(
+    () => rankItems(live.items, live.locations, now),
+    [live.items, live.locations, now],
+  );
+  const visible = useMemo(() => {
+    const list = ranked.filter((r) => matches(r, filters));
+    if (filters.sort === 'newest') {
+      list.sort(
+        (a, b) => Date.parse(b.item.updatedAt) - Date.parse(a.item.updatedAt),
+      );
+    }
+    return list;
+  }, [ranked, filters]);
+
+  const sortedLocations = useMemo(
+    () => [...live.locations].sort((a, b) => a.name.localeCompare(b.name)),
+    [live.locations],
+  );
+
+  // Remember the scroll position inside the table box when going to a detail page and back.
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box || live.status !== 'ready') return;
+    const saved = Number(sessionStorage.getItem('hazewatch.table.scroll') ?? 0);
+    if (saved > 0) box.scrollTop = saved;
+    const onScroll = () =>
+      sessionStorage.setItem('hazewatch.table.scroll', String(box.scrollTop));
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return () => box.removeEventListener('scroll', onScroll);
+  }, [live.status]);
+
+  const update = (patch: Partial<Filters>) =>
+    setFilters({ ...filters, ...patch });
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const filtersActive =
+    JSON.stringify({ ...filters, sort: 'rank' }) !== JSON.stringify(NO_FILTERS);
+
+  return (
+    <section className={styles.wrapper} aria-labelledby="live-table-title">
+      <div className={styles.toolbar}>
+        <h2 id="live-table-title" className={styles.title}>
+          Live haze information
+        </h2>
+        <div className={styles.filters}>
+          <label className={styles.field}>
+            <span className="visually-hidden">Search</span>
+            <input
+              type="search"
+              placeholder="Search…"
+              value={filters.search}
+              onChange={(e) => update({ search: e.target.value })}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className="visually-hidden">Location</span>
+            <select
+              value={filters.locationId}
+              onChange={(e) => update({ locationId: e.target.value })}
+            >
+              <option value="">All locations</option>
+              {sortedLocations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}, {l.countryCode}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className="visually-hidden">Category</span>
+            <select
+              value={filters.category}
+              onChange={(e) =>
+                update({ category: e.target.value as Filters['category'] })
+              }
+            >
+              <option value="">All categories</option>
+              {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className="visually-hidden">Status</span>
+            <select
+              value={filters.status}
+              onChange={(e) =>
+                update({ status: e.target.value as Filters['status'] })
+              }
+            >
+              <option value="">All statuses</option>
+              {Object.entries(STATUS_LABELS).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Sort</span>
+            <select
+              value={filters.sort}
+              onChange={(e) =>
+                update({ sort: e.target.value as Filters['sort'] })
+              }
+            >
+              <option value="rank">Rank</option>
+              <option value="newest">Newest</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className={styles.metaRow}>
+        <span aria-live="polite">
+          {live.status === 'ready' &&
+            `Showing ${visible.length} of ${ranked.length}`}
+        </span>
+        <label className={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={live.autoApply}
+            onChange={(e) => live.setAutoApply(e.target.checked)}
+          />
+          Show new updates automatically
+        </label>
+      </div>
+
+      <div aria-live="polite">
+        {live.pending.length > 0 && (
+          <button
+            type="button"
+            className={styles.pendingBar}
+            onClick={live.applyPending}
+          >
+            ▲ {live.pending.length} new update
+            {live.pending.length === 1 ? '' : 's'} — show
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={scrollRef}
+        className={styles.scrollBox}
+        tabIndex={0}
+        role="region"
+        aria-label="Live haze information, scrollable"
+      >
+        {live.status === 'loading' && <LoadingRows />}
+        {live.status === 'error' && (
+          <StateMessage
+            kind="error"
+            title="Couldn't load haze data."
+            action={<Button onClick={live.retry}>Retry</Button>}
+          >
+            {live.error}
+          </StateMessage>
+        )}
+        {live.status === 'ready' && visible.length === 0 && (
+          <StateMessage
+            kind="empty"
+            title={
+              ranked.length === 0
+                ? 'No haze information yet.'
+                : 'No items match your filters.'
+            }
+            action={
+              filtersActive ? (
+                <Button
+                  onClick={() =>
+                    setFilters({ ...NO_FILTERS, sort: filters.sort })
+                  }
+                >
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
+        {live.status === 'ready' &&
+          visible.length > 0 &&
+          (isNarrow ? (
+            <ul className={styles.cards}>
+              {visible.map((r) => (
+                <ItemCard
+                  key={r.item.id}
+                  ranked={r}
+                  fresh={live.freshIds.has(r.item.id)}
+                />
+              ))}
+            </ul>
+          ) : (
+            <table className={styles.table}>
+              <caption className="visually-hidden">
+                Haze information ranked by score. Use the score button to see
+                why an item has its rank.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Score</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Summary</th>
+                  <th scope="col">Air quality</th>
+                  <th scope="col">Trend</th>
+                  <th scope="col">Evidence</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">
+                    <span className="visually-hidden">Details</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((r, index) => {
+                  const open = expanded.has(r.item.id);
+                  const breakdownId = `rank-${r.item.id}`;
+                  return (
+                    <Fragment key={r.item.id}>
+                      <tr
+                        className={[
+                          live.freshIds.has(r.item.id) ? styles.fresh : '',
+                          r.item.status === 'retracted' ? styles.retracted : '',
+                        ].join(' ')}
+                      >
+                        <td className={styles.num}>
+                          {filters.sort === 'rank' ? r.rank : index + 1}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.scoreButton}
+                            aria-expanded={open}
+                            aria-controls={breakdownId}
+                            onClick={() => toggle(r.item.id)}
+                            title="Why this rank?"
+                          >
+                            {r.score}
+                            <span aria-hidden="true"> ⓘ</span>
+                            <span className="visually-hidden">
+                              {' '}
+                              — show why this item has rank {r.rank}
+                            </span>
+                          </button>
+                        </td>
+                        <td className={styles.nowrap}>
+                          <TimeAgo iso={r.item.updatedAt} prefix="Updated" />
+                        </td>
+                        <td>
+                          <LocationName
+                            location={r.location}
+                            iso={r.item.observedAt}
+                          />
+                        </td>
+                        <td>{CATEGORY_LABELS[r.item.category]}</td>
+                        <td className={styles.summary} title={r.item.summary}>
+                          {r.item.headline}
+                        </td>
+                        <td>
+                          <BandBadge
+                            band={itemBand(r.item)}
+                            pm25={itemPm25(r.item)}
+                            compact
+                          />
+                        </td>
+                        <td>
+                          <TrendCell trend={r.item.trend} />
+                        </td>
+                        <td>
+                          <EvidenceCell item={r.item} />
+                        </td>
+                        <td>
+                          <StatusBadge status={r.item.status} />
+                        </td>
+                        <td>
+                          <Link
+                            to={`/item/${encodeURIComponent(r.item.id)}`}
+                            className={buttonClass('secondary', 'small')}
+                          >
+                            Read more
+                            <span className="visually-hidden">
+                              {' '}
+                              about {r.item.headline}
+                            </span>
+                          </Link>
+                        </td>
+                      </tr>
+                      {open && (
+                        <tr id={breakdownId} className={styles.breakdownRow}>
+                          <td />
+                          <td colSpan={10}>
+                            <RankBreakdown parts={r.parts} score={r.score} />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          ))}
+      </div>
+    </section>
+  );
+}
+
+function LoadingRows() {
+  return (
+    <div
+      className={styles.loading}
+      aria-busy="true"
+      aria-label="Loading haze data"
+    >
+      {Array.from({ length: 8 }, (_, i) => (
+        <Skeleton key={i} height="28px" />
+      ))}
+    </div>
+  );
+}
+
+function LocationName({
+  location,
+  iso,
+}: {
+  location: Location | null;
+  iso: string;
+}) {
+  if (!location) return <span>Unknown location</span>;
+  const local = `${formatDateTime(iso, location.timeZone)} local (${utcOffsetLabel(iso, location.timeZone)})`;
+  return (
+    <span
+      className={styles.nowrap}
+      title={`${location.region} · observed ${local}`}
+    >
+      {location.name},{' '}
+      <abbr title={location.country}>{location.countryCode}</abbr>
+    </span>
+  );
+}
+
+function TrendCell({ trend }: { trend: Trend | null }) {
+  if (trend === null) return <span className={styles.muted}>—</span>;
+  const symbol = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+  const text =
+    trend === 'up' ? 'rising' : trend === 'down' ? 'falling' : 'steady';
+  return (
+    <span
+      title={text}
+      className={
+        trend === 'up'
+          ? styles.trendUp
+          : trend === 'down'
+            ? styles.trendDown
+            : ''
+      }
+    >
+      <span aria-hidden="true">{symbol}</span>
+      <span className="visually-hidden">{text}</span>
+    </span>
+  );
+}
+
+function EvidenceCell({ item }: { item: HazeItem }) {
+  const total = item.checks.length;
+  const passed = item.checks.filter((c) => c.result === 'pass').length;
+  if (total === 0) return <span className={styles.muted}>no checks</span>;
+  return (
+    <span
+      className={styles.nowrap}
+      title={`${passed} of ${total} evidence checks passed · ${item.sources.length} source(s)`}
+    >
+      {passed}/{total}
+      {passed === total && <span aria-hidden="true"> ✓</span>}
+      <span className={styles.muted}> · {item.sources.length} src</span>
+    </span>
+  );
+}
+
+export function RankBreakdown({
+  parts,
+  score,
+}: {
+  parts: RankPart[];
+  score: number;
+}) {
+  return (
+    <div className={styles.breakdown}>
+      <p className={styles.breakdownTitle}>Why this score ({score} / 100)</p>
+      <ul>
+        {parts.map((p) => (
+          <li key={p.key}>
+            <span className={styles.partLabel}>{p.label}</span>
+            <span className={styles.partPoints}>
+              {p.points > 0 ? '+' : ''}
+              {p.points}
+              {p.max > 0 && <span className={styles.muted}> / {p.max}</span>}
+            </span>
+            <span className={styles.muted}>{p.reason}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ItemCard({ ranked, fresh }: { ranked: RankedItem; fresh: boolean }) {
+  const { item, location } = ranked;
+  return (
+    <li className={`${styles.card} ${fresh ? styles.fresh : ''}`}>
+      <div className={styles.cardTop}>
+        <span>
+          #{ranked.rank} · score {ranked.score}
+        </span>
+        <TimeAgo iso={item.updatedAt} prefix="Updated" />
+      </div>
+      <p className={styles.cardTitle}>{item.headline}</p>
+      <p className={styles.muted}>
+        <LocationName location={location} iso={item.observedAt} /> ·{' '}
+        {CATEGORY_LABELS[item.category]}
+      </p>
+      <div className={styles.cardRow}>
+        <BandBadge band={itemBand(item)} pm25={itemPm25(item)} />
+        <StatusBadge status={item.status} />
+        <EvidenceCell item={item} />
+      </div>
+      <Link
+        to={`/item/${encodeURIComponent(item.id)}`}
+        className={buttonClass('secondary', 'small')}
+      >
+        Read more<span className="visually-hidden"> about {item.headline}</span>
+      </Link>
+    </li>
+  );
+}

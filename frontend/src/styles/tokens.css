@@ -1,0 +1,129 @@
+/*
+ * Design tokens: the ONLY place colours, spacing, fonts, radii and motion are defined.
+ * Components use var(--token-name). Change a value here and it updates everywhere.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces and text */
+  --color-bg: #f4f2ed;
+  --color-surface: #ffffff;
+  --color-surface-2: #ece9e1;
+  --color-text: #1c2024;
+  --color-muted: #5a636c;
+  --color-border: #d6d2c7;
+  --color-accent: #a8481a;
+  --color-accent-hover: #8c3a12;
+  --color-accent-contrast: #ffffff;
+  --color-focus: #1f6feb;
+  --color-highlight: #fff4cc;
+
+  /* Status */
+  --color-ok: #2c7a39;
+  --color-warn: #9a5b00;
+  --color-error: #b3261e;
+  --color-info: #2b5fa8;
+  --color-stale: #66696f;
+  --color-ok-bg: #e3f2e5;
+  --color-warn-bg: #fdf0d8;
+  --color-error-bg: #fbe4e2;
+  --color-info-bg: #e3ecf8;
+  --color-stale-bg: #ebebec;
+
+  /* Air-quality bands (always shown WITH a text label, never colour alone) */
+  --band-good: #3d9a4f;
+  --band-moderate: #e0b81f;
+  --band-sensitive: #ec8526;
+  --band-unhealthy: #d4413a;
+  --band-very-unhealthy: #8f3f9f;
+  --band-hazardous: #6e1b2e;
+  --band-unknown: #9aa0a6;
+
+  /* Spacing (4 px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Type */
+  --font-ui:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono:
+    ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --line-height: 1.5;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-2: 0 4px 12px rgb(0 0 0 / 0.12);
+
+  /* Layers */
+  --z-header: 10;
+  --z-overlay: 20;
+
+  /* Layout */
+  --header-height: 56px;
+  --page-gutter: 16px;
+  --content-max: 1440px;
+  --table-height: 36vh;
+  /* Office canvas height cap, so chat + office fit on a laptop screen together with the table. */
+  --office-height: 56vh;
+
+  /* Motion: --motion-scale becomes 0 when the user asks for reduced motion */
+  --motion-scale: 1;
+  --duration-fast: calc(150ms * var(--motion-scale));
+  --duration-base: calc(250ms * var(--motion-scale));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #141619;
+    --color-surface: #1d2024;
+    --color-surface-2: #262a2f;
+    --color-text: #e8e6e1;
+    --color-muted: #a3a9b0;
+    --color-border: #363b42;
+    --color-accent: #f08a4b;
+    --color-accent-hover: #f6a374;
+    --color-accent-contrast: #1a1006;
+    --color-focus: #6ea8ff;
+    --color-highlight: #3a3418;
+
+    --color-ok: #6fcf7f;
+    --color-warn: #f2b84b;
+    --color-error: #ff8a80;
+    --color-info: #8ab4f8;
+    --color-stale: #a7abb1;
+    --color-ok-bg: #1f3324;
+    --color-warn-bg: #3a2c12;
+    --color-error-bg: #3d1f1d;
+    --color-info-bg: #1d2a3d;
+    --color-stale-bg: #2b2d31;
+
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 4px 12px rgb(0 0 0 / 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-scale: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --table-height: 60vh;
+    --page-gutter: 12px;
+  }
+}
