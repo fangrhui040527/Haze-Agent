@@ -44,7 +44,10 @@
   cursor: pointer;
   text-align: left;
   box-shadow: none;
-  transition: transform var(--duration-fast), box-shadow var(--duration-fast), background var(--duration-fast);
+  transition:
+    transform var(--duration-fast),
+    box-shadow var(--duration-fast),
+    background var(--duration-fast);
 }
 
 .prompt:hover:not(:disabled) {

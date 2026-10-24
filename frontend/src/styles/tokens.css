@@ -8,7 +8,11 @@
   /* Surfaces and text */
   --color-bg: #f4f2ed;
   --color-surface: #ffffff;
-  --color-panel: color-mix(in srgb, var(--color-bg) 18.5%, var(--color-surface) 81.5%);
+  --color-panel: color-mix(
+    in srgb,
+    var(--color-bg) 18.5%,
+    var(--color-surface) 81.5%
+  );
   --color-surface-2: #ece9e1;
   --color-text: #1c2024;
   --color-muted: #5a636c;
@@ -51,8 +55,8 @@
 
   /* Type */
   --font-ui:
-    'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono:
     ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
   --text-xs: 0.75rem;
@@ -105,7 +109,11 @@
   :root {
     --color-bg: #141619;
     --color-surface: #1d2024;
-    --color-panel: color-mix(in srgb, var(--color-bg) 18.5%, var(--color-surface) 81.5%);
+    --color-panel: color-mix(
+      in srgb,
+      var(--color-bg) 18.5%,
+      var(--color-surface) 81.5%
+    );
     --color-surface-2: #262a2f;
     --color-text: #e8e6e1;
     --color-muted: #a3a9b0;

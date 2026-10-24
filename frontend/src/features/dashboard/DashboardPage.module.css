@@ -22,7 +22,6 @@
   grid-area: office;
 }
 
-
 @media (min-width: 1024px) {
   .grid {
     grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr);

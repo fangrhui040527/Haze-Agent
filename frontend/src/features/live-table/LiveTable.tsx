@@ -275,10 +275,21 @@ export function LiveTable() {
                   <th scope="col">Score</th>
                   <th scope="col">Updated</th>
                   <th scope="col" className={styles.locationCol}>
-                    <label className={`${styles.thFilterLabel} ${filters.locationId ? styles.thFilterActive : ''}`}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.locationId ? styles.thFilterActive : ''}`}
+                    >
                       <span>Location</span>
-                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
-                      {filters.locationId && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.locationId && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
                       <select
                         aria-label="Filter by location"
                         className={styles.thFilterOverlay}
@@ -295,16 +306,29 @@ export function LiveTable() {
                     </label>
                   </th>
                   <th scope="col" className={styles.categoryCol}>
-                    <label className={`${styles.thFilterLabel} ${filters.category ? styles.thFilterActive : ''}`}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.category ? styles.thFilterActive : ''}`}
+                    >
                       <span>Category</span>
-                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
-                      {filters.category && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.category && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
                       <select
                         aria-label="Filter by category"
                         className={styles.thFilterOverlay}
                         value={filters.category}
                         onChange={(e) =>
-                          update({ category: e.target.value as Filters['category'] })
+                          update({
+                            category: e.target.value as Filters['category'],
+                          })
                         }
                       >
                         <option value="">All categories</option>
@@ -316,21 +340,40 @@ export function LiveTable() {
                       </select>
                     </label>
                   </th>
-                  <th scope="col" className={styles.summary}>Summary</th>
-                  <th scope="col" className={styles.airQualityCol}>Air quality</th>
-                  <th scope="col" className={styles.trendCol}>Trend</th>
+                  <th scope="col" className={styles.summary}>
+                    Summary
+                  </th>
+                  <th scope="col" className={styles.airQualityCol}>
+                    Air quality
+                  </th>
+                  <th scope="col" className={styles.trendCol}>
+                    Trend
+                  </th>
                   <th scope="col">Evidence</th>
                   <th scope="col" className={styles.statusCol}>
-                    <label className={`${styles.thFilterLabel} ${filters.status ? styles.thFilterActive : ''}`}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.status ? styles.thFilterActive : ''}`}
+                    >
                       <span>Status</span>
-                      <ChevronDown size={10} strokeWidth={2.5} aria-hidden="true" />
-                      {filters.status && <span className={styles.thFilterDot} aria-hidden="true" />}
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.status && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
                       <select
                         aria-label="Filter by status"
                         className={styles.thFilterOverlay}
                         value={filters.status}
                         onChange={(e) =>
-                          update({ status: e.target.value as Filters['status'] })
+                          update({
+                            status: e.target.value as Filters['status'],
+                          })
                         }
                       >
                         <option value="">All statuses</option>
@@ -372,7 +415,11 @@ export function LiveTable() {
                             title="Why this rank?"
                           >
                             <span>{r.score}</span>
-                            <Info size={13} strokeWidth={2.2} aria-hidden="true" />
+                            <Info
+                              size={13}
+                              strokeWidth={2.2}
+                              aria-hidden="true"
+                            />
                             <span className="visually-hidden">
                               {' '}
                               — show why this item has rank {r.rank}
@@ -423,7 +470,10 @@ export function LiveTable() {
                             aria-label={`Read more about ${r.item.headline}`}
                           >
                             <FileText size={16} aria-hidden="true" />
-                            <span className="visually-hidden"> about {r.item.headline}</span>
+                            <span className="visually-hidden">
+                              {' '}
+                              about {r.item.headline}
+                            </span>
                           </Link>
                         </td>
                       </tr>
@@ -483,7 +533,10 @@ function LocationName({
 function TrendCell({ trend }: { trend: Trend | null }) {
   if (trend === null) {
     return (
-      <span className={`${styles.trendIcon} ${styles.muted}`} title="No trend data">
+      <span
+        className={`${styles.trendIcon} ${styles.muted}`}
+        title="No trend data"
+      >
         <Minus size={15} strokeWidth={2.5} aria-hidden="true" />
         <span className="visually-hidden">No trend data</span>
       </span>
@@ -504,8 +557,12 @@ function TrendCell({ trend }: { trend: Trend | null }) {
             : styles.trendFlat
       }`}
     >
-      {trend === 'up' && <ArrowUp size={15} strokeWidth={2.5} aria-hidden="true" />}
-      {trend === 'down' && <ArrowDown size={15} strokeWidth={2.5} aria-hidden="true" />}
+      {trend === 'up' && (
+        <ArrowUp size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
+      {trend === 'down' && (
+        <ArrowDown size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
       {trend !== 'up' && trend !== 'down' && (
         <ArrowRight size={15} strokeWidth={2.5} aria-hidden="true" />
       )}

@@ -469,9 +469,7 @@ function DatasetStats({
         </span>
         <span className={styles.statsTag}>{edge} edge cases</span>
         <span className={styles.statsTag}>Source: {origin}</span>
-        <span className={styles.statsTag}>
-          {liveEvents} simulated event(s)
-        </span>
+        <span className={styles.statsTag}>{liveEvents} simulated event(s)</span>
         <span className={styles.statsTag}>
           Generated <TimeAgo iso={dataset.generatedAt} />
         </span>
@@ -640,108 +638,110 @@ function Browser({ dataset }: { dataset: DemoDataset }) {
   return (
     <>
       <Panel className={styles.block}>
-      <h2>Browse</h2>
-      <div className={styles.browseToolbar}>
-        <div
-          className={styles.tabs}
-          role="tablist"
-          aria-label="Dataset collections"
-        >
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              type="button"
-              aria-selected={tab === t.id}
-              className={styles.tab}
-              onClick={() => {
-                setTab(t.id);
-                setSelected(null);
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <label className={`${styles.field} ${styles.filterField}`}>
-          <Filter size={17} aria-hidden="true" />
-          <span className="visually-hidden">Filter rows</span>
-          <input
-            type="search"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Type to filter rows…"
-          />
-        </label>
-      </div>
-      <p className={styles.muted}>
-        {filtered.length} row(s)
-        {filtered.length > MAX_ROWS ? `, showing the first ${MAX_ROWS}` : ''}.
-        Select a row to see its JSON.
-        {tab === 'items' &&
-          ' Tip: filter by "edge-case" to see the deliberately awkward items.'}
-      </p>
-      <div className={styles.browser}>
-        <div
-          className={styles.browserTable}
-          tabIndex={0}
-          role="region"
-          aria-label={`${tab} table`}
-        >
-          {filtered.length === 0 ? (
-            <StateMessage
-              kind="empty"
-              title={
-                tab === 'events' ? 'No simulated events yet.' : 'No rows match.'
-              }
+        <h2>Browse</h2>
+        <div className={styles.browseToolbar}>
+          <div
+            className={styles.tabs}
+            role="tablist"
+            aria-label="Dataset collections"
+          >
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                type="button"
+                aria-selected={tab === t.id}
+                className={styles.tab}
+                onClick={() => {
+                  setTab(t.id);
+                  setSelected(null);
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <label className={`${styles.field} ${styles.filterField}`}>
+            <Filter size={17} aria-hidden="true" />
+            <span className="visually-hidden">Filter rows</span>
+            <input
+              type="search"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Type to filter rows…"
             />
-          ) : (
-            <table>
-              <colgroup>
-                {COLUMN_WIDTHS[tab].map((width, index) => (
-                  <col key={index} style={{ width }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  {headers.map((h) => (
-                    <th key={h} scope="col">
-                      {h}
-                    </th>
+          </label>
+        </div>
+        <p className={styles.muted}>
+          {filtered.length} row(s)
+          {filtered.length > MAX_ROWS ? `, showing the first ${MAX_ROWS}` : ''}.
+          Select a row to see its JSON.
+          {tab === 'items' &&
+            ' Tip: filter by "edge-case" to see the deliberately awkward items.'}
+        </p>
+        <div className={styles.browser}>
+          <div
+            className={styles.browserTable}
+            tabIndex={0}
+            role="region"
+            aria-label={`${tab} table`}
+          >
+            {filtered.length === 0 ? (
+              <StateMessage
+                kind="empty"
+                title={
+                  tab === 'events'
+                    ? 'No simulated events yet.'
+                    : 'No rows match.'
+                }
+              />
+            ) : (
+              <table>
+                <colgroup>
+                  {COLUMN_WIDTHS[tab].map((width, index) => (
+                    <col key={index} style={{ width }} />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.slice(0, MAX_ROWS).map((r) => (
-                  <tr
-                    key={r.key}
-                    aria-selected={r.key === selected}
-                    className={r.key === selected ? styles.selected : ''}
-                  >
-                    {r.cells.map((c, i) => (
-                      <td key={i}>
-                        {i === 0 ? (
-                          <button
-                            type="button"
-                            className={styles.rowButton}
-                            onClick={() => {
-                              setSelected(r.key);
-                            }}
-                          >
-                            {c}
-                          </button>
-                        ) : (
-                          c
-                        )}
-                      </td>
+                </colgroup>
+                <thead>
+                  <tr>
+                    {headers.map((h) => (
+                      <th key={h} scope="col">
+                        {h}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {filtered.slice(0, MAX_ROWS).map((r) => (
+                    <tr
+                      key={r.key}
+                      aria-selected={r.key === selected}
+                      className={r.key === selected ? styles.selected : ''}
+                    >
+                      {r.cells.map((c, i) => (
+                        <td key={i}>
+                          {i === 0 ? (
+                            <button
+                              type="button"
+                              className={styles.rowButton}
+                              onClick={() => {
+                                setSelected(r.key);
+                              }}
+                            >
+                              {c}
+                            </button>
+                          ) : (
+                            c
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
-      </div>
       </Panel>
       {selectedRow &&
         createPortal(

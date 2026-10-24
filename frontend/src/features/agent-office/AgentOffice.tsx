@@ -50,7 +50,9 @@ export function AgentOffice({
     'hazewatch.office.visible',
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
-  const [internalSelected, setInternalSelected] = useState<AgentId | null>(null);
+  const [internalSelected, setInternalSelected] = useState<AgentId | null>(
+    null,
+  );
   const isControlled = externalSelected !== undefined;
   const selected = isControlled ? externalSelected : internalSelected;
   const onSelect = externalOnSelect ?? setInternalSelected;

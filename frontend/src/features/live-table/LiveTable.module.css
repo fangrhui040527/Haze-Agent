@@ -225,9 +225,14 @@
   max-width: 100%;
   min-height: 42px;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-highlight) 72%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-highlight) 72%,
+    var(--color-surface)
+  );
   color: var(--color-text);
   text-align: left;
   font-weight: 700;
@@ -407,7 +412,11 @@
 }
 
 .thFilterLabel:hover {
-  background: color-mix(in srgb, var(--color-surface-2) 80%, var(--color-accent) 20%);
+  background: color-mix(
+    in srgb,
+    var(--color-surface-2) 80%,
+    var(--color-accent) 20%
+  );
   color: var(--color-accent);
 }
 
@@ -439,7 +448,6 @@
   font-size: inherit;
   border: none;
 }
-
 
 .locationCol {
   white-space: nowrap;
@@ -611,7 +619,7 @@
   background: var(--color-accent-hover);
   color: #ffffff;
   border-color: var(--color-accent-hover);
-  transform: scale(0.90);
+  transform: scale(0.9);
   box-shadow: none;
 }
 
@@ -627,7 +635,7 @@
     color: #ffffff;
     border-color: var(--color-accent-hover);
     box-shadow: none;
-    transform: scale(0.90);
+    transform: scale(0.9);
   }
 }
 
