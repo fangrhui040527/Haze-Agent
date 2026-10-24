@@ -14,6 +14,7 @@ import styles from './AgentOffice.module.css';
 import { OFFICE_HEIGHT, OFFICE_WIDTH, STATIONS } from './officeLayout.ts';
 import {
   deriveAgentStatuses,
+  isLocalCheckRun,
   OfficeModel,
   type AgentStatus,
   type Pose,
@@ -58,7 +59,8 @@ export function AgentOffice({
   const onSelect = externalOnSelect ?? setInternalSelected;
   const statuses = useMemo(() => deriveAgentStatuses(run.events), [run.events]);
   const levelB = run.events.some((e) => e.type === 'run_state');
-  const toggle = (id: AgentId) => onSelect(selected === id ? null : id);
+  const localCheck = isLocalCheckRun(run.events);
+  const toggle = (id: AgentId) => setSelected((s) => (s === id ? null : id));
 
   return (
     <section className={styles.office} aria-labelledby="office-title">
@@ -89,7 +91,12 @@ export function AgentOffice({
           onSelect={onSelect}
         />
       )}
-      {levelB && (
+      {localCheck && (
+        <p className={styles.note}>
+          This scheduling request uses local checks. No model agents are run.
+        </p>
+      )}
+      {levelB && !localCheck && (
         <p className={styles.note}>
           The backend only reports the overall run state, so individual agent
           steps are not shown.

@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -6,16 +8,30 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { Link } from 'react-router';
-import { AgentRunError } from '../../services/agents/index.ts';
+import {
+  AgentRunError,
+  KLANG_CREW_EXAMPLE,
+} from '../../services/agents/index.ts';
 import { useLocalStorageState, useNow } from '../../shared/hooks/hooks.ts';
 import { isAbortError } from '../../shared/lib/delay.ts';
 import { formatDuration } from '../../shared/lib/time.ts';
-import type { Citation } from '../../shared/types/agents.ts';
+import type { AgentAnswer, Citation } from '../../shared/types/agents.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import styles from './ChatPanel.module.css';
+
+const ScheduleResult = lazy(() =>
+  import('./ScheduleResult.tsx').then((module) => ({
+    default: module.ScheduleResult,
+  })),
+);
+const AgentExecution = lazy(() =>
+  import('./AgentExecution.tsx').then((module) => ({
+    default: module.AgentExecution,
+  })),
+);
 
 interface ChatMessage {
   id: string;
@@ -24,7 +40,9 @@ interface ChatMessage {
   text?: string;
   paragraphs?: string[];
   citations?: Citation[];
-  source?: 'mock_template' | 'model' | 'template_fallback';
+  source?: AgentAnswer['source'];
+  scheduling?: AgentAnswer['scheduling'];
+  agentExecution?: AgentAnswer['agentExecution'];
   state: 'pending' | 'done' | 'error' | 'cancelled';
   error?: string;
   retryable?: boolean;
@@ -34,6 +52,7 @@ interface ChatMessage {
 }
 
 const EXAMPLE_PROMPTS = [
+  KLANG_CREW_EXAMPLE,
   "What's the haze situation in Kuala Lumpur?",
   'Compare Kuala Lumpur and Johor Bahru today',
   'Will the haze in Kuching get worse tomorrow?',
@@ -46,6 +65,8 @@ const SOURCE_LABEL = {
   mock_template: 'Demo answer (template)',
   model: 'AI model answer',
   template_fallback: 'Template fallback (AI unavailable)',
+  computed_demo: 'Computed fictional sample · no AI model run',
+  input_required: 'Planning input needed',
 } as const;
 
 const MAX_STORED = 50;
@@ -64,7 +85,7 @@ export function ChatPanel({
   run: AgentRun;
   prefill: ChatPrefill | null;
 }) {
-  // Chat history stays in this browser only (privacy: nothing is sent to a server by the mock).
+  // History, including live role receipts, stays in this browser.
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
     'hazewatch.chat.v1',
     [],
@@ -91,7 +112,14 @@ export function ChatPanel({
   // Keep the newest message visible, also when a pending message turns into an answer or error.
   useEffect(() => {
     const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
+    if (list) {
+      const newest = list.lastElementChild as HTMLElement | null;
+      // A schedule is taller than the chat viewport: start at its summary.
+      list.scrollTop =
+        messages.at(-1)?.scheduling && newest
+          ? newest.offsetTop - list.offsetTop
+          : list.scrollHeight;
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -172,6 +200,8 @@ export function ChatPanel({
         paragraphs: answer.paragraphs,
         citations: answer.citations,
         source: answer.source,
+        scheduling: answer.scheduling,
+        agentExecution: answer.agentExecution,
       });
     } catch (error) {
       if (isAbortError(error)) finish({ state: 'cancelled' });
@@ -215,13 +245,11 @@ export function ChatPanel({
       </div>
 
       {messages.length === 0 ? (
-        <div
-          ref={(node) => {
-            historyRef.current = node;
-          }}
-          className={styles.empty}
-        >
-          <p>Ask about haze anywhere in the demo data. Try:</p>
+        <div className={styles.empty}>
+          <p>
+            Ask about haze in the demo data or compare the fictional Klang crew
+            schedule. Try:
+          </p>
           <ul className={styles.prompts}>
             {EXAMPLE_PROMPTS.map((p) => (
               <li key={p}>
@@ -239,11 +267,8 @@ export function ChatPanel({
         </div>
       ) : (
         <ol
-          ref={(node) => {
-            listRef.current = node;
-            historyRef.current = node;
-          }}
-          className={styles.messages}
+          ref={listRef}
+          className={`${styles.messages} ${messages.some((m) => m.scheduling) ? styles.withSchedule : ''}`}
           role="log"
           aria-label="Conversation"
         >
@@ -338,9 +363,24 @@ function MessageBody({
     );
   return (
     <div className={styles.bubble}>
+      {m.agentExecution && (
+        <p className={styles.source}>
+          AI model commentary on the fictional sample
+        </p>
+      )}
       {m.paragraphs?.map((p, i) => (
         <p key={i}>{p}</p>
       ))}
+      {m.agentExecution && (
+        <Suspense fallback={<p role="status">Loading agent execution…</p>}>
+          <AgentExecution execution={m.agentExecution} />
+        </Suspense>
+      )}
+      {m.scheduling && (
+        <Suspense fallback={<p role="status">Loading schedule result…</p>}>
+          <ScheduleResult response={m.scheduling} />
+        </Suspense>
+      )}
       {m.citations && m.citations.length > 0 && (
         <p className={styles.citations}>
           Sources:{' '}
@@ -362,9 +402,11 @@ function MessageBody({
         </p>
       )}
       {m.source && (
-        <Badge tone={m.source === 'model' ? 'info' : 'neutral'}>
-          {SOURCE_LABEL[m.source]}
-        </Badge>
+        <p className={styles.source}>
+          <Badge tone={m.source === 'model' ? 'info' : 'neutral'}>
+            {SOURCE_LABEL[m.source]}
+          </Badge>
+        </p>
       )}
     </div>
   );

@@ -9,11 +9,56 @@ import {
   pointToTile,
   STATIONS,
 } from './officeLayout.ts';
-import { deriveAgentStatuses, OfficeModel } from './officeModel.ts';
+import {
+  deriveAgentStatuses,
+  isLocalCheckRun,
+  OfficeModel,
+} from './officeModel.ts';
 
 const base = { runId: 'r1', at: '2026-10-23T12:00:00Z', message: '' };
 
 describe('deriveAgentStatuses', () => {
+  it('does not claim model execution during or after a local scheduling check', () => {
+    const events: AgentEvent[] = [
+      { ...base, type: 'run_started', executionKind: 'local_check' },
+      { ...base, type: 'run_state', state: 'running' },
+    ];
+    expect(isLocalCheckRun(events)).toBe(true);
+    const assertNotRun = (items: AgentEvent[]) => {
+      for (const status of Object.values(deriveAgentStatuses(items))) {
+        expect(status).toEqual({
+          state: 'idle',
+          text: 'Not run (local check)',
+        });
+      }
+    };
+    assertNotRun(events);
+    assertNotRun([...events, { ...base, type: 'run_completed' }]);
+    assertNotRun([...events, { ...base, type: 'run_cancelled' }]);
+    assertNotRun([
+      ...events,
+      {
+        ...base,
+        type: 'run_failed',
+        agent: null,
+        error: 'unavailable',
+        retryable: true,
+      },
+    ]);
+
+    const nextRun: AgentEvent[] = [
+      ...events,
+      { ...base, type: 'run_started' },
+      {
+        ...base,
+        type: 'agent_working',
+        agent: 'hazeops',
+        message: 'Gathering data',
+      },
+    ];
+    expect(isLocalCheckRun(nextRun)).toBe(false);
+    expect(deriveAgentStatuses(nextRun).hazeops.state).toBe('working');
+  });
   it('follows a run step by step', () => {
     const events: AgentEvent[] = [
       { ...base, type: 'run_started' },
@@ -65,6 +110,22 @@ describe('deriveAgentStatuses', () => {
 });
 
 describe('OfficeModel', () => {
+  it('keeps model actors idle for local checks and resumes normal animation on an agent run', () => {
+    const model = new OfficeModel();
+    model.apply(
+      { ...base, type: 'run_started', executionKind: 'local_check' },
+      0,
+      true,
+    );
+    model.apply({ ...base, type: 'run_state', state: 'running' }, 1, true);
+    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
+    model.apply({ ...base, type: 'run_completed' }, 2, true);
+    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
+    expect(model.runActive).toBe(false);
+    model.apply({ ...base, type: 'run_started' }, 3, true);
+    model.apply({ ...base, type: 'agent_working', agent: 'hazeops' }, 4, true);
+    expect(model.actors.get('hazeops')?.pose).toBe('working');
+  });
   it('walks the Manager to the office and back', () => {
     const model = new OfficeModel();
     model.apply(

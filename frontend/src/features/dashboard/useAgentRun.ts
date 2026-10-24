@@ -1,6 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentService } from '../../services/agents/index.ts';
-import { isAbortError } from '../../shared/lib/delay.ts';
+import { abortError, isAbortError } from '../../shared/lib/delay.ts';
 import type {
   AgentAnswer,
   AgentEvent,
@@ -29,6 +29,14 @@ export function useAgentRun(): AgentRun {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
+  useEffect(
+    () => () => {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    },
+    [],
+  );
+
   const ask = useCallback(async (request: AskRequest) => {
     if (controllerRef.current)
       throw new Error('A question is already being answered.');
@@ -40,16 +48,26 @@ export function useAgentRun(): AgentRun {
     try {
       const answer = await agentService.ask(
         request,
-        (e) => setEvents((prev) => [...prev, e]),
+        (e) => {
+          if (
+            controllerRef.current === controller &&
+            !controller.signal.aborted
+          ) {
+            setEvents((prev) => [...prev, e]);
+          }
+        },
         controller.signal,
       );
+      if (controller.signal.aborted || controllerRef.current !== controller)
+        throw abortError();
       setStatus('completed');
       return answer;
     } catch (error) {
-      setStatus(isAbortError(error) ? 'cancelled' : 'failed');
+      if (controllerRef.current === controller)
+        setStatus(isAbortError(error) ? 'cancelled' : 'failed');
       throw error;
     } finally {
-      controllerRef.current = null;
+      if (controllerRef.current === controller) controllerRef.current = null;
     }
   }, []);
 
