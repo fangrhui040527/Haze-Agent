@@ -168,6 +168,71 @@ describe('v0.13 closed planning contract', () => {
     });
   });
 
+  it('declares bounded aligned starts and keeps baseline timing inside those bounds', () => {
+    const bundle = fixture();
+    const starts = (firstHour: number, lastHour: number) =>
+      Array.from({ length: (lastHour - firstHour) * 4 + 1 }, (_, index) =>
+        t(firstHour + Math.floor(index / 4), (index % 4) * 15),
+      );
+    const expected = new Map([
+      ['inspection', starts(8, 11)],
+      ['maintenance', starts(8, 11)],
+      ['administration', starts(8, 10)],
+    ]);
+
+    for (const activity of bundle.activities) {
+      expect(activity.timing_rule).toBe('movable_within_window');
+      expect(activity.allowed_starts).toEqual(
+        expected.get(activity.activity_id),
+      );
+      const baseline = bundle.baseline.assignments.find(
+        (assignment) => assignment.activity_id === activity.activity_id,
+      );
+      expect(baseline).toBeDefined();
+      expect(activity.allowed_starts).toContain(baseline!.start);
+      expect(Date.parse(baseline!.start)).toBeGreaterThanOrEqual(
+        Date.parse(activity.release),
+      );
+      expect(
+        Date.parse(baseline!.start) + activity.duration_minutes * 60_000,
+      ).toBeLessThanOrEqual(Date.parse(activity.deadline));
+    }
+
+    expect(
+      bundle.baseline.assignments.map(({ activity_id, start }) => [
+        activity_id,
+        start,
+      ]),
+    ).toEqual([
+      ['inspection', t(8)],
+      ['maintenance', t(9)],
+      ['administration', t(10)],
+    ]);
+    const inspectionEnd =
+      Date.parse(t(8)) +
+      bundle.activities.find(
+        (activity) => activity.activity_id === 'inspection',
+      )!.duration_minutes *
+        60_000;
+    expect(Date.parse(t(9))).toBeGreaterThanOrEqual(inspectionEnd);
+  });
+
+  it('records the empty resource set with a fictional absence basis', () => {
+    const bundle = fixture();
+    expect(bundle.resources).toEqual([]);
+    expect(bundle.resource_absence_basis_ref?.id).toBe(
+      'demo:fictional-no-bottlenecks',
+    );
+    const absence = demoRecords().find(
+      ({ ref }) => ref.id === 'demo:fictional-no-bottlenecks',
+    )?.record;
+    expect(absence).toMatchObject({
+      scope: 'fictional_fixture_only',
+      no_relevant_resource_bottlenecks_assumed: true,
+      operational_attestation: false,
+    });
+  });
+
   it.each<{
     name: string;
     change: (bundle: PlanningBundle) => void;

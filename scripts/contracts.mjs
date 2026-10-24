@@ -61,7 +61,16 @@ async function bindFixtures() {
               operational_attestation: false,
               notice: fixtureNotice,
             }
-          : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
+          : ref.id === 'demo:fictional-no-bottlenecks'
+            ? {
+                id: ref.id,
+                revision: ref.revision,
+                scope: 'fictional_fixture_only',
+                no_relevant_resource_bottlenecks_assumed: true,
+                operational_attestation: false,
+                notice: fixtureNotice,
+              }
+            : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
     ref.sha256 = contractHash(record);
     records.set(`${ref.id}@${ref.revision}`, { ref: { ...ref }, record });
   };

@@ -190,7 +190,7 @@
   "resource_absence_basis_ref": {
     "id": "demo:fictional-no-bottlenecks",
     "revision": 1,
-    "sha256": "f54dba501c5f2460438f98a31513ab34cbce3e3138f2c9dcb28dc07adb8a9a68"
+    "sha256": "1b1e1ce2bf78272a2b82c73eb9b9331156c639edfac8e82cfc52b561347025ec"
   },
   "baseline": {
     "ref": {

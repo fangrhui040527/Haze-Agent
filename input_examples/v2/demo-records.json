@@ -63,11 +63,14 @@
     "ref": {
       "id": "demo:fictional-no-bottlenecks",
       "revision": 1,
-      "sha256": "f54dba501c5f2460438f98a31513ab34cbce3e3138f2c9dcb28dc07adb8a9a68"
+      "sha256": "1b1e1ce2bf78272a2b82c73eb9b9331156c639edfac8e82cfc52b561347025ec"
     },
     "record": {
       "id": "demo:fictional-no-bottlenecks",
       "revision": 1,
+      "scope": "fictional_fixture_only",
+      "no_relevant_resource_bottlenecks_assumed": true,
+      "operational_attestation": false,
       "notice": "Fictional contract specimen only; not accepted authority or evidence."
     }
   },
