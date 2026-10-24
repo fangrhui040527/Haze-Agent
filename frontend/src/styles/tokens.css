@@ -67,15 +67,16 @@
   --radius-card: 18px;
   --radius-pill: 9999px;
 
-  --border-width: 2.5px;
-  --color-border-neo: var(--color-text);
-  --color-shadow-neo: var(--color-text);
+  --border-width: 0px;
+  --color-border-neo: transparent;
+  --color-shadow-neo: #e06828;
+  --color-shadow-card: var(--color-shadow-neo);
 
-  --shadow-card: 4px 4px 0 var(--color-shadow-neo);
+  --shadow-card: 4px 4px 0 var(--color-shadow-card);
   --shadow-btn: 3px 3px 0 var(--color-shadow-neo);
   --shadow-btn-hover: 4px 4px 0 var(--color-shadow-neo);
   --shadow-btn-active: 1px 1px 0 var(--color-shadow-neo);
-  --shadow-badge: 1.5px 1.5px 0 var(--color-shadow-neo);
+  --shadow-badge: none;
 
   --shadow-1: 3px 3px 0 var(--color-shadow-neo);
   --shadow-2: 5px 5px 0 var(--color-shadow-neo);
@@ -123,8 +124,9 @@
     --color-info-bg: #1d2a3d;
     --color-stale-bg: #2b2d31;
 
-    --color-border-neo: #4c545e;
-    --color-shadow-neo: #050607;
+    --color-border-neo: transparent;
+    --color-shadow-neo: #f08a4b;
+    --color-shadow-card: var(--color-shadow-neo);
 
     --shadow-1: 3px 3px 0 var(--color-shadow-neo);
     --shadow-2: 5px 5px 0 var(--color-shadow-neo);

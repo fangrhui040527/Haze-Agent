@@ -7,7 +7,7 @@
   gap: var(--space-2);
   min-height: 38px;
   padding: 0 var(--space-4);
-  border: var(--border-width) solid var(--color-border-neo);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-text);
@@ -44,7 +44,7 @@
 
 .primary {
   background: var(--color-accent);
-  border-color: var(--color-border-neo);
+  border: none;
   color: var(--color-accent-contrast);
 }
 
@@ -53,20 +53,20 @@
 }
 
 .ghost {
-  border-color: transparent;
+  border: none;
   background: transparent;
   box-shadow: none;
 }
 
 .ghost:hover:not(:disabled) {
   background: var(--color-surface-2);
-  border-color: var(--color-border-neo);
+  border: none;
   box-shadow: var(--shadow-btn);
 }
 
 .danger {
   color: var(--color-error);
-  border-color: var(--color-border-neo);
+  border: none;
   background: var(--color-error-bg);
 }
 
@@ -74,7 +74,7 @@
   min-height: 30px;
   padding: 0 var(--space-3);
   font-size: var(--text-xs);
-  box-shadow: var(--shadow-badge);
+  box-shadow: none;
 }
 
 .small:hover:not(:disabled) {
@@ -89,10 +89,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border: 1.5px solid var(--color-border-neo);
+  padding: 3px var(--space-2);
+  border: none;
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-badge);
+  box-shadow: none;
   font-size: var(--text-xs);
   font-weight: 800;
   text-transform: uppercase;
@@ -142,12 +142,12 @@
 }
 
 .swatch {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 4px;
   flex: none;
-  border: 1.5px solid var(--color-border-neo);
-  box-shadow: 1px 1px 0 var(--color-shadow-neo);
+  border: none;
+  box-shadow: none;
 }
 
 .bandValue {
@@ -205,7 +205,7 @@
 
 .panel {
   background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border-neo);
+  border: none;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   min-width: 0;
