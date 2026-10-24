@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   NavLink,
   Outlet,
@@ -89,6 +90,19 @@ function Footer() {
 }
 
 export function AppLayout() {
+  useEffect(() => {
+    function updateZoom() {
+      if (typeof window === 'undefined') return;
+      // In desktop browsers, window.outerWidth / window.innerWidth reflects page zoom level (~0.75 for 75% zoom)
+      const zoomRatio = window.outerWidth / window.innerWidth;
+      const is75OrLess = zoomRatio <= 0.82;
+      document.documentElement.classList.toggle('zoom-75', is75OrLess);
+    }
+    updateZoom();
+    window.addEventListener('resize', updateZoom);
+    return () => window.removeEventListener('resize', updateZoom);
+  }, []);
+
   return (
     <LiveDataProvider>
       <a href="#main" className="skip-link">

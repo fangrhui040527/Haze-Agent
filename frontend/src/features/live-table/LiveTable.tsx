@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowRight, ArrowUp, FileText, Info, Minus } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useLiveData } from '../../app/liveDataContext.ts';
@@ -17,7 +18,7 @@ import type {
   Trend,
 } from '../../shared/types/domain.ts';
 import { BandBadge, StatusBadge } from '../../shared/ui/Badge.tsx';
-import { Button, buttonClass } from '../../shared/ui/Button.tsx';
+import { Button } from '../../shared/ui/Button.tsx';
 import { Skeleton, StateMessage } from '../../shared/ui/States.tsx';
 import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
 import styles from './LiveTable.module.css';
@@ -280,9 +281,9 @@ export function LiveTable() {
                   <th scope="col">Updated</th>
                   <th scope="col">Location</th>
                   <th scope="col">Category</th>
-                  <th scope="col">Summary</th>
-                  <th scope="col">Air quality</th>
-                  <th scope="col">Trend</th>
+                  <th scope="col" className={styles.summary}>Summary</th>
+                  <th scope="col" className={styles.airQualityCol}>Air quality</th>
+                  <th scope="col" className={styles.trendCol}>Trend</th>
                   <th scope="col">Evidence</th>
                   <th scope="col">Status</th>
                   <th scope="col">
@@ -314,8 +315,8 @@ export function LiveTable() {
                             onClick={() => toggle(r.item.id)}
                             title="Why this rank?"
                           >
-                            {r.score}
-                            <span aria-hidden="true"> ⓘ</span>
+                            <span>{r.score}</span>
+                            <Info size={13} strokeWidth={2.2} aria-hidden="true" />
                             <span className="visually-hidden">
                               {' '}
                               — show why this item has rank {r.rank}
@@ -335,14 +336,19 @@ export function LiveTable() {
                         <td className={styles.summary} title={r.item.summary}>
                           {r.item.headline}
                         </td>
-                        <td>
+                        <td className={styles.airQualityCol}>
                           <BandBadge
                             band={itemBand(r.item)}
                             pm25={itemPm25(r.item)}
                             compact
+                            className={
+                              itemBand(r.item) === 'sensitive'
+                                ? styles.airQualityWrap
+                                : styles.airQualityNowrap
+                            }
                           />
                         </td>
-                        <td>
+                        <td className={styles.trendCol}>
                           <TrendCell trend={r.item.trend} />
                         </td>
                         <td>
@@ -354,13 +360,12 @@ export function LiveTable() {
                         <td>
                           <Link
                             to={`/item/${encodeURIComponent(r.item.id)}`}
-                            className={buttonClass('secondary', 'small')}
+                            className={styles.readMoreBtn}
+                            title="Read more"
+                            aria-label={`Read more about ${r.item.headline}`}
                           >
-                            Read more
-                            <span className="visually-hidden">
-                              {' '}
-                              about {r.item.headline}
-                            </span>
+                            <FileText size={16} aria-hidden="true" />
+                            <span className="visually-hidden"> about {r.item.headline}</span>
                           </Link>
                         </td>
                       </tr>
@@ -418,22 +423,34 @@ function LocationName({
 }
 
 function TrendCell({ trend }: { trend: Trend | null }) {
-  if (trend === null) return <span className={styles.muted}>—</span>;
-  const symbol = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+  if (trend === null) {
+    return (
+      <span className={`${styles.trendIcon} ${styles.muted}`} title="No trend data">
+        <Minus size={15} strokeWidth={2.5} aria-hidden="true" />
+        <span className="visually-hidden">No trend data</span>
+      </span>
+    );
+  }
+
   const text =
     trend === 'up' ? 'rising' : trend === 'down' ? 'falling' : 'steady';
+
   return (
     <span
       title={text}
-      className={
+      className={`${styles.trendIcon} ${
         trend === 'up'
           ? styles.trendUp
           : trend === 'down'
             ? styles.trendDown
-            : ''
-      }
+            : styles.trendFlat
+      }`}
     >
-      <span aria-hidden="true">{symbol}</span>
+      {trend === 'up' && <ArrowUp size={15} strokeWidth={2.5} aria-hidden="true" />}
+      {trend === 'down' && <ArrowDown size={15} strokeWidth={2.5} aria-hidden="true" />}
+      {trend !== 'up' && trend !== 'down' && (
+        <ArrowRight size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
       <span className="visually-hidden">{text}</span>
     </span>
   );
@@ -504,9 +521,12 @@ function ItemCard({ ranked, fresh }: { ranked: RankedItem; fresh: boolean }) {
       </div>
       <Link
         to={`/item/${encodeURIComponent(item.id)}`}
-        className={buttonClass('secondary', 'small')}
+        className={styles.readMoreBtn}
+        title="Read more"
+        aria-label={`Read more about ${item.headline}`}
       >
-        Read more<span className="visually-hidden"> about {item.headline}</span>
+        <FileText size={16} aria-hidden="true" />
+        <span className="visually-hidden"> about {item.headline}</span>
       </Link>
     </li>
   );
