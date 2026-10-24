@@ -1,0 +1,257 @@
+/** Server-only chat-completion adapter. Credentials never enter agent context. */
+export interface AgentModel {
+  readonly selection: { provider: string; model: string };
+  complete(
+    input: { role: string; instruction: string; context: unknown },
+    signal: AbortSignal,
+  ): Promise<string>;
+}
+
+const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
+const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+const TIMEOUT_MS = 60_000;
+const MAX_REQUEST_BYTES = 131_072;
+const MAX_RESPONSE_BYTES = 65_536;
+const MAX_TEXT_CHARACTERS = 12_000;
+
+class ModelError extends Error {}
+
+function completionUrl(value: string | undefined): URL {
+  let url: URL;
+  try {
+    url = new URL(value ?? '');
+  } catch {
+    throw new Error(
+      'HAZE_PROVIDER_BASE_URL must be an absolute HTTP(S) API base URL.',
+    );
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      'HAZE_PROVIDER_BASE_URL must use HTTP(S) without credentials, query, or fragment.',
+    );
+  }
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/chat/completions`;
+  return url;
+}
+
+async function readCompletion(
+  response: Response,
+  signal: AbortSignal,
+): Promise<unknown> {
+  if (!response.body)
+    throw new ModelError('Agent model returned an empty response.');
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  const cancel = () => {
+    void reader.cancel().catch(() => undefined);
+  };
+  signal.addEventListener('abort', cancel, { once: true });
+  try {
+    while (true) {
+      signal.throwIfAborted();
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      const value: unknown = chunk.value;
+      if (!(value instanceof Uint8Array)) {
+        throw new ModelError('Agent model returned an invalid response body.');
+      }
+      byteLength += value.byteLength;
+      if (byteLength > MAX_RESPONSE_BYTES) {
+        throw new ModelError('Agent model response exceeded its size limit.');
+      }
+      chunks.push(value);
+    }
+    try {
+      return JSON.parse(
+        Buffer.concat(chunks, byteLength).toString('utf8'),
+      ) as unknown;
+    } catch {
+      throw new ModelError('Agent model returned invalid JSON.');
+    }
+  } catch (error) {
+    cancel();
+    throw error;
+  } finally {
+    signal.removeEventListener('abort', cancel);
+    reader.releaseLock();
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function assistantText(body: unknown): string {
+  const choices = isRecord(body) ? body.choices : undefined;
+  const choice: unknown = Array.isArray(choices) ? choices[0] : undefined;
+  const message = isRecord(choice) ? choice.message : undefined;
+  if (
+    !isRecord(choice) ||
+    choice.finish_reason !== 'stop' ||
+    !isRecord(message) ||
+    message.role !== 'assistant' ||
+    typeof message.content !== 'string' ||
+    !message.content.trim()
+  ) {
+    throw new ModelError(
+      'Agent model did not return a complete, nonempty assistant message.',
+    );
+  }
+  if (message.content.length > MAX_TEXT_CHARACTERS) {
+    throw new ModelError('Agent model answer exceeded its text limit.');
+  }
+  return message.content.trim();
+}
+
+export function resolveAgentModel(
+  env: NodeJS.ProcessEnv,
+  fetcher: typeof fetch = fetch,
+): AgentModel {
+  const sampleMode = env.SAMPLE_MODE?.trim().toLowerCase();
+  if (sampleMode && sampleMode !== '0' && sampleMode !== 'false') {
+    throw new Error(
+      'SAMPLE_MODE disables model requests. Set SAMPLE_MODE=false to run the office agents.',
+    );
+  }
+  const provider = env.HAZE_PROVIDER?.trim() || 'offline';
+  if (provider === 'offline') {
+    throw new Error(
+      'Office agents require HAZE_PROVIDER=nvidia or openai-compatible and a server-side API key; offline mode cannot run model agents.',
+    );
+  }
+  if (provider !== 'nvidia' && provider !== 'openai-compatible') {
+    throw new Error(
+      'HAZE_PROVIDER must be offline, nvidia, or openai-compatible.',
+    );
+  }
+  const model =
+    env.HAZE_MODEL?.trim() ||
+    (provider === 'nvidia' ? NVIDIA_DEFAULT_MODEL : undefined);
+  if (!model) throw new Error('HAZE_MODEL is required to run office agents.');
+  const apiKey =
+    env.HAZE_PROVIDER_API_KEY?.trim() ||
+    (provider === 'nvidia' ? env.NVIDIA_API_KEY?.trim() : undefined);
+  if (!apiKey) {
+    throw new Error(
+      provider === 'nvidia'
+        ? 'NVIDIA_API_KEY or HAZE_PROVIDER_API_KEY is required to run office agents.'
+        : 'HAZE_PROVIDER_API_KEY is required to run office agents.',
+    );
+  }
+  const url = completionUrl(
+    env.HAZE_PROVIDER_BASE_URL?.trim() ||
+      (provider === 'nvidia' ? NVIDIA_API_BASE_URL : undefined),
+  );
+
+  return {
+    selection: { provider, model },
+    async complete(input, signal) {
+      if (signal.aborted) {
+        throw new DOMException(
+          'Agent model request was cancelled.',
+          'AbortError',
+        );
+      }
+      let body: string;
+      try {
+        if (
+          !input.role.trim() ||
+          input.role.length > 80 ||
+          !input.instruction.trim() ||
+          input.instruction.length > MAX_TEXT_CHARACTERS
+        ) {
+          throw new Error();
+        }
+        const context = JSON.stringify(input.context);
+        if (context === undefined) throw new Error();
+        body = JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are ${input.role}.\n${input.instruction}`,
+            },
+            { role: 'user', content: context },
+          ],
+          ...(provider === 'nvidia'
+            ? {
+                max_tokens: 700,
+                ...(model === NVIDIA_DEFAULT_MODEL
+                  ? { chat_template_kwargs: { enable_thinking: false } }
+                  : {}),
+              }
+            : { max_completion_tokens: 700 }),
+          stream: false,
+        });
+        if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES)
+          throw new Error();
+      } catch {
+        throw new Error(
+          'Agent model input must be bounded, JSON-serializable context with a role and instruction.',
+        );
+      }
+
+      const deadline = new AbortController();
+      const timer = setTimeout(() => deadline.abort(), TIMEOUT_MS);
+      const requestSignal = AbortSignal.any([signal, deadline.signal]);
+      let onAbort: (() => void) | undefined;
+      const aborted = new Promise<never>((_resolve, reject) => {
+        onAbort = () => reject(new Error('Aborted'));
+        if (requestSignal.aborted) onAbort();
+        else requestSignal.addEventListener('abort', onAbort, { once: true });
+      });
+      try {
+        const request = async () => {
+          requestSignal.throwIfAborted();
+          const response = await fetcher(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body,
+            signal: requestSignal,
+            redirect: 'error',
+          });
+          if (!response.ok) {
+            void response.body?.cancel().catch(() => undefined);
+            throw new ModelError(
+              'Agent model provider request failed. Check the server provider configuration.',
+            );
+          }
+          const text = assistantText(
+            await readCompletion(response, requestSignal),
+          );
+          return text.replaceAll(apiKey, '[redacted]');
+        };
+        return await Promise.race([request(), aborted]);
+      } catch (error) {
+        if (signal.aborted) {
+          throw new DOMException(
+            'Agent model request was cancelled.',
+            'AbortError',
+          );
+        }
+        if (deadline.signal.aborted) {
+          // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
+          throw new Error('Agent model request timed out after 60 seconds.');
+        }
+        if (error instanceof ModelError) throw error;
+        // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
+        throw new Error(
+          'Agent model request or response failed. Check the server provider configuration.',
+        );
+      } finally {
+        clearTimeout(timer);
+        if (onAbort) requestSignal.removeEventListener('abort', onAbort);
+      }
+    },
+  };
+}

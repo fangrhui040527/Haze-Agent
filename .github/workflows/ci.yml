@@ -47,8 +47,14 @@ jobs:
         run: npm run format:check
       - name: Build
         run: npm run build
+      - name: Build frontend and check browser/server integration types
+        run: npm --prefix frontend run build
+      - name: Test frontend interactions and schedule presentation
+        run: npm --prefix frontend test
       - name: Verify v2 schemas and matching contract fixtures
         run: npm run contracts:check
+      - name: Verify demo contract handoffs and independent section 23 trace
+        run: npm run demo:check
       - name: Run focused unit, engine adapter and SQLite persistence tests
         run: npm test
       - name: Run pinned upstream engine conformance

@@ -65,13 +65,15 @@ export function BandBadge({
   band,
   pm25,
   compact = false,
+  className,
 }: {
   band: BandId | null;
   pm25: number | null;
   compact?: boolean;
+  className?: string;
 }) {
   return (
-    <span className={styles.band}>
+    <span className={[styles.band, className].filter(Boolean).join(' ')}>
       <span
         className={styles.swatch}
         style={{ background: band ? BAND_VAR[band] : 'var(--band-unknown)' }}

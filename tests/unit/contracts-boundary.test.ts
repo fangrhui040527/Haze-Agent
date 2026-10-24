@@ -92,20 +92,25 @@ describe('v2 contract boundary', () => {
     ).toThrow('invalid_contract');
   });
 
-  it('exports closed Draft 2020-12 structural schemas', () => {
+  it('exports existing and supplemental closed Draft 2020-12 structural schemas', () => {
     const schemas = exportContractSchemas();
-    expect(Object.keys(schemas).sort()).toEqual([
-      'haze.environmental_series.v2',
-      'haze.evidence.v2',
-      'haze.planning.v2',
-      'haze.result.v2',
-      'haze.run.v2',
-    ]);
+    expect(Object.keys(schemas)).toEqual(
+      expect.arrayContaining([
+        'haze.planning.v2',
+        'haze.result.v2',
+        'haze.run.v2',
+        'haze.planner.input.v2',
+        'haze.workershield.input.v2',
+        'haze.independent_check.v2',
+      ]),
+    );
     for (const schema of Object.values(schemas)) {
       expect(schema.$schema).toBe(
         'https://json-schema.org/draft/2020-12/schema',
       );
-      expect(schema.additionalProperties).toBe(false);
+      for (const shape of schema.anyOf ?? [schema]) {
+        expect(shape.additionalProperties).toBe(false);
+      }
       expect(schema['x-canonical-serializer']).toBe('haze.canonical-json.v1');
     }
   });

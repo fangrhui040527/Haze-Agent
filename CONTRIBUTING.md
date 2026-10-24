@@ -16,6 +16,8 @@ Use the Node and npm versions pinned in `.nvmrc` and `package.json`. Start with 
 | `npm run contracts:generate`                                             | Generate the committed v2 JSON Schemas from the built Zod contracts.                       |
 | `npm run contracts:check`                                                | Check generated schemas, synthetic fixture validation and matching fixture hashes.         |
 | `npm run contracts:fixtures`                                             | Refresh fictional record hashes and planning/request/result fixture bindings.              |
+| `npm run demo:generate`                                                  | Generate the immutable section 23 review package from the local producer and checker.      |
+| `npm run demo:check`                                                     | Verify review-package drift, bindings, workstream traces and engineering/error checks.     |
 | `npm run contracts:validate -- planning input_examples/v2/planning.json` | Validate one v2 contract file without running a planning job.                              |
 | `npm run verify:pins`                                                    | Verify engine source checksums and workflow package locks.                                 |
 | `npm run vendor:engines`                                                 | Materialize and compile pinned engine source without nested installs.                      |
@@ -37,7 +39,13 @@ Maintain at least three inputs under `input_examples/` and matching, same-named 
 
 The separate v0.13 contract examples live in `input_examples/v2/` and `output_examples/v2/`. Their scope is defined in [docs/demo-scope.md](docs/demo-scope.md), using [architecture v0.13](docs/Haze_Agent_Architecture_v0.13.pdf) as the reference. Preserve their synthetic/historical labels. A checked-in result fixture is an illustration of the contract, not captured execution evidence. The metadata graph's numeric `schemaVersion` must never be treated as a domain-contract version.
 
+The new computed review package lives in `examples/demo-review/package.json`; it is separate from those hand-authored contract specimens. Its sources are `app/demo/`, `scripts/demo-review.mjs` and supplemental `app/contracts/handoffs.ts`. Run `npm run build` before `npm run demo:check`. After an intentional producer/contract change, regenerate with `npm run demo:generate`, inspect the resulting immutable record hashes and run the checks again. Preserve pending human review, `agent_execution_status=not_run`, demo-local provenance, disabled publication and false operational eligibility. Do not populate reviewer approvals or provider/tool receipts to make a fixture appear executed.
+
+Review the interface handoffs, pending human decisions and sign-off template in [docs/demo-contract-review.md](docs/demo-contract-review.md). Scope/contract agreement requires actual authorized human findings bound to exact package/schema revisions and hashes. Preparing the package does not establish agreement, accepted operating evidence or day-one real-use success. No distribution or member contact is part of this work.
+
 Edit v2 contracts in `app/contracts/`; keep JSON Schemas under `schemas/` generated rather than hand-edited. After a contract change run `npm run build`, `npm run contracts:generate` and `npm run contracts:check`, plus the normal repository checks. Keep the matching planning/run/result fixture references and content hashes synchronized. Validate run fixtures with `--surface historical_harness`; public/canonical admission must reject their demo-local references. New v1 planning/run payloads require explicit migration and are rejected rather than silently reinterpreted as v2. Do not infer scientific approval, canonical acceptance or a successful comparison from structural validation.
+
+Supplemental evidence/scenario/policy/snapshot/draft/planner/calculation/check/WorkerShield records are deliberately closed to the fictional engineering slice. Extending them to real operating evidence is a separate reviewed contract change with the full architecture's source, authority, intended-use, constraints and operational gates. Keep independent checking separate from producer arithmetic and from human exact-material approval.
 
 ## Change and review conventions
 

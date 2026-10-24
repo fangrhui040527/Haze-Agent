@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "revision": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "haze.decision_policy.v2"
+    },
+    "scope": {
+      "type": "string",
+      "const": "fictional_engineering_only"
+    },
+    "approval_status": {
+      "type": "string",
+      "const": "fixture"
+    },
+    "operational_approval_ref": {
+      "type": "null"
+    },
+    "approval_reason": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "explanation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": ["code", "explanation"],
+      "additionalProperties": false
+    },
+    "required_scenario_refs": {
+      "minItems": 2,
+      "maxItems": 2,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+          },
+          "revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": ["id", "revision", "sha256"],
+        "additionalProperties": false
+      }
+    },
+    "minimum_gain_percent_each_scenario": {
+      "type": "number",
+      "const": 10
+    },
+    "maximum_total_movement_minutes": {
+      "type": "number",
+      "const": 360
+    },
+    "maximum_changed_activity_count": {
+      "type": "number",
+      "const": 3
+    },
+    "maximum_per_activity_movement_minutes": {
+      "type": "number",
+      "const": 120
+    },
+    "movement_counting": {
+      "type": "string",
+      "const": "shared_activity_once"
+    },
+    "worker_nonincrease_required": {
+      "type": "boolean",
+      "const": true
+    },
+    "matched_activity_nonincrease_required": {
+      "type": "boolean",
+      "const": true
+    },
+    "new_controls_allowed": {
+      "type": "boolean",
+      "const": false
+    },
+    "reassignment_allowed": {
+      "type": "boolean",
+      "const": false
+    },
+    "overtime_allowed": {
+      "type": "boolean",
+      "const": false
+    },
+    "displacement_allowed": {
+      "type": "boolean",
+      "const": false
+    },
+    "fixed_work": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string",
+          "const": "activity_ids"
+        },
+        {
+          "type": "string",
+          "const": "worker_assignments"
+        },
+        {
+          "type": "string",
+          "const": "durations"
+        },
+        {
+          "type": "string",
+          "const": "locations"
+        },
+        {
+          "type": "string",
+          "const": "services_and_quality"
+        },
+        {
+          "type": "string",
+          "const": "existing_controls"
+        },
+        {
+          "type": "string",
+          "const": "resource_limits"
+        }
+      ],
+      "items": false,
+      "minItems": 7,
+      "maxItems": 7
+    },
+    "full_occupancy_required": {
+      "type": "boolean",
+      "const": true
+    },
+    "ranking": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string",
+          "const": "least_total_movement"
+        },
+        {
+          "type": "string",
+          "const": "fewest_changed_activities"
+        },
+        {
+          "type": "string",
+          "const": "least_maximum_activity_movement"
+        },
+        {
+          "type": "string",
+          "const": "greatest_minimum_supported_crew_gain"
+        },
+        {
+          "type": "string",
+          "const": "greatest_nominal_crew_gain"
+        },
+        {
+          "type": "string",
+          "const": "canonical_activity_id_start_utc_sequence"
+        }
+      ],
+      "items": false,
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "numerical_tolerance": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "integer_ug_minutes_for_this_fixture"
+        },
+        "substantive_increase_allowed": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": ["method", "substantive_increase_allowed"],
+      "additionalProperties": false
+    },
+    "cost_basis_ref": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+        },
+        "revision": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": ["id", "revision", "sha256"],
+      "additionalProperties": false
+    },
+    "unknown_cost_components": {
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+      }
+    },
+    "limitations": {
+      "minItems": 1,
+      "maxItems": 64,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "schema_version",
+    "scope",
+    "approval_status",
+    "operational_approval_ref",
+    "approval_reason",
+    "required_scenario_refs",
+    "minimum_gain_percent_each_scenario",
+    "maximum_total_movement_minutes",
+    "maximum_changed_activity_count",
+    "maximum_per_activity_movement_minutes",
+    "movement_counting",
+    "worker_nonincrease_required",
+    "matched_activity_nonincrease_required",
+    "new_controls_allowed",
+    "reassignment_allowed",
+    "overtime_allowed",
+    "displacement_allowed",
+    "fixed_work",
+    "full_occupancy_required",
+    "ranking",
+    "numerical_tolerance",
+    "cost_basis_ref",
+    "unknown_cost_components",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "$id": "urn:haze:schema:haze.decision_policy.v2",
+  "title": "haze.decision_policy.v2",
+  "description": "Haze architecture v0.13 structural contract. Also run the runtime semantic validator; a schema pass grants no operating authority.",
+  "x-canonical-serializer": "haze.canonical-json.v1"
+}
