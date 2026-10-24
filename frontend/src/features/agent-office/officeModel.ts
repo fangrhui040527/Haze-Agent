@@ -375,7 +375,7 @@ function moveAlong(
   let remaining = step;
   let facing: Facing | null = null;
   while (remaining > 0 && m.path.length > 0) {
-    const target = m.path[0]!;
+    const target = m.path[0];
     const dx = target.x - m.pos.x;
     const dy = target.y - m.pos.y;
     const dist = Math.hypot(dx, dy);

@@ -217,7 +217,7 @@ export function findPath(from: Point, to: Point): Point[] {
   const cameFrom = new Map<number, number>([[startKey, -1]]);
   const queue: Tile[] = [start];
   for (let i = 0; i < queue.length; i++) {
-    const t = queue[i]!;
+    const t = queue[i];
     if (key(t.col, t.row) === goalKey) break;
     for (const [dc, dr] of [
       [1, 0],

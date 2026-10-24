@@ -134,7 +134,7 @@ function drawText(ctx: Ctx, text: string, x: number, y: number, color: string) {
       for (let c = 0; c < row.length; c++)
         if (row[c] === 'X') ctx.fillRect(cx + c, y + r, 1, 1);
     });
-    cx += g[0]!.length + 1;
+    cx += g[0].length + 1;
   }
 }
 
@@ -200,9 +200,9 @@ function drawWindow(
       ctx,
       C.skylineFar,
       x + i * 4,
-      y + h - far[i % far.length]! - 3,
+      y + h - far[i % far.length] - 3,
       4,
-      far[i % far.length]! + 3,
+      far[i % far.length] + 3,
     );
   if (skyline === 'towers') {
     // Twin towers with a skybridge, softened by the haze
@@ -220,9 +220,9 @@ function drawWindow(
         ctx,
         C.skylineNear,
         x + i * 6,
-        y + h - near[i % near.length]!,
+        y + h - near[i % near.length],
         5,
-        near[i % near.length]!,
+        near[i % near.length],
       );
   }
   // Haze veil and mullions
@@ -308,7 +308,7 @@ function drawDivider(ctx: Ctx): void {
   const x = DIVIDER_COL * TILE + 3;
   const w = TILE - 6;
   const doorTop = DOOR_ROWS[0] * TILE;
-  const doorBottom = (DOOR_ROWS[DOOR_ROWS.length - 1]! + 1) * TILE;
+  const doorBottom = (DOOR_ROWS[DOOR_ROWS.length - 1] + 1) * TILE;
   rect(
     ctx,
     C.doormat,
@@ -600,7 +600,7 @@ function drawShelves(ctx: Ctx, f: Furniture) {
     while (bx < x0 + w - 5) {
       const bw = 2 + (i % 3 === 0 ? 1 : 0);
       const bh = 6 + ((i * 7) % 4);
-      rect(ctx, colors[i % colors.length]!, bx, y + 10 - bh, bw, bh);
+      rect(ctx, colors[i % colors.length], bx, y + 10 - bh, bw, bh);
       bx += bw + (i % 5 === 4 ? 3 : 1);
       i++;
     }

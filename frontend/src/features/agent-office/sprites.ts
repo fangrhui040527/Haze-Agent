@@ -363,12 +363,12 @@ export function drawCat(
   left: boolean,
 ): void {
   const rows = CAT[frame];
-  const w = rows[0]!.length;
+  const w = rows[0].length;
   const x0 = Math.round(x - w / 2);
   const y0 = Math.round(y - rows.length);
   rows.forEach((row, r) => {
     for (let c = 0; c < row.length; c++) {
-      const k = row[c]!;
+      const k = row[c];
       if (k === '.') continue;
       ctx.fillStyle = CAT_COLORS[k]!;
       ctx.fillRect(left ? x0 + w - 1 - c : x0 + c, y0 + r, 1, 1);

@@ -35,6 +35,8 @@ jobs:
         run: npm install --global npm@11.8.0
       - name: Install locked dependencies
         run: npm ci
+      - name: Install locked frontend dependencies
+        run: npm ci --prefix frontend
       - name: Verify engine and workflow pins
         run: npm run verify:pins
       - name: Check types
