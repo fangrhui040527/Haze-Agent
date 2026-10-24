@@ -109,10 +109,12 @@ export function AppLayout() {
         Skip to content
       </a>
       <Header />
-      <main id="main" className={styles.main}>
-        <Outlet />
-      </main>
-      <Footer />
+      <div className={styles.pageBody}>
+        <main id="main" className={styles.main}>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
       <ScrollRestoration />
     </LiveDataProvider>
   );

@@ -131,77 +131,83 @@ export function LiveTable() {
   return (
     <section className={styles.wrapper} aria-labelledby="live-table-title">
       <div className={styles.toolbar}>
-        <h2 id="live-table-title" className={styles.title}>
-          Live haze information
-        </h2>
-        <div className={styles.filters}>
-          <form
-            className={`${styles.field} ${styles.searchField}`}
-            onSubmit={(e) => {
-              e.preventDefault();
-              update({ search: searchDraft });
-            }}
-          >
-            <Search className={styles.fieldIcon} aria-hidden="true" />
-            <label className={styles.searchLabel}>
-              <span className="visually-hidden">Search</span>
-              <input
-                type="search"
-                placeholder="Search…"
-                value={searchDraft}
-                onChange={(e) => setSearchDraft(e.target.value)}
-              />
-            </label>
-          </form>
-          <label className={styles.field}>
-            <span className="visually-hidden">Sort</span>
-            <ArrowDownWideNarrow
-              className={styles.fieldIcon}
-              aria-hidden="true"
-            />
-            <select
-              value={filters.sort}
-              onChange={(e) =>
-                update({ sort: e.target.value as Filters['sort'] })
-              }
-            >
-              <option value="rank">Rank</option>
-              <option value="newest">Newest</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div className={styles.metaRow}>
-        <span aria-live="polite">
-          {live.status === 'ready' &&
-            `Showing ${visible.length} of ${ranked.length}`}
-        </span>
-        <label className={styles.checkbox}>
-          <input
-            type="checkbox"
-            className={styles.checkboxInput}
-            checked={live.autoApply}
-            onChange={(e) => live.setAutoApply(e.target.checked)}
-          />
-          <span className={styles.checkboxBox} aria-hidden="true" />
-          <span className={styles.checkboxText}>
-            Show new updates automatically
+        <div className={styles.tableIntro}>
+          <h2 id="live-table-title" className={styles.title}>
+            Live haze information
+          </h2>
+          <span className={styles.metaRow} aria-live="polite">
+            {live.status === 'ready' &&
+              `Showing ${visible.length} of ${ranked.length}`}
           </span>
-        </label>
-      </div>
-
-      <div aria-live="polite">
-        {live.pending.length > 0 && (
-          <button
-            type="button"
-            className={styles.pendingBar}
-            onClick={live.applyPending}
-          >
-            ▲ {live.pending.length} new update
-            {live.pending.length === 1 ? '' : 's'} — show
-          </button>
-        )}
+        </div>
+        <div className={styles.filterControls}>
+          <div className={styles.filters}>
+            <form
+              className={`${styles.field} ${styles.searchField}`}
+              onSubmit={(e) => {
+                e.preventDefault();
+                update({ search: searchDraft });
+              }}
+            >
+              <Search className={styles.fieldIcon} aria-hidden="true" />
+              <label className={styles.searchLabel}>
+                <span className="visually-hidden">Search</span>
+                <input
+                  type="search"
+                  placeholder="Search…"
+                  value={searchDraft}
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                />
+              </label>
+            </form>
+            <label className={styles.field}>
+              <span className="visually-hidden">Sort</span>
+              <ArrowDownWideNarrow
+                className={styles.fieldIcon}
+                aria-hidden="true"
+              />
+              <select
+                value={filters.sort}
+                onChange={(e) =>
+                  update({ sort: e.target.value as Filters['sort'] })
+                }
+              >
+                <option value="rank">Rank</option>
+                <option value="newest">Newest</option>
+              </select>
+            </label>
+          </div>
+          <div className={styles.updateControl} aria-live="polite">
+            {live.pending.length > 0 ? (
+              <button
+                type="button"
+                className={styles.pendingBar}
+                onClick={live.applyPending}
+              >
+                <span className={styles.pendingCount}>
+                  {live.pending.length}
+                </span>
+                <span className={styles.pendingText}>
+                  {live.pending.length === 1 ? 'new update' : 'new updates'}
+                </span>
+                <ArrowDown size={16} aria-hidden="true" />
+              </button>
+            ) : (
+              <label className={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={live.autoApply}
+                  onChange={(e) => live.setAutoApply(e.target.checked)}
+                />
+                <span className={styles.checkboxBox} aria-hidden="true" />
+                <span className={styles.checkboxText}>
+                  Show new updates automatically
+                </span>
+              </label>
+            )}
+          </div>
+        </div>
       </div>
 
       <div
@@ -232,6 +238,9 @@ export function LiveTable() {
             action={
               filtersActive ? (
                 <Button
+                  size="small"
+                  variant="ghost"
+                  className={styles.clearFiltersButton}
                   onClick={() =>
                     setFilters({ ...NO_FILTERS, sort: filters.sort })
                   }

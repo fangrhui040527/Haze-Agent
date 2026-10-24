@@ -73,6 +73,7 @@ export function ChatPanel({
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const historyRef = useRef<HTMLDivElement | HTMLOListElement>(null);
   // Latest messages for async callbacks (an answer can arrive after several re-renders).
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -92,6 +93,29 @@ export function ChatPanel({
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    const history = historyRef.current;
+    if (!input || !history) return;
+
+    const initialInputHeight = input.getBoundingClientRect().height;
+    const initialHistoryFlex = history.style.flex;
+    const initialHistoryHeight = history.getBoundingClientRect().height;
+    const observer = new ResizeObserver(() => {
+      const height = input.getBoundingClientRect().height;
+      history.style.flex =
+        height > initialInputHeight + 1
+          ? `0 0 ${initialHistoryHeight}px`
+          : initialHistoryFlex;
+    });
+
+    observer.observe(input);
+    return () => {
+      observer.disconnect();
+      history.style.flex = initialHistoryFlex;
+    };
+  }, []);
 
   // Messages left "pending" from a previous visit can never finish.
   useEffect(() => {
@@ -191,7 +215,12 @@ export function ChatPanel({
       </div>
 
       {messages.length === 0 ? (
-        <div className={styles.empty}>
+        <div
+          ref={(node) => {
+            historyRef.current = node;
+          }}
+          className={styles.empty}
+        >
           <p>Ask about haze anywhere in the demo data. Try:</p>
           <ul className={styles.prompts}>
             {EXAMPLE_PROMPTS.map((p) => (
@@ -210,7 +239,10 @@ export function ChatPanel({
         </div>
       ) : (
         <ol
-          ref={listRef}
+          ref={(node) => {
+            listRef.current = node;
+            historyRef.current = node;
+          }}
           className={styles.messages}
           role="log"
           aria-label="Conversation"

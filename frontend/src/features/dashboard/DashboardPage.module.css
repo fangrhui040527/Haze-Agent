@@ -15,31 +15,23 @@
 
 .chat {
   grid-area: chat;
+  position: relative;
 }
 
 .office {
   grid-area: office;
 }
 
+
 @media (min-width: 1024px) {
   .grid {
-    /* The office gets two thirds of the width so its characters and nameplates stay readable. */
-    grid-template-columns: minmax(360px, 1fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr);
     grid-template-areas:
       'table table'
-      'chat office';
+      'office chat';
   }
 
-  /* The chat sits flush against the office so the Manager's reception is "next to" it. */
   .chat {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  .office {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    margin-left: calc(-1 * var(--space-3));
-    border-left-style: dashed;
+    min-height: calc(var(--office-height) + 186px);
   }
 }

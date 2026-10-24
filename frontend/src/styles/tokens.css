@@ -99,14 +99,6 @@
   --duration-base: calc(250ms * var(--motion-scale));
 }
 
-/* Take full width only at 75% zoom */
-:root.zoom-75,
-@media (min-width: 1720px) and (max-resolution: 0.95dppx) {
-  :root {
-    --content-max: 100%;
-  }
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --color-bg: #141619;

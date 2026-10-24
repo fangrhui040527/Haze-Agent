@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
+import type { AgentId } from '../../shared/types/agents.ts';
 import { Panel } from '../../shared/ui/States.tsx';
 import { AgentOffice } from '../agent-office/AgentOffice.tsx';
 import { ChatPanel, type ChatPrefill } from '../chat/ChatPanel.tsx';
@@ -16,6 +17,7 @@ export function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [prefill, setPrefill] = useState<ChatPrefill | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentId | null>(null);
 
   // The detail page's "Ask the agents about this" sends a question here via navigation state.
   useEffect(() => {
@@ -38,7 +40,11 @@ export function DashboardPage() {
         <ChatPanel run={run} prefill={prefill} />
       </Panel>
       <Panel className={styles.office}>
-        <AgentOffice run={run} />
+        <AgentOffice
+          run={run}
+          selected={selectedAgent}
+          onSelect={setSelectedAgent}
+        />
       </Panel>
     </div>
   );
