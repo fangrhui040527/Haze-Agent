@@ -4,14 +4,43 @@
   gap: var(--space-3);
 }
 
+/* ── Warning callout: dashed warn border + orange offset shadow ── */
 .warning {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   border: 2px dashed var(--color-warn);
   background: var(--color-warn-bg);
+  box-shadow: var(--shadow-1);
 }
 
+/* ── Panel block: tinted header strip like DetailPage ── */
 .block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.block > h2:first-child,
+.block > h3:first-child {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-2);
+  box-sizing: border-box;
+}
+
+.block > *:not(h2:first-child):not(h3:first-child) {
+  padding: var(--space-3) var(--space-4) 0;
+}
+
+.block > *:last-child {
+  padding-bottom: var(--space-4);
+}
+
+/* Fallback for blocks that don't use Panel — give them just flat padding */
+.blockInner {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -25,6 +54,7 @@
   gap: var(--space-2) var(--space-3);
 }
 
+/* ── Form field inputs/selects: pill radius, surface-2 bg, focus shadow ── */
 .field {
   display: inline-flex;
   align-items: center;
@@ -35,15 +65,26 @@
 .field input,
 .field select {
   min-height: 34px;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   background: var(--color-surface-2);
   max-width: 220px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  box-shadow: none;
+  transition: box-shadow var(--duration-fast);
+}
+
+.field input:focus,
+.field select:focus {
+  outline: none;
+  box-shadow: 2px 2px 0 var(--color-shadow-neo);
 }
 
 .field input[type='number'] {
   width: 90px;
+  padding: 0 var(--space-2);
 }
 
 .check {
@@ -54,20 +95,25 @@
   cursor: pointer;
 }
 
+/* ── Scenarios fieldset: surface-2 card with offset shadow ── */
 .scenarios {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   margin: 0;
   background: var(--color-surface-2);
+  box-shadow: var(--shadow-1);
 }
 
 .scenarios legend {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
   padding: 0 var(--space-1);
 }
 
@@ -83,7 +129,7 @@
 .message {
   min-height: 1.5em;
   color: var(--color-ok);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .stats {
@@ -97,32 +143,55 @@
   gap: var(--space-1);
 }
 
+/* ── Import error panel: tinted error card ── */
 .importErrors {
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--color-error-bg);
   color: var(--color-error);
+  box-shadow: var(--shadow-1);
   max-height: 240px;
   overflow: auto;
 }
 
+/* ── Tab navigation: pill buttons, offset shadow on active ── */
 .tabs {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  border-bottom: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  align-self: flex-start;
 }
 
 .tab {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border: none;
-  background: none;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-weight: 700;
+  font-size: var(--text-sm);
   cursor: pointer;
+  color: var(--color-muted);
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast),
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast);
 }
 
+.tab:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Active tab: accent surface + orange offset shadow */
 .tab[aria-selected='true'] {
-  border-bottom-color: var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-weight: 800;
+  box-shadow: var(--shadow-btn);
 }
 
 .browser {
@@ -137,12 +206,15 @@
   }
 }
 
+/* ── Browser table: surface-2 card with shadow, no raw borders ── */
 .browserTable {
   position: relative;
   max-height: 480px;
   overflow: auto;
   border: none;
   border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .browserTable table {
@@ -156,19 +228,28 @@
   background: var(--color-surface-2);
   text-align: left;
   padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
 }
 
 .browserTable td {
   padding: var(--space-1) var(--space-2);
-  border-top: 1px solid var(--color-border);
+  border-top: none;
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.browserTable tbody tr:nth-child(even) td {
+  background: var(--color-surface-2);
+}
+
 .selected td {
-  background: var(--color-highlight);
+  background: var(--color-highlight) !important;
 }
 
 .rowButton {
@@ -182,6 +263,7 @@
   font-size: inherit;
 }
 
+/* ── JSON viewer: monospace card ── */
 .json {
   min-width: 0;
 }
@@ -194,4 +276,5 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-2);
   font-size: var(--text-xs);
+  box-shadow: var(--shadow-1);
 }
