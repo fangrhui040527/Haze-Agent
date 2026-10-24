@@ -282,6 +282,41 @@ describe('v0.13 closed planning contract', () => {
     });
   });
 
+  it('pins the fictional policy thresholds without granting operational approval', () => {
+    const bundle = fixture();
+    const policy = demoRecords().find(
+      ({ ref }) => ref.id === bundle.policy_ref.id,
+    );
+    expect(policy?.record).toMatchObject({
+      id: 'demo:fictional-policy',
+      revision: bundle.policy_ref.revision,
+      policy_version: 'haze.decision_policy.v2',
+      scope: 'fictional_two_worker_engineering_example',
+      approval_status: 'not_approved',
+      operational_use_allowed: false,
+      allow_overtime: false,
+      allow_reassignment: false,
+      allow_new_controls: false,
+      worker_and_activity_nonincrease: true,
+      minimum_benefit: {
+        metric: 'crew_concentration_time_proxy_reduction_fraction',
+        threshold: 0.1,
+        comparison: 'greater_than_or_equal',
+        required_scenarios: ['nominal', 'plus_20_sensitivity'],
+        aggregation: 'each_required_scenario',
+      },
+      disruption_limits: {
+        maximum_total_absolute_timing_movement_minutes: 360,
+        maximum_changed_activities: 3,
+        maximum_per_activity_absolute_timing_movement_minutes: 120,
+        shared_activity_counting: 'once_per_activity_id',
+      },
+      uncertainty_note:
+        'The +20 sensitivity is a fictional engineering perturbation, not supported operational uncertainty.',
+    });
+    expect(bundle.evidence_refs).toEqual([]);
+  });
+
   it('validates the illustrative schedules without claiming an exhaustive set', () => {
     const bundle = fixture();
     const examples = verificationSchedules();

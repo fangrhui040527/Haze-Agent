@@ -73,7 +73,36 @@ async function bindFixtures() {
                 operational_attestation: false,
                 notice: fixtureNotice,
               }
-            : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
+            : ref.id === 'demo:fictional-policy'
+              ? {
+                  id: ref.id,
+                  revision: ref.revision,
+                  policy_version: 'haze.decision_policy.v2',
+                  scope: 'fictional_two_worker_engineering_example',
+                  approval_status: 'not_approved',
+                  operational_use_allowed: false,
+                  allow_overtime: false,
+                  allow_reassignment: false,
+                  allow_new_controls: false,
+                  worker_and_activity_nonincrease: true,
+                  minimum_benefit: {
+                    metric: 'crew_concentration_time_proxy_reduction_fraction',
+                    threshold: 0.1,
+                    comparison: 'greater_than_or_equal',
+                    required_scenarios: ['nominal', 'plus_20_sensitivity'],
+                    aggregation: 'each_required_scenario',
+                  },
+                  disruption_limits: {
+                    maximum_total_absolute_timing_movement_minutes: 360,
+                    maximum_changed_activities: 3,
+                    maximum_per_activity_absolute_timing_movement_minutes: 120,
+                    shared_activity_counting: 'once_per_activity_id',
+                  },
+                  uncertainty_note:
+                    'The +20 sensitivity is a fictional engineering perturbation, not supported operational uncertainty.',
+                  notice: fixtureNotice,
+                }
+              : { id: ref.id, revision: ref.revision, notice: fixtureNotice };
     ref.sha256 = contractHash(record);
     records.set(`${ref.id}@${ref.revision}`, { ref: { ...ref }, record });
   };

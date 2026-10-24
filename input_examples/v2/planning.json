@@ -11,7 +11,7 @@
   "policy_ref": {
     "id": "demo:fictional-policy",
     "revision": 1,
-    "sha256": "f1a9849f93fdcad8794c6730f6aa1d8db0b94a8050c1cdcf8adbd812a9c3b9b3"
+    "sha256": "1e306d23979d997665359dd61d28792fb7cf688d89ef315302f96a9a15e72f44"
   },
   "method_ref": {
     "id": "demo:fictional-method",
