@@ -16,6 +16,8 @@
 
 .title {
   font-size: var(--text-lg);
+  font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
 .filters {
@@ -174,18 +176,24 @@
 
 .scoreButton {
   min-width: 52px;
-  padding: 2px var(--space-2);
+  padding: 3px var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   font-family: var(--font-mono);
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.scoreButton:hover {
+  background: var(--color-surface-2);
 }
 
 .scoreButton[aria-expanded='true'] {
   border-color: var(--color-accent);
+  background: var(--color-surface-2);
 }
 
 .fresh td,
@@ -269,7 +277,7 @@
   gap: var(--space-1);
   padding: var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   background: var(--color-surface);
   font-size: var(--text-sm);
 }
