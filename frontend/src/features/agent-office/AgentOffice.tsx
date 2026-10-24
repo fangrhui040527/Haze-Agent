@@ -37,13 +37,26 @@ const POSE_TONE: Record<Pose, 'neutral' | 'info' | 'ok' | 'error' | 'accent'> =
  * The legend underneath is the text version of the same state (also read by screen readers).
  * Click a character (or its legend entry) to see what it does.
  */
-export function AgentOffice({ run }: { run: AgentRun }) {
+export function AgentOffice({
+  run,
+  selected: externalSelected,
+  onSelect: externalOnSelect,
+}: {
+  run: AgentRun;
+  selected?: AgentId | null;
+  onSelect?: (id: AgentId | null) => void;
+}) {
   const reduced = useReducedMotion();
   const [visible, setVisible] = useLocalStorageState(
     'hazewatch.office.visible',
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
-  const [selected, setSelected] = useState<AgentId | null>(null);
+  const [internalSelected, setInternalSelected] = useState<AgentId | null>(
+    null,
+  );
+  const isControlled = externalSelected !== undefined;
+  const selected = isControlled ? externalSelected : internalSelected;
+  const onSelect = externalOnSelect ?? setInternalSelected;
   const statuses = useMemo(() => deriveAgentStatuses(run.events), [run.events]);
   const levelB = run.events.some((e) => e.type === 'run_state');
   const localCheck = isLocalCheckRun(run.events);
@@ -60,10 +73,12 @@ export function AgentOffice({ run }: { run: AgentRun }) {
           <label className={styles.toggle}>
             <input
               type="checkbox"
+              className={styles.toggleInput}
               checked={visible}
               onChange={(e) => setVisible(e.target.checked)}
             />
-            Show office
+            <span className={styles.toggleBox} aria-hidden="true" />
+            <span>Show office</span>
           </label>
         </div>
       </div>
@@ -73,7 +88,7 @@ export function AgentOffice({ run }: { run: AgentRun }) {
           run={run}
           reduced={reduced}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={onSelect}
         />
       )}
       {localCheck && (
@@ -87,45 +102,51 @@ export function AgentOffice({ run }: { run: AgentRun }) {
           steps are not shown.
         </p>
       )}
-      {selected && (
-        <SelectedCard
-          id={selected}
-          status={statuses[selected]}
-          onClose={() => setSelected(null)}
-        />
-      )}
-
-      <ul className={styles.legend} aria-label="What each agent is doing">
-        {AGENT_IDS.map((id) => (
-          <li key={id}>
-            <button
-              type="button"
-              className={styles.legendItem}
-              aria-pressed={selected === id}
-              onClick={() => toggle(id)}
-              title={AGENT_INFO[id].role}
-            >
-              <span
-                className={styles.dot}
-                style={{ background: LOOKS[id].palette.C }}
-                aria-hidden="true"
-              />
-              <span className={styles.agentName}>{AGENT_INFO[id].name}</span>
-              <Badge
-                tone={POSE_TONE[statuses[id].state]}
-                title={statuses[id].text}
+      <div className={styles.legendRegion}>
+        <ul
+          className={`${styles.legend} ${!visible ? styles.legendSixRows : ''}`}
+          aria-label="What each agent is doing"
+        >
+          {AGENT_IDS.map((id) => (
+            <li key={id}>
+              <button
+                type="button"
+                className={styles.legendItem}
+                aria-pressed={selected === id}
+                onClick={() => toggle(id)}
+                title={AGENT_INFO[id].role}
               >
-                {statuses[id].text}
-              </Badge>
-            </button>
-          </li>
-        ))}
-      </ul>
+                <span
+                  className={styles.dot}
+                  style={{ background: LOOKS[id].palette.C }}
+                  aria-hidden="true"
+                />
+                <span className={styles.agentName}>{AGENT_INFO[id].name}</span>
+                <Badge
+                  tone={POSE_TONE[statuses[id].state]}
+                  title={statuses[id].text}
+                >
+                  {statuses[id].text}
+                </Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+        {selected && (
+          <div className={styles.popupAnchor}>
+            <AgentDetailPopup
+              id={selected}
+              status={statuses[selected]}
+              onClose={() => onSelect(null)}
+            />
+          </div>
+        )}
+      </div>
     </section>
   );
 }
 
-function SelectedCard({
+export function AgentDetailPopup({
   id,
   status,
   onClose,
@@ -134,16 +155,51 @@ function SelectedCard({
   status: AgentStatus;
   onClose: () => void;
 }) {
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onPointerDown(e: PointerEvent) {
+      if (popupRef.current?.contains(e.target as Node)) {
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest(`.${styles.legendItem}`) ||
+        target?.tagName === 'CANVAS'
+      ) {
+        return;
+      }
+      onClose();
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+
+    const timer = setTimeout(() => {
+      window.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('keydown', onKeyDown);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <div className={styles.card} role="status">
+    <div ref={popupRef} className={styles.popup} role="status">
       <span
         className={styles.dot}
         style={{ background: LOOKS[id].palette.C }}
         aria-hidden="true"
       />
       <div className={styles.cardText}>
-        <strong>{AGENT_INFO[id].name}</strong>{' '}
-        <span className={styles.muted}>· {AGENT_INFO[id].role}</span>
+        <div>
+          <strong>{AGENT_INFO[id].name}</strong>{' '}
+          <span className={styles.muted}>· {AGENT_INFO[id].role}</span>
+        </div>
         <div>
           <Badge tone={POSE_TONE[status.state]}>{status.text}</Badge>
         </div>

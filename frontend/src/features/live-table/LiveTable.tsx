@@ -1,3 +1,14 @@
+import {
+  ArrowDown,
+  ArrowDownWideNarrow,
+  ArrowRight,
+  ArrowUp,
+  ChevronDown,
+  FileText,
+  Info,
+  Minus,
+  Search,
+} from 'lucide-react';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useLiveData } from '../../app/liveDataContext.ts';
@@ -17,7 +28,7 @@ import type {
   Trend,
 } from '../../shared/types/domain.ts';
 import { BandBadge, StatusBadge } from '../../shared/ui/Badge.tsx';
-import { Button, buttonClass } from '../../shared/ui/Button.tsx';
+import { Button } from '../../shared/ui/Button.tsx';
 import { Skeleton, StateMessage } from '../../shared/ui/States.tsx';
 import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
 import styles from './LiveTable.module.css';
@@ -66,8 +77,13 @@ export function LiveTable() {
     'hazewatch.table.filters',
     NO_FILTERS,
   );
+  const [searchDraft, setSearchDraft] = useState(filters.search);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSearchDraft(filters.search);
+  }, [filters.search]);
 
   const ranked = useMemo(
     () => rankItems(live.items, live.locations, now),
@@ -115,106 +131,83 @@ export function LiveTable() {
   return (
     <section className={styles.wrapper} aria-labelledby="live-table-title">
       <div className={styles.toolbar}>
-        <h2 id="live-table-title" className={styles.title}>
-          Live haze information
-        </h2>
-        <div className={styles.filters}>
-          <label className={styles.field}>
-            <span className="visually-hidden">Search</span>
-            <input
-              type="search"
-              placeholder="Search…"
-              value={filters.search}
-              onChange={(e) => update({ search: e.target.value })}
-            />
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Location</span>
-            <select
-              value={filters.locationId}
-              onChange={(e) => update({ locationId: e.target.value })}
-            >
-              <option value="">All locations</option>
-              {sortedLocations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}, {l.countryCode}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Category</span>
-            <select
-              value={filters.category}
-              onChange={(e) =>
-                update({ category: e.target.value as Filters['category'] })
-              }
-            >
-              <option value="">All categories</option>
-              {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className="visually-hidden">Status</span>
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                update({ status: e.target.value as Filters['status'] })
-              }
-            >
-              <option value="">All statuses</option>
-              {Object.entries(STATUS_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>Sort</span>
-            <select
-              value={filters.sort}
-              onChange={(e) =>
-                update({ sort: e.target.value as Filters['sort'] })
-              }
-            >
-              <option value="rank">Rank</option>
-              <option value="newest">Newest</option>
-            </select>
-          </label>
+        <div className={styles.tableIntro}>
+          <h2 id="live-table-title" className={styles.title}>
+            Live haze information
+          </h2>
+          <span className={styles.metaRow} aria-live="polite">
+            {live.status === 'ready' &&
+              `Showing ${visible.length} of ${ranked.length}`}
+          </span>
         </div>
-      </div>
-
-      <div className={styles.metaRow}>
-        <span aria-live="polite">
-          {live.status === 'ready' &&
-            `Showing ${visible.length} of ${ranked.length}`}
-        </span>
-        <label className={styles.checkbox}>
-          <input
-            type="checkbox"
-            checked={live.autoApply}
-            onChange={(e) => live.setAutoApply(e.target.checked)}
-          />
-          Show new updates automatically
-        </label>
-      </div>
-
-      <div aria-live="polite">
-        {live.pending.length > 0 && (
-          <button
-            type="button"
-            className={styles.pendingBar}
-            onClick={live.applyPending}
-          >
-            ▲ {live.pending.length} new update
-            {live.pending.length === 1 ? '' : 's'} — show
-          </button>
-        )}
+        <div className={styles.filterControls}>
+          <div className={styles.filters}>
+            <form
+              className={`${styles.field} ${styles.searchField}`}
+              onSubmit={(e) => {
+                e.preventDefault();
+                update({ search: searchDraft });
+              }}
+            >
+              <Search className={styles.fieldIcon} aria-hidden="true" />
+              <label className={styles.searchLabel}>
+                <span className="visually-hidden">Search</span>
+                <input
+                  type="search"
+                  placeholder="Search…"
+                  value={searchDraft}
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                />
+              </label>
+            </form>
+            <label className={styles.field}>
+              <span className="visually-hidden">Sort</span>
+              <ArrowDownWideNarrow
+                className={styles.fieldIcon}
+                aria-hidden="true"
+              />
+              <select
+                value={filters.sort}
+                onChange={(e) =>
+                  update({ sort: e.target.value as Filters['sort'] })
+                }
+              >
+                <option value="rank">Rank</option>
+                <option value="newest">Newest</option>
+              </select>
+            </label>
+          </div>
+          <div className={styles.updateControl} aria-live="polite">
+            {live.pending.length > 0 ? (
+              <button
+                type="button"
+                className={styles.pendingBar}
+                onClick={live.applyPending}
+              >
+                <span className={styles.pendingCount}>
+                  {live.pending.length}
+                </span>
+                <span className={styles.pendingText}>
+                  {live.pending.length === 1 ? 'new update' : 'new updates'}
+                </span>
+                <ArrowDown size={16} aria-hidden="true" />
+              </button>
+            ) : (
+              <label className={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  className={styles.checkboxInput}
+                  checked={live.autoApply}
+                  onChange={(e) => live.setAutoApply(e.target.checked)}
+                />
+                <span className={styles.checkboxBox} aria-hidden="true" />
+                <span className={styles.checkboxText}>
+                  Show new updates automatically
+                </span>
+              </label>
+            )}
+          </div>
+        </div>
       </div>
 
       <div
@@ -245,6 +238,9 @@ export function LiveTable() {
             action={
               filtersActive ? (
                 <Button
+                  size="small"
+                  variant="ghost"
+                  className={styles.clearFiltersButton}
                   onClick={() =>
                     setFilters({ ...NO_FILTERS, sort: filters.sort })
                   }
@@ -278,13 +274,117 @@ export function LiveTable() {
                   <th scope="col">#</th>
                   <th scope="col">Score</th>
                   <th scope="col">Updated</th>
-                  <th scope="col">Location</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Summary</th>
-                  <th scope="col">Air quality</th>
-                  <th scope="col">Trend</th>
+                  <th scope="col" className={styles.locationCol}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.locationId ? styles.thFilterActive : ''}`}
+                    >
+                      <span>Location</span>
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.locationId && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <select
+                        aria-label="Filter by location"
+                        className={styles.thFilterOverlay}
+                        value={filters.locationId}
+                        onChange={(e) => update({ locationId: e.target.value })}
+                      >
+                        <option value="">All locations</option>
+                        {sortedLocations.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}, {l.countryCode}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
+                  <th scope="col" className={styles.categoryCol}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.category ? styles.thFilterActive : ''}`}
+                    >
+                      <span>Category</span>
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.category && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <select
+                        aria-label="Filter by category"
+                        className={styles.thFilterOverlay}
+                        value={filters.category}
+                        onChange={(e) =>
+                          update({
+                            category: e.target.value as Filters['category'],
+                          })
+                        }
+                      >
+                        <option value="">All categories</option>
+                        {Object.entries(CATEGORY_LABELS).map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
+                  <th scope="col" className={styles.summary}>
+                    Summary
+                  </th>
+                  <th scope="col" className={styles.airQualityCol}>
+                    Air quality
+                  </th>
+                  <th scope="col" className={styles.trendCol}>
+                    Trend
+                  </th>
                   <th scope="col">Evidence</th>
-                  <th scope="col">Status</th>
+                  <th scope="col" className={styles.statusCol}>
+                    <label
+                      className={`${styles.thFilterLabel} ${filters.status ? styles.thFilterActive : ''}`}
+                    >
+                      <span>Status</span>
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
+                      {filters.status && (
+                        <span
+                          className={styles.thFilterDot}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <select
+                        aria-label="Filter by status"
+                        className={styles.thFilterOverlay}
+                        value={filters.status}
+                        onChange={(e) =>
+                          update({
+                            status: e.target.value as Filters['status'],
+                          })
+                        }
+                      >
+                        <option value="">All statuses</option>
+                        {Object.entries(STATUS_LABELS).map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </th>
                   <th scope="col">
                     <span className="visually-hidden">Details</span>
                   </th>
@@ -314,8 +414,12 @@ export function LiveTable() {
                             onClick={() => toggle(r.item.id)}
                             title="Why this rank?"
                           >
-                            {r.score}
-                            <span aria-hidden="true"> ⓘ</span>
+                            <span>{r.score}</span>
+                            <Info
+                              size={13}
+                              strokeWidth={2.2}
+                              aria-hidden="true"
+                            />
                             <span className="visually-hidden">
                               {' '}
                               — show why this item has rank {r.rank}
@@ -325,38 +429,47 @@ export function LiveTable() {
                         <td className={styles.nowrap}>
                           <TimeAgo iso={r.item.updatedAt} prefix="Updated" />
                         </td>
-                        <td>
+                        <td className={styles.locationCol}>
                           <LocationName
                             location={r.location}
                             iso={r.item.observedAt}
                           />
                         </td>
-                        <td>{CATEGORY_LABELS[r.item.category]}</td>
+                        <td className={styles.categoryCol}>
+                          {CATEGORY_LABELS[r.item.category]}
+                        </td>
                         <td className={styles.summary} title={r.item.summary}>
                           {r.item.headline}
                         </td>
-                        <td>
+                        <td className={styles.airQualityCol}>
                           <BandBadge
                             band={itemBand(r.item)}
                             pm25={itemPm25(r.item)}
                             compact
+                            className={
+                              itemBand(r.item) === 'sensitive'
+                                ? styles.airQualityWrap
+                                : styles.airQualityNowrap
+                            }
                           />
                         </td>
-                        <td>
+                        <td className={styles.trendCol}>
                           <TrendCell trend={r.item.trend} />
                         </td>
                         <td>
                           <EvidenceCell item={r.item} />
                         </td>
-                        <td>
+                        <td className={styles.statusCol}>
                           <StatusBadge status={r.item.status} />
                         </td>
                         <td>
                           <Link
                             to={`/item/${encodeURIComponent(r.item.id)}`}
-                            className={buttonClass('secondary', 'small')}
+                            className={styles.readMoreBtn}
+                            title="Read more"
+                            aria-label={`Read more about ${r.item.headline}`}
                           >
-                            Read more
+                            <FileText size={16} aria-hidden="true" />
                             <span className="visually-hidden">
                               {' '}
                               about {r.item.headline}
@@ -418,22 +531,41 @@ function LocationName({
 }
 
 function TrendCell({ trend }: { trend: Trend | null }) {
-  if (trend === null) return <span className={styles.muted}>—</span>;
-  const symbol = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→';
+  if (trend === null) {
+    return (
+      <span
+        className={`${styles.trendIcon} ${styles.muted}`}
+        title="No trend data"
+      >
+        <Minus size={15} strokeWidth={2.5} aria-hidden="true" />
+        <span className="visually-hidden">No trend data</span>
+      </span>
+    );
+  }
+
   const text =
     trend === 'up' ? 'rising' : trend === 'down' ? 'falling' : 'steady';
+
   return (
     <span
       title={text}
-      className={
+      className={`${styles.trendIcon} ${
         trend === 'up'
           ? styles.trendUp
           : trend === 'down'
             ? styles.trendDown
-            : ''
-      }
+            : styles.trendFlat
+      }`}
     >
-      <span aria-hidden="true">{symbol}</span>
+      {trend === 'up' && (
+        <ArrowUp size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
+      {trend === 'down' && (
+        <ArrowDown size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
+      {trend !== 'up' && trend !== 'down' && (
+        <ArrowRight size={15} strokeWidth={2.5} aria-hidden="true" />
+      )}
       <span className="visually-hidden">{text}</span>
     </span>
   );
@@ -504,9 +636,12 @@ function ItemCard({ ranked, fresh }: { ranked: RankedItem; fresh: boolean }) {
       </div>
       <Link
         to={`/item/${encodeURIComponent(item.id)}`}
-        className={buttonClass('secondary', 'small')}
+        className={styles.readMoreBtn}
+        title="Read more"
+        aria-label={`Read more about ${item.headline}`}
       >
-        Read more<span className="visually-hidden"> about {item.headline}</span>
+        <FileText size={16} aria-hidden="true" />
+        <span className="visually-hidden"> about {item.headline}</span>
       </Link>
     </li>
   );

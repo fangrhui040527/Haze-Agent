@@ -224,41 +224,43 @@ export function DetailPage() {
             </p>
           ))}
 
-          <h3>Key numbers</h3>
-          <p>
-            <BandBadge band={band} pm25={pm25} />
-          </p>
-          <p className={styles.small}>
-            {BAND_STANDARD_LABEL}. Local standard:{' '}
-            {location?.aqiStandard ?? 'unknown'} (not applied in the demo).
-          </p>
-          {item.measurements.length > 0 && (
-            <table className={styles.numbers}>
-              <caption className="visually-hidden">Measurements</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Pollutant</th>
-                  <th scope="col">Value</th>
-                  <th scope="col">Averaging</th>
-                </tr>
-              </thead>
-              <tbody>
-                {item.measurements.map((m) => (
-                  <tr key={m.pollutant}>
-                    <th scope="row">{POLLUTANT_LABELS[m.pollutant]}</th>
-                    <td>
-                      {m.value === null ? (
-                        <span className={styles.muted}>no data</span>
-                      ) : (
-                        `${m.value} ${m.unit}`
-                      )}
-                    </td>
-                    <td>{m.averaging}</td>
+          <div className={styles.keyNumbers}>
+            <h3>Key numbers</h3>
+            <p>
+              <BandBadge band={band} pm25={pm25} />
+            </p>
+            <p className={styles.small}>
+              {BAND_STANDARD_LABEL}. Local standard:{' '}
+              {location?.aqiStandard ?? 'unknown'} (not applied in the demo).
+            </p>
+            {item.measurements.length > 0 && (
+              <table className={styles.numbers}>
+                <caption className="visually-hidden">Measurements</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Pollutant</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">Averaging</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {item.measurements.map((m) => (
+                    <tr key={m.pollutant}>
+                      <th scope="row">{POLLUTANT_LABELS[m.pollutant]}</th>
+                      <td>
+                        {m.value === null ? (
+                          <span className={styles.muted}>no data</span>
+                        ) : (
+                          `${m.value} ${m.unit}`
+                        )}
+                      </td>
+                      <td>{m.averaging}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
           {item.weather && (
             <dl className={styles.facts}>
               <Fact
@@ -291,14 +293,6 @@ export function DetailPage() {
                   item.weather.rainMm === null
                     ? null
                     : `${item.weather.rainMm} mm`
-                }
-              />
-              <Fact
-                label="Temperature"
-                value={
-                  item.weather.temperatureC === null
-                    ? null
-                    : `${item.weather.temperatureC} °C`
                 }
               />
             </dl>
@@ -345,6 +339,18 @@ export function DetailPage() {
                   item.forecast.validTo,
                   location?.timeZone,
                 )}
+              />
+            </dl>
+          )}
+          {item.weather && (
+            <dl className={styles.facts}>
+              <Fact
+                label="Temperature"
+                value={
+                  item.weather.temperatureC === null
+                    ? null
+                    : `${item.weather.temperatureC} °C`
+                }
               />
             </dl>
           )}

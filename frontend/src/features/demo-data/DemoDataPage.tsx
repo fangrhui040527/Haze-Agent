@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { FileText, Filter, RotateCcw, X } from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type MouseEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 import {
   demoStore,
@@ -36,6 +45,14 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'chatScripts', label: 'Chat scripts' },
   { id: 'events', label: 'Live event log' },
 ];
+
+const COLUMN_WIDTHS: Record<Tab, string[]> = {
+  items: ['10%', '11%', '10%', '9%', '30%', '30%'],
+  locations: ['14%', '17%', '13%', '13%', '22%', '21%'],
+  sources: ['17%', '25%', '16%', '24%', '18%'],
+  chatScripts: ['18%', '62%', '20%'],
+  events: ['17%', '17%', '17%', '14%', '35%'],
+};
 
 const ORIGIN_LABEL = {
   none: 'not loaded',
@@ -158,7 +175,7 @@ export function DemoDataPage() {
 
       <Panel className={styles.block}>
         <h2>Generate</h2>
-        <div className={styles.row}>
+        <div className={`${styles.row} ${styles.generateRow}`}>
           <label className={styles.field}>
             Seed
             <input
@@ -181,7 +198,7 @@ export function DemoDataPage() {
               }
             />
           </label>
-          <label className={styles.field}>
+          <label className={`${styles.field} ${styles.coverageField}`}>
             Coverage
             <select
               value={coverage}
@@ -201,13 +218,15 @@ export function DemoDataPage() {
             Regenerate
           </Button>
           <Button
+            className={styles.resetButton}
             onClick={() =>
               resetToSeed()
                 .then(() => flash('Reset to the committed seed file.'))
                 .catch((e: unknown) => setLoadError(String(e)))
             }
           >
-            Reset to seed file
+            <RotateCcw size={15} aria-hidden="true" />
+            <span>Reset to seed file</span>
           </Button>
         </div>
         <p className={styles.muted}>
@@ -237,15 +256,17 @@ export function DemoDataPage() {
           >
             Burst 20
           </Button>
-          <label className={styles.check}>
+          <label className={`${styles.check} ${styles.autoCheck}`}>
             <input
               type="checkbox"
+              className={styles.autoCheckInput}
               checked={settings.autoSimulate}
               onChange={(e) =>
                 updateMockSettings({ autoSimulate: e.target.checked })
               }
             />
-            Auto every
+            <span className={styles.autoCheckBox} aria-hidden="true" />
+            <span>Auto every</span>
           </label>
           <label className={styles.field}>
             <span className="visually-hidden">
@@ -267,17 +288,21 @@ export function DemoDataPage() {
         </div>
         <fieldset className={styles.scenarios}>
           <legend>Scenario</legend>
-          {SCENARIOS.map((s) => (
-            <label key={s.id} className={styles.check} title={s.description}>
-              <input
-                type="radio"
-                name="scenario"
-                checked={settings.scenario === s.id}
-                onChange={() => updateMockSettings({ scenario: s.id })}
-              />
-              {s.label}
-            </label>
-          ))}
+          <div className={styles.scenarioOptions}>
+            {SCENARIOS.map((s) => (
+              <label key={s.id} className={styles.check} title={s.description}>
+                <input
+                  type="radio"
+                  className={styles.scenarioInput}
+                  name="scenario"
+                  checked={settings.scenario === s.id}
+                  onChange={() => updateMockSettings({ scenario: s.id })}
+                />
+                <span className={styles.scenarioIndicator} aria-hidden="true" />
+                <span>{s.label}</span>
+              </label>
+            ))}
+          </div>
         </fieldset>
         <p className={styles.muted}>
           {SCENARIOS.find((s) => s.id === settings.scenario)?.description}{' '}
@@ -332,21 +357,24 @@ export function DemoDataPage() {
             onChange={(v) => updateMockSettings({ latencyMs: v })}
           />
         </div>
-        <div className={styles.row}>
-          <label className={styles.check}>
+        <div className={`${styles.row} ${styles.mockBehaviorActions}`}>
+          <label className={`${styles.check} ${styles.autoCheck}`}>
             <input
               type="checkbox"
+              className={styles.autoCheckInput}
               checked={settings.failNextLoad}
               onChange={(e) =>
                 updateMockSettings({ failNextLoad: e.target.checked })
               }
             />
-            Make the next dashboard load fail (to see the error state), then
-            reload the page
+            <span className={styles.autoCheckBox} aria-hidden="true" />
+            <span>
+              Make the next dashboard load fail (to see the error state), then
+              reload the page
+            </span>
           </label>
           <Button
-            size="small"
-            variant="ghost"
+            className={styles.resetSettingsButton}
             onClick={() => mockSettings.set(DEFAULT_MOCK_SETTINGS)}
           >
             Reset settings
@@ -426,15 +454,27 @@ function DatasetStats({
   const edge = dataset.items.filter((i) => i.tags.includes('edge-case')).length;
   return (
     <div className={styles.stats}>
-      <p>
-        Seed <strong>{dataset.seed}</strong> ·{' '}
-        <strong>{dataset.items.length}</strong> items ·{' '}
-        <strong>{dataset.locations.length}</strong> locations ·{' '}
-        <strong>{dataset.sources.length}</strong> sources · {edge} edge cases ·
-        source: {origin} · {liveEvents} simulated event(s) this session ·
-        generated <TimeAgo iso={dataset.generatedAt} />
-      </p>
-      <div className={styles.chips}>
+      <div className={styles.statsSummary}>
+        <span className={styles.statsTag}>
+          Seed <strong>{dataset.seed}</strong>
+        </span>
+        <span className={styles.statsTag}>
+          <strong>{dataset.items.length}</strong> items
+        </span>
+        <span className={styles.statsTag}>
+          <strong>{dataset.locations.length}</strong> locations
+        </span>
+        <span className={styles.statsTag}>
+          <strong>{dataset.sources.length}</strong> sources
+        </span>
+        <span className={styles.statsTag}>{edge} edge cases</span>
+        <span className={styles.statsTag}>Source: {origin}</span>
+        <span className={styles.statsTag}>{liveEvents} simulated event(s)</span>
+        <span className={styles.statsTag}>
+          Generated <TimeAgo iso={dataset.generatedAt} />
+        </span>
+      </div>
+      <div className={`${styles.chips} ${styles.categoryChips}`}>
         {Object.entries(byCategory).map(([k, v]) => (
           <Badge key={k}>
             {CATEGORY_LABELS[k as keyof typeof CATEGORY_LABELS] ?? k}: {v}
@@ -582,116 +622,169 @@ function Browser({ dataset }: { dataset: DemoDataset }) {
   );
   const selectedRow = filtered.find((r) => r.key === selected) ?? null;
 
+  useEffect(() => {
+    if (!selectedRow) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedRow]);
+
+  const closeOnBackdrop = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) setSelected(null);
+  };
+
   return (
-    <Panel className={styles.block}>
-      <h2>Browse</h2>
-      <div
-        className={styles.tabs}
-        role="tablist"
-        aria-label="Dataset collections"
-      >
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            type="button"
-            aria-selected={tab === t.id}
-            className={styles.tab}
-            onClick={() => {
-              setTab(t.id);
-              setSelected(null);
-            }}
+    <>
+      <Panel className={styles.block}>
+        <h2>Browse</h2>
+        <div className={styles.browseToolbar}>
+          <div
+            className={styles.tabs}
+            role="tablist"
+            aria-label="Dataset collections"
           >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <label className={styles.field}>
-        Filter
-        <input
-          type="search"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Type to filter rows…"
-        />
-      </label>
-      <p className={styles.muted}>
-        {filtered.length} row(s)
-        {filtered.length > MAX_ROWS ? `, showing the first ${MAX_ROWS}` : ''}.
-        Select a row to see its JSON.
-        {tab === 'items' &&
-          ' Tip: filter by "edge-case" to see the deliberately awkward items.'}
-      </p>
-      <div className={styles.browser}>
-        <div
-          className={styles.browserTable}
-          tabIndex={0}
-          role="region"
-          aria-label={`${tab} table`}
-        >
-          {filtered.length === 0 ? (
-            <StateMessage
-              kind="empty"
-              title={
-                tab === 'events' ? 'No simulated events yet.' : 'No rows match.'
-              }
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                type="button"
+                aria-selected={tab === t.id}
+                className={styles.tab}
+                onClick={() => {
+                  setTab(t.id);
+                  setSelected(null);
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <label className={`${styles.field} ${styles.filterField}`}>
+            <Filter size={17} aria-hidden="true" />
+            <span className="visually-hidden">Filter rows</span>
+            <input
+              type="search"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Type to filter rows…"
             />
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  {headers.map((h) => (
-                    <th key={h} scope="col">
-                      {h}
-                    </th>
+          </label>
+        </div>
+        <p className={styles.muted}>
+          {filtered.length} row(s)
+          {filtered.length > MAX_ROWS ? `, showing the first ${MAX_ROWS}` : ''}.
+          Select a row to see its JSON.
+          {tab === 'items' &&
+            ' Tip: filter by "edge-case" to see the deliberately awkward items.'}
+        </p>
+        <div className={styles.browser}>
+          <div
+            className={styles.browserTable}
+            tabIndex={0}
+            role="region"
+            aria-label={`${tab} table`}
+          >
+            {filtered.length === 0 ? (
+              <StateMessage
+                kind="empty"
+                title={
+                  tab === 'events'
+                    ? 'No simulated events yet.'
+                    : 'No rows match.'
+                }
+              />
+            ) : (
+              <table>
+                <colgroup>
+                  {COLUMN_WIDTHS[tab].map((width, index) => (
+                    <col key={index} style={{ width }} />
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.slice(0, MAX_ROWS).map((r) => (
-                  <tr
-                    key={r.key}
-                    aria-selected={r.key === selected}
-                    className={r.key === selected ? styles.selected : ''}
-                  >
-                    {r.cells.map((c, i) => (
-                      <td key={i}>
-                        {i === 0 ? (
-                          <button
-                            type="button"
-                            className={styles.rowButton}
-                            onClick={() => setSelected(r.key)}
-                          >
-                            {c}
-                          </button>
-                        ) : (
-                          c
-                        )}
-                      </td>
+                </colgroup>
+                <thead>
+                  <tr>
+                    {headers.map((h) => (
+                      <th key={h} scope="col">
+                        {h}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {filtered.slice(0, MAX_ROWS).map((r) => (
+                    <tr
+                      key={r.key}
+                      aria-selected={r.key === selected}
+                      className={r.key === selected ? styles.selected : ''}
+                    >
+                      {r.cells.map((c, i) => (
+                        <td key={i}>
+                          {i === 0 ? (
+                            <button
+                              type="button"
+                              className={styles.rowButton}
+                              onClick={() => {
+                                setSelected(r.key);
+                              }}
+                            >
+                              {c}
+                            </button>
+                          ) : (
+                            c
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
-        <div className={styles.json}>
-          {selectedRow ? (
-            <>
-              {tab === 'items' && (
-                <Link to={`/item/${encodeURIComponent(selectedRow.key)}`}>
-                  Open on the detail page →
-                </Link>
-              )}
+      </Panel>
+      {selectedRow &&
+        createPortal(
+          <div
+            className={styles.jsonBackdrop}
+            onMouseDown={closeOnBackdrop}
+            role="presentation"
+          >
+            <section
+              className={styles.jsonDialog}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="json-dialog-title"
+            >
+              <header className={styles.jsonHeader}>
+                <h3 id="json-dialog-title">Row data</h3>
+                <div className={styles.jsonActions}>
+                  {tab === 'items' && (
+                    <Link
+                      to={`/item/${encodeURIComponent(selectedRow.key)}`}
+                      className={styles.detailButton}
+                      aria-label="Open item detail page"
+                      onClick={() => setSelected(null)}
+                    >
+                      <FileText size={17} aria-hidden="true" />
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.jsonClose}
+                    aria-label="Close row data"
+                    autoFocus
+                    onClick={() => setSelected(null)}
+                  >
+                    <X size={18} aria-hidden="true" />
+                  </button>
+                </div>
+              </header>
               <pre>{JSON.stringify(selectedRow.data, null, 2)}</pre>
-            </>
-          ) : (
-            <p className={styles.muted}>
-              Select a row (click its first cell) to see the raw JSON.
-            </p>
-          )}
-        </div>
-      </div>
-    </Panel>
+            </section>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
