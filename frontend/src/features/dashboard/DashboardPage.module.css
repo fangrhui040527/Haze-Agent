@@ -1,0 +1,45 @@
+/* docs/03-ui-design.md §3: table on top; chat + office side by side on desktop; stacked below 1024px. */
+.grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'table'
+    'chat'
+    'office';
+}
+
+.table {
+  grid-area: table;
+}
+
+.chat {
+  grid-area: chat;
+}
+
+.office {
+  grid-area: office;
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    /* The office gets two thirds of the width so its characters and nameplates stay readable. */
+    grid-template-columns: minmax(360px, 1fr) minmax(0, 2fr);
+    grid-template-areas:
+      'table table'
+      'chat office';
+  }
+
+  /* The chat sits flush against the office so the Manager's reception is "next to" it. */
+  .chat {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .office {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: calc(-1 * var(--space-3));
+    border-left-style: dashed;
+  }
+}
