@@ -49,7 +49,7 @@
     "bundle_ref": {
       "id": "demo:klang-fixture-input-v2",
       "revision": 1,
-      "sha256": "8c50ab5f0586941ff9892aa451b020bbe18f8655cd4224060ca8dc6d6566a9ef"
+      "sha256": "328b00ceb6ba2df8b755ebb8d60e8103c4034c6568ea529b11a596dc134615bb"
     },
     "candidate_ref": null,
     "candidate_reason": {
