@@ -3,6 +3,8 @@
 > Read-only study of the proposal. No application code yet.
 > Date written: 23 Oct 2026 (same day as the spec).
 
+> Update, 24 Oct 2026: the approved frontend remains generic and now includes Klang crew scheduling as an example request and structured answer inside chat. This supersedes the earlier decision below to drop scheduling entirely. See [the implemented contract route](chat-crew-scheduling.md).
+
 ## 0. Sources used
 
 **Only these two files count as the source of truth** (folder `banning-reference/Latest/`):

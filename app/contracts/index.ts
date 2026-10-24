@@ -8,6 +8,7 @@ import {
 } from './evidence.js';
 import { planningSchema, planningShape, runSchema } from './planning.js';
 import { resultSchema, resultShape } from './result.js';
+import { HANDOFF_VERSIONS, handoffSchemas, handoffShapes } from './handoffs.js';
 
 export {
   environmentalSeriesSchema,
@@ -22,6 +23,24 @@ export type { PlanningBundle, Activity, RunRequest } from './planning.js';
 export type { Result } from './result.js';
 export type { ImmutableReference } from './common.js';
 export {
+  HANDOFF_VERSIONS,
+  handoffSchemas,
+  handoffShapes,
+  sourceLocatorShape,
+} from './handoffs.js';
+export type {
+  HandoffKind,
+  EvidenceHandoff,
+  ScenarioHandoff,
+  PolicyHandoff,
+  SnapshotHandoff,
+  InputDraftHandoff,
+  PlannerInputHandoff,
+  CalculationHandoff,
+  IndependentCheckHandoff,
+  WorkerShieldInputHandoff,
+} from './handoffs.js';
+export {
   parseContractJson,
   canonicalJson,
   contractHash,
@@ -30,11 +49,11 @@ export {
 export { CONTRACT_LIMITS } from './common.js';
 
 export const CONTRACT_VERSIONS = {
-  evidence: 'haze.evidence.v2',
   environmental_series: 'haze.environmental_series.v2',
   planning: 'haze.planning.v2',
   run: 'haze.run.v2',
   result: 'haze.result.v2',
+  ...HANDOFF_VERSIONS,
 } as const;
 export type ContractKind = keyof typeof CONTRACT_VERSIONS;
 export type ExecutionSurface = 'canonical' | 'historical_harness';
@@ -65,13 +84,16 @@ export function validateContract(
       supported_versions: [CONTRACT_VERSIONS[kind]],
     });
   }
-  const schema = {
-    evidence: evidenceSchema,
-    environmental_series: environmentalSeriesSchema,
+  const schemas: Record<ContractKind, z.ZodType> = {
     planning: planningSchema,
     run: runSchema,
     result: resultSchema,
-  }[kind];
+    ...handoffSchemas,
+    // Both published evidence formats share v2; retain each format's refinements.
+    evidence: z.union([evidenceSchema, handoffSchemas.evidence]),
+    environmental_series: environmentalSeriesSchema,
+  };
+  const schema = schemas[kind];
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw new ContractError(
@@ -100,11 +122,12 @@ export function validateContract(
 /** Structural schemas deliberately leave cross-record predicates to validateContract. */
 export function exportContractSchemas() {
   const shapes = {
-    evidence: evidenceShape,
     environmental_series: environmentalSeriesShape,
     planning: planningShape,
     run: runSchema,
     result: resultShape,
+    ...handoffShapes,
+    evidence: z.union([evidenceShape, handoffShapes.evidence]),
   };
   return Object.fromEntries(
     (Object.keys(shapes) as ContractKind[]).map(

@@ -67,6 +67,15 @@
   max-width: 92%;
 }
 
+.withSchedule {
+  max-height: min(65vh, 620px);
+}
+
+.withSchedule .agents {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .user {
   align-self: flex-end;
   align-items: flex-end;
@@ -88,6 +97,14 @@
   background: var(--color-surface-2);
   font-size: var(--text-sm);
   overflow-wrap: anywhere;
+}
+
+.source {
+  max-width: 100%;
+}
+
+.source > span {
+  white-space: normal;
 }
 
 .user .bubble {

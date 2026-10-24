@@ -12,43 +12,16 @@
  */
 
 import type { AgentId } from './domain.ts';
+import type { DemoChatResponse } from '../../../../app/demo/chat-contract.ts';
+import type {
+  DemoAgentEvent,
+  DemoAgentExecution,
+} from '../../../../app/demo/agent-contract.ts';
 
 export type { AgentId };
 
-interface BaseEvent {
-  runId: string;
-  /** ISO timestamp. */
-  at: string;
-  /** Plain-language text for the status line, e.g. "EvidenceCritic is checking 4 sources…". */
-  message: string;
-}
-
-export type AgentEvent =
-  | (BaseEvent & { type: 'run_started' })
-  /** Level B only: the backend reports the run state but not which agent is busy. */
-  | (BaseEvent & { type: 'run_state'; state: 'queued' | 'running' })
-  | (BaseEvent & { type: 'agent_thinking'; agent: AgentId })
-  | (BaseEvent & {
-      type: 'agent_moving';
-      agent: AgentId;
-      to: 'office' | 'reception';
-    })
-  | (BaseEvent & {
-      type: 'handoff';
-      from: AgentId;
-      to: AgentId[];
-      payloadLabel: string;
-    })
-  | (BaseEvent & { type: 'agent_working'; agent: AgentId })
-  | (BaseEvent & { type: 'agent_completed'; agent: AgentId })
-  | (BaseEvent & { type: 'run_completed' })
-  | (BaseEvent & {
-      type: 'run_failed';
-      agent: AgentId | null;
-      error: string;
-      retryable: boolean;
-    })
-  | (BaseEvent & { type: 'run_cancelled' });
+/** Browser and server share the same event contract. */
+export type AgentEvent = DemoAgentEvent;
 
 export type AgentEventType = AgentEvent['type'];
 
@@ -63,9 +36,18 @@ export interface AgentAnswer {
   paragraphs: string[];
   citations: Citation[];
   /** Where the words came from. Shown to the user; never claim "model" for a template. */
-  source: 'mock_template' | 'model' | 'template_fallback';
+  source:
+    | 'mock_template'
+    | 'model'
+    | 'template_fallback'
+    | 'computed_demo'
+    | 'input_required';
   fictional: boolean;
   durationMs: number;
+  /** Validated domain result and resolved plans, kept together for faithful chat rendering. */
+  scheduling?: DemoChatResponse;
+  /** Live role execution receipts, separate from checked historical artifacts. */
+  agentExecution?: DemoAgentExecution;
 }
 
 export interface AskRequest {

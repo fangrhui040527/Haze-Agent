@@ -90,6 +90,8 @@ export class OfficeModel {
   };
   /** True between run_started and the end of the run. */
   runActive = false;
+  /** A local contract check does not imply execution by any displayed model agent. */
+  private localCheck = false;
 
   /** Wandering and the cat; can be switched off at any time (reduced motion). */
   ambient: boolean;
@@ -105,6 +107,7 @@ export class OfficeModel {
     this.packets = [];
     this.highlights.clear();
     this.runActive = false;
+    this.localCheck = false;
     for (const id of AGENT_IDS) {
       this.actors.set(id, {
         id,
@@ -193,6 +196,7 @@ export class OfficeModel {
   apply(event: AgentEvent, now: number, instant: boolean): void {
     switch (event.type) {
       case 'run_started':
+        this.localCheck = event.executionKind === 'local_check';
         this.packets = [];
         this.highlights.clear();
         for (const a of this.actors.values()) {
@@ -207,6 +211,7 @@ export class OfficeModel {
         break;
       case 'run_state':
         this.runActive = true;
+        if (this.localCheck) break;
         if (event.state === 'queued') this.setPose('manager', 'thinking', now);
         else {
           this.walk('manager', MEETING_SPOT, 'idle', instant);
@@ -255,9 +260,13 @@ export class OfficeModel {
       case 'run_completed':
         for (const id of AGENT_IDS)
           if (id !== 'manager') this.setPose(id, 'idle', now, instant);
-        this.endRun('done', instant, now);
+        this.endRun(this.localCheck ? 'idle' : 'done', instant, now);
         break;
       case 'run_failed':
+        if (this.localCheck) {
+          this.endRun('idle', instant, now);
+          break;
+        }
         if (event.agent && event.agent !== 'manager')
           this.setPose(event.agent, 'error', now, instant);
         this.endRun('error', instant, now);
@@ -412,6 +421,13 @@ export interface AgentStatus {
   text: string;
 }
 
+export function isLocalCheckRun(events: readonly AgentEvent[]): boolean {
+  return (
+    events.findLast((event) => event.type === 'run_started')?.executionKind ===
+    'local_check'
+  );
+}
+
 export function deriveAgentStatuses(
   events: readonly AgentEvent[],
 ): Record<AgentId, AgentStatus> {
@@ -421,13 +437,20 @@ export function deriveAgentStatuses(
   const set = (id: AgentId, state: Pose, text: string) => {
     result[id] = { state, text };
   };
+  let localCheck = false;
   for (const e of events) {
     switch (e.type) {
       case 'run_started':
+        localCheck = e.executionKind === 'local_check';
+        if (localCheck) {
+          for (const id of AGENT_IDS) set(id, 'idle', 'Not run (local check)');
+          break;
+        }
         for (const id of AGENT_IDS) set(id, 'idle', 'Idle');
         set('manager', 'thinking', 'Received a question');
         break;
       case 'run_state':
+        if (localCheck) break;
         if (e.state === 'queued')
           set('manager', 'thinking', 'Waiting in the queue');
         else {
@@ -463,13 +486,16 @@ export function deriveAgentStatuses(
         set(e.agent, 'done', 'Done');
         break;
       case 'run_completed':
+        if (localCheck) break;
         set('manager', 'done', 'Delivered the answer');
         break;
       case 'run_failed':
+        if (localCheck) break;
         if (e.agent) set(e.agent, 'error', `Failed: ${e.error}`);
         set('manager', 'error', 'Run failed');
         break;
       case 'run_cancelled':
+        if (localCheck) break;
         for (const id of AGENT_IDS) set(id, 'idle', 'Idle');
         break;
     }

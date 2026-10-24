@@ -4,25 +4,37 @@ A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World
 EvidenceCritic, WorkerShield) shown as a pixel-art office.
 
 > **Status: demo with FICTIONAL data only.** The backend team is still building the real services.
-> Everything here runs on mock data and mock agents behind interfaces that the real backend
-> can replace without touching the UI.
+> General haze answers use mock data and mock agents. The Klang crew example runs the local
+> deterministic planning checker plus real model-role reviews and pinned memory services,
+> streaming their actual activity to the office. All sample data
+> is fictional; operational recommendations and publication remain disabled.
 
 Design and decisions: [`docs/01-project-understanding.md`](../docs/01-project-understanding.md),
 [`docs/02-critique.md`](../docs/02-critique.md), [`docs/03-ui-design.md`](../docs/03-ui-design.md).
 
 ---
 
-## 1. Run it (Windows PowerShell)
+## 1. Run it locally (Windows, macOS, or Linux)
 
-You need **Node.js 22.18 or newer** (tested on 24.22). Check with `node --version`.
+Use the repository's pinned **Node.js 24.22.1** and **npm 11.8.0** for the shared planning harness. Check with `node --version`.
 
-```powershell
-cd C:\Dev\Website\Haze-Agent\frontend
-npm install          # first time only, downloads the packages
+Open a terminal in the cloned repository's root folder (the folder containing `frontend`), then run:
+
+```sh
+npm ci               # installs the shared contracts and local scheduling harness dependencies
+npm run build        # builds and verifies the pinned memory engines used by the Klang team
+cd frontend
+npm ci               # installs the dependencies from the committed lockfile
 npm run dev          # starts the app
 ```
 
-Open **http://localhost:5173**. Stop it with `Ctrl + C`.
+These commands work in PowerShell and macOS/Linux shells. If your terminal is already in `frontend`, run `npm ci --prefix ..` for the shared dependencies, then `npm ci` and `npm run dev`.
+
+Keep the terminal running and open the **Local** URL printed by Vite, usually **http://localhost:5173**. If that port is occupied, Vite may choose another port. Stop the server with `Ctrl + C`.
+
+General demo chat uses fictional data without API keys. The Klang crew team requires `HAZE_PROVIDER=nvidia` and `NVIDIA_API_KEY` in the ignored repository-root `.env` (existing OpenAI-compatible settings also work). Vite dev and preview read this configuration server-side and include the localhost-only scheduling adapter; a static `dist/` deployment needs an equivalent server adapter. Restart Vite after changing provider settings. `SAMPLE_MODE=true`, offline mode or a missing key blocks live model execution explicitly.
+
+Try the default **fictional Klang crew sample** request in chat. Its answer includes the baseline, selected candidate and illustrated alternative, with exact times and immutable references. Requests for real crew schedules ask for validated planning input instead of silently using sample facts. See [the route and verification notes](../docs/chat-crew-scheduling.md) for contracts, limitations and focused checks.
 
 | Command                 | What it does                                                                                                         |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -152,6 +164,8 @@ The chat, the status line and the pixel office render **only** from a list of `A
 | `run_completed` / `run_failed` / `run_cancelled` | End of run                                        | Manager returns; a red "!" on failure                 |
 
 Steps:
+
+The Klang sample already uses a real server-side LangGraph team: four model roles and the pinned World Model/H-Mem services. It emits `run_started` with `executionKind: 'agents'`, streams actual activity and returns `source: 'model'` with separate execution receipts and an independently checked schedule. Models select validated facts; controlled rendering supplies the displayed explanation. Requests needing real planning input still return `'input_required'` with `executionKind: 'local_check'`. Keep this route separate when replacing the general mock service; see [crew scheduling](../docs/chat-crew-scheduling.md).
 
 1. Implement `src/services/agents/HttpAgentService.ts`:
    - Post the question.
