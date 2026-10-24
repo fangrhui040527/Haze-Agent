@@ -60,7 +60,7 @@ export function AgentOffice({
   const statuses = useMemo(() => deriveAgentStatuses(run.events), [run.events]);
   const levelB = run.events.some((e) => e.type === 'run_state');
   const localCheck = isLocalCheckRun(run.events);
-  const toggle = (id: AgentId) => setSelected((s) => (s === id ? null : id));
+  const toggle = (id: AgentId) => onSelect(selected === id ? null : id);
 
   return (
     <section className={styles.office} aria-labelledby="office-title">
