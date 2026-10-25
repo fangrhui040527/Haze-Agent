@@ -293,8 +293,17 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
       readiness: 'implemented',
       limitations: SMOKELEDGER_LIMITATIONS,
     },
-    matches: (request) =>
-      /\b(haze|smoke|episode)\b/iu.test(request.objective),
+    // Claim only requests with a readable town and window; other haze questions stay with
+    // the team's capabilities or become explicit gaps there.
+    matches(request) {
+      if (!/\b(haze|smoke|episode)\b/iu.test(request.objective)) return false;
+      try {
+        frameSmokeLedgerScope(request);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     assignments(request) {
       let input: unknown;
       try {
@@ -330,6 +339,76 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
       ];
     },
   };
+}
+
+const sponsorSchema = z.looseObject({
+  zetaris: z
+    .looseObject({
+      executed: z.number(),
+      skipped: z.number(),
+      request_ids: z.array(z.string()).optional(),
+    })
+    .optional(),
+  nightshift: z
+    .looseObject({
+      executed: z.number(),
+      skipped: z.number(),
+      model_route: z.string().optional(),
+    })
+    .optional(),
+});
+
+/** Recorded execution only: what ran, what was skipped, and where the trace is. */
+function provenanceLine(response: RunToolOutput['response']): string {
+  const sponsor = sponsorSchema.safeParse(
+    response.sponsor_integration_evidence ?? {},
+  );
+  const zetaris = sponsor.success ? sponsor.data.zetaris : undefined;
+  const nightshift = sponsor.success ? sponsor.data.nightshift : undefined;
+  const ops = (prefix: string) =>
+    Object.entries(response.engine_operations_executed ?? {})
+      .filter(([key]) => key.startsWith(prefix))
+      .reduce((sum, [, count]) => sum + count, 0);
+  const remote = (name: string, entry?: { executed: number; skipped: number }) =>
+    !entry
+      ? `${name} not reported`
+      : entry.executed > 0
+        ? `${name} executed (${entry.executed})`
+        : entry.skipped > 0
+          ? `${name} skipped (${entry.skipped})`
+          : `${name} not used`;
+  const ids = zetaris?.request_ids?.length
+    ? `, request ids ${zetaris.request_ids.slice(0, 5).join(', ')}`
+    : '';
+  return [
+    `Provenance (${response.mode}): ${remote('Zetaris', zetaris)}${ids}`,
+    // A model route is named only for calls that actually ran.
+    `${remote('Nightshift', nightshift)}${nightshift && nightshift.executed > 0 && nightshift.model_route ? ` via ${nightshift.model_route}` : ''}`,
+    `H-MEM ${ops('hmem.')} and World Model ${ops('world_model.')} operations executed locally`,
+    `sidecar trace ${response.log_file ?? 'not recorded'}.`,
+  ].join('; ');
+}
+
+/** Data that would narrow the conclusion, derived only from what the run reported. */
+function dataNeeds(output: RunToolOutput): string[] {
+  const response = output.response;
+  const limitations = (response.output?.limitations ?? []).join(' ');
+  const needs: string[] = [];
+  for (const hours of response.output?.validity?.unserved ?? [])
+    needs.push(`PM2.5 evidence for the uncovered period ${hours}`);
+  if (/hindsight/i.test(limitations))
+    needs.push(
+      'a forecast issued before the window (these values are hindsight)',
+    );
+  if (output.operation === 'trace_sources')
+    needs.push(
+      'a current, dated concession map',
+      'independent trajectories (for example NOAA HYSPLIT) to narrow the source ranges',
+      'on-the-ground verification before naming any landholder',
+    );
+  if (response.mode === 'offline_sample')
+    needs.push('a live run on real evidence (this is the fictional sample)');
+  return needs;
 }
 
 const KIND: Record<SmokeLedgerRunTool, string> = {
@@ -404,11 +483,17 @@ async function runOperation(
         ? 'synthetic_fixture'
         : 'external_source',
   });
+  const needs = dataNeeds(output);
   return {
     status: 'completed',
-    summary:
+    summary: [
       response.output?.summary ??
-      `SmokeLedger ${output.operation} completed without a summary.`,
+        `SmokeLedger ${output.operation} completed without a summary.`,
+      ...(needs.length
+        ? [`Would improve the conclusion: ${needs.join('; ')}.`]
+        : []),
+      provenanceLine(response),
+    ].join('\n'),
     support: response.status === 'success' ? 'supported' : 'partial',
     uncertainty: [
       ...(response.output?.limitations ?? []),

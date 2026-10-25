@@ -57,6 +57,10 @@ export const runResponseSchema = z.looseObject({
         .array(z.looseObject({ evidence_id: z.string(), sha256: z.string() }))
         .optional(),
       limitations: z.array(z.string()).optional(),
+      validity: z
+        .looseObject({ unserved: z.array(z.string()).optional() })
+        .nullable()
+        .optional(),
     })
     .nullable()
     .optional(),

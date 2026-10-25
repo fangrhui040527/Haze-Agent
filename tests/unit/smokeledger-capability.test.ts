@@ -65,7 +65,11 @@ const runResponse = (run_id: string, overrides: object = {}) => ({
     limitations: ['Names are leads for verification.'],
   },
   critic: { final: { decision: 'approve' } },
-  sponsor_integration_evidence: { zetaris: { executed: false } },
+  // Same shape as the real sidecar's sample-mode response.
+  sponsor_integration_evidence: {
+    zetaris: { executed: 0, skipped: 13, request_ids: [] },
+    nightshift: { executed: 0, skipped: 0, available: false },
+  },
   engine_operations_executed: { 'hmem.query': 2 },
   remote_calls_executed: {},
   remote_calls_skipped: { 'zetaris.sql': 13 },
@@ -175,6 +179,25 @@ describe('smokeledger scope framing', () => {
   ])('needs an explicit scope for %j', (objective) => {
     expect(() => frameSmokeLedgerScope({ objective })).toThrow();
   });
+
+  it.each([
+    ['Investigate the haze over Batu Pahat on 6–7 October 2026.', true],
+    ['What is the haze like?', false],
+    [
+      'Investigate PM2.5 evidence for Klang during 2026-10-06 to 2026-10-07.',
+      false,
+    ],
+  ])(
+    'claims %j only with a readable town and window: %s',
+    (objective, expected) => {
+      expect(
+        createSmokeLedgerCapability().matches({
+          schema_version: 'haze.task.request.v3',
+          objective,
+        } as never),
+      ).toBe(expected);
+    },
+  );
 
   it('asks for scope instead of guessing when framing fails', () => {
     const plans = createSmokeLedgerCapability().assignments({
@@ -321,12 +344,24 @@ describe('smokeledger assignments', () => {
       value,
     );
     expect(output.support).toBe('supported');
+    // Recorded provenance and data needs reach the synthesis, never implied execution.
+    expect(output.summary).toContain(
+      'Provenance (offline_sample): Zetaris skipped (13); Nightshift not used',
+    );
+    expect(output.summary).toContain(
+      'H-MEM 2 and World Model 0 operations executed locally',
+    );
+    expect(output.summary).toContain(
+      'Would improve the conclusion: a current, dated concession map',
+    );
     expect(saved[0]).toMatchObject({
       kind: 'smokeledger.trace_sources',
       evidence_origin: 'synthetic_fixture',
       content: {
         response: {
-          sponsor_integration_evidence: { zetaris: { executed: false } },
+          sponsor_integration_evidence: {
+            zetaris: { executed: 0, skipped: 13, request_ids: [] },
+          },
           remote_calls_skipped: { 'zetaris.sql': 13 },
         },
       },

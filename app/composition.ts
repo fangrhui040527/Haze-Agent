@@ -19,6 +19,11 @@ import {
   createPm25Capability,
   createPm25Tools,
 } from './capabilities/pm25/index.js';
+import {
+  createSmokeLedgerAssignments,
+  createSmokeLedgerCapability,
+  createSmokeLedgerTools,
+} from './capabilities/smokeledger/index.js';
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
@@ -34,14 +39,20 @@ export function createExecutionRegistry(options: {
   ])
     registry.registerAgent(agent);
   registry.registerCapability(createPm25Capability());
+  // Before episode-investigation: fixture planning picks the first match, and SmokeLedger
+  // only matches requests with a readable town and window.
+  registry.registerCapability(createSmokeLedgerCapability());
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
     ...createPm25Assignments(),
+    ...createSmokeLedgerAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])
     registry.registerAssignment(assignment);
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
+  for (const tool of createSmokeLedgerTools(options))
+    registry.registerTool(tool);
   return registry;
 }
