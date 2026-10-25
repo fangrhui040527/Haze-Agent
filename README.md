@@ -17,7 +17,28 @@ npm run build
 npm --prefix frontend run dev
 ```
 
-Configure the existing model route in server-only `.env` using the placeholders in [.env.example](.env.example). Configure existing Zetaris access in `third_party/zetaris/.env.local` or process environment: `ZETARIS_API_KEY`, `ZETARIS_REST_URL` and `ZETARIS_ORG_ID`. Keep credentials out of browser `VITE_*` variables. The application does not provision these services or create credentials.
+Copy [.env.example](.env.example) to root `.env` and
+[app/adapters/zetaris/.env.example](app/adapters/zetaris/.env.example) to
+`app/adapters/zetaris/.env.local`. These local files are gitignored. For live
+agent requests, set your own `NVIDIA_API_KEY` (or use
+`HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
+`HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
+requires an existing Zetaris instance and your own `ZETARIS_API_KEY`; configure
+its `ZETARIS_REST_URL` and `ZETARIS_ORG_ID` if they differ from the documented
+defaults. Keep credentials out of browser `VITE_*` variables. API keys are
+personal and must never be added to a committed example file.
+
+The optional data-ingestion scripts need their own keys: `FIRMS_MAP_KEY` for
+NASA FIRMS and `WINDY_API_KEY` for Windy. They belong in
+`app/adapters/zetaris/.env.local`; Open-Meteo and Data.gov.my fetchers do not
+require keys.
+
+The examples provide configuration names and local development defaults, not
+hosted-service credentials. To run the local SmokeLedger PostgreSQL database,
+use `npm run db:init`; its development-only connection defaults are documented
+in the Zetaris environment example. External API keys are not needed for the
+fixture checks (`npm run tasks:verify -- --fixture`), but are needed for live
+model or Zetaris requests.
 
 A general request needs only its objective. Import text, Markdown, CSV or JSON when the answer needs your source material. For example:
 
@@ -51,12 +72,13 @@ Browse the [documentation index](docs/README.md) for guides grouped by topic.
 | `app/orchestration/`                  | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
 | `app/contracts/`                      | Browser-safe v3 contracts and separate server-only canonical serialization                 |
 | `app/agents/`, `app/capabilities/`    | Versioned agents and independently registered domain methods                               |
-| `app/adapters/`, `app/checkpoints/`   | Pinned Meterless facades, provider integration and checkpoint helpers                      |
+| `app/adapters/`                       | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
+| `app/checkpoints/`                    | Checkpoint helpers                                                                         |
 | `app/compatibility/`, `app/graph.ts`  | Engine/restart proof and offline metadata graph                                            |
 | `frontend/`                           | Chat, evidence results, source samples and agent execution display                         |
 | `scripts/`, `tests/`                  | Build, verification, examples and regression checks                                        |
 | `input_examples/`, `output_examples/` | Offline metadata examples and explicit orchestration fixtures                              |
-| `third_party/`                        | Pinned engine sources and retained Zetaris deployment/data-source tooling                  |
+| `third_party/`                        | Pinned engine sources                                                                      |
 | `docs/`                               | Current architecture, implementation notes and labeled historical design records           |
 
 ## Offline infrastructure and engine pins

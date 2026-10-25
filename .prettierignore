@@ -1,6 +1,7 @@
 node_modules/
 vendor/
 third_party/
+app/adapters/zetaris/
 dist/
 coverage/
 package-lock.json

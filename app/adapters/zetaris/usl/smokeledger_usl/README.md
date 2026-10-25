@@ -8,7 +8,7 @@ with declared types and relationships.
 ## Bootstrap
 
 From the repository root, make sure Zetaris is running and
-`third_party/zetaris/.env.local` has the Zetaris connection settings. Preview
+`app/adapters/zetaris/.env.local` has the Zetaris connection settings. Preview
 the ordered setup without changing anything:
 
 ```powershell

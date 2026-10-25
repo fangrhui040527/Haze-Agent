@@ -107,6 +107,7 @@ function loadEnvLocal(): string | null {
     path.join(REPO_ROOT, ".env.local"),
     path.resolve(REPO_ROOT, "..", ".env.local"),
     path.resolve(REPO_ROOT, "..", "..", ".env.local"),
+    path.resolve(REPO_ROOT, "..", "..", "..", ".env.local"),
   ];
 
   for (const file of candidates) {

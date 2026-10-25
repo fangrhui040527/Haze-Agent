@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Pool, type PoolClient } from 'pg';
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = path.resolve(SOURCE_DIR, '../../../../');
+const PROJECT_ROOT = path.resolve(SOURCE_DIR, '../../../../../');
 const ZETARIS_ROOT = path.resolve(SOURCE_DIR, '../../');
 const LOCATIONS_PATH = path.resolve(
   SOURCE_DIR,

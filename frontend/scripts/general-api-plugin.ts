@@ -99,7 +99,7 @@ export function generalApiPlugin(): Plugin {
       // Server-only root configuration. Vite still exposes only VITE_* to the browser.
       const sourceEnvPath = resolve(
         import.meta.dirname,
-        '../../third_party/zetaris/.env.local',
+        '../../app/adapters/zetaris/.env.local',
       );
       env = {
         ...loadEnv(config.mode, resolve(import.meta.dirname, '../..'), ''),
