@@ -84,8 +84,8 @@ frontend/
    │  ├─ demo-data/            Demo Data page
    │  └─ dashboard/            main page + useAgentRun (one run shared by chat and office)
    ├─ services/
-   │  ├─ data/                 DataService interface, MockDataService, ZetarisDataService (TODO), index.ts ← swap here
-   │  └─ agents/               AgentService interface, MockAgentService, HttpAgentService (TODO), index.ts ← swap here
+   │  ├─ data/                 DataService, MockDataService, HttpDataService (server), CompositeDataService, index.ts
+   │  └─ agents/               AgentService, MockAgentService, HttpAgentService (server), index.ts (auto-picks)
    ├─ mock/                    everything fake: generator, simulator, demo store, mock answers, mock settings
    ├─ shared/
    │  ├─ types/                domain.ts (HazeItem…), agents.ts (AgentEvent), dataset.ts
@@ -130,21 +130,23 @@ Imports use explicit `.ts` / `.tsx` extensions (needed so Node can run the data 
 
 ---
 
-## 5. Swapping the mock data for the real backend (Zetaris)
+## 5. Real data from the HazeWatch server
 
 The whole app reads data through one interface, `DataService` (`src/services/data/DataService.ts`):
 `loadSnapshot()`, `getItem(id)`, `subscribe(onUpdate, onStatus)`.
 
-1. Implement the TODOs in `src/services/data/ZetarisDataService.ts`, mapping the backend's JSON into
-   `HazeItem` / `Location` / `Source` (`src/shared/types/domain.ts`).
-2. In **`src/services/data/index.ts`** (the only file to change), replace
-   `export const dataService: DataService = mockDataService;` with
-   `export const dataService: DataService = new ZetarisDataService(import.meta.env.VITE_API_BASE_URL);`
-3. Copy `.env.example` to `.env.local` and set `VITE_API_BASE_URL`.
+- `HttpDataService` reads the HazeWatch server (`../server`): `/api/snapshot`, `/api/items/:id` and the
+  `/api/stream` SSE feed. In development Vite proxies `/api` to `http://127.0.0.1:8000` (override with
+  `HAZEWATCH_API`); in a build, set `VITE_API_BASE_URL`.
+- `CompositeDataService` (used in `src/services/data/index.ts`) shows **real data when the server has it** and
+  falls back to the fictional demo data when the server is unreachable or empty. The Demo Data page has a
+  toggle to show demo data next to real data (off by default).
+- Real item ids start with `hz-`; demo ids never do.
+- Chat uses `HttpAgentService` when `/api/health` answers, otherwise the mock (labelled as a demo).
 
-**Important:** the browser must **never** call Zetaris directly or hold Zetaris credentials. Anything in
-`VITE_*` variables ships to every visitor. The adapter calls _our_ backend API, and the backend talks to Zetaris.
-Nothing about Zetaris's API is known yet (see `docs/02-critique.md` §4), so don't guess endpoints.
+**Important:** the browser never calls Zetaris, OpenAQ, NASA FIRMS or the engines directly and never holds
+their keys. Anything in `VITE_*` variables ships to every visitor. Keys live in the repository-root `.env`,
+read only by the server. See `../server/README.md`.
 
 ---
 
@@ -163,18 +165,19 @@ The chat, the status line and the pixel office render **only** from a list of `A
 | `run_state` (`queued / running`)                 | **Level B**: backend only knows the overall state | Everyone shows a generic "working"; no invented steps |
 | `run_completed` / `run_failed` / `run_cancelled` | End of run                                        | Manager returns; a red "!" on failure                 |
 
-Steps:
+How it works now:
 
 The Klang sample already uses a real server-side LangGraph team: four model roles and the pinned World Model/H-Mem services. It emits `run_started` with `executionKind: 'agents'`, streams actual activity and returns `source: 'model'` with separate execution receipts and an independently checked schedule. Models select validated facts; controlled rendering supplies the displayed explanation. Requests needing real planning input still return `'input_required'` with `executionKind: 'local_check'`. Keep this route separate when replacing the general mock service; see [crew scheduling](../docs/chat-crew-scheduling.md).
 
-1. Implement `src/services/agents/HttpAgentService.ts`:
-   - Post the question.
-   - Then either read an SSE stream (Server-Sent Events, a simple one-way stream from server to browser) or poll the run status.
-   - Map each message to an `AgentEvent` and call `onEvent`.
-   - When the run finishes, resolve with an `AgentAnswer`.
-2. Swap it in **`src/services/agents/index.ts`**.
-3. If the backend only has run states (the spec's `POST /run` → `GET /runs/{id}` polling), emit `run_state` events. The UI already handles that honestly.
-4. Set `AgentAnswer.source` truthfully: `'model'` only when a model produced the answer, otherwise `'template_fallback'`.
+1. `src/services/agents/HttpAgentService.ts` posts the question to `POST /api/runs`, then reads
+   `GET /api/runs/:id/events` (SSE): `agent` messages are `AgentEvent`s, the final `answer` message is the
+   `AgentAnswer`. Cancelling calls `POST /api/runs/:id/cancel`.
+2. The server's steps often finish within milliseconds, so events are played back at least 650 ms apart for
+   the office. Playback only spaces them out; it never adds, removes or reorders events.
+3. The server only emits events for agents that really ran (Manager, HazeOps, World Model, H-Mem).
+   EvidenceCritic and WorkerShield are not connected, so they stay idle.
+4. `AgentAnswer.source` is truthful: `'template'` for the server's template answers from real records,
+   `'model'` only when an AI model wrote the answer.
 
 ---
 
