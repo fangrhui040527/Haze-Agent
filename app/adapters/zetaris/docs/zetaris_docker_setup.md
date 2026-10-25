@@ -4,7 +4,7 @@ Run these commands from inside the `zetaris-platform` folder.
 
 ## Step 0 — Unzip and Configure Environment
 
-1. Unzip your `zetaris-platform.zip` into `third_party/zetaris/zetaris-platform`.
+1. Unzip your `zetaris-platform.zip` into `app/adapters/zetaris/zetaris-platform`.
 2. Ensure `.env` and `.env.server.example` are present in the current `zetaris-platform` folder (copy `.env.server.example` to `.env`).
 3. In `.env`, configure the administrator credentials before proceeding to the next steps:
    ```env

@@ -10,6 +10,7 @@ export default tseslint.config(
       'tmp/**',
       'vendor/**',
       'third_party/**',
+      'app/adapters/zetaris/**',
     ],
   },
   {

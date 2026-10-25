@@ -2,7 +2,7 @@
 
 This local PostgreSQL database stores SmokeLedger evidence. Each API ingester
 has its own folder, shared ingestion helpers live at the source root, and
-Zetaris's USL definition lives under `third_party/zetaris/usl/smokeledger_usl/`.
+Zetaris's USL definition lives under `app/adapters/zetaris/usl/smokeledger_usl/`.
 The schema is initialized automatically when its Docker volume is first created:
 
 ```sh
@@ -57,9 +57,9 @@ The documented public sources are:
   (no key).
 
 FIRMS requires a personal free map key. Add `FIRMS_MAP_KEY=...` to either the
-gitignored root `.env` file or `third_party/zetaris/.env.local`; never commit
+gitignored root `.env` file or `app/adapters/zetaris/.env.local`; never commit
 the key. Open-Meteo needs no key.
-Set `SMOKELEDGER_DATABASE_URL` in `.env` or `third_party/zetaris/.env.local`
+Set `SMOKELEDGER_DATABASE_URL` in `.env` or `app/adapters/zetaris/.env.local`
 to override the local PostgreSQL connection.
 
 The fetchers upsert repeated fire and wind observations. PM2.5 forecasts are
@@ -70,7 +70,7 @@ been saved if a later API batch fails.
 
 ## Register the database and bootstrap the Zetaris USL
 
-Start Zetaris and make sure `third_party/zetaris/.env.local` contains the
+Start Zetaris and make sure `app/adapters/zetaris/.env.local` contains the
 Zetaris REST connection settings. From the repository root, preview the setup:
 
 ```powershell

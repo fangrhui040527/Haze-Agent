@@ -61,6 +61,6 @@ Update active documentation and example references when removing or moving code.
 
 ## Dependencies, source pins and secrets
 
-Preserve checksum-pinned sources under `third_party/meterless/`, including their complete declared inventory, upstream lockfiles, licenses and notices. Edit the pin and provenance deliberately when updating upstream; the build rejects missing or changed files. Generated `dist/` and `vendor/` remain ignored. Retained Zetaris scripts and datasets are independent operator tooling and must not be removed solely because the PM2.5 runtime does not import them.
+Preserve checksum-pinned sources under `third_party/meterless/`, including their complete declared inventory, upstream lockfiles, licenses and notices. Edit the pin and provenance deliberately when updating upstream; the build rejects missing or changed files. Generated `dist/` and `vendor/` remain ignored. Retained Zetaris scripts and datasets under `app/adapters/zetaris/` are independent operator tooling and must not be removed solely because the PM2.5 runtime does not import them.
 
 Update Node/npm pins together and regenerate lockfiles with the pinned npm version. Store real credentials only in process environment, ignored environment files or CI secrets. `.env.example` contains placeholders; browser `VITE_*` variables must never contain credentials.

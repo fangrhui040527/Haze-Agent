@@ -54,7 +54,7 @@ cannot establish complete coverage.
 
 ## Access check on 25 October 2026
 
-Running `python scripts/preflight.py` inside `third_party/zetaris` reported
+Running `python scripts/preflight.py` inside `app/adapters/zetaris` reported
 `NOT READY`: no `.env.local`, and missing `ZETARIS_API_KEY`,
 `ZETARIS_USERNAME`, and `ZETARIS_PASSWORD`. The root environment file contained
 model configuration but no Zetaris configuration. No credentials were printed,
@@ -67,7 +67,7 @@ live task still requires the existing configured Zetaris source to be reachable
 and to contain the requested selection; these checks do not establish live
 integration readiness.
 
-Use `third_party/zetaris/.env.local` for existing Zetaris credentials and pass
+Use `app/adapters/zetaris/.env.local` for existing Zetaris credentials and pass
 them to the server process. Required runtime access is `ZETARIS_API_KEY`;
 `ZETARIS_REST_URL` and numeric `ZETARIS_ORG_ID` select the existing instance and
 organization. The existing documented local defaults are used if those last two

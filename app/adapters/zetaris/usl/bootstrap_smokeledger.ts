@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ZETARIS_ROOT = path.resolve(SCRIPT_DIR, '..');
-const PROJECT_ROOT = path.resolve(ZETARIS_ROOT, '..', '..');
+const PROJECT_ROOT = path.resolve(ZETARIS_ROOT, '..', '..', '..');
 const RUN_SQL = path.join(ZETARIS_ROOT, 'scripts', 'run_sql.py');
 const REGISTER_SQL = path.join(
   ZETARIS_ROOT,
@@ -47,7 +47,7 @@ function parseArgs(args: string[]): Options {
     console.log(`SmokeLedger Zetaris bootstrap
 
 Usage:
-  node --experimental-strip-types third_party/zetaris/usl/bootstrap_smokeledger.ts [options]
+  node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_smokeledger.ts [options]
 
 Options:
   --dry-run          Preview SQL and database setup without running anything
