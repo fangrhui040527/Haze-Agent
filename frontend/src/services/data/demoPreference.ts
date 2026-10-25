@@ -9,7 +9,7 @@ export interface DemoPreference {
   showDemoWithReal: boolean;
 }
 
-const KEY = 'hazewatch.demo.preference.v1';
+const KEY = 'haze.demo.preference.v1';
 
 export const demoPreference = createStore<DemoPreference>({
   showDemoWithReal: false,

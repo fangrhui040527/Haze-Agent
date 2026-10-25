@@ -16,12 +16,12 @@ import type {
 } from '../hazeops/types.ts';
 
 /**
- * The HazeWatch data model on top of the Meterless World Model
+ * The Haze data model on top of the Meterless World Model
  * (documented in docs/05-world-model-data-model.md).
  *
  * Entities (all keyed by externalKey, so the name-similarity resolver never merges them):
- *   location:hazewatch:<id>   station:hazewatch:<id>
- *   source:hazewatch:<id>     evidence:hazewatch:<evidenceId>
+ *   location:haze:<id>   station:haze:<id>
+ *   source:haze:<id>     evidence:haze:<evidenceId>
  * Facts carry the values (pm25_modeled, pm25_observed, pm25_forecast_24h,
  * fire_hotspots_24h). Relationships: evidence -published_by-> source,
  * station -near-> location.
@@ -30,7 +30,7 @@ import type {
  * writes what changed. Raw response bytes are archived outside it, by content hash.
  */
 
-export const SYSTEM = 'hazewatch';
+export const SYSTEM = 'haze';
 export const entityId = (type: string, id: string) => `${type}:${SYSTEM}:${id}`;
 export const localId = (id: string) => id.split(':').slice(2).join(':');
 
@@ -173,7 +173,7 @@ export class HazeWorld {
       if (
         await this.upsertIfChanged('location', id, name, rest, {
           kind: 'manual',
-          by: 'hazewatch-config',
+          by: 'haze-config',
           at,
         })
       )
@@ -199,7 +199,7 @@ export class HazeWorld {
             watcherId: spec.id,
             freshnessMinutes: spec.freshnessMinutes,
           },
-          { kind: 'manual', by: 'hazewatch-config', at },
+          { kind: 'manual', by: 'haze-config', at },
         )
       )
         changed++;

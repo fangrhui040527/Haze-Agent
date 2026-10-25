@@ -7,7 +7,7 @@ import type {
 import { AgentRunError, type AgentService } from './AgentService.ts';
 
 /**
- * Asks the HazeWatch server (server/src/runs).
+ * Asks the Haze server (server/src/runs).
  *
  *   POST /api/runs                 -> 202 { runId }
  *   GET  /api/runs/:id/events (SSE) -> "agent" events (AgentEvent), then "answer" (AgentAnswer)
@@ -21,7 +21,7 @@ import { AgentRunError, type AgentService } from './AgentService.ts';
 const PLAYBACK_GAP_MS = 650;
 
 export class HttpAgentService implements AgentService {
-  readonly label = 'HazeWatch server agents';
+  readonly label = 'Haze server agents';
   private readonly baseUrl: string;
 
   constructor(baseUrl: string) {

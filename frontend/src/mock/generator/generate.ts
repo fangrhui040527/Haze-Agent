@@ -39,7 +39,7 @@ import {
 } from './text.ts';
 
 export const DEMO_NOTICE =
-  'FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the HazeWatch interface. Do not use it for health or safety decisions.';
+  'FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the Haze interface. Do not use it for health or safety decisions.';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;

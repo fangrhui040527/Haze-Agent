@@ -1,7 +1,7 @@
 import type { HmemEngine } from '../engines.ts';
 
 /**
- * H-MEM use in HazeWatch: remember each chat exchange and recall similar earlier ones.
+ * H-MEM use in Haze: remember each chat exchange and recall similar earlier ones.
  * Recall here is keyword-like (the pinned reference uses a deterministic hash
  * embedder), so it finds overlapping words, not meaning. Sleep and dreaming, which
  * rewrite memories automatically, are never called.
@@ -34,15 +34,12 @@ export class ChatMemory {
     const record = this.memory.add({
       content: `Q: ${input.question}`,
       type: 'general',
-      tags: [
-        'hazewatch-chat',
-        ...input.locationIds.map((id) => `location:${id}`),
-      ],
-      source: 'hazewatch-chat',
+      tags: ['haze-chat', ...input.locationIds.map((id) => `location:${id}`)],
+      source: 'haze-chat',
       provenance: {
         origin: 'chat_message',
         learnedAt: Date.now(),
-        label: `HazeWatch chat run ${input.runId} (template answer): ${input.answerSummary.slice(0, 200)}`,
+        label: `Haze chat run ${input.runId} (template answer): ${input.answerSummary.slice(0, 200)}`,
         refs: input.citedItemIds,
       },
     });

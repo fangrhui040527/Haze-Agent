@@ -161,7 +161,7 @@ export function composeTask(input: {
     blocks.push({
       type: 'callout',
       tone: 'warning',
-      text: 'No schedule was computed. Planning work around haze belongs to WorkerShield, which is not connected yet. HazeWatch does not give health or safety advice; follow official guidance such as the Department of Environment and Ministry of Health advisories.',
+      text: 'No schedule was computed. Planning work around haze belongs to WorkerShield, which is not connected yet. Haze does not give health or safety advice; follow official guidance such as the Department of Environment and Ministry of Health advisories.',
     });
     nextRequirements = [
       'Crew size and roles, and where each task happens',

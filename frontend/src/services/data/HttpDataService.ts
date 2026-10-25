@@ -5,7 +5,7 @@ import type {
 import type { DataService, DataSnapshot, LiveUpdate } from './DataService.ts';
 
 /**
- * Real data from the HazeWatch server (server/), which reads the Meterless World Model
+ * Real data from the Haze server (server/), which reads the Meterless World Model
  * fed by HazeOps. The browser never talks to Zetaris, OpenAQ, FIRMS or the engines
  * directly; keys stay on the server.
  *
@@ -14,7 +14,7 @@ import type { DataService, DataSnapshot, LiveUpdate } from './DataService.ts';
  *   GET /api/stream (SSE) -> "upsert" events carrying LiveUpdate
  */
 export class HttpDataService implements DataService {
-  readonly label = 'HazeWatch server (real data)';
+  readonly label = 'Haze server (real data)';
   private readonly baseUrl: string;
 
   constructor(baseUrl: string) {

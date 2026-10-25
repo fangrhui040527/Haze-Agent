@@ -37,7 +37,7 @@ export const DEFAULT_MOCK_SETTINGS: MockSettings = {
   agentMode: 'full',
 };
 
-const KEY = 'hazewatch.mock.settings.v1';
+const KEY = 'haze.mock.settings.v1';
 
 export const mockSettings = createStore<MockSettings>({
   ...DEFAULT_MOCK_SETTINGS,

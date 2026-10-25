@@ -11,7 +11,7 @@ import type {
  *
  * Implementations:
  *   - MockDataService     (today: fictional demo data)
- *   - HttpDataService     (the HazeWatch server: real data from the World Model)
+ *   - HttpDataService     (the Haze server: real data from the World Model)
  *   - CompositeDataService (real data, with demo data only when needed or asked for)
  *
  * Pick one in src/services/data/index.ts. Nothing else in the app imports an implementation.

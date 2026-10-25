@@ -90,7 +90,7 @@ export function ChatPanel({
   const navigate = useNavigate();
   // History, including live role receipts, stays in this browser.
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
-    'hazewatch.chat.v1',
+    'haze.chat.v1',
     [],
   );
   const [draft, setDraft] = useState('');

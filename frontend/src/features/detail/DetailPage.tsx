@@ -96,9 +96,9 @@ export function DetailPage() {
 
   useEffect(() => {
     if (state.status === 'ready')
-      document.title = `${state.detail.item.headline} · HazeWatch`;
+      document.title = `${state.detail.item.headline} · Haze`;
     return () => {
-      document.title = 'HazeWatch';
+      document.title = 'Haze';
     };
   }, [state]);
 

@@ -11,10 +11,10 @@ export default defineConfig({
   plugins: [react(), demoChatPlugin()],
   server: {
     open: true,
-    // The HazeWatch server (server/) listens on 127.0.0.1:8000 by default.
+    // The Haze server (server/) listens on 127.0.0.1:8000 by default.
     proxy: {
       '/api': {
-        target: process.env.HAZEWATCH_API ?? 'http://127.0.0.1:8000',
+        target: process.env.HAZE_API ?? 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

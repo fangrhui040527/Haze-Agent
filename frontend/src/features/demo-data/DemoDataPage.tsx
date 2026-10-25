@@ -131,7 +131,7 @@ export function DemoDataPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `hazewatch-demo-data-seed${dataset.seed}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `haze-demo-data-seed${dataset.seed}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -158,7 +158,7 @@ export function DemoDataPage() {
           Show fictional demo data next to real data
         </label>
         <p>
-          Off by default: when the HazeWatch server has real data, demo data is
+          Off by default: when the Haze server has real data, demo data is
           hidden. When the server is unreachable or has no records yet, demo
           data is shown with the DEMO banner. Changes below only affect demo
           data.

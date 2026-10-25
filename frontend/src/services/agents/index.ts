@@ -17,7 +17,7 @@ const HEALTH_CACHE_MS = 30_000;
 
 /**
  * THE ONE PLACE that decides which agent backend answers chat questions:
- * the HazeWatch server when it is reachable, otherwise the mock (labelled as a demo).
+ * the Haze server when it is reachable, otherwise the mock (labelled as a demo).
  * The fictional Klang crew sample is routed by TaskAwareAgentService (below).
  */
 class AutoAgentService implements AgentService {
@@ -65,7 +65,7 @@ class AutoAgentService implements AgentService {
 }
 
 /**
- * Real crew-scheduling requests go to the HazeWatch server, whose Manager opens a
+ * Real crew-scheduling requests go to the Haze server, whose Manager opens a
  * scheduling task report. Only requests for the fictional Klang sample still go to
  * the sample flow in SchedulingAgentService.
  */

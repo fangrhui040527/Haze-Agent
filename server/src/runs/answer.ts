@@ -179,7 +179,7 @@ export function composeAnswer(input: {
 
   if (intent === 'health') {
     paragraphs.push(
-      'HazeWatch does not give health or safety advice. The agent that would explain what readings mean for people outdoors, using official guidance only (WorkerShield), is not connected yet. Please follow official guidance, such as Malaysia’s Department of Environment and Ministry of Health advisories.',
+      'Haze does not give health or safety advice. The agent that would explain what readings mean for people outdoors, using official guidance only (WorkerShield), is not connected yet. Please follow official guidance, such as Malaysia’s Department of Environment and Ministry of Health advisories.',
     );
     paragraphs.push(
       ...placeSummary(
@@ -228,7 +228,7 @@ export function composeAnswer(input: {
       );
     }
     paragraphs.push(
-      'Hotspots show where satellites saw heat, not where the haze over a city came from. Attributing smoke to fires needs a transport model and review, which HazeWatch does not do yet.',
+      'Hotspots show where satellites saw heat, not where the haze over a city came from. Attributing smoke to fires needs a transport model and review, which Haze does not do yet.',
     );
   } else if (intent === 'sources') {
     const here = items.filter((i) => i.locationId === first.id);

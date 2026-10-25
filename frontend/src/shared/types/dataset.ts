@@ -1,6 +1,6 @@
 import type { HazeItem, Location, Source } from './domain.ts';
 
-export const DATASET_SCHEMA_VERSION = 'hazewatch.demo.v1';
+export const DATASET_SCHEMA_VERSION = 'haze.demo.v1';
 
 export type ChatIntent =
   | 'overview'

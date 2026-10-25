@@ -5,7 +5,7 @@ const baseUrl = (
 ).replace(/\/+$/, '');
 
 /**
- * Follows one task report on the HazeWatch server (server/src/tasks):
+ * Follows one task report on the Haze server (server/src/tasks):
  *   GET /api/tasks/:id/events (SSE) -> "step" and "block" events, then "result" or "failed"
  * The server replays earlier events on connect, so reopening a report rebuilds it.
  * Returns a function that stops listening.

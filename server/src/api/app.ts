@@ -21,7 +21,7 @@ import { projectDetail } from '../world/projection.ts';
 /**
  * HTTP + SSE API. Mirrors the frontend's DataService and AgentService contracts
  * (frontend/src/services). Spec §15.2's /health and /heartbeat/tick keep their names
- * under /api. SSE is a HazeWatch addition: the spec defines polling only.
+ * under /api. SSE is a Haze addition: the spec defines polling only.
  */
 
 export interface AppDependencies {
@@ -57,7 +57,7 @@ export function createApp(deps: AppDependencies): Hono {
     const watchers = deps.hazeops.watchers();
     return c.json({
       ok: true,
-      service: 'hazewatch-server',
+      service: 'haze-server',
       startedAt: deps.startedAt,
       coverage: deps.config.coverage,
       sampleMode: deps.config.sampleMode,

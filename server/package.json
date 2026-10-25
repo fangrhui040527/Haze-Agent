@@ -1,8 +1,8 @@
 {
-  "name": "hazewatch-server",
+  "name": "haze-server",
   "version": "0.1.0",
   "private": true,
-  "description": "HazeWatch API server: Meterless World Model + H-MEM engines and the HazeOps evidence retriever",
+  "description": "Haze API server: Meterless World Model + H-MEM engines and the HazeOps evidence retriever",
   "type": "module",
   "engines": {
     "node": ">=24.12"

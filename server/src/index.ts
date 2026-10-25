@@ -221,7 +221,7 @@ const server = serve(
   { fetch: app.fetch, port: config.port, hostname: config.host },
   (info) => {
     console.log(
-      `[hazewatch] API on http://${info.address}:${info.port} (coverage: ${config.coverage}, ${locations.length} places)`,
+      `[haze] API on http://${info.address}:${info.port} (coverage: ${config.coverage}, ${locations.length} places)`,
     );
     for (const { spec, state } of hazeops.watchers()) {
       console.log(
@@ -237,7 +237,7 @@ if (config.schedulerEnabled) {
 }
 
 const shutdown = () => {
-  console.log('[hazewatch] shutting down');
+  console.log('[haze] shutting down');
   server.close();
   process.exit(0);
 };

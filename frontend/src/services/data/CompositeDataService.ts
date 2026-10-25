@@ -13,8 +13,8 @@ const isRealId = (id: string) => id.startsWith('hz-');
 type Mode = 'real' | 'real+demo' | 'demo';
 
 const LABELS: Record<Mode, string> = {
-  real: 'HazeWatch server (real data)',
-  'real+demo': 'HazeWatch server + fictional demo data',
+  real: 'Haze server (real data)',
+  'real+demo': 'Haze server + fictional demo data',
   demo: 'Mock (fictional demo data, server has no real data)',
 };
 

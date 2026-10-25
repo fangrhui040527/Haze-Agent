@@ -61,6 +61,6 @@ export function bundleRaw(
   parts: { label: string; status: number; sha256: string; body: unknown }[],
 ): Buffer {
   return Buffer.from(
-    JSON.stringify({ format: 'hazewatch.raw-bundle.v1', parts }, null, 0),
+    JSON.stringify({ format: 'haze.raw-bundle.v1', parts }, null, 0),
   );
 }

@@ -61,9 +61,9 @@ jobs:
         run: npm test
       - name: Run pinned upstream engine conformance
         run: npm run test:engines
-      - name: Check HazeWatch server types
+      - name: Check Haze server types
         run: npm run typecheck --prefix server
-      - name: Run HazeWatch server tests (needs the build above)
+      - name: Run Haze server tests (needs the build above)
         run: npm test --prefix server
 
   postgres:

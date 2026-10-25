@@ -183,7 +183,7 @@ interface LoaderModule {
   }>;
 }
 
-export const WORLD_NAMESPACE = 'hazewatch';
+export const WORLD_NAMESPACE = 'haze';
 
 export async function openEngines(stateDir: string): Promise<OpenedEngines> {
   const loaderUrl = pathToFileURL(
@@ -215,7 +215,7 @@ export async function openEngines(stateDir: string): Promise<OpenedEngines> {
   }) as WorldModelEngine;
   const memory = new loaded.HMEM({
     persistDir: memoryDirectory,
-    actor: 'hazewatch',
+    actor: 'haze',
   }) as HmemEngine;
 
   return {

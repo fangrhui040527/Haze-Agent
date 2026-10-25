@@ -24,7 +24,7 @@ export async function memoryWorld(): Promise<HazeWorld> {
     storage: 'memory',
     conflictPolicy: 'most-recent-wins',
   }) as WorldModelEngine;
-  return new HazeWorld(engine, mkdtempSync(join(tmpdir(), 'hazewatch-test-')));
+  return new HazeWorld(engine, mkdtempSync(join(tmpdir(), 'haze-test-')));
 }
 
 export const KLANG = {

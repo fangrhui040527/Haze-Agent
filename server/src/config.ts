@@ -44,10 +44,7 @@ export function loadConfig(): ServerConfig {
   return {
     port: Number(text('PORT') ?? 8000),
     host: text('HOST') ?? '127.0.0.1',
-    stateDir: resolve(
-      REPOSITORY_ROOT,
-      text('HAZEWATCH_STATE_DIR') ?? '.state/hazewatch',
-    ),
+    stateDir: resolve(REPOSITORY_ROOT, text('HAZE_STATE_DIR') ?? '.state/haze'),
     coverage,
     sampleMode: text('SAMPLE_MODE') === 'true',
     operatorToken: text('HAZE_OPERATOR_TOKEN'),
