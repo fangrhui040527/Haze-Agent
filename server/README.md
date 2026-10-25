@@ -45,25 +45,25 @@ the Copernicus Atmosphere Monitoring Service (CAMS) and Open-Meteo.
 
 ## API
 
-| Endpoint                      | Purpose                                                 |
-| ----------------------------- | ------------------------------------------------------- |
-| `GET /api/health`             | engine pins, watcher status, which agents are connected |
-| `GET /api/snapshot`           | all items, locations, sources (`DataSnapshot`)          |
-| `GET /api/items/:id`          | one item with location, sources, related items          |
-| `GET /api/evidence/:id`       | one pinned evidence record with its provenance          |
-| `GET /api/stream`             | SSE: `upsert` events when items change                  |
-| `GET /api/hazeops/watchers`   | each watcher's Spec §12 declaration and state           |
-| `GET /api/manager/assignments` | what the Manager assigned to each agent, and how it ended |
-| `GET /api/runtime/jobs`       | recent runtime jobs, each with its own deadline         |
-| `POST /api/heartbeat/tick`    | operator-only: run due watchers now (Spec §15.2)        |
-| `POST /api/runs`              | ask a question → `{ runId }`                            |
-| `GET /api/runs/:id/events`    | SSE: `agent` events (`AgentEvent`), then `answer`       |
-| `POST /api/runs/:id/cancel`   | cancel a run                                            |
-| `POST /api/tasks`             | open a task report (scheduling or revenue recovery only; others → 422) |
-| `GET /api/tasks/:id`          | the finished result envelope (v0.14 §16), 202 while running |
-| `GET /api/tasks/:id/events`   | SSE: `step` and `block` events as the report is written, then `result` |
-| `POST /api/tasks/:id/cancel`  | cancel a task                                           |
-| `POST /api/runs/:id/feedback` | `{ kind: helpful                                        | not_helpful | wrong }` → H-MEM feedback |
+| Endpoint                       | Purpose                                                                |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `GET /api/health`              | engine pins, watcher status, which agents are connected                |
+| `GET /api/snapshot`            | all items, locations, sources (`DataSnapshot`)                         |
+| `GET /api/items/:id`           | one item with location, sources, related items                         |
+| `GET /api/evidence/:id`        | one pinned evidence record with its provenance                         |
+| `GET /api/stream`              | SSE: `upsert` events when items change                                 |
+| `GET /api/hazeops/watchers`    | each watcher's Spec §12 declaration and state                          |
+| `GET /api/manager/assignments` | what the Manager assigned to each agent, and how it ended              |
+| `GET /api/runtime/jobs`        | recent runtime jobs, each with its own deadline                        |
+| `POST /api/heartbeat/tick`     | operator-only: run due watchers now (Spec §15.2)                       |
+| `POST /api/runs`               | ask a question → `{ runId }`                                           |
+| `GET /api/runs/:id/events`     | SSE: `agent` events (`AgentEvent`), then `answer`                      |
+| `POST /api/runs/:id/cancel`    | cancel a run                                                           |
+| `POST /api/tasks`              | open a task report (scheduling or revenue recovery only; others → 422) |
+| `GET /api/tasks/:id`           | the finished result envelope (v0.14 §16), 202 while running            |
+| `GET /api/tasks/:id/events`    | SSE: `step` and `block` events as the report is written, then `result` |
+| `POST /api/tasks/:id/cancel`   | cancel a task                                                          |
+| `POST /api/runs/:id/feedback`  | `{ kind: helpful                                                       | not_helpful | wrong }` → H-MEM feedback |
 
 The spec defines polling only; SSE is a HazeWatch addition.
 

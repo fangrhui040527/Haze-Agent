@@ -234,7 +234,7 @@ export function composeTask(input: {
       text: framing.objective.text,
       revision: framing.objective.revision,
     },
-    blocks: blocks.map((b, i) => ({ ...b, id: `b${i + 1}` }) as TaskBlock),
+    blocks: blocks.map((b, i) => ({ ...b, id: `b${i + 1}` })),
     citations,
     coverage: place
       ? `${placeName}: ${found} kind(s) of record from the World Model, sensors within ${NEARBY_SENSOR_KM} km.`

@@ -3,7 +3,6 @@ import type {
   Location,
 } from '../../../frontend/src/shared/types/domain.ts';
 import type {
-  TaskBlock,
   TaskEvent,
   TaskKind,
   TaskLink,
@@ -215,7 +214,7 @@ export class TaskService {
         nearby,
         refreshNote,
       });
-      for (const block of composed.blocks as TaskBlock[]) {
+      for (const block of composed.blocks) {
         this.push(task, { type: 'block', block });
       }
       this.step(task, {

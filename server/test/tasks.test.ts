@@ -49,9 +49,9 @@ describe('task reports', () => {
       runtime: new Runtime(),
       freshItems: () => [],
       readingsNear: () => [],
-      refresh: async (_places, brief) => {
+      refresh: (_places, brief) => {
         expect(brief.objective.text).toBe('Plan the crew schedule for Klang');
-        return null;
+        return Promise.resolve(null);
       },
     });
     const framing = frame('Plan the crew schedule for Klang');

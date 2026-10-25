@@ -2,9 +2,7 @@
   "description": "Malaysian places watched by HazeOps in addition to the frontend location list. GeoNames data (CC BY 4.0), via the Open-Meteo Geocoding API and, when a GeoNames username is set, the GeoNames search API (populated places of 15,000+ people).",
   "generatedAt": "2026-10-24T12:33:02.792Z",
   "generator": "server/scripts/build-malaysia-locations.mjs",
-  "sources": [
-    "curated list"
-  ],
+  "sources": ["curated list"],
   "places": [
     {
       "location": {

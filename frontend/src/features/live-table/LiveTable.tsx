@@ -32,11 +32,7 @@ import { Button } from '../../shared/ui/Button.tsx';
 import { Skeleton, StateMessage } from '../../shared/ui/States.tsx';
 import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
 import styles from './LiveTable.module.css';
-import {
-  rankItems,
-  type RankedItem,
-  type RankPart,
-} from './ranking.ts';
+import { rankItems, type RankedItem, type RankPart } from './ranking.ts';
 
 interface Filters {
   search: string;
