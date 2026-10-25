@@ -304,6 +304,116 @@ describe('office agent model adapter', () => {
     ).resolves.toBe('Echo [redacted]');
   });
 
+  it('returns the actual provider model and usage receipt from the same completion', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        model: 'provider-resolved-model-v2',
+        id: 'response-123',
+        usage: { prompt_tokens: 219, completion_tokens: 37 },
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              role: 'assistant',
+              content: '  Cited evidence summary.  ',
+            },
+          },
+        ],
+      }),
+    );
+    const model = resolveAgentModel(selected, fetcher);
+    expect(model.selection.model).toBe('selected-model');
+    await expect(
+      model.completeWithReceipt?.(input, new AbortController().signal),
+    ).resolves.toEqual({
+      text: 'Cited evidence summary.',
+      receipt: {
+        response_model: 'provider-resolved-model-v2',
+        response_id: 'response-123',
+        input_tokens: 219,
+        output_tokens: 37,
+      },
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps absent receipt fields unknown instead of inferring the configured model', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(completion());
+    const model = resolveAgentModel(selected, fetcher);
+    const result = await model.completeWithReceipt?.(
+      input,
+      new AbortController().signal,
+    );
+    expect(result?.receipt).toEqual({
+      response_model: null,
+      response_id: null,
+      input_tokens: null,
+      output_tokens: null,
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds and sanitizes receipt metadata without inventing usage', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        model: 'x'.repeat(257),
+        id: `echo-${selected.HAZE_PROVIDER_API_KEY}`,
+        usage: { prompt_tokens: '219', completion_tokens: -1 },
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              role: 'assistant',
+              content: `Echo ${selected.HAZE_PROVIDER_API_KEY}`,
+            },
+          },
+        ],
+      }),
+    );
+    const result = await resolveAgentModel(
+      selected,
+      fetcher,
+    ).completeWithReceipt?.(input, new AbortController().signal);
+    expect(result).toEqual({
+      text: 'Echo [redacted]',
+      receipt: {
+        response_model: null,
+        response_id: 'echo-[redacted]',
+        input_tokens: null,
+        output_tokens: null,
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain(
+      selected.HAZE_PROVIDER_API_KEY,
+    );
+  });
+
+  it('preserves zero token counts and rejects fractional or unsafe reported counts', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        model: 45,
+        id: '',
+        usage: { prompt_tokens: 0, completion_tokens: 0.5 },
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: { role: 'assistant', content: 'Summary.' },
+          },
+        ],
+      }),
+    );
+    const result = await resolveAgentModel(
+      selected,
+      fetcher,
+    ).completeWithReceipt?.(input, new AbortController().signal);
+    expect(result?.receipt).toEqual({
+      response_model: null,
+      response_id: null,
+      input_tokens: 0,
+      output_tokens: null,
+    });
+  });
+
   it('does not request a model when already cancelled', async () => {
     const fetcher = vi.fn<typeof fetch>();
     const controller = new AbortController();

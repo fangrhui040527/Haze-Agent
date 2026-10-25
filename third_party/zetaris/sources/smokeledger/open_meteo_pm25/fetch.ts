@@ -21,8 +21,6 @@ const SOURCE = 'Open-Meteo PM2.5';
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
   const locations = await readLocations(options.locationIds);
-  const issuedAt = new Date();
-  issuedAt.setUTCMinutes(0, 0, 0);
 
   const rowCount = await withDatabase(async (client) => {
     await seedTowns(client, locations, options.dryRun);
@@ -53,7 +51,12 @@ async function main(): Promise<void> {
               location.name,
               validAt,
               'model',
-              issuedAt,
+              // This response does not identify the provider's model issue
+              // time. ingested_utc records our receipt; it is not issuance.
+              // The pm25_key COALESCE expression makes unknown-issuance rows
+              // upsert one current value per town/time/kind. Exact task
+              // captures preserve retrieved selections separately.
+              null,
               value,
               'open-meteo-air-quality',
             ]);

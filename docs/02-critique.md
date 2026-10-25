@@ -1,5 +1,7 @@
 # 02 — Critique and Reality Check (Phase 2)
 
+> **Historical record.** This critique concerns the earlier v0.13 backend/frontend split. References to removed scheduling files and former missing capabilities describe that earlier tree. See the [retirement record](legacy-retirement.md), root README and current v0.14/orchestration documentation for present behavior.
+
 > **Direction being critiqued:** a **live haze information dashboard** with three stacked sections: live table, chat, pixel agent office. Agents: Manager, HazeOps, WorkerShield, EvidenceCritic, World Model, H-Mem. Location and audience are agnostic. Klang, crews and schedules are dropped (decision recorded in `01-project-understanding.md`).
 >
 > **Tags:**

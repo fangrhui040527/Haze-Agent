@@ -1,9 +1,11 @@
 # 01 — Project Understanding (Phase 1)
 
+> **Historical record.** Written against the earlier v0.13 proposal and frontend decisions. The referenced scheduling implementation and source-document locations describe the tree at that time; scheduling was [retired on 25 October 2026](legacy-retirement.md). Use the root README and v0.14/orchestration documentation for current behavior.
+
 > Read-only study of the proposal. No application code yet.
 > Date written: 23 Oct 2026 (same day as the spec).
 
-> Update, 24 Oct 2026: the approved frontend remains generic and now includes Klang crew scheduling as an example request and structured answer inside chat. This supersedes the earlier decision below to drop scheduling entirely. See [the implemented contract route](chat-crew-scheduling.md).
+> Update, 24 Oct 2026 (historical): the approved frontend remained generic and included Klang crew scheduling as an example request and structured answer inside chat. This superseded the earlier decision below to drop scheduling entirely. That route has since been [retired](legacy-retirement.md).
 
 ## 0. Sources used
 

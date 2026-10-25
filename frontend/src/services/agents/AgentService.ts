@@ -2,6 +2,8 @@ import type {
   AgentAnswer,
   AgentEvent,
   AskRequest,
+  AgentTaskHandle,
+  AgentTaskCancellation,
 } from '../../shared/types/agents.ts';
 
 /**
@@ -21,7 +23,21 @@ export interface AgentService {
     request: AskRequest,
     onEvent: (event: AgentEvent) => void,
     signal: AbortSignal,
+    onTask?: (task: AgentTaskHandle) => void,
   ): Promise<AgentAnswer>;
+  /** An explicit server operation, independent of stopping the browser wait. */
+  cancelTask?(
+    taskId: string,
+    operationKey: string,
+    signal?: AbortSignal,
+  ): Promise<AgentTaskCancellation>;
+}
+
+export class AgentTaskCancelledError extends Error {
+  constructor() {
+    super('The server cancelled this task. Saved artifacts remain available.');
+    this.name = 'AgentTaskCancelledError';
+  }
 }
 
 export class AgentRunError extends Error {

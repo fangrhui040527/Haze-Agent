@@ -76,15 +76,6 @@
   max-width: 92%;
 }
 
-.withSchedule {
-  max-height: min(65vh, 620px);
-}
-
-.withSchedule .agents {
-  max-width: 100%;
-  min-width: 0;
-}
-
 .user {
   align-self: flex-end;
   align-items: flex-end;
@@ -194,6 +185,7 @@
 
 .status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   min-height: 36px;
@@ -214,7 +206,44 @@
   min-width: 0;
 }
 
+.cancellationError {
+  flex-basis: 100%;
+  color: var(--color-error);
+  overflow-wrap: anywhere;
+}
+
 .elapsed {
   font-family: var(--font-mono);
   color: var(--color-muted);
+}
+
+.evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.evidence ul {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.evidence summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.evidence details > p,
+.evidence details > ul {
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 560px) {
+  .status {
+    flex-wrap: wrap;
+  }
+  .statusText {
+    flex-basis: 70%;
+  }
 }

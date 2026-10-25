@@ -3,26 +3,25 @@
 A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World Model, H-Mem,
 EvidenceCritic, WorkerShield) shown as a pixel-art office.
 
-> **Status: demo with FICTIONAL data only.** The backend team is still building the real services.
-> General haze answers use mock data and mock agents. The Klang crew example runs the local
-> deterministic planning checker plus real model-role reviews and pinned memory services,
-> streaming their actual activity to the office. All sample data
-> is fictional; operational recommendations and publication remain disabled.
+> **Status: read-only evidence chat plus a fictional dashboard table.** General chat uses the
+> durable task API and a single configured Zetaris SmokeLedger PM2.5 source. Missing access
+> or provider failures are explicit errors; no mock answer is substituted. Operational actions
+> and publication remain outside this milestone. See [implementation and verification](../docs/milestone-v014.md).
 
-Design and decisions: [`docs/01-project-understanding.md`](../docs/01-project-understanding.md),
-[`docs/02-critique.md`](../docs/02-critique.md), [`docs/03-ui-design.md`](../docs/03-ui-design.md).
+Current design and implementation: [`docs/milestone-v014.md`](../docs/milestone-v014.md)
+and [`docs/orchestration-scaffold.md`](../docs/orchestration-scaffold.md).
 
 ---
 
 ## 1. Run it locally (Windows, macOS, or Linux)
 
-Use the repository's pinned **Node.js 24.22.1** and **npm 11.8.0** for the shared planning harness. Check with `node --version`.
+Use the repository's pinned **Node.js 24.22.1** and **npm 11.8.0**. Check with `node --version`.
 
 Open a terminal in the cloned repository's root folder (the folder containing `frontend`), then run:
 
 ```sh
-npm ci               # installs the shared contracts and local scheduling harness dependencies
-npm run build        # builds and verifies the pinned memory engines used by the Klang team
+npm ci               # installs the shared contracts and task backend dependencies
+npm run build        # builds the current backend
 cd frontend
 npm ci               # installs the dependencies from the committed lockfile
 npm run dev          # starts the app
@@ -32,9 +31,31 @@ These commands work in PowerShell and macOS/Linux shells. If your terminal is al
 
 Keep the terminal running and open the **Local** URL printed by Vite, usually **http://localhost:5173**. If that port is occupied, Vite may choose another port. Stop the server with `Ctrl + C`.
 
-General demo chat uses fictional data without API keys. The Klang crew team requires `HAZE_PROVIDER=nvidia` and `NVIDIA_API_KEY` in the ignored repository-root `.env` (existing OpenAI-compatible settings also work). Vite dev and preview read this configuration server-side and include the localhost-only scheduling adapter; a static `dist/` deployment needs an equivalent server adapter. Restart Vite after changing provider settings. `SAMPLE_MODE=true`, offline mode or a missing key blocks live model execution explicitly.
+Evidence chat requires the configured Zetaris source and model provider. Vite dev/preview read
+the root model configuration and the exact `third_party/zetaris/.env.local` source configuration
+server-side, with process environment taking precedence. Keep `VITE_API_BASE_URL` empty for the
+same-origin local API; never put credentials in `VITE_*` variables. Restart Vite after changing
+configuration. Dev and preview must not simultaneously own the same `STATE_DIR/tasks` directory.
+Static hosting needs an authenticated backend adapter.
 
-Try the default **fictional Klang crew sample** request in chat. Its answer includes the baseline, selected candidate and illustrated alternative, with exact times and immutable references. Requests for real crew schedules ask for validated planning input instead of silently using sample facts. See [the route and verification notes](../docs/chat-crew-scheduling.md) for contracts, limitations and focused checks.
+Try: “Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24,
+distinguish modeled values from observations, and identify coverage gaps.” Edit the location and
+dates for your request. Dates are UTC, the end is exclusive, and the maximum interval is 31 days.
+The answer links exact captured evidence and shows coverage, gaps, assumptions, review scope
+and actual execution provenance. **Stop waiting** detaches the browser; an admitted task remains
+readable through **Saved task**. Retrying a submission keeps its idempotency key.
+
+Set `VITE_HAZE_ORCHESTRATION=true` in `frontend/.env.local` to opt in to the v2 Manager,
+HazeOps, WorkerShield and EvidenceCritic workflow. The old `VITE_HAZE_HYBRID` setting
+remains a fallback for existing configuration. The default remains v1. The office
+shows actual assignment receipts, and answers show partial/blocked completion and
+review limitations. **Cancel task** sends an idempotent server cancellation; **Stop
+waiting** only detaches the browser. Failed cancellation keeps the task link available
+and can be retried with the same operation key. Fixture adapters are labeled as fixture
+evidence and do not establish live integration readiness.
+
+The crew-scheduling demo is retired. Existing browser chat text remains visible as
+archived history; new questions always use the evidence task API.
 
 | Command                 | What it does                                                                                                         |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -53,14 +74,15 @@ Try the default **fictional Klang crew sample** request in chat. Its answer incl
 | --------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
 | Dashboard | `/`          | Live table (top), chat (bottom left), agent office (bottom right)                                          |
 | Detail    | `/item/:id`  | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline |
-| Demo Data | `/demo-data` | Developer tool: view, regenerate, import/export data; simulate live events; change mock agent behaviour    |
+| Demo Data | `/demo-data` | Developer tool: view, regenerate, import/export data and simulate dashboard updates                        |
 
 Things worth trying on the Demo Data page:
 
-- **Agent event detail → "Run state only"** shows how the office behaves if the backend only reports run state.
-- **"Always fail"** shows the error path.
 - **"Make the next dashboard load fail"** shows the dashboard's error state.
 - The **scenarios** (haze spike, source outage, …) change what simulated events look like.
+
+Agent simulation controls and chat templates are retained for the optional offline mock.
+They do not affect the configured HTTP agent service or live task execution.
 
 ---
 
@@ -85,7 +107,7 @@ frontend/
    │  └─ dashboard/            main page + useAgentRun (one run shared by chat and office)
    ├─ services/
    │  ├─ data/                 DataService interface, MockDataService, ZetarisDataService (TODO), index.ts ← swap here
-   │  └─ agents/               AgentService interface, MockAgentService, HttpAgentService (TODO), index.ts ← swap here
+   │  └─ agents/               AgentService interface, HttpAgentService, optional offline mock, index.ts
    ├─ mock/                    everything fake: generator, simulator, demo store, mock answers, mock settings
    ├─ shared/
    │  ├─ types/                domain.ts (HazeItem…), agents.ts (AgentEvent), dataset.ts
@@ -132,7 +154,7 @@ Imports use explicit `.ts` / `.tsx` extensions (needed so Node can run the data 
 
 ## 5. Swapping the mock data for the real backend (Zetaris)
 
-The whole app reads data through one interface, `DataService` (`src/services/data/DataService.ts`):
+The fictional dashboard reads data through `DataService` (`src/services/data/DataService.ts`):
 `loadSnapshot()`, `getItem(id)`, `subscribe(onUpdate, onStatus)`.
 
 1. Implement the TODOs in `src/services/data/ZetarisDataService.ts`, mapping the backend's JSON into
@@ -144,37 +166,31 @@ The whole app reads data through one interface, `DataService` (`src/services/dat
 
 **Important:** the browser must **never** call Zetaris directly or hold Zetaris credentials. Anything in
 `VITE_*` variables ships to every visitor. The adapter calls _our_ backend API, and the backend talks to Zetaris.
-Nothing about Zetaris's API is known yet (see `docs/02-critique.md` §4), so don't guess endpoints.
+This dashboard adapter remains an unimplemented placeholder. The separate evidence task API
+already uses the server-side Zetaris integration; it does not populate the dashboard table.
 
 ---
 
-## 6. Replacing the mock agent events with the real backend
+## 6. Evidence task API and actual execution events
 
-The chat, the status line and the pixel office render **only** from a list of `AgentEvent`s
-(`src/shared/types/agents.ts`). The backend needs to produce the same events:
+`src/services/agents/index.ts` selects `HttpAgentService` for all questions. The table uses fictional
+dashboard data; table items are never passed as trusted evidence context.
 
-| Event                                            | Meaning                                           | Office shows                                          |
-| ------------------------------------------------ | ------------------------------------------------- | ----------------------------------------------------- |
-| `run_started`                                    | Question received                                 | Manager at reception                                  |
-| `agent_thinking`                                 | An agent is thinking                              | Thought bubble                                        |
-| `agent_moving` (`to: office / reception`)        | Manager walks                                     | Walking animation                                     |
-| `handoff` (`from`, `to[]`, `payloadLabel`)       | Work passed between agents                        | Paper flies between desks                             |
-| `agent_working` / `agent_completed`              | Agent busy / done                                 | Typing / green tick                                   |
-| `run_state` (`queued / running`)                 | **Level B**: backend only knows the overall state | Everyone shows a generic "working"; no invented steps |
-| `run_completed` / `run_failed` / `run_cancelled` | End of run                                        | Manager returns; a red "!" on failure                 |
+The HTTP adapter posts `haze.task.request.v1` to `/api/tasks`, then polls
+`/api/tasks/:id/events?after=CURSOR` and `/api/tasks/:id`. Shared Zod schemas validate admission,
+status, result and event pages. Global durable cursors are strictly increasing and can contain
+gaps caused by other tasks. Terminal status is drained through the matching final event page.
 
-Steps:
+The office consumes server `TaskEvent` receipts directly through the `task_event` variant.
+Only the named participants show activity; no handoffs or unused specialists are invented.
+The expandable receipt log preserves timestamps, actors and messages. Network, contract and
+provider errors reject explicitly and never trigger `MockAgentService`.
 
-The Klang sample already uses a real server-side LangGraph team: four model roles and the pinned World Model/H-Mem services. It emits `run_started` with `executionKind: 'agents'`, streams actual activity and returns `source: 'model'` with separate execution receipts and an independently checked schedule. Models select validated facts; controlled rendering supplies the displayed explanation. Requests needing real planning input still return `'input_required'` with `executionKind: 'local_check'`. Keep this route separate when replacing the general mock service; see [crew scheduling](../docs/chat-crew-scheduling.md).
-
-1. Implement `src/services/agents/HttpAgentService.ts`:
-   - Post the question.
-   - Then either read an SSE stream (Server-Sent Events, a simple one-way stream from server to browser) or poll the run status.
-   - Map each message to an `AgentEvent` and call `onEvent`.
-   - When the run finishes, resolve with an `AgentAnswer`.
-2. Swap it in **`src/services/agents/index.ts`**.
-3. If the backend only has run states (the spec's `POST /run` → `GET /runs/{id}` polling), emit `run_state` events. The UI already handles that honestly.
-4. Set `AgentAnswer.source` truthfully: `'model'` only when a model produced the answer, otherwise `'template_fallback'`.
+General evidence results use `source: 'evidence_model'` only after completed, validated model
+synthesis. Citations link the same task's immutable artifacts with hash and exact selection
+metadata. The result panel distinguishes requested model route from returned provider model
+and keeps unreported usage explicit. Successful captured-shape unit fixtures verify wiring;
+they do not establish live source readiness.
 
 ---
 
@@ -250,4 +266,4 @@ generator and a 320×180 canvas cover what we need.
 
 The pixel office is **original work** (sprites are drawn in code in `features/agent-office/sprites.ts`).
 It is inspired by the style of [pixel-agents](https://github.com/pixel-agents-hq/pixel-agents) (MIT).
-No code or image assets were copied; see `docs/03-ui-design.md` §7.1 for the licence review.
+No code or image assets were copied.

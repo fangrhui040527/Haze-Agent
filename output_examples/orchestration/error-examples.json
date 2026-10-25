@@ -1,0 +1,44 @@
+{
+  "kind": "documentation-fragments",
+  "executed": false,
+  "description": "Illustrative error response fragments, not task records or execution receipts. The fixture-trace.json file contains an actual captured synthetic execution.",
+  "examples": [
+    {
+      "condition": "A v2 request asks for a capability outside the first registered PM2.5 case.",
+      "http_status": 422,
+      "body": {
+        "error": {
+          "code": "unsupported_capability",
+          "message": "This milestone supports PM2.5 evidence summaries only."
+        }
+      }
+    },
+    {
+      "condition": "An admission operation key is reused for different content in the same principal/workspace/contract.",
+      "http_status": 409,
+      "body": {
+        "error": {
+          "code": "idempotency_conflict",
+          "message": "This idempotency key was already used for different content."
+        }
+      }
+    },
+    {
+      "condition": "The configured live evidence source has no Zetaris key after task admission.",
+      "task_fragment": {
+        "status": "failed",
+        "error": {
+          "code": "unavailable",
+          "message": "The Zetaris SmokeLedger PM2.5 adapter is unavailable: ZETARIS_API_KEY is missing. No other source was queried."
+        }
+      },
+      "result": null
+    },
+    {
+      "condition": "A server cancellation stops an active v2 task. Reusing its cancellation key preserves this generation.",
+      "http_status": 200,
+      "body_fragment": { "status": "cancelled", "generation": 2 },
+      "limitation": "The response does not assert remote termination or billing cessation."
+    }
+  ]
+}

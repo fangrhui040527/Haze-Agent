@@ -37,9 +37,9 @@ function Header() {
         {live.fictional && (
           <Badge
             tone="warn"
-            title="All data shown is invented for demonstration."
+            title="Dashboard table items are fictional. Evidence chat uses its separately labeled task API."
           >
-            DEMO DATA · fictional
+            TABLE · fictional sample
           </Badge>
         )}
         <span className={styles.connection} title={live.dataSourceLabel}>
@@ -84,7 +84,8 @@ function Footer() {
   return (
     <footer className={styles.footer}>
       Not medical advice. Follow your local authorities. Sources are listed on
-      each item. All data currently shown is fictional demo data.
+      each item. Table items are fictional samples; evidence answers identify
+      their source and execution mode.
     </footer>
   );
 }
