@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import { DashboardPage } from '../features/dashboard/DashboardPage.tsx';
 import { DemoDataPage } from '../features/demo-data/DemoDataPage.tsx';
 import { DetailPage } from '../features/detail/DetailPage.tsx';
+import { TaskPage } from '../features/task-report/TaskPage.tsx';
 import { AppLayout, NotFoundPage, RouteErrorPage } from './AppLayout.tsx';
 
 /**
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'item/:id', element: <DetailPage /> },
       { path: 'demo-data', element: <DemoDataPage /> },
+      { path: 'task/:id', element: <TaskPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   AgentRunError,
   KLANG_CREW_EXAMPLE,
@@ -43,6 +43,7 @@ interface ChatMessage {
   source?: AgentAnswer['source'];
   scheduling?: AgentAnswer['scheduling'];
   agentExecution?: AgentAnswer['agentExecution'];
+  task?: AgentAnswer['task'];
   state: 'pending' | 'done' | 'error' | 'cancelled';
   error?: string;
   retryable?: boolean;
@@ -67,6 +68,7 @@ const SOURCE_LABEL = {
   template_fallback: 'Template fallback (AI unavailable)',
   computed_demo: 'Computed fictional sample · no AI model run',
   input_required: 'Planning input needed',
+  template: 'Template answer from real records (no AI model connected)',
 } as const;
 
 const MAX_STORED = 50;
@@ -85,6 +87,7 @@ export function ChatPanel({
   run: AgentRun;
   prefill: ChatPrefill | null;
 }) {
+  const navigate = useNavigate();
   // History, including live role receipts, stays in this browser.
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
     'hazewatch.chat.v1',
@@ -202,7 +205,11 @@ export function ChatPanel({
         source: answer.source,
         scheduling: answer.scheduling,
         agentExecution: answer.agentExecution,
+        task: answer.task,
       });
+      // The Manager opened a task report: show it being written.
+      if (answer.task)
+        void navigate(`/task/${encodeURIComponent(answer.task.taskId)}`);
     } catch (error) {
       if (isAbortError(error)) finish({ state: 'cancelled' });
       else
@@ -371,6 +378,13 @@ function MessageBody({
       {m.paragraphs?.map((p, i) => (
         <p key={i}>{p}</p>
       ))}
+      {m.task && (
+        <p>
+          <Link to={`/task/${encodeURIComponent(m.task.taskId)}`}>
+            Open the report: {m.task.title}
+          </Link>
+        </p>
+      )}
       {m.agentExecution && (
         <Suspense fallback={<p role="status">Loading agent execution…</p>}>
           <AgentExecution execution={m.agentExecution} />

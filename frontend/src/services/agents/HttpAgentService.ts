@@ -1,53 +1,137 @@
+import { delay } from '../../shared/lib/delay.ts';
 import type {
   AgentAnswer,
   AgentEvent,
   AskRequest,
 } from '../../shared/types/agents.ts';
-import type { AgentService } from './AgentService.ts';
+import { AgentRunError, type AgentService } from './AgentService.ts';
 
 /**
- * TODO(backend): real agent adapter. NOT IMPLEMENTED — the backend API for chat is not decided.
+ * Asks the HazeWatch server (server/src/runs).
  *
- * What we know from the spec (Haze_Agent_Architecture_v0.13.pdf §15.2 p.28):
- *   POST /run returns 202 + a status location; GET /runs/{id} returns execution state
- *   (queued/running/waiting/paused/completed/failed/cancelled/timed_out). That is POLLING with
- *   run-level state only -> map it to `run_state` events (fallback level B).
+ *   POST /api/runs                 -> 202 { runId }
+ *   GET  /api/runs/:id/events (SSE) -> "agent" events (AgentEvent), then "answer" (AgentAnswer)
+ *   POST /api/runs/:id/cancel      -> 204
  *
- * If the backend adds per-agent events (agreed in docs/02-critique.md §5.3), map each one to an
- * AgentEvent (agent_working, handoff, …) and the office will animate them automatically.
- * Never invent per-agent events the backend did not send.
- *
- * Sketch (do not ship until the endpoints are confirmed):
- *   1. POST question -> runId
- *   2. Either: new EventSource(`${baseUrl}/runs/${runId}/events`) and map messages -> onEvent
- *      Or:     poll GET /runs/{runId} every ~2 s and emit run_state events
- *   3. On completion, fetch the answer and map to AgentAnswer (source: 'model' only if the
- *      backend confirms a model produced it; otherwise 'template_fallback').
- *   4. On signal abort: call the backend's cancel endpoint (if any), emit run_cancelled.
+ * The server only emits events for agents that really ran. Its steps often finish
+ * within milliseconds, so events are played back at least PLAYBACK_GAP_MS apart for
+ * the office animation. Playback only spaces them out: it never adds, removes or
+ * reorders an event.
  */
+const PLAYBACK_GAP_MS = 650;
+
 export class HttpAgentService implements AgentService {
-  readonly label = 'Backend agents';
+  readonly label = 'HazeWatch server agents';
   private readonly baseUrl: string;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
-  // TODO(backend): add the `signal: AbortSignal` parameter (3rd) and use it to cancel the run.
-  ask(
-    _request: AskRequest,
+  async ask(
+    request: AskRequest,
     onEvent: (event: AgentEvent) => void,
+    signal: AbortSignal,
   ): Promise<AgentAnswer> {
-    const message = `HttpAgentService is not implemented yet (${this.baseUrl}). See TODOs in this file.`;
-    onEvent({
-      type: 'run_failed',
-      runId: 'not-started',
-      at: new Date().toISOString(),
-      agent: null,
-      error: message,
-      retryable: false,
-      message,
+    const response = await fetch(`${this.baseUrl}/api/runs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
     });
-    return Promise.reject(new Error(message));
+    if (!response.ok) {
+      throw new AgentRunError(
+        `The server refused the question (HTTP ${response.status}).`,
+        response.status >= 500,
+      );
+    }
+    const { runId } = (await response.json()) as { runId: string };
+
+    const queue: (
+      | { kind: 'event'; event: AgentEvent }
+      | { kind: 'answer'; answer: AgentAnswer }
+      | { kind: 'lost' }
+    )[] = [];
+    let wake: (() => void) | null = null;
+    const push = (entry: (typeof queue)[number]) => {
+      queue.push(entry);
+      wake?.();
+    };
+    const source = new EventSource(`${this.baseUrl}/api/runs/${runId}/events`);
+    let finished = false;
+    source.addEventListener('agent', (e) =>
+      push({
+        kind: 'event',
+        event: JSON.parse((e as MessageEvent<string>).data) as AgentEvent,
+      }),
+    );
+    source.addEventListener('answer', (e) =>
+      push({
+        kind: 'answer',
+        answer: JSON.parse((e as MessageEvent<string>).data) as AgentAnswer,
+      }),
+    );
+    source.addEventListener('end', () => {
+      finished = true;
+      source.close();
+    });
+    source.onerror = () => {
+      if (!finished) push({ kind: 'lost' });
+      source.close();
+    };
+    const onAbort = () => {
+      void fetch(`${this.baseUrl}/api/runs/${runId}/cancel`, {
+        method: 'POST',
+      }).catch(() => undefined);
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+
+    try {
+      for (;;) {
+        if (queue.length === 0) {
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+            signal.addEventListener('abort', () => resolve(), { once: true });
+          });
+          wake = null;
+        }
+        if (signal.aborted) {
+          onEvent({
+            type: 'run_cancelled',
+            runId,
+            at: new Date().toISOString(),
+            message: 'Cancelled.',
+          });
+          throw new DOMException('Cancelled', 'AbortError');
+        }
+        const entry = queue.shift();
+        if (!entry) continue;
+        if (entry.kind === 'answer') return entry.answer;
+        if (entry.kind === 'lost') {
+          const message =
+            'Lost the connection to the server before the answer arrived.';
+          onEvent({
+            type: 'run_failed',
+            runId,
+            at: new Date().toISOString(),
+            agent: null,
+            error: message,
+            retryable: true,
+            message,
+          });
+          throw new AgentRunError(message, true);
+        }
+        onEvent(entry.event);
+        if (entry.event.type === 'run_failed') {
+          throw new AgentRunError(entry.event.error, entry.event.retryable);
+        }
+        if (entry.event.type === 'run_cancelled')
+          throw new DOMException('Cancelled', 'AbortError');
+        await delay(PLAYBACK_GAP_MS, signal).catch(() => undefined);
+      }
+    } finally {
+      signal.removeEventListener('abort', onAbort);
+      source.close();
+    }
   }
 }
