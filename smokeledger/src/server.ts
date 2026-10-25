@@ -139,7 +139,9 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ error: { type: "not_found", message: `${req.method} ${url.pathname}` } }));
 });
 
-server.listen(CONFIG.port, "0.0.0.0", () => console.log(`SmokeLedger haze harness on http://0.0.0.0:${CONFIG.port} (${CONFIG.sampleMode ? "offline_sample" : "live"})`));
+// HOST lets an embedding app keep the sidecar on loopback; the Docker default stays 0.0.0.0.
+const host = process.env.HOST ?? "0.0.0.0";
+server.listen(CONFIG.port, host, () => console.log(`SmokeLedger haze harness on http://${host}:${CONFIG.port} (${CONFIG.sampleMode ? "offline_sample" : "live"})`));
 prepare()
   .then(() => resumeUnfinished())
   .then(() => (readyState = { ready: true }))
