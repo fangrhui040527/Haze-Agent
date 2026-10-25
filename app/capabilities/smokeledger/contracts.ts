@@ -140,10 +140,52 @@ const MONTHS = [
   'december',
 ];
 
+const TOWN = String.raw`([A-Z][\p{L} .'-]*?)`;
+const DAYS = String.raw`(\d{1,2})(?:\s*(?:[–-]|to|and)\s*(\d{1,2}))?\s+([A-Za-z]+)\s+(\d{4})\b`;
+const TOWN_AND_DAYS = new RegExp(
+  String.raw`\b(?:over|in|for|at)\s+${TOWN}\s+(?:on|during|between|from)\s+${DAYS}`,
+  'u',
+);
+// Verbs may start a sentence; the town itself must still be capitalised.
+const CHANGE = String.raw`\b(?:[Cc]hange|[Ss]witch|[Mm]ove|[Ss]et)\s+(?:the\s+)?`;
+const TOWN_CHANGE = new RegExp(
+  String.raw`${CHANGE}(?:area|town|location|place|district)\s+(?:to|for)\s+${TOWN}\s*(?:[.,;!?]|$)`,
+  'u',
+);
+const DAYS_CHANGE = new RegExp(
+  String.raw`${CHANGE}(?:dates?|days?|window|period)\s+to\s+${DAYS}`,
+  'u',
+);
+
+/** Whole Malaysian days [first 00:00, last + 1 day 00:00) +08:00. */
+function wholeDays(
+  first: string,
+  last: string | undefined,
+  monthName: string,
+  yearText: string,
+): SmokeLedgerScope['window'] {
+  const month = MONTHS.indexOf(monthName.toLowerCase());
+  if (month < 0) throw new Error(`Unknown month: ${monthName}.`);
+  const year = Number(yearText);
+  const day = (d: number) => {
+    const date = new Date(Date.UTC(year, month, d));
+    if (date.getUTCMonth() !== month)
+      throw new Error(`${d} ${monthName} ${year} is not a calendar date.`);
+    return date;
+  };
+  const start = day(Number(first));
+  const end = new Date(day(Number(last ?? first)).getTime() + 86_400_000);
+  const local = (date: Date) =>
+    `${date.toISOString().slice(0, 10)}T00:00:00+08:00`;
+  return { start: local(start), end: local(end) };
+}
+
 /**
- * Explicit scope (the request's or a correction's revised scope) wins; otherwise
- * read "over|in|for|at TOWN on D[–D] Month YYYY" as whole Malaysian days
- * [D 00:00, last day + 1 00:00) +08:00. Anything else needs an explicit scope.
+ * Explicit scope (the request's or a correction's revised scope) wins. Otherwise
+ * read the objective line by line (the task runtime appends each correction as a
+ * new line) so the latest "over TOWN on D[–D] Month YYYY", "change the area to
+ * TOWN" or "change the dates to D[–D] Month YYYY" wins. Anything else needs an
+ * explicit scope.
  */
 export function frameSmokeLedgerScope(request: {
   objective: string;
@@ -151,30 +193,28 @@ export function frameSmokeLedgerScope(request: {
 }): SmokeLedgerScope {
   if (request.scope !== undefined)
     return smokeLedgerScopeSchema.parse(request.scope);
-  const match =
-    /\b(?:over|in|for|at)\s+([A-Z][\p{L} .'-]*?)\s+(?:on|during|between|from)\s+(\d{1,2})(?:\s*(?:[–-]|to|and)\s*(\d{1,2}))?\s+([A-Za-z]+)\s+(\d{4})\b/u.exec(
-      request.objective,
-    );
-  const month = match ? MONTHS.indexOf(match[4]!.toLowerCase()) : -1;
-  if (!match || month < 0)
+  let town: string | undefined;
+  let window: SmokeLedgerScope['window'] | undefined;
+  for (const line of request.objective.split('\n')) {
+    const both = TOWN_AND_DAYS.exec(line);
+    if (both) {
+      town = both[1]!.trim();
+      window = wholeDays(both[2]!, both[3], both[4]!, both[5]!);
+    }
+    const townChange = TOWN_CHANGE.exec(line);
+    if (townChange) town = townChange[1]!.trim();
+    const daysChange = DAYS_CHANGE.exec(line);
+    if (daysChange)
+      window = wholeDays(
+        daysChange[1]!,
+        daysChange[2],
+        daysChange[3]!,
+        daysChange[4]!,
+      );
+  }
+  if (!town || !window)
     throw new Error(
       'SmokeLedger needs a town and a date range, e.g. "over Batu Pahat on 6–7 October 2026", or an explicit scope.',
     );
-  const year = Number(match[5]);
-  const first = Number(match[2]);
-  const last = Number(match[3] ?? match[2]);
-  const day = (d: number) => {
-    const date = new Date(Date.UTC(year, month, d));
-    if (date.getUTCMonth() !== month)
-      throw new Error(`${d} ${match[4]} ${year} is not a calendar date.`);
-    return date;
-  };
-  const start = day(first);
-  const end = new Date(day(last).getTime() + 86_400_000);
-  const local = (date: Date) =>
-    `${date.toISOString().slice(0, 10)}T00:00:00+08:00`;
-  return smokeLedgerScopeSchema.parse({
-    town: match[1]!.trim(),
-    window: { start: local(start), end: local(end) },
-  });
+  return smokeLedgerScopeSchema.parse({ town, window });
 }

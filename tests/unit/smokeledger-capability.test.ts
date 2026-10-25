@@ -163,6 +163,35 @@ describe('smokeledger scope framing', () => {
     ).toEqual(scope);
   });
 
+  // The task runtime appends each correction to the objective as a new line.
+  it('applies a text-only town correction and keeps the dates', () => {
+    expect(
+      frameSmokeLedgerScope({
+        objective:
+          'Investigate the haze over Batu Pahat on 6–7 October 2026.\ncorrection: Change the area to Klang.',
+      }),
+    ).toEqual({ ...scope, town: 'Klang' });
+  });
+
+  it('applies the latest of several corrections', () => {
+    expect(
+      frameSmokeLedgerScope({
+        objective: [
+          'Investigate the haze over Batu Pahat on 6–7 October 2026.',
+          'correction: Change the area to Klang.',
+          'correction: Change the dates to 8 October 2026.',
+          'correction: Switch the town to Muar',
+        ].join('\n'),
+      }),
+    ).toEqual({
+      town: 'Muar',
+      window: {
+        start: '2026-10-08T00:00:00+08:00',
+        end: '2026-10-09T00:00:00+08:00',
+      },
+    });
+  });
+
   it('lets an explicit scope (for example a correction) win', () => {
     const klang = { ...scope, town: 'Klang' };
     expect(
