@@ -2,7 +2,7 @@ import { bandIndex, bandLabel, itemBand } from '../../shared/lib/bands.ts';
 import type { HazeItem, Location } from '../../shared/types/domain.ts';
 
 /**
- * THE ranking rule for the live table (docs/03-ui-design.md §6).
+ * THE ranking rule for the live table (docs/frontend/03-ui-design.md §6).
  *
  * score = recency (0–40) + severity (0–40) + evidence (0–20) + penalties (0 to −20),
  * clamped to 0–100 and rounded. Retracted items always score 0.

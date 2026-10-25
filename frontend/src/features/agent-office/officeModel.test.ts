@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../shared/types/agents.ts';
-import type { OrchestrationEvent } from '../../../../app/orchestration/contracts.ts';
+import type { TaskEvent } from '../../../../app/contracts/tasks.ts';
 import {
   DIVIDER_COL,
   DOOR_ROWS,
@@ -15,7 +15,7 @@ import { deriveAgentStatuses, OfficeModel } from './officeModel.ts';
 const base = { runId: 'r1', at: '2026-10-23T12:00:00Z', message: '' };
 function orchestrationTaskEvent(
   type: string,
-  actor: OrchestrationEvent['actor'],
+  actor: TaskEvent['actor'],
   cursor: number,
 ): AgentEvent {
   return {
@@ -23,9 +23,10 @@ function orchestrationTaskEvent(
     type: 'task_event',
     message: `Actual ${type}`,
     receipt: {
-      schema_version: 'haze.task.event.v2',
+      schema_version: 'haze.task.event.v3',
       cursor,
       task_id: base.runId,
+      run_id: base.runId,
       at: base.at,
       type,
       actor,
@@ -93,6 +94,10 @@ describe('deriveAgentStatuses', () => {
         receipt: {
           cursor: 1,
           task_id: 'task',
+          run_id: base.runId,
+          schema_version: 'haze.task.event.v3',
+          objective_revision: 1,
+          generation: 1,
           at: base.at,
           type: 'tool_started',
           actor: 'HazeOps',

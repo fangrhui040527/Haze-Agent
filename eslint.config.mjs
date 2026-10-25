@@ -13,6 +13,29 @@ export default tseslint.config(
     ],
   },
   {
+    files: [
+      'app/tasks/**/*.ts',
+      'app/orchestration/**/*.ts',
+      'app/adapters/**/*.ts',
+      'app/checkpoints/**/*.ts',
+      'app/contracts/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/capabilities/**', '**/agents/**'],
+              message:
+                'Register domain implementations at app/composition.ts; core infrastructure must remain domain independent.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       js.configs.recommended,

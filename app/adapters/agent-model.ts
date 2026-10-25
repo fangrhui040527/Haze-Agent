@@ -2,6 +2,10 @@ export interface AgentModelInput {
   role: string;
   instruction: string;
   context: unknown;
+  /** Admitted by the runtime for this attempt and passed through unchanged. */
+  max_output_tokens?: number;
+  /** Strict JSON actions still undergo agent-owned schema validation after completion. */
+  json_mode?: boolean;
 }
 
 /** Provider-returned metadata; absent fields remain unknown, not inferred. */
@@ -35,6 +39,11 @@ const MAX_RESPONSE_BYTES = 65_536;
 const MAX_TEXT_CHARACTERS = 12_000;
 
 class ModelError extends Error {}
+
+/** Dispatch happened, but no provider receipt established the remote outcome. */
+export class AgentModelOutcomeUnknownError extends Error {
+  readonly outcome = 'unknown' as const;
+}
 
 function completionUrl(value: string | undefined): URL {
   let url: URL;
@@ -215,6 +224,13 @@ export function resolveAgentModel(
       }
       const context = JSON.stringify(input.context);
       if (context === undefined) throw new Error();
+      const outputTokens = input.max_output_tokens ?? 1200;
+      if (
+        !Number.isSafeInteger(outputTokens) ||
+        outputTokens < 1 ||
+        outputTokens > 16_384
+      )
+        throw new Error();
       body = JSON.stringify({
         model,
         messages: [
@@ -226,13 +242,16 @@ export function resolveAgentModel(
         ],
         ...(provider === 'nvidia'
           ? {
-              max_tokens: 700,
+              max_tokens: outputTokens,
               ...(model === NVIDIA_DEFAULT_MODEL
                 ? { chat_template_kwargs: { enable_thinking: false } }
                 : {}),
             }
-          : { max_completion_tokens: 700 }),
+          : { max_completion_tokens: outputTokens }),
         stream: false,
+        ...(input.json_mode
+          ? { response_format: { type: 'json_object' }, temperature: 0 }
+          : {}),
       });
       if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES)
         throw new Error();
@@ -286,12 +305,14 @@ export function resolveAgentModel(
         );
       }
       if (deadline.signal.aborted) {
-        // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
-        throw new Error('Agent model request timed out after 60 seconds.');
+        // Upstream causes may contain credentials; retain only the safe outcome classification.
+        throw new AgentModelOutcomeUnknownError(
+          'Agent model request timed out after 60 seconds.',
+        );
       }
       if (error instanceof ModelError) throw error;
-      // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
-      throw new Error(
+      // Upstream causes may contain credentials; retain only the safe outcome classification.
+      throw new AgentModelOutcomeUnknownError(
         'Agent model request or response failed. Check the server provider configuration.',
       );
     } finally {

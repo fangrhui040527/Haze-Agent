@@ -6,9 +6,9 @@ coverage/
 package-lock.json
 # Generated demo data (written by `npm run data:generate` / the Demo Data page's Export).
 frontend/public/demo-data/
-docs/*.pdf
+docs/**/*.pdf
 # Architecture reference source is retained as supplied.
-docs/haze-architecture-v0.8.html
+docs/architecture/haze-architecture-v0.8.html
 .state/
 state/
 logs/

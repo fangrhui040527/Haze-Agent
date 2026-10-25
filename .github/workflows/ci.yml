@@ -49,16 +49,16 @@ jobs:
         run: npm run build
       - name: Build frontend and check browser/server integration types
         run: npm --prefix frontend run build
-      - name: Test frontend evidence, task receipts and interactions
+      - name: Test general frontend results, questions, controls and receipts
         run: npm --prefix frontend test
       - name: Run focused unit, engine adapter and SQLite persistence tests
         run: npm test
       - name: Run pinned upstream engine conformance
         run: npm run test:engines
-      - name: Verify synthetic orchestration task execution and restart readback
+      - name: Verify explicit general fixture tasks and fresh-process readback
         run: npm run test:integration
         env:
-          STATE_DIR: ${{ runner.temp }}/haze-orchestration-verification
+          STATE_DIR: ${{ runner.temp }}/haze-general-verification
 
   postgres:
     name: PostgreSQL saver integration

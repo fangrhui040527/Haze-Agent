@@ -1,3 +1,4 @@
+import { acceptTaskReadback } from './taskReadback.ts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   agentService,
@@ -10,179 +11,373 @@ import type {
   AskRequest,
   AgentTaskHandle,
 } from '../../shared/types/agents.ts';
+import type {
+  Artifact,
+  ArtifactImport,
+  ArtifactRef,
+} from '../../../../app/contracts/artifacts.ts';
+import type { CapabilityCard } from '../../../../app/contracts/capabilities.ts';
+import type {
+  ControlReceipt,
+  TaskControl,
+  TaskUpdate,
+} from '../../../../app/contracts/controls.ts';
 
 export type RunStatus =
-  'idle' | 'running' | 'completed' | 'failed' | 'cancelled' | 'task_cancelled';
-
+  | 'idle'
+  | 'running'
+  | 'waiting'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'task_cancelled';
 export interface AgentRun {
-  /** Events of the current (or last) run, in order. The office animates from these. */
   events: AgentEvent[];
   status: RunStatus;
-  /** Plain-text status for the status line (always available, even without animation). */
   statusText: string;
   startedAt: number | null;
   serviceLabel: string;
   ask(request: AskRequest): Promise<AgentAnswer>;
   cancel(): void;
   task: AgentTaskHandle | null;
-  cancellationPending: boolean;
-  cancellationError: string | null;
-  cancelTask(): Promise<void>;
+  operationPending: boolean;
+  operationError: string | null;
+  receipt: ControlReceipt | null;
+  control(
+    action: TaskControl['action'],
+    revokedTools?: string[],
+  ): Promise<void>;
+  update(
+    passage: string,
+    questionId?: string,
+    scope?: TaskUpdate['scope'],
+    contextRefs?: ArtifactRef[],
+  ): Promise<void>;
+  importSource(source: ArtifactImport, key: string): Promise<Artifact>;
+  capabilities: CapabilityCard[];
+  capabilitiesError: string | null;
+  latestAnswer: AgentAnswer | null;
 }
 
-/** One agent run at a time, shared by the chat (input/answers) and the office (animation). */
 export function useAgentRun(): AgentRun {
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [status, setStatus] = useState<RunStatus>('idle');
   const [startedAt, setStartedAt] = useState<number | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
   const [task, setTask] = useState<AgentTaskHandle | null>(null);
-  const [cancellationPending, setCancellationPending] = useState(false);
-  const [cancellationError, setCancellationError] = useState<string | null>(
+  const [operationPending, setOperationPending] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<ControlReceipt | null>(null);
+  const [latestAnswer, setLatestAnswer] = useState<AgentAnswer | null>(null);
+  const [capabilities, setCapabilities] = useState<CapabilityCard[]>([]);
+  const [capabilitiesError, setCapabilitiesError] = useState<string | null>(
     null,
   );
+  const controllerRef = useRef<AbortController | null>(null);
   const taskRef = useRef<AgentTaskHandle | null>(null);
-  const cancellationRef = useRef<AbortController | null>(null);
-  const cancellationKeys = useRef(new Map<string, string>());
-
-  useEffect(
-    () => () => {
+  const operationRef = useRef<AbortController | null>(null);
+  // Failed delivery can be retried with the same exact body and key.
+  const operationKeys = useRef(new Map<string, string>());
+  useEffect(() => {
+    const controller = new AbortController();
+    agentService
+      .capabilities?.(controller.signal)
+      .then(setCapabilities)
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setCapabilitiesError(
+            error instanceof Error
+              ? error.message
+              : 'Capability metadata could not be loaded.',
+          );
+      });
+    return () => {
+      controller.abort();
       controllerRef.current?.abort();
-      controllerRef.current = null;
-      cancellationRef.current?.abort();
-      cancellationRef.current = null;
+      operationRef.current?.abort();
+    };
+  }, []);
+  const onTask = useCallback((admitted: AgentTaskHandle) => {
+    if (!acceptTaskReadback(taskRef.current, admitted)) return;
+    taskRef.current = admitted;
+    setTask(admitted);
+    try {
+      sessionStorage.setItem('haze.general.task.id', admitted.id);
+    } catch {
+      /* Readback still works without browser storage. */
+    }
+    if (admitted.status === 'waiting' || admitted.status === 'paused')
+      setStatus(admitted.status);
+    else if (admitted.status === 'running' || admitted.status === 'queued')
+      setStatus('running');
+  }, []);
+  const observe = useCallback(
+    async (
+      execute: (
+        signal: AbortSignal,
+        event: (event: AgentEvent) => void,
+      ) => Promise<AgentAnswer>,
+    ) => {
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      try {
+        const answer = await execute(controller.signal, (event) => {
+          if (
+            controllerRef.current === controller &&
+            !controller.signal.aborted
+          )
+            setEvents((previous) =>
+              previous.some(
+                (item) =>
+                  item.type === 'task_event' &&
+                  event.type === 'task_event' &&
+                  item.receipt.cursor === event.receipt.cursor,
+              )
+                ? previous
+                : [...previous, event],
+            );
+        });
+        if (controller.signal.aborted || controllerRef.current !== controller)
+          throw abortError();
+        setLatestAnswer(answer);
+        setStatus('completed');
+        return answer;
+      } catch (error) {
+        if (controllerRef.current === controller)
+          setStatus(
+            error instanceof AgentTaskCancelledError
+              ? 'task_cancelled'
+              : isAbortError(error)
+                ? 'cancelled'
+                : 'failed',
+          );
+        throw error;
+      } finally {
+        if (controllerRef.current === controller) controllerRef.current = null;
+      }
     },
     [],
   );
-
-  const ask = useCallback(async (request: AskRequest) => {
-    if (controllerRef.current)
-      throw new Error('A question is already being answered.');
-    const controller = new AbortController();
-    controllerRef.current = controller;
-    setEvents([]);
-    setStatus('running');
-    setStartedAt(Date.now());
-    taskRef.current = null;
-    setTask(null);
-    cancellationRef.current?.abort();
-    cancellationRef.current = null;
-    setCancellationPending(false);
-    setCancellationError(null);
+  useEffect(() => {
+    let savedTaskId: string | null = null;
     try {
-      const answer = await agentService.ask(
-        request,
-        (e) => {
-          if (
-            controllerRef.current === controller &&
-            !controller.signal.aborted
-          ) {
-            setEvents((prev) => [...prev, e]);
-          }
-        },
-        controller.signal,
-        (admitted) => {
-          if (
-            controllerRef.current === controller &&
-            !controller.signal.aborted
-          ) {
-            taskRef.current = admitted;
-            setTask(admitted);
-          }
-        },
-      );
-      if (controller.signal.aborted || controllerRef.current !== controller)
-        throw abortError();
-      setStatus('completed');
-      return answer;
-    } catch (error) {
-      if (controllerRef.current === controller)
-        setStatus(
-          error instanceof AgentTaskCancelledError
-            ? 'task_cancelled'
-            : isAbortError(error)
-              ? 'cancelled'
-              : 'failed',
-        );
-      throw error;
-    } finally {
-      if (controllerRef.current === controller) controllerRef.current = null;
+      savedTaskId = sessionStorage.getItem('haze.general.task.id');
+    } catch {
+      /* Browser storage is optional. */
     }
-  }, []);
-
-  const cancel = useCallback(() => controllerRef.current?.abort(), []);
-  const cancelTask = useCallback(async () => {
-    const admitted = taskRef.current;
-    if (
-      !admitted ||
-      admitted.schemaVersion !== 'haze.task.v2' ||
-      cancellationRef.current ||
-      !agentService.cancelTask
-    )
+    if (!savedTaskId || !agentService.readTask || !agentService.watchTask)
       return;
     const controller = new AbortController();
-    cancellationRef.current = controller;
-    setCancellationPending(true);
-    setCancellationError(null);
-    let operationKey = cancellationKeys.current.get(admitted.id);
-    if (!operationKey) {
-      operationKey = crypto.randomUUID();
-      cancellationKeys.current.set(admitted.id, operationKey);
-    }
-    try {
-      const cancelled = await agentService.cancelTask(
-        admitted.id,
-        operationKey,
-        controller.signal,
+    agentService
+      .readTask(savedTaskId, controller.signal)
+      .then((record) => {
+        if (
+          controller.signal.aborted ||
+          taskRef.current ||
+          controllerRef.current
+        )
+          return;
+        onTask({
+          id: record.id,
+          schemaVersion: 'haze.task.v3',
+          taskUrl: `${typeof import.meta.env.VITE_API_BASE_URL === 'string' ? import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '') : ''}/api/tasks/${record.id}`,
+          status: record.status,
+          mode: record.mode,
+          record,
+        });
+        setStartedAt(Date.now());
+        void observe((signal, event) =>
+          agentService.watchTask!(record.id, event, signal, onTask),
+        ).catch(() => {});
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setOperationError(
+            error instanceof Error
+              ? error.message
+              : 'The saved task could not be restored.',
+          );
+      });
+    return () => controller.abort();
+  }, [observe, onTask]);
+  const ask = useCallback(
+    async (request: AskRequest) => {
+      if (controllerRef.current)
+        throw new Error('A task is already being observed.');
+      setEvents([]);
+      setStatus('running');
+      setStartedAt(Date.now());
+      setLatestAnswer(null);
+      taskRef.current = null;
+      setTask(null);
+      setReceipt(null);
+      setOperationError(null);
+      return observe((signal, event) =>
+        agentService.ask(request, event, signal, onTask),
       );
-      if (taskRef.current?.id === admitted.id && !controller.signal.aborted) {
-        const updated = { ...admitted, status: cancelled.status };
-        taskRef.current = updated;
-        setTask(updated);
-        if (cancelled.status === 'cancelled' && !controllerRef.current)
-          setStatus('task_cancelled');
-      }
-    } catch (error) {
-      if (taskRef.current?.id === admitted.id && !controller.signal.aborted)
-        setCancellationError(
-          error instanceof Error
-            ? error.message
-            : 'Cancellation failed. Check the saved task status.',
+    },
+    [observe, onTask],
+  );
+  const cancel = useCallback(() => controllerRef.current?.abort(), []);
+  const mutate = useCallback(
+    async (body: TaskControl | TaskUpdate) => {
+      const admitted = taskRef.current;
+      if (!admitted || operationRef.current) return;
+      const controller = new AbortController();
+      operationRef.current = controller;
+      setOperationPending(true);
+      setOperationError(null);
+      const fingerprint = JSON.stringify({ id: admitted.id, body });
+      const key = operationKeys.current.get(fingerprint) ?? crypto.randomUUID();
+      operationKeys.current.set(fingerprint, key);
+      try {
+        const supported =
+          'action' in body
+            ? typeof agentService.controlTask === 'function'
+            : typeof agentService.updateTask === 'function';
+        if (!supported)
+          throw new Error('This task service does not support changes.');
+        const received =
+          'action' in body
+            ? await agentService.controlTask!(
+                admitted.id,
+                body,
+                key,
+                controller.signal,
+              )
+            : await agentService.updateTask!(
+                admitted.id,
+                body,
+                key,
+                controller.signal,
+              );
+        setReceipt(received);
+        const record = await agentService.readTask!(
+          admitted.id,
+          controller.signal,
         );
-    } finally {
-      if (cancellationRef.current === controller) {
-        cancellationRef.current = null;
-        setCancellationPending(false);
+        onTask({
+          ...admitted,
+          status: record.status,
+          mode: record.mode,
+          record,
+        });
+        if (
+          !controllerRef.current &&
+          ['queued', 'running', 'waiting', 'paused'].includes(record.status) &&
+          agentService.watchTask
+        ) {
+          setStartedAt(Date.now());
+          void observe((signal, event) =>
+            agentService.watchTask!(admitted.id, event, signal, onTask),
+          ).catch(() => {});
+        }
+        if (record.status === 'cancelled') setStatus('task_cancelled');
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setOperationError(
+            error instanceof Error
+              ? error.message
+              : 'The change failed. Refresh the saved task and retry.',
+          );
+          // A stale expectation requires fresh readback before another mutation.
+          try {
+            const record = await agentService.readTask!(
+              admitted.id,
+              controller.signal,
+            );
+            onTask({ ...admitted, status: record.status, record });
+          } catch {
+            /* Keep the original operation error. */
+          }
+        }
+        throw error;
+      } finally {
+        if (operationRef.current === controller) {
+          operationRef.current = null;
+          setOperationPending(false);
+        }
       }
-    }
-  }, []);
-
-  const last = events[events.length - 1];
+    },
+    [observe, onTask],
+  );
+  const expectation = () => {
+    const record = taskRef.current?.record;
+    if (!record)
+      throw new Error(
+        'Wait for the current saved task revision before changing it.',
+      );
+    return {
+      expected_objective_revision: record.objective_revision,
+      expected_run_id: record.current_run_id,
+      expected_generation: record.generation,
+      expected_state_revision: record.state_revision,
+    };
+  };
+  const control = async (
+    action: TaskControl['action'],
+    revokedTools?: string[],
+  ) =>
+    mutate({
+      schema_version: 'haze.task.control.v3',
+      ...expectation(),
+      action,
+      ...(revokedTools?.length ? { revoked_tools: revokedTools } : {}),
+    });
+  const update = async (
+    passage: string,
+    questionId?: string,
+    scope?: TaskUpdate['scope'],
+    contextRefs?: ArtifactRef[],
+  ) =>
+    mutate({
+      schema_version: 'haze.task.update.v3',
+      ...expectation(),
+      kind: questionId ? 'clarification' : 'correction',
+      passage,
+      ...(questionId ? { question_id: questionId } : {}),
+      ...(scope !== undefined ? { scope } : {}),
+      ...(contextRefs?.length ? { context_refs: contextRefs } : {}),
+    });
+  const importSource = async (source: ArtifactImport, key: string) => {
+    if (!agentService.importSource)
+      throw new Error('Source imports are unavailable.');
+    return agentService.importSource(source, key);
+  };
+  const last = events.at(-1);
   const statusText =
     status === 'idle'
-      ? 'Agents are idle. Ask a question to start.'
+      ? 'Agents are idle. Describe a task to start.'
       : status === 'completed'
         ? 'Answer ready.'
-        : status === 'task_cancelled'
-          ? 'The server cancelled this task. Saved artifacts remain available.'
-          : status === 'cancelled'
-            ? 'Stopped waiting. Check the saved task for its server status.'
-            : (last?.message ?? 'Starting…');
-
+        : status === 'paused'
+          ? 'Task paused. Saved work is retained.'
+          : status === 'waiting'
+            ? 'Waiting for clarification or source material.'
+            : status === 'task_cancelled'
+              ? 'The server cancelled this task. Saved artifacts remain available.'
+              : status === 'cancelled'
+                ? 'Stopped waiting. Check the saved task for its server status.'
+                : (last?.message ?? 'Starting...');
   return {
     events,
     status,
     statusText,
     startedAt,
-    serviceLabel:
-      task?.mode === 'fixture'
-        ? 'Fixture adapters · development execution'
-        : agentService.label,
+    serviceLabel: task?.mode
+      ? `${task.mode} execution - actual receipts`
+      : agentService.label,
     ask,
     cancel,
     task,
-    cancellationPending,
-    cancellationError,
-    cancelTask,
+    operationPending,
+    operationError,
+    receipt,
+    control,
+    update,
+    importSource,
+    capabilities,
+    capabilitiesError,
+    latestAnswer,
   };
 }

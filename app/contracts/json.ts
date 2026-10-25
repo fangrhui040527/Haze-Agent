@@ -7,8 +7,17 @@ export type JsonValue =
 export const CANONICAL_SERIALIZER_VERSION = 'haze.canonical-json.v1';
 
 /** JSON.parse alone silently discards duplicate keys and accepts overflow as Infinity. */
-export function parseContractJson(source: string): JsonValue {
-  if (Buffer.byteLength(source, 'utf8') > CONTRACT_LIMITS.bytes) {
+export function parseContractJson(
+  source: string,
+  maximumBytes: number = CONTRACT_LIMITS.bytes,
+): JsonValue {
+  if (
+    !Number.isSafeInteger(maximumBytes) ||
+    maximumBytes < 1 ||
+    maximumBytes > 8 * CONTRACT_LIMITS.bytes
+  )
+    throw new Error('invalid_json_byte_bound');
+  if (Buffer.byteLength(source, 'utf8') > maximumBytes) {
     throw new Error('contract_too_large');
   }
   let position = 0;
@@ -112,7 +121,10 @@ export function parseContractJson(source: string): JsonValue {
 }
 
 /** UTF-16 key order, ECMAScript number/string encoding, no insignificant whitespace. */
-export function canonicalJson(value: unknown): string {
+export function canonicalJson(
+  value: unknown,
+  maximumBytes: number = CONTRACT_LIMITS.bytes,
+): string {
   const seen = new Set<object>();
   const encode = (item: unknown, depth: number): string => {
     if (depth > CONTRACT_LIMITS.depth) throw new Error('contract_too_deep');
@@ -148,14 +160,17 @@ export function canonicalJson(value: unknown): string {
     return encoded;
   };
   const encoded = encode(value, 0);
-  if (Buffer.byteLength(encoded, 'utf8') > CONTRACT_LIMITS.bytes) {
+  if (Buffer.byteLength(encoded, 'utf8') > maximumBytes) {
     throw new Error('contract_too_large');
   }
   return encoded;
 }
 
-export function contractHash(value: unknown): string {
+export function contractHash(
+  value: unknown,
+  maximumBytes: number = CONTRACT_LIMITS.bytes,
+): string {
   return createHash('sha256')
-    .update(canonicalJson(value), 'utf8')
+    .update(canonicalJson(value, maximumBytes), 'utf8')
     .digest('hex');
 }

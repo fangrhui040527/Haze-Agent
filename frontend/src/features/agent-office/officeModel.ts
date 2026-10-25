@@ -70,7 +70,7 @@ const HIGHLIGHT_MS = 1200;
 const WANDER_DELAY_MS: [number, number] = [8_000, 25_000];
 const WANDER_STAY_MS: [number, number] = [2_500, 6_000];
 const PET_REST_MS: [number, number] = [3_000, 9_000];
-const TASK_ACTORS = {
+const TASK_ACTORS: Record<string, AgentId | null> = {
   Manager: 'manager',
   HazeOps: 'hazeops',
   WorkerShield: 'workershield',
@@ -220,10 +220,21 @@ export class OfficeModel {
           type === 'assignment_completed'
         )
           if (id) this.setPose(id, 'done', now, instant);
+        if (
+          id &&
+          (type === 'assignment_waiting' ||
+            type === 'assignment_paused' ||
+            type === 'assignment_stale')
+        )
+          this.setPose(id, 'idle', now, instant);
         if (id && type === 'assignment_failed')
           this.setPose(id, 'error', now, instant);
         if (type === 'task_completed') this.endRun('done', instant, now);
-        if (type === 'task_cancelled') {
+        if (
+          type === 'task_cancelled' ||
+          type === 'task_paused' ||
+          type === 'task_waiting'
+        ) {
           for (const actor of this.actors.values())
             this.setPose(actor.id, 'idle', now, instant);
           this.endRun('idle', instant, now);
@@ -478,9 +489,19 @@ export function deriveAgentStatuses(
         const type = e.receipt.type;
         if (type === 'task_admitted')
           for (const actor of AGENT_IDS) set(actor, 'idle', 'Idle');
-        if (type === 'task_cancelled') {
+        if (
+          type === 'task_cancelled' ||
+          type === 'task_paused' ||
+          type === 'task_waiting'
+        ) {
           for (const actor of AGENT_IDS)
-            set(actor, 'idle', 'Stopped after server cancellation');
+            set(
+              actor,
+              'idle',
+              type === 'task_cancelled'
+                ? 'Stopped after server cancellation'
+                : e.message,
+            );
           break;
         }
         if (type === 'task_failed' || type === 'task_timed_out') {
@@ -498,11 +519,17 @@ export function deriveAgentStatuses(
           type === 'task_timed_out' ||
           type === 'assignment_failed'
             ? 'error'
-            : type.endsWith('_completed')
-              ? 'done'
-              : type.endsWith('_started')
-                ? 'working'
-                : result[id].state;
+            : [
+                  'assignment_waiting',
+                  'assignment_paused',
+                  'assignment_stale',
+                ].includes(type)
+              ? 'idle'
+              : type.endsWith('_completed')
+                ? 'done'
+                : type.endsWith('_started')
+                  ? 'working'
+                  : result[id].state;
         set(id, state, e.message);
         break;
       }
@@ -557,6 +584,9 @@ export function deriveAgentStatuses(
         break;
     }
   }
+  if (taskStatus === 'paused' || taskStatus === 'waiting')
+    for (const id of AGENT_IDS)
+      set(id, 'idle', taskStatus === 'paused' ? 'Paused' : 'Waiting');
   if (taskStatus === 'cancelled')
     for (const id of AGENT_IDS)
       set(id, 'idle', 'Stopped after server cancellation');

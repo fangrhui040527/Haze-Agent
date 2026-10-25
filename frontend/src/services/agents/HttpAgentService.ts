@@ -1,12 +1,15 @@
-import type { TaskRecord } from '../../../../app/tasks/contracts.ts';
-import type { OrchestrationTask } from '../../../../app/orchestration/contracts.ts';
+import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
+import type { ArtifactImport } from '../../../../app/contracts/artifacts.ts';
+import type {
+  TaskControl,
+  TaskUpdate,
+} from '../../../../app/contracts/controls.ts';
 import { abortError, delay, isAbortError } from '../../shared/lib/delay.ts';
 import type {
   AgentAnswer,
   AgentEvent,
   AskRequest,
   AgentTaskHandle,
-  AgentTaskCancellation,
 } from '../../shared/types/agents.ts';
 import {
   AgentRunError,
@@ -14,12 +17,8 @@ import {
   type AgentService,
 } from './AgentService.ts';
 
-const loadTaskContracts = () => import('../../../../app/tasks/contracts.ts');
-const loadOrchestrationContracts = () =>
-  import('../../../../app/orchestration/contracts.ts');
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-
-/** A stopped browser wait never claims that a durable server task was cancelled. */
+/** Abort even when an injected transport does not implement AbortSignal. */
 function abortable<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) {
     void pending.catch(() => {});
@@ -48,280 +47,328 @@ function abortable<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
   });
 }
 
-/** Read-only evidence tasks; no fallback to offline samples or scheduling facts. */
 export class HttpAgentService implements AgentService {
-  readonly label = 'Evidence task API · actual execution receipts';
+  readonly label = 'General task API - actual execution receipts';
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
   private readonly pollMs: number;
-  private readonly orchestration: boolean;
-
   constructor(
     baseUrl = '',
     fetcher: typeof fetch = (input, init) => fetch(input, init),
     pollMs = 750,
-    orchestration = false,
   ) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.fetcher = fetcher;
     this.pollMs = pollMs;
-    this.orchestration = orchestration;
   }
-
-  async ask(
-    request: AskRequest,
-    onEvent: (event: AgentEvent) => void,
-    signal: AbortSignal,
-    onTask?: (task: AgentTaskHandle) => void,
-  ): Promise<AgentAnswer> {
-    const started = Date.now();
-    let taskPath: string | undefined;
-    try {
-      const { taskAdmissionSchema, taskEventPageSchema, taskRecordSchema } =
-        await abortable(loadTaskContracts(), signal);
-      const orchestrationContracts = this.orchestration
-        ? await abortable(loadOrchestrationContracts(), signal)
-        : undefined;
-      const read = async (
-        path: string,
-        init: RequestInit = {},
-      ): Promise<unknown> => {
-        const response = await abortable(
-          this.fetcher(`${this.baseUrl}${path}`, {
-            ...init,
-            signal,
-            cache: 'no-store',
-            credentials: 'same-origin',
-          }),
-          signal,
-        );
-        if (
-          !response.headers.get('content-type')?.includes('application/json')
-        ) {
-          void response.body?.cancel().catch(() => {});
-          throw new AgentRunError(
-            'The evidence task API is unavailable on this host. Start the configured Haze backend and retry.',
-            false,
-          );
-        }
-        const raw = await abortable(response.text(), signal);
-        if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES)
-          throw new AgentRunError(
-            'The task response exceeds the browser response bound.',
-            false,
-          );
-        const value: unknown = JSON.parse(raw);
-        if (!response.ok) {
-          const error = value as { error?: { message?: unknown } } | null;
-          throw new AgentRunError(
-            typeof error?.error?.message === 'string'
-              ? error.error.message.slice(0, 2000)
-              : `Evidence task request failed (${response.status}).`,
-            response.status >= 500 || response.status === 429,
-          );
-        }
-        return value;
-      };
-
-      const admitted = taskAdmissionSchema.parse(
-        await read('/api/tasks', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Idempotency-Key': request.idempotencyKey ?? crypto.randomUUID(),
-          },
-          body: JSON.stringify({
-            schema_version: this.orchestration
-              ? 'haze.task.request.v2'
-              : 'haze.task.request.v1',
-            objective: request.question,
-            ...(this.orchestration
-              ? { context_refs: [], constraints: [], desired_deliverables: [] }
-              : {}),
-          }),
-        }),
-      );
-      taskPath = `/api/tasks/${admitted.task_id}`;
-      if (
-        admitted.status_url !== taskPath ||
-        admitted.events_url !== `${taskPath}/events`
-      )
-        throw new Error(
-          'Task admission paths do not match the admitted identity.',
-        );
-      onTask?.({
-        id: admitted.task_id,
-        schemaVersion: this.orchestration ? 'haze.task.v2' : 'haze.task.v1',
-        taskUrl: `${this.baseUrl}${taskPath}`,
-        status: 'queued',
-      });
-      let cursor = 0;
-      let record: TaskRecord | OrchestrationTask;
-      while (true) {
-        const rawPage = await read(`${taskPath}/events?after=${cursor}`);
-        const page = orchestrationContracts
-          ? orchestrationContracts.orchestrationEventPageSchema.parse(rawPage)
-          : taskEventPageSchema.parse(rawPage);
-        for (const event of page.events) {
-          // Cursors are global durable IDs; other tasks can create legitimate gaps.
-          if (event.task_id !== admitted.task_id || event.cursor <= cursor)
-            throw new Error(
-              'The durable task event cursor or identity is invalid.',
-            );
-          cursor = event.cursor;
-          onEvent({
-            type: 'task_event',
-            runId: event.task_id,
-            at: event.at,
-            message: event.message,
-            receipt: event,
-          });
-        }
-        if (page.next_cursor !== cursor)
-          throw new Error('The durable task event page skipped receipts.');
-        const rawRecord = await read(taskPath);
-        record = orchestrationContracts
-          ? orchestrationContracts.orchestrationTaskSchema.parse(rawRecord)
-          : taskRecordSchema.parse(rawRecord);
-        if (
-          record.id !== admitted.task_id ||
-          record.original_request.objective !== request.question
-        )
-          throw new Error(
-            'The task record does not belong to this submission.',
-          );
-        onTask?.({
-          id: record.id,
-          schemaVersion: record.schema_version,
-          taskUrl: `${this.baseUrl}${taskPath}`,
-          status: record.status,
-          mode: record.mode,
-        });
-        if (record.status !== 'queued' && record.status !== 'running') {
-          // Drain events written between the event page and terminal status read.
-          if (page.status !== record.status) continue;
-          break;
-        }
-        if (Date.now() > Date.parse(record.limits.deadline) + 10_000)
-          throw new AgentRunError(
-            'The browser stopped waiting after the task deadline. Open the persisted task to inspect its status.',
-            false,
-          );
-        await delay(this.pollMs, signal);
-      }
-      if (record.status === 'cancelled') throw new AgentTaskCancelledError();
-      if (record.status !== 'completed' || !record.result)
-        throw new AgentRunError(
-          record.error?.message ??
-            `Evidence task ended with status ${record.status}.`,
-          false,
-        );
-      const result = record.result;
-      for (const citation of result.citations) {
-        if (citation.url !== `${taskPath}/artifacts/${citation.artifact_id}`)
-          throw new Error(
-            'A citation does not point to this task’s exact artifact.',
-          );
-      }
-      return {
-        runId: record.id,
-        paragraphs: result.answer.split(/\n\s*\n/).filter(Boolean),
-        citations: result.citations.map((citation) => ({
-          id: citation.id,
-          label: citation.label,
-          itemId: null,
-          href: `${this.baseUrl}${citation.url}`,
-          artifactId: citation.artifact_id,
-          sha256: citation.sha256,
-          selection: citation.selection,
-        })),
-        source:
-          result.provenance.mode === 'fixture'
-            ? 'evidence_fixture'
-            : 'evidence_model',
-        fictional: result.provenance.mode === 'fixture',
-        durationMs: Date.now() - started,
-        evidence: { taskUrl: `${this.baseUrl}${taskPath}`, result },
-      };
-    } catch (error) {
-      if (signal.aborted || isAbortError(error)) throw abortError();
-      if (error instanceof AgentTaskCancelledError) throw error;
-      const suffix = taskPath
-        ? ` Persisted task: ${this.baseUrl}${taskPath}.`
-        : '';
-      if (error instanceof AgentRunError)
-        throw new AgentRunError(`${error.message}${suffix}`, error.retryable);
-      throw new AgentRunError(
-        `The evidence task could not be read or failed contract validation. No answer was substituted.${suffix}`,
-        false,
-      );
-    }
-  }
-
-  async cancelTask(
-    taskId: string,
-    operationKey: string,
-    parentSignal?: AbortSignal,
-  ): Promise<AgentTaskCancellation> {
-    const signal = parentSignal
-      ? AbortSignal.any([parentSignal, AbortSignal.timeout(10_000)])
-      : AbortSignal.timeout(10_000);
-    if (
-      !this.orchestration ||
-      !/^[a-f0-9-]{36}$/i.test(taskId) ||
-      !operationKey
-    )
-      throw new AgentRunError(
-        'Server cancellation requires an admitted v2 task.',
-        false,
-      );
+  private async read(
+    path: string,
+    init: RequestInit = {},
+    suppliedSignal?: AbortSignal,
+  ): Promise<unknown> {
+    const signal = suppliedSignal ?? AbortSignal.timeout(15_000);
     const response = await abortable(
-      this.fetcher(`${this.baseUrl}/api/tasks/${taskId}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': operationKey,
-        },
-        body: '{}',
-        credentials: 'same-origin',
-        cache: 'no-store',
+      this.fetcher(`${this.baseUrl}${path}`, {
+        ...init,
         signal,
+        cache: 'no-store',
+        credentials: 'same-origin',
       }),
       signal,
     );
     if (!response.headers.get('content-type')?.includes('application/json')) {
       void response.body?.cancel().catch(() => {});
       throw new AgentRunError(
-        'The task cancellation API is unavailable. The server task may still be running.',
+        'The task API is unavailable on this host. Start the configured Haze backend and retry.',
         false,
       );
     }
     const raw = await abortable(response.text(), signal);
-    if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES)
+    const responseBound = path.startsWith('/api/artifacts')
+      ? 8 * 1024 * 1024
+      : MAX_RESPONSE_BYTES;
+    if (new TextEncoder().encode(raw).byteLength > responseBound)
       throw new AgentRunError(
-        'The cancellation response exceeds the browser response bound.',
+        'The task response exceeds the browser response bound.',
         false,
       );
-    const value: unknown = JSON.parse(raw);
+    let value: unknown;
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      throw new AgentRunError(
+        'The task API returned invalid JSON. Check the saved task and retry.',
+        false,
+      );
+    }
     if (!response.ok) {
       const error = value as { error?: { message?: unknown } } | null;
       throw new AgentRunError(
         typeof error?.error?.message === 'string'
           ? error.error.message.slice(0, 2000)
-          : `Task cancellation failed (${response.status}). The server task may still be running.`,
-        response.status >= 500,
+          : `Task request failed (${response.status}).`,
+        response.status >= 500 || response.status === 429,
       );
     }
-    const { cancellationSchema } = await abortable(
-      loadOrchestrationContracts(),
+    return value;
+  }
+  private post(path: string, body: unknown, key: string, signal?: AbortSignal) {
+    return this.read(
+      path,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
+        body: JSON.stringify(body),
+      },
       signal,
     );
-    const parsed = cancellationSchema.safeParse(value);
-    if (!parsed.success || parsed.data.task_id !== taskId)
+  }
+  async ask(
+    request: AskRequest,
+    onEvent: (event: AgentEvent) => void,
+    signal: AbortSignal,
+    onTask?: (task: AgentTaskHandle) => void,
+  ): Promise<AgentAnswer> {
+    const { taskAdmissionSchema } = await abortable(
+      import('../../../../app/contracts/tasks.ts'),
+      signal,
+    );
+    const admitted = taskAdmissionSchema.parse(
+      await this.post(
+        '/api/tasks',
+        {
+          schema_version: 'haze.task.request.v3',
+          objective: request.question,
+          ...(request.contextRefs?.length
+            ? { context_refs: request.contextRefs }
+            : {}),
+          ...(request.scope !== undefined ? { scope: request.scope } : {}),
+        },
+        request.idempotencyKey ?? crypto.randomUUID(),
+        signal,
+      ),
+    );
+    const path = `/api/tasks/${admitted.task_id}`;
+    if (
+      admitted.status_url !== path ||
+      admitted.events_url !== `${path}/events`
+    )
       throw new AgentRunError(
-        'The task cancellation response failed validation. Check the saved task status.',
+        'Task admission paths do not match the admitted identity.',
         false,
       );
-    return parsed.data;
+    onTask?.({
+      id: admitted.task_id,
+      schemaVersion: 'haze.task.v3',
+      taskUrl: `${this.baseUrl}${path}`,
+      status: 'queued',
+    });
+    return this.watchTask(admitted.task_id, onEvent, signal, onTask);
+  }
+  async readTask(taskId: string, signal?: AbortSignal): Promise<TaskRecord> {
+    const { taskRecordSchema } =
+      await import('../../../../app/contracts/tasks.ts');
+    const parsed = taskRecordSchema.safeParse(
+      await this.read(`/api/tasks/${encodeURIComponent(taskId)}`, {}, signal),
+    );
+    if (!parsed.success)
+      throw new AgentRunError(
+        'The saved task response failed contract validation for the general protocol. Refresh the application after updating the backend.',
+        false,
+      );
+    const record = parsed.data;
+    if (record.id !== taskId)
+      throw new AgentRunError(
+        'The task response belongs to another task.',
+        false,
+      );
+    return record;
+  }
+  async watchTask(
+    taskId: string,
+    onEvent: (event: AgentEvent) => void,
+    signal: AbortSignal,
+    onTask?: (task: AgentTaskHandle) => void,
+  ): Promise<AgentAnswer> {
+    const { taskEventPageSchema } = await abortable(
+      import('../../../../app/contracts/tasks.ts'),
+      signal,
+    );
+    const started = Date.now();
+    let cursor = 0;
+    const path = `/api/tasks/${taskId}`;
+    try {
+      while (true) {
+        const page = taskEventPageSchema.parse(
+          await this.read(`${path}/events?after=${cursor}`, {}, signal),
+        );
+        for (const event of page.events) {
+          if (event.task_id !== taskId || event.cursor <= cursor)
+            throw new Error('Invalid event identity or cursor.');
+          cursor = event.cursor;
+          onEvent({
+            type: 'task_event',
+            runId: event.run_id,
+            at: event.at,
+            message: event.message,
+            receipt: event,
+          });
+        }
+        if (page.next_cursor !== cursor)
+          throw new Error('Event page skipped receipts.');
+        const record = await this.readTask(taskId, signal);
+        onTask?.({
+          id: record.id,
+          schemaVersion: 'haze.task.v3',
+          taskUrl: `${this.baseUrl}${path}`,
+          status: record.status,
+          mode: record.mode,
+          record,
+        });
+        if (
+          ['completed', 'failed', 'timed_out', 'cancelled'].includes(
+            record.status,
+          )
+        ) {
+          if (page.status !== record.status) continue;
+          if (record.status === 'cancelled')
+            throw new AgentTaskCancelledError();
+          if (record.status !== 'completed' || !record.result)
+            throw new AgentRunError(
+              record.error?.message ??
+                `Task ended with status ${record.status}.`,
+              false,
+            );
+          const result = record.result;
+          return {
+            runId: record.current_run_id,
+            paragraphs: result.answer.split(/\n\s*\n/).filter(Boolean),
+            citations: result.sources.map((source) => {
+              const exact = `/api/artifacts/${source.artifact.id}`;
+              if (source.url && source.url !== exact)
+                throw new Error(
+                  'A source does not point to its exact artifact.',
+                );
+              return {
+                id: source.id,
+                label: source.label,
+                itemId: null,
+                href: `${this.baseUrl}${exact}`,
+                artifactId: source.artifact.id,
+                sha256: source.artifact.sha256,
+                selection: source.selection,
+              };
+            }),
+            source:
+              result.provenance.mode === 'live'
+                ? 'evidence_model'
+                : 'evidence_fixture',
+            fictional: result.provenance.mode === 'fixture',
+            durationMs: Date.now() - started,
+            evidence: {
+              taskUrl: `${this.baseUrl}${path}`,
+              result,
+              objectiveRevision: record.objective_revision,
+              runId: record.current_run_id,
+            },
+          };
+        }
+        // Pauses and persisted questions remain observable without triggering new work.
+        await delay(this.pollMs, signal);
+      }
+    } catch (error) {
+      if (signal.aborted || isAbortError(error)) throw abortError();
+      if (error instanceof AgentTaskCancelledError) throw error;
+      if (error instanceof AgentRunError) throw error;
+      throw new AgentRunError(
+        `The task response failed contract validation. Persisted task: ${this.baseUrl}${path}.`,
+        false,
+      );
+    }
+  }
+  async updateTask(
+    taskId: string,
+    update: TaskUpdate,
+    key: string,
+    signal?: AbortSignal,
+  ) {
+    const { controlReceiptSchema, taskUpdateSchema } =
+      await import('../../../../app/contracts/controls.ts');
+    const receipt = controlReceiptSchema.parse(
+      await this.post(
+        `/api/tasks/${taskId}/updates`,
+        taskUpdateSchema.parse(update),
+        key,
+        signal,
+      ),
+    );
+    if (receipt.task_id !== taskId)
+      throw new AgentRunError(
+        'The correction receipt belongs to another task.',
+        false,
+      );
+    return receipt;
+  }
+  async controlTask(
+    taskId: string,
+    control: TaskControl,
+    key: string,
+    signal?: AbortSignal,
+  ) {
+    const { controlReceiptSchema, taskControlSchema } =
+      await import('../../../../app/contracts/controls.ts');
+    const receipt = controlReceiptSchema.parse(
+      await this.post(
+        `/api/tasks/${taskId}/control`,
+        taskControlSchema.parse(control),
+        key,
+        signal,
+      ),
+    );
+    if (receipt.task_id !== taskId)
+      throw new AgentRunError(
+        'The control receipt belongs to another task.',
+        false,
+      );
+    return receipt;
+  }
+  async importSource(
+    source: ArtifactImport,
+    key: string,
+    signal?: AbortSignal,
+  ) {
+    const { artifactSchema, artifactImportSchema } =
+      await import('../../../../app/contracts/artifacts.ts');
+    return artifactSchema.parse(
+      await this.post(
+        '/api/artifacts',
+        artifactImportSchema.parse(source),
+        key,
+        signal,
+      ),
+    );
+  }
+  async readArtifact(artifactId: string, signal?: AbortSignal) {
+    const { artifactSchema } =
+      await import('../../../../app/contracts/artifacts.ts');
+    const artifact = artifactSchema.parse(
+      await this.read(
+        `/api/artifacts/${encodeURIComponent(artifactId)}`,
+        {},
+        signal,
+      ),
+    );
+    if (artifact.id !== artifactId)
+      throw new AgentRunError(
+        'The artifact response belongs to another artifact.',
+        false,
+      );
+    return artifact;
+  }
+  async capabilities(signal?: AbortSignal) {
+    const { capabilityCardSchema } =
+      await import('../../../../app/contracts/capabilities.ts');
+    const value = await this.read('/api/capabilities', {}, signal);
+    return capabilityCardSchema.array().parse(value);
   }
 }

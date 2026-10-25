@@ -1,4 +1,4 @@
-/* docs/03-ui-design.md §3: table on top; chat + office side by side on desktop; stacked below 1024px. */
+/* docs/frontend/03-ui-design.md §3: table on top; chat + office side by side on desktop; stacked below 1024px. */
 .grid {
   display: grid;
   gap: var(--space-3);

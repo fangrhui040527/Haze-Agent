@@ -12,11 +12,16 @@
  */
 
 import type { AgentId } from './domain.ts';
-import type { TaskEvent, TaskResult } from '../../../../app/tasks/contracts.ts';
 import type {
-  OrchestrationEvent,
-  OrchestrationResult,
-} from '../../../../app/orchestration/contracts.ts';
+  TaskEvent,
+  TaskRecord,
+  TaskResult,
+  TaskStatus,
+} from '../../../../app/contracts/tasks.ts';
+import type {
+  ArtifactRef,
+  JsonValue,
+} from '../../../../app/contracts/artifacts.ts';
 
 export type { AgentId };
 
@@ -26,23 +31,17 @@ export interface TaskAgentEvent {
   runId: string;
   at: string;
   message: string;
-  receipt: TaskEvent | OrchestrationEvent;
+  receipt: TaskEvent;
 }
 
 /** Admission/readback identity, separate from execution receipts. */
 export interface AgentTaskHandle {
   id: string;
-  schemaVersion: 'haze.task.v1' | 'haze.task.v2';
+  schemaVersion: 'haze.task.v3';
   taskUrl: string;
-  status:
-    'queued' | 'running' | 'completed' | 'failed' | 'timed_out' | 'cancelled';
-  mode?: 'live' | 'fixture';
-}
-
-export interface AgentTaskCancellation {
-  task_id: string;
-  status: AgentTaskHandle['status'];
-  generation: number;
+  status: TaskStatus;
+  mode?: 'live' | 'fixture' | 'replay';
+  record?: TaskRecord;
 }
 
 /** UI-only events for the offline mock and its office animation. */
@@ -93,7 +92,9 @@ export interface AgentAnswer {
   durationMs: number;
   evidence?: {
     taskUrl: string;
-    result: TaskResult | OrchestrationResult;
+    result: TaskResult;
+    objectiveRevision?: number;
+    runId?: string;
   };
 }
 
@@ -103,6 +104,8 @@ export interface AskRequest {
   focusItemId: string | null;
   /** Reused by a retry of the same submission; scoped by the server identity. */
   idempotencyKey?: string;
+  contextRefs?: ArtifactRef[];
+  scope?: JsonValue;
 }
 
 export const AGENT_IDS: readonly AgentId[] = [
@@ -117,11 +120,14 @@ export const AGENT_IDS: readonly AgentId[] = [
 export const AGENT_INFO: Record<AgentId, { name: string; role: string }> = {
   manager: {
     name: 'Manager',
-    role: 'Receives your question, delegates, returns the answer',
+    role: 'Plans the task, creates assignments, and returns the result',
   },
   hazeops: { name: 'HazeOps', role: 'Gathers data from sources' },
-  worldmodel: { name: 'World Model', role: 'Archive of verified records' },
-  hmem: { name: 'H-Mem', role: 'Recalls similar past episodes' },
+  worldmodel: {
+    name: 'World Model',
+    role: 'Disabled in the general task service',
+  },
+  hmem: { name: 'H-Mem', role: 'Disabled in the general task service' },
   evidencecritic: {
     name: 'EvidenceCritic',
     role: 'Checks freshness, agreement and links',

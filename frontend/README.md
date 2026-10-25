@@ -6,10 +6,10 @@ EvidenceCritic, WorkerShield) shown as a pixel-art office.
 > **Status: read-only evidence chat plus a fictional dashboard table.** General chat uses the
 > durable task API and a single configured Zetaris SmokeLedger PM2.5 source. Missing access
 > or provider failures are explicit errors; no mock answer is substituted. Operational actions
-> and publication remain outside this milestone. See [implementation and verification](../docs/milestone-v014.md).
+> and publication remain outside this milestone. See [implementation and verification](../docs/evidence/milestone-v014.md).
 
-Current design and implementation: [`docs/milestone-v014.md`](../docs/milestone-v014.md)
-and [`docs/orchestration-scaffold.md`](../docs/orchestration-scaffold.md).
+Current design and implementation: [`docs/evidence/milestone-v014.md`](../docs/evidence/milestone-v014.md)
+and [`docs/orchestration/orchestration-scaffold.md`](../docs/orchestration/orchestration-scaffold.md).
 
 ---
 
@@ -31,11 +31,11 @@ These commands work in PowerShell and macOS/Linux shells. If your terminal is al
 
 Keep the terminal running and open the **Local** URL printed by Vite, usually **http://localhost:5173**. If that port is occupied, Vite may choose another port. Stop the server with `Ctrl + C`.
 
-Evidence chat requires the configured Zetaris source and model provider. Vite dev/preview read
+Live tasks require a configured model provider. Capabilities that retrieve external evidence also require their server-side source configuration. Vite dev/preview read
 the root model configuration and the exact `third_party/zetaris/.env.local` source configuration
 server-side, with process environment taking precedence. Keep `VITE_API_BASE_URL` empty for the
 same-origin local API; never put credentials in `VITE_*` variables. Restart Vite after changing
-configuration. Dev and preview must not simultaneously own the same `STATE_DIR/tasks` directory.
+configuration. Dev and preview must not simultaneously own the same general state directory (`.state/general-v1` by default).
 Static hosting needs an authenticated backend adapter.
 
 Try: “Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24,
@@ -45,14 +45,12 @@ The answer links exact captured evidence and shows coverage, gaps, assumptions, 
 and actual execution provenance. **Stop waiting** detaches the browser; an admitted task remains
 readable through **Saved task**. Retrying a submission keeps its idempotency key.
 
-Set `VITE_HAZE_ORCHESTRATION=true` in `frontend/.env.local` to opt in to the v2 Manager,
-HazeOps, WorkerShield and EvidenceCritic workflow. The old `VITE_HAZE_HYBRID` setting
-remains a fallback for existing configuration. The default remains v1. The office
-shows actual assignment receipts, and answers show partial/blocked completion and
-review limitations. **Cancel task** sends an idempotent server cancellation; **Stop
-waiting** only detaches the browser. Failed cancellation keeps the task link available
-and can be retried with the same operation key. Fixture adapters are labeled as fixture
-evidence and do not establish live integration readiness.
+Every task uses the general v3 protocol. Only an objective is required. Attach or paste
+UTF-8 text, Markdown, CSV, or JSON source material (up to 1 MiB per source), and provide
+optional JSON scope when useful. Questions and exact corrections remain in saved history.
+The office shows actual assignment receipts and waiting states. Pause, cancel, resume,
+continuation, and permission revocation use current revision expectations; receipts distinguish
+requested and confirmed state. Fixture adapters are labeled and do not establish live readiness.
 
 The crew-scheduling demo is retired. Existing browser chat text remains visible as
 archived history; new questions always use the evidence task API.
@@ -176,7 +174,7 @@ already uses the server-side Zetaris integration; it does not populate the dashb
 `src/services/agents/index.ts` selects `HttpAgentService` for all questions. The table uses fictional
 dashboard data; table items are never passed as trusted evidence context.
 
-The HTTP adapter posts `haze.task.request.v1` to `/api/tasks`, then polls
+The HTTP adapter posts `haze.task.request.v3` to `/api/tasks`, then polls
 `/api/tasks/:id/events?after=CURSOR` and `/api/tasks/:id`. Shared Zod schemas validate admission,
 status, result and event pages. Global durable cursors are strictly increasing and can contain
 gaps caused by other tasks. Terminal status is drained through the matching final event page.
@@ -187,9 +185,9 @@ The expandable receipt log preserves timestamps, actors and messages. Network, c
 provider errors reject explicitly and never trigger `MockAgentService`.
 
 General evidence results use `source: 'evidence_model'` only after completed, validated model
-synthesis. Citations link the same task's immutable artifacts with hash and exact selection
-metadata. The result panel distinguishes requested model route from returned provider model
-and keeps unreported usage explicit. Successful captured-shape unit fixtures verify wiring;
+synthesis. Sources link exact immutable artifact versions with hash and selection metadata.
+The general result panel shows work products, covered scope, uncertainty, review, currency,
+next requirements, and actual execution provenance. PM2.5 coverage is an optional domain renderer. Successful captured-shape unit fixtures verify wiring;
 they do not establish live source readiness.
 
 ---
@@ -267,3 +265,11 @@ generator and a 320×180 canvas cover what we need.
 The pixel office is **original work** (sprites are drawn in code in `features/agent-office/sprites.ts`).
 It is inspired by the style of [pixel-agents](https://github.com/pixel-agents-hq/pixel-agents) (MIT).
 No code or image assets were copied.
+
+## General task interface
+
+Chat uses `haze.task.request.v3` for every task. Only the objective is required. Optional source imports accept UTF-8 text, Markdown, CSV, and JSON, up to 1 MiB per file. Scope is optional JSON interpreted by a registered capability.
+
+The local Vite API plugin serves task admission/readback/events, corrections, controls, authorized capabilities, and exact artifacts. It uses `.state/general-v1` unless `STATE_DIR` is explicitly set. Set server-side `HAZE_EXECUTION_MODE=fixture` for fixture verification; live is the default. There is no automatic fixture fallback.
+
+Questions and correction passages remain attached to the saved task. Pause, cancel, resume, and continuation send the current objective/run/generation/state revisions and display persisted requested/confirmed receipts. Stopping the browser wait does not cancel the saved task. General results show work products, sources, scope, uncertainty, review, currency, and provenance. PM2.5 coverage is an optional `pm25.analysis` artifact renderer.

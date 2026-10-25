@@ -121,6 +121,37 @@ export function AgentOffice({
           </ol>
         </details>
       )}
+      {run.task?.record && (
+        <section className={styles.assignments} aria-label="Actual assignments">
+          <h3>Assignments</h3>
+          {run.task.record.assignments.length === 0 ? (
+            <p>No specialist assignments have been admitted.</p>
+          ) : (
+            <ol>
+              {run.task.record.assignments.map((assignment) => (
+                <li key={assignment.id}>
+                  <strong>{assignment.role}</strong> ? {assignment.capability} ?{' '}
+                  {assignment.status}
+                  <p>{assignment.brief}</p>
+                  <small>
+                    Revision {assignment.revision}; brief acknowledged at
+                    revision {assignment.acknowledged_revision}. Evidence
+                    support: {assignment.support}. Output:{' '}
+                    {assignment.usability}.
+                  </small>
+                  {assignment.gaps.length > 0 && (
+                    <ul>
+                      {assignment.gaps.map((gap, index) => (
+                        <li key={index}>{gap}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
       <div className={styles.legendRegion}>
         <ul
           className={`${styles.legend} ${!visible ? styles.legendSixRows : ''}`}
@@ -275,7 +306,8 @@ function OfficeCanvas({
     }
     appliedRef.current = events.length;
     // A persisted server cancellation also stops the office after polling detached.
-    if (run.task?.status === 'cancelled') model.reset();
+    if (['cancelled', 'paused', 'waiting'].includes(run.task?.status ?? ''))
+      model.reset();
   }, [run.events, run.task?.status, reduced]);
 
   useEffect(() => {

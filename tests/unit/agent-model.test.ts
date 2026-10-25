@@ -36,6 +36,78 @@ afterEach(() => {
 });
 
 describe('office agent model adapter', () => {
+  it('distinguishes an interrupted request without a receipt from a known HTTP rejection', async () => {
+    const interrupted = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error('private network failure'));
+    await expect(run(interrupted)).rejects.toMatchObject({
+      outcome: 'unknown',
+    });
+    expect(interrupted).toHaveBeenCalledTimes(1);
+    const rejected = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response('private upstream detail', { status: 401 }),
+      );
+    const error: unknown = await run(rejected).catch(
+      (failure: unknown) => failure,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toHaveProperty('outcome', 'unknown');
+    expect(String(error)).not.toContain('private');
+  });
+
+  it('requests native JSON output for schema-validated agent actions', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(completion('{"type":"finish"}'));
+    await resolveAgentModel(selected, fetcher).complete(
+      { ...input, json_mode: true, max_output_tokens: 191 },
+      new AbortController().signal,
+    );
+    const body = JSON.parse(
+      fetcher.mock.calls[0]?.[1]?.body as string,
+    ) as Record<string, unknown>;
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.max_completion_tokens).toBe(191);
+  });
+
+  it.each([1, 191, 1200, 2400])(
+    'passes an admitted output allowance of %i unchanged to each provider',
+    async (tokens) => {
+      for (const provider of ['nvidia', 'openai-compatible']) {
+        const fetcher = vi.fn<typeof fetch>().mockResolvedValue(completion());
+        await resolveAgentModel(
+          { ...selected, HAZE_PROVIDER: provider },
+          fetcher,
+        ).complete(
+          { ...input, max_output_tokens: tokens },
+          new AbortController().signal,
+        );
+        const body = JSON.parse(
+          fetcher.mock.calls[0]?.[1]?.body as string,
+        ) as Record<string, unknown>;
+        expect(
+          body[provider === 'nvidia' ? 'max_tokens' : 'max_completion_tokens'],
+        ).toBe(tokens);
+      }
+    },
+  );
+
+  it.each([0, -1, 16_385, 1.5, Infinity])(
+    'rejects an unadmitted output allowance %s before network access',
+    async (tokens) => {
+      const fetcher = vi.fn<typeof fetch>();
+      await expect(
+        resolveAgentModel(selected, fetcher).complete(
+          { ...input, max_output_tokens: tokens },
+          new AbortController().signal,
+        ),
+      ).rejects.toThrow('bounded');
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([{}, { HAZE_PROVIDER: 'offline' }])(
     'requires a real provider for %j without issuing a request',
     (env) => {
@@ -128,7 +200,7 @@ describe('office agent model adapter', () => {
             },
             { role: 'user', content: JSON.stringify(input.context) },
           ],
-          max_completion_tokens: 700,
+          max_completion_tokens: 1200,
           stream: false,
         }),
         signal: expect.any(AbortSignal) as AbortSignal,
@@ -155,7 +227,7 @@ describe('office agent model adapter', () => {
       expect(fetcher.mock.calls[0]?.[0]).toEqual(
         new URL('https://integrate.api.nvidia.com/v1/chat/completions'),
       );
-      expect(fetcher.mock.calls[0]?.[1]?.body).toContain('"max_tokens":700');
+      expect(fetcher.mock.calls[0]?.[1]?.body).toContain('"max_tokens":1200');
       expect(fetcher.mock.calls[0]?.[1]?.body).toContain(
         '"chat_template_kwargs":{"enable_thinking":false}',
       );

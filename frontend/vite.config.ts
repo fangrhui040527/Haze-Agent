@@ -1,14 +1,14 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { demoChatPlugin } from './scripts/demo-chat-plugin.ts';
+import { generalApiPlugin } from './scripts/general-api-plugin.ts';
 
 // Vite's server.open honours $BROWSER; default to Edge unless overridden.
 process.env.BROWSER ??= 'msedge';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), demoChatPlugin()],
+  plugins: [react(), generalApiPlugin()],
   server: {
     open: true,
   },

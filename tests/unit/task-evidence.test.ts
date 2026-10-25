@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   PM25_SOURCE_ID,
   resolveEvidenceSource,
-} from '../../app/tasks/evidence.js';
+} from '../../app/capabilities/pm25/evidence.js';
 
 const env = {
   ZETARIS_API_KEY: 'test-secret-not-in-artifacts',
@@ -27,6 +27,16 @@ const row: unknown[] = [
 const signal = () => new AbortController().signal;
 
 describe('Zetaris SmokeLedger PM2.5 evidence boundary', () => {
+  it('preserves an unknown remote outcome after network interruption without substituting evidence', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error('private transport failure'));
+    await expect(
+      resolveEvidenceSource(env, fetcher).retrieve(scope, signal()),
+    ).rejects.toMatchObject({ code: 'provider_failure', outcome: 'unknown' });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('captures the exact response, selection and model semantics without claiming issuance', async () => {
     const raw = `{ "data": ${JSON.stringify([row])} }`;
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(raw));
@@ -113,7 +123,7 @@ describe('Zetaris SmokeLedger PM2.5 evidence boundary', () => {
       .mockResolvedValue(new Response('provider detail', { status: 401 }));
     await expect(
       resolveEvidenceSource(env, failed).retrieve(scope, signal()),
-    ).rejects.toMatchObject({ code: 'provider_failure' });
+    ).rejects.toMatchObject({ code: 'provider_failure', outcome: 'failed' });
     expect(failed).toHaveBeenCalledTimes(1);
     const malformed = vi
       .fn<typeof fetch>()

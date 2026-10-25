@@ -11,8 +11,8 @@ import type { DataService, DataSnapshot, LiveUpdate } from './DataService.ts';
  * must stay on the server (Spec §14.2 p.26: no secrets in browser assets). This adapter calls
  * OUR backend API; the backend queries Zetaris and returns data in a shape we agree on.
  *
- * Everything about Zetaris is UNKNOWN in the project files (docs/01 §5.2). Before filling this in,
- * get answers to docs/02-critique.md §4:
+ * Everything about Zetaris is UNKNOWN in the project files (docs/frontend/01-project-understanding.md §5.2). Before filling this in,
+ * get answers to docs/frontend/02-critique.md §4:
  *   - Which backend endpoints exist (list, detail, live updates)? Paths and auth?
  *   - Response JSON shape? Map it to HazeItem/Location/Source in the TODO mappers below.
  *   - Live updates: SSE stream, WebSocket, or polling? How often?

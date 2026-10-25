@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
+import { fixtureTask } from '../../services/agents/testFixtures.ts';
 import { ChatPanel } from './ChatPanel.tsx';
 
 function idleRun(): AgentRun {
@@ -14,9 +15,15 @@ function idleRun(): AgentRun {
     ask: vi.fn(),
     cancel: vi.fn(),
     task: null,
-    cancellationPending: false,
-    cancellationError: null,
-    cancelTask: vi.fn(),
+    operationPending: false,
+    operationError: null,
+    receipt: null,
+    control: vi.fn(),
+    update: vi.fn(),
+    importSource: vi.fn(),
+    capabilities: [],
+    capabilitiesError: null,
+    latestAnswer: null,
   };
 }
 
@@ -36,7 +43,11 @@ describe('chat after crew demo retirement', () => {
     const markup = renderToStaticMarkup(
       createElement(ChatPanel, { run: idleRun(), prefill: null }),
     );
-    expect(markup).toContain('Summarize the PM2.5 evidence available');
+    expect(markup).toContain(
+      'Explain the main conclusions in my attached sources',
+    );
+    expect(markup).toContain('Attach source material');
+    expect(markup).toContain('Optional task scope');
     expect(markup).not.toContain('Klang crew sample');
     expect(markup).not.toContain('Legacy scheduling demo');
   });
@@ -65,6 +76,28 @@ describe('chat after crew demo retirement', () => {
     expect(markup).not.toContain('Loading schedule');
   });
 
+  it('retains a known stale label in browser history after another task is selected', () => {
+    saved = [
+      {
+        id: 'historical',
+        role: 'agents',
+        at: '2026-10-25T00:00:00Z',
+        state: 'done',
+        stale: true,
+        paragraphs: ['Earlier answer.'],
+        evidence: {
+          taskUrl: '/api/tasks/earlier',
+          result: fixtureTask().result,
+        },
+      },
+    ];
+    const markup = renderToStaticMarkup(
+      createElement(ChatPanel, { run: idleRun(), prefill: null }),
+    );
+    expect(markup).toContain('Stale result');
+    expect(markup).toContain('Currency: stale');
+  });
+
   it('keeps saved task access and explicit server cancellation after polling detaches', () => {
     const run = idleRun();
     run.status = 'cancelled';
@@ -72,7 +105,8 @@ describe('chat after crew demo retirement', () => {
       'Stopped waiting. Check the saved task for its server status.';
     run.task = {
       id: 'current',
-      schemaVersion: 'haze.task.v2',
+      schemaVersion: 'haze.task.v3',
+      record: { ...fixtureTask(), status: 'running' },
       taskUrl: '/api/tasks/current',
       status: 'running',
     };
@@ -82,6 +116,7 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Stopped waiting. Check the saved task');
     expect(markup).toContain('href="/api/tasks/current"');
     expect(markup).toContain('Cancel task');
+    expect(markup).toContain('Pause task');
     expect(markup).toContain('Saved task');
   });
 });

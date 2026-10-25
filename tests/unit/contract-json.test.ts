@@ -6,6 +6,16 @@ import {
 } from '../../app/contracts/json.js';
 
 describe('contract JSON boundary', () => {
+  it('allows an explicit transport allowance while retaining duplicate-key protection', () => {
+    const large = JSON.stringify({ content_base64: 'a'.repeat(1_398_104) });
+    expect(() => parseContractJson(large)).toThrow('contract_too_large');
+    expect(parseContractJson(large, 2_097_152)).toHaveProperty(
+      'content_base64',
+    );
+    expect(() => parseContractJson('{"x":1,"x":2}', 2_097_152)).toThrow(
+      'duplicate_json_key',
+    );
+  });
   it('rejects duplicate and escaped duplicate keys instead of losing accepted facts', () => {
     expect(() => parseContractJson('{"x":1,"x":2}')).toThrow(
       'duplicate_json_key',

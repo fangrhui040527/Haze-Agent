@@ -12,18 +12,17 @@ Use Node 24.22.1 and npm 11.8.0 from the repository pins. Install with `npm ci` 
 | `npm run test:integration`                                              | Run the fixture HTTP task and fresh-process readback after building          |
 | `npm run typecheck`, `npm run lint`                                     | Check backend types and lint                                                 |
 | `npm test`, `npm run test:watch`                                        | Run or watch local unit tests                                                |
-| `npm run orchestration:test`                                            | Run focused orchestration runtime, HTTP, evidence and port checks            |
-| `npm run orchestration:verify -- --fixture`                             | Capture an explicitly synthetic task and fresh-process readback              |
+| `npm run tasks:test`                                                    | Run focused general runtime, storage, HTTP and domain checks                 |
+| `npm run tasks:verify -- --fixture`                                     | Capture an explicitly synthetic task and fresh-process readback              |
 | `npm run tasks:serve`                                                   | Start the configured local task API                                          |
-| `npm run tasks:verify -- LOCATION START END`                            | Verify the configured live v1 path and restart/readback                      |
-| `npm run orchestration:verify -- --live LOCATION START END`             | Verify the configured live v2 path                                           |
+| `npm run tasks:verify -- --live LOCATION START END`                     | Verify the configured general path and restart/readback                      |
 | `npm run test:postgres`                                                 | Run the PostgreSQL saver integration suite                                   |
 | `npm run verify:pins`, `npm run vendor:engines`, `npm run test:engines` | Verify sources, generate engine output and run upstream conformance          |
 | `npm run probe:compatibility`                                           | Probe engines, the selected provider and SQLite restart behavior             |
 | `npm start -- input_examples/01-minimal.json`                           | Run the offline metadata example after building                              |
 | `npm run format:check`, `npm run format`                                | Check or apply repository formatting                                         |
 
-The previous `hybrid:test` and `hybrid:verify` commands remain compatibility aliases for the preferred `orchestration:*` commands.
+The v1/v2 task paths and `hybrid:*`/`orchestration:*` command aliases are retired. Use the general v3 commands above. Historical state is never migrated automatically.
 
 Build before tests that load the pinned local engines. Default unit tests use disposable memory or temporary SQLite state and require no API credentials. PostgreSQL tests require a dedicated disposable database through `HAZE_TEST_POSTGRES_URL`; the library does not load that environment variable from a file. Run that suite when changing saver configuration, checkpoint behavior or PostgreSQL dependencies.
 
@@ -39,11 +38,11 @@ Before review, run the checks relevant to the change and record any unavailable 
 
 ## Implementation boundaries
 
-`app/tasks/` owns local task admission, storage, the v1 runtime and evidence/model adapters. `app/orchestration/` owns v2 assignments, coordination, budgets and component ports. Shared reference schemas and canonical JSON/hash utilities remain in `app/contracts/common.ts` and `app/contracts/json.ts`. The [orchestration adapter contract](docs/orchestration-adapters.md) defines teammate boundaries and the [scaffold guide](docs/orchestration-scaffold.md) describes runtime behavior.
+`app/tasks/` owns the general lifecycle, authoritative SQLite records, controls, recovery and HTTP. `app/orchestration/` owns the typed executable registry, action contracts and reference checkpoints. Browser-safe public schemas live in `app/contracts/`; `json.ts` supplies separate server-only serialization/hashing. Executable agent modules own instructions, validation and bounded loops. Capabilities own domain inputs, methods, retrieval guidance, artifacts and independent checks. Only `app/composition.ts` imports domain modules into the running application. Lint and architecture tests enforce that boundary. See the [general engine guide](docs/orchestration/general-engine.md).
 
 Preserve Manager, HazeOps, WorkerShield and EvidenceCritic as the four domain roles. LangGraph and savers provide execution infrastructure. Requests, checkpoints, model agreement and structural validation do not grant scientific approval or accepted-state authority.
 
-The v0.13 scheduling package and connected demo UI have been removed; see the [retirement record](docs/legacy-retirement.md). Do not restore mandatory planning bundles, crew defaults or schedule-only contracts to general task admission. Retained historical design documents describe prior decisions and are not current implementation instructions.
+The v0.13 scheduling package and connected demo UI have been removed; see the [retirement record](docs/history/legacy-retirement.md). Do not restore mandatory planning bundles, crew defaults or schedule-only contracts to general task admission. Retained historical design documents describe prior decisions and are not current implementation instructions.
 
 Keep offline metadata inputs and same-named expected outputs in `input_examples/` and `output_examples/`. Their numeric `schemaVersion` is separate from task contract versions. Orchestration examples must retain explicit synthetic provenance, immutable artifact references and honest execution receipts. Never populate fabricated provider usage or approvals to make a fixture appear live.
 
@@ -54,7 +53,7 @@ Keep changes focused and explain their resulting behavior, relevant checks and l
 - Server-owned identity, permissions, scope and resource limits remain enforced in code.
 - Exact evidence versions, hashes, selected rows, uncertainty and intended use remain visible.
 - Cancellation, restart and late-result behavior remain truthful; adapters do not silently retry or substitute fixtures.
-- Component readiness is supported by recorded evidence in [the readiness register](docs/orchestration-readiness.json).
+- Component readiness is supported by recorded evidence in [the current verification record](docs/orchestration/general-engine-verification.md).
 - Direct dependencies remain exactly pinned and local/CI behavior agree.
 - Secrets, databases, logs and generated build output are absent from the diff.
 

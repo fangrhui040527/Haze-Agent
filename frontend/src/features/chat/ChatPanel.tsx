@@ -13,12 +13,20 @@ import {
 import { useLocalStorageState, useNow } from '../../shared/hooks/hooks.ts';
 import { isAbortError } from '../../shared/lib/delay.ts';
 import { formatDuration } from '../../shared/lib/time.ts';
-import type { AgentAnswer, Citation } from '../../shared/types/agents.ts';
+import type {
+  AgentAnswer,
+  AskRequest,
+  Citation,
+} from '../../shared/types/agents.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
-import { EvidenceResult } from './EvidenceResult.tsx';
+import type { Artifact } from '../../../../app/contracts/artifacts.ts';
+import { TaskResult } from './TaskResult.tsx';
+import { TaskQuestions } from './TaskQuestions.tsx';
+import { TaskControls } from './TaskControls.tsx';
+import { SourceImport, sourceReferences } from './SourceImport.tsx';
 import styles from './ChatPanel.module.css';
 
 interface ChatMessage {
@@ -38,6 +46,7 @@ interface ChatMessage {
   scheduling?: unknown;
   agentExecution?: unknown;
   evidence?: AgentAnswer['evidence'];
+  stale?: boolean;
   state: 'pending' | 'done' | 'error' | 'cancelled' | 'task_cancelled';
   error?: string;
   retryable?: boolean;
@@ -45,9 +54,12 @@ interface ChatMessage {
   question?: string;
   focusItemId?: string | null;
   idempotencyKey?: string;
+  contextRefs?: AskRequest['contextRefs'];
+  scope?: AskRequest['scope'];
 }
 
 const EXAMPLE_PROMPTS = [
+  'Explain the main conclusions in my attached sources and identify what remains uncertain.',
   'Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24, distinguish modeled values from observations, and identify coverage gaps.',
 ];
 
@@ -83,6 +95,9 @@ export function ChatPanel({
     [],
   );
   const [draft, setDraft] = useState('');
+  const [sources, setSources] = useState<Artifact[]>([]);
+  const [scope, setScope] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -100,6 +115,31 @@ export function ChatPanel({
       inputRef.current?.focus();
     }
   }, [prefill]);
+
+  // Once observed stale, a saved answer remains historical when another task is selected.
+  useEffect(() => {
+    const record = run.task?.record;
+    if (!record) return;
+    let changed = false;
+    const next = messagesRef.current.map((message) => {
+      const evidence = message.evidence;
+      if (message.stale || !evidence || evidence.taskUrl !== run.task?.taskUrl)
+        return message;
+      if (
+        (evidence.objectiveRevision ?? 1) < record.objective_revision ||
+        (evidence.runId && evidence.runId !== record.current_run_id) ||
+        evidence.result.currency === 'stale'
+      ) {
+        changed = true;
+        return { ...message, stale: true };
+      }
+      return message;
+    });
+    if (changed) {
+      messagesRef.current = next;
+      setMessages(next);
+    }
+  }, [run.task, setMessages]);
 
   // Keep the newest message visible, also when a pending message turns into an answer or error.
   useEffect(() => {
@@ -152,9 +192,20 @@ export function ChatPanel({
     question: string,
     focus: string | null,
     submissionKey?: string,
+    savedContext?: Pick<AskRequest, 'contextRefs' | 'scope'>,
   ) => {
     const trimmed = question.trim();
-    if (!trimmed || run.status === 'running') return;
+    if (!trimmed || ['running', 'waiting', 'paused'].includes(run.status))
+      return;
+    let parsedScope;
+    try {
+      if (savedContext?.scope !== undefined) parsedScope = savedContext.scope;
+      else if (scope.trim()) parsedScope = JSON.parse(scope);
+    } catch {
+      setInputError('Scope must be valid JSON. Correct it or leave it empty.');
+      return;
+    }
+    setInputError(null);
     const pendingId = newId();
     const idempotencyKey = submissionKey ?? crypto.randomUUID();
     save([
@@ -174,6 +225,8 @@ export function ChatPanel({
         question: trimmed,
         focusItemId: focus,
         idempotencyKey,
+        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
+        scope: parsedScope,
       },
     ]);
     setDraft('');
@@ -191,6 +244,8 @@ export function ChatPanel({
         question: trimmed,
         focusItemId: focus,
         idempotencyKey,
+        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
+        ...(parsedScope !== undefined ? { scope: parsedScope } : {}),
       });
       finish({
         state: 'done',
@@ -224,7 +279,19 @@ export function ChatPanel({
     }
   };
 
-  const running = run.status === 'running';
+  const running = ['running', 'waiting', 'paused'].includes(run.status);
+  const currentRecord = run.task?.record;
+  const currentResultInHistory = Boolean(
+    currentRecord &&
+    messages.some(
+      (message) =>
+        message.evidence &&
+        message.evidence.taskUrl === run.task?.taskUrl &&
+        (message.evidence.objectiveRevision ?? 1) ===
+          currentRecord.objective_revision &&
+        message.evidence.runId === currentRecord.current_run_id,
+    ),
+  );
 
   return (
     <section className={styles.chat} aria-labelledby="chat-title">
@@ -245,9 +312,8 @@ export function ChatPanel({
       {messages.length === 0 ? (
         <div className={styles.empty}>
           <p>
-            Summarize PM2.5 evidence for a location and explicit period. Edit
-            this example before sending. Dates are UTC; the end is exclusive
-            (maximum 31 days).
+            Describe what you need to understand or investigate. Attach source
+            material when useful; the agents will ask for missing information.
           </p>
           <ul className={styles.prompts}>
             {EXAMPLE_PROMPTS.map((p) => (
@@ -287,15 +353,78 @@ export function ChatPanel({
                 message={m}
                 onRetry={() =>
                   m.question &&
-                  void send(m.question, m.focusItemId ?? null, m.idempotencyKey)
+                  void send(
+                    m.question,
+                    m.focusItemId ?? null,
+                    m.idempotencyKey,
+                    { contextRefs: m.contextRefs, scope: m.scope },
+                  )
                 }
                 retryDisabled={running}
+                stale={
+                  Boolean(m.stale) ||
+                  Boolean(
+                    m.evidence &&
+                    run.task &&
+                    m.evidence.taskUrl === run.task.taskUrl &&
+                    run.task.record &&
+                    ((m.evidence.objectiveRevision ?? 1) <
+                      run.task.record.objective_revision ||
+                      (m.evidence.runId &&
+                        m.evidence.runId !== run.task.record.current_run_id) ||
+                      run.task.record.result?.currency === 'stale'),
+                  )
+                }
               />
             </li>
           ))}
         </ol>
       )}
 
+      {run.task?.record && (
+        <div className={styles.currentTask}>
+          <TaskControls run={run} />
+          <TaskQuestions run={run} />
+          {run.task.record.result &&
+            !currentResultInHistory &&
+            (run.task.record.result.currency === 'current' ||
+              !messages.some(
+                (message) => message.evidence?.taskUrl === run.task?.taskUrl,
+              )) && (
+              <TaskResult
+                evidence={{
+                  taskUrl: run.task.taskUrl,
+                  result: run.task.record.result,
+                }}
+                showAnswer
+              />
+            )}
+        </div>
+      )}
+      <SourceImport
+        sources={sources}
+        onChange={setSources}
+        importSource={run.importSource}
+        disabled={running}
+      />
+      <details className={styles.scopeInput}>
+        <summary>Optional task scope</summary>
+        <label htmlFor="task-scope">
+          Scope as JSON, interpreted by the selected capability
+        </label>
+        <textarea
+          id="task-scope"
+          rows={2}
+          value={scope}
+          onChange={(event) => setScope(event.target.value)}
+          disabled={running}
+        />
+      </details>
+      {inputError && (
+        <p role="alert" className={styles.cancellationError}>
+          {inputError}
+        </p>
+      )}
       <form className={styles.form} onSubmit={onSubmit}>
         <label htmlFor="chat-input" className="visually-hidden">
           Your question
@@ -308,7 +437,7 @@ export function ChatPanel({
           placeholder="Type a question… (Enter to send, Shift+Enter for a new line)"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          maxLength={500}
+          maxLength={16000}
         />
         <Button
           type="submit"
@@ -331,6 +460,27 @@ export function ChatPanel({
         </p>
       )}
 
+      {run.capabilities.length > 0 && (
+        <details className={styles.capabilities}>
+          <summary>Available capabilities</summary>
+          <ul>
+            {run.capabilities.map((capability) => (
+              <li key={capability.id}>
+                <strong>{capability.id}</strong> ? {capability.readiness}
+                <p>{capability.purpose}</p>
+                <ul>
+                  {capability.limitations.map((limitation, index) => (
+                    <li key={index}>{limitation}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {run.capabilitiesError && (
+        <p className={styles.muted}>{run.capabilitiesError}</p>
+      )}
       <StatusLine run={run} />
     </section>
   );
@@ -340,10 +490,12 @@ function MessageBody({
   message: m,
   onRetry,
   retryDisabled,
+  stale,
 }: {
   message: ChatMessage;
   onRetry: () => void;
   retryDisabled: boolean;
+  stale: boolean;
 }) {
   if (m.role === 'user') return <p className={styles.bubble}>{m.text}</p>;
   if (m.state === 'pending')
@@ -386,8 +538,8 @@ function MessageBody({
       {m.paragraphs?.map((p, i) => (
         <p key={i}>{p}</p>
       ))}
-      {m.evidence && (
-        <EvidenceResult evidence={m.evidence} citations={m.citations ?? []} />
+      {m.evidence?.result?.schema_version === 'haze.task.result.v3' && (
+        <TaskResult evidence={m.evidence} stale={stale} />
       )}
       {m.citations && m.citations.length > 0 && (
         <p className={styles.citations}>
@@ -433,18 +585,16 @@ function MessageBody({
 
 /** The always-visible text version of what the agents are doing (screen-reader friendly). */
 function StatusLine({ run }: { run: AgentRun }) {
-  const now = useNow(run.status === 'running' ? 1000 : 60_000);
-  const running = run.status === 'running';
+  const observing = ['running', 'waiting', 'paused'].includes(run.status);
+  const now = useNow(observing ? 1000 : 60_000);
+  const running = observing;
   const task = run.events.findLast((event) => event.type === 'task_event');
   const baseUrl: unknown = import.meta.env.VITE_API_BASE_URL;
   const savedTaskUrl =
     run.task?.taskUrl ??
     (task
-      ? `${typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : ''}/api/tasks/${task.runId}`
+      ? `${typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : ''}/api/tasks/${task.receipt.task_id}`
       : undefined);
-  const canCancelTask =
-    run.task?.schemaVersion === 'haze.task.v2' &&
-    (run.task.status === 'queued' || run.task.status === 'running');
   return (
     <div
       className={`${styles.status} ${run.status === 'failed' ? styles.statusFailed : ''}`}
@@ -463,15 +613,10 @@ function StatusLine({ run }: { run: AgentRun }) {
           Stop waiting
         </Button>
       )}
-      {canCancelTask && (
-        <Button
-          size="small"
-          variant="danger"
-          onClick={() => void run.cancelTask()}
-          disabled={run.cancellationPending}
-        >
-          {run.cancellationPending ? 'Cancelling task…' : 'Cancel task'}
-        </Button>
+      {run.operationError && !run.task?.record && (
+        <p role="alert" className={styles.cancellationError}>
+          {run.operationError}
+        </p>
       )}
       {savedTaskUrl && (
         <a
@@ -482,11 +627,6 @@ function StatusLine({ run }: { run: AgentRun }) {
         >
           Saved task
         </a>
-      )}
-      {run.cancellationError && (
-        <p className={styles.cancellationError} role="alert">
-          {run.cancellationError}
-        </p>
       )}
     </div>
   );
