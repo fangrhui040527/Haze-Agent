@@ -360,6 +360,30 @@ describe('smokeledger assignments', () => {
     });
   });
 
+  it('keeps a branch partial when a finding was not assessed, even if the sidecar critic approves', async () => {
+    const unassessed =
+      'Fires inside mapped concessions: not assessed, because no concession map is loaded [E-aa6885079e].';
+    const sidecar = fakeSidecar({
+      'GET /health': health('offline_sample'),
+      'POST /run': (body) => {
+        const response = runResponse((body as { run_id: string }).run_id);
+        response.output.claims.push({
+          id: 'c2',
+          kind: 'inference',
+          text: unassessed,
+          evidence_ids: ['E-aa6885079e'],
+        });
+        return [200, response];
+      },
+    });
+    const { value } = services(sidecar.fetcher, scope);
+    const output = await definition('smokeledger.trace_sources').execute!(
+      value,
+    );
+    expect(output.support).toBe('partial');
+    expect(output.uncertainty[0]).toBe(unassessed);
+  });
+
   it('keeps the sidecar response verbatim and labels sample evidence fictional', async () => {
     const sidecar = fakeSidecar({
       'GET /health': health('offline_sample'),

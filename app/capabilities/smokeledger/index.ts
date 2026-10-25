@@ -484,6 +484,10 @@ async function runOperation(
         : 'external_source',
   });
   const needs = dataNeeds(output);
+  // A finding the sidecar could not assess keeps the branch partial even when its critic approves.
+  const unassessed = (response.output?.claims ?? [])
+    .map((claim) => claim.text)
+    .filter((text) => /\bnot assessed\b/i.test(text));
   return {
     status: 'completed',
     summary: [
@@ -494,8 +498,12 @@ async function runOperation(
         : []),
       provenanceLine(response),
     ].join('\n'),
-    support: response.status === 'success' ? 'supported' : 'partial',
+    support:
+      response.status === 'success' && unassessed.length === 0
+        ? 'supported'
+        : 'partial',
     uncertainty: [
+      ...unassessed,
       ...(response.output?.limitations ?? []),
       ...(response.mode === 'offline_sample'
         ? ['Offline sample: fictional 3–9 Oct 2026 episode; Zetaris and Nightshift were skipped.']
