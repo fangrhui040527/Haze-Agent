@@ -7,6 +7,7 @@ import type {
   TaskKind,
   TaskLink,
   TaskResult,
+  TaskState,
   TaskStep,
 } from '../../../frontend/src/shared/types/tasks.ts';
 import type { Brief, Framing, Manager } from '../manager/manager.ts';
@@ -29,6 +30,8 @@ interface Task {
   framing: Framing;
   events: TaskEvent[];
   result: TaskResult | null;
+  state: TaskState;
+  error: string | null;
   done: boolean;
   jobId: string | null;
   listeners: Set<(event: TaskEvent) => void>;
@@ -68,6 +71,8 @@ export class TaskService {
       framing,
       events: [],
       result: null,
+      state: 'running',
+      error: null,
       done: false,
       jobId: null,
       listeners: new Set(),
@@ -79,13 +84,27 @@ export class TaskService {
     )) {
       this.tasks.delete(old);
     }
-    const { jobId } = this.deps.runtime.admit(
+    const { jobId, promise } = this.deps.runtime.admit(
       `task:${id}`,
       `Task ${id} (${framing.kind})`,
       TASK_DEADLINE_MS,
       (signal) => this.execute(task, signal),
     );
     task.jobId = jobId;
+    // A job whose deadline elapsed in the queue never calls execute().
+    void promise.catch((error: unknown) => {
+      const timedOut =
+        error instanceof DOMException && error.name === 'TimeoutError';
+      this.fail(
+        task,
+        timedOut ? 'timed_out' : 'failed',
+        timedOut
+          ? 'The task ran out of time.'
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      );
+    });
     return {
       taskId: id,
       kind: framing.kind,
@@ -99,6 +118,16 @@ export class TaskService {
 
   result(id: string): TaskResult | null {
     return this.tasks.get(id)?.result ?? null;
+  }
+
+  /** Terminal errors are status records, never fabricated successful reports. */
+  status(
+    id: string,
+  ): { taskId: string; state: TaskState; error: string | null } | null {
+    const task = this.tasks.get(id);
+    return task
+      ? { taskId: task.id, state: task.state, error: task.error }
+      : null;
   }
 
   isDone(id: string): boolean {
@@ -118,7 +147,22 @@ export class TaskService {
   cancel(id: string): boolean {
     const task = this.tasks.get(id);
     if (!task?.jobId || task.done) return false;
-    return this.deps.runtime.cancel(task.jobId);
+    if (!this.deps.runtime.cancel(task.jobId)) return false;
+    this.fail(task, 'cancelled', 'The task was cancelled.');
+    return true;
+  }
+
+  private fail(
+    task: Task,
+    state: 'failed' | 'cancelled' | 'timed_out',
+    error: string,
+  ): void {
+    if (task.done) return;
+    task.state = state;
+    task.error = error;
+    this.push(task, { type: 'failed', error });
+    task.done = true;
+    task.listeners.clear();
   }
 
   private push(task: Task, event: TaskEvent): void {
@@ -131,6 +175,7 @@ export class TaskService {
   }
 
   private async execute(task: Task, signal: AbortSignal): Promise<void> {
+    if (task.done) return;
     const { framing } = task;
     const { places } = framing;
     const names = places.map((p) => p.name).join(' and ') || 'the request';
@@ -141,6 +186,7 @@ export class TaskService {
           : new Error('aborted');
     };
     try {
+      check();
       this.step(task, {
         id: 'frame',
         agent: 'manager',
@@ -224,14 +270,26 @@ export class TaskService {
         state: 'done',
       });
       task.result = { ...composed, taskId: task.id, state: 'completed' };
+      task.state = 'completed';
       this.push(task, { type: 'result', result: task.result });
     } catch (error) {
+      const timedOut =
+        signal.reason instanceof DOMException &&
+        signal.reason.name === 'TimeoutError';
+      const state = signal.aborted
+        ? timedOut
+          ? 'timed_out'
+          : 'cancelled'
+        : 'failed';
       const message = signal.aborted
-        ? 'The task was cancelled or ran out of time.'
+        ? timedOut
+          ? 'The task ran out of time.'
+          : 'The task was cancelled.'
         : error instanceof Error
           ? error.message
           : String(error);
-      this.push(task, { type: 'failed', error: message });
+      this.fail(task, state, message);
+      throw error;
     } finally {
       task.done = true;
       task.listeners.clear();

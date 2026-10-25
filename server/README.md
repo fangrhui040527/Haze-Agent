@@ -35,7 +35,7 @@ Configuration comes from the repository-root `.env` (never commit it):
 | `HAZEOPS_SCHEDULER`                    | `off` to stop automatic polling             | on                                           |
 | `SAMPLE_MODE`                          | `true` disables every network source        | off                                          |
 | `PORT`, `HOST`                         | listen address                              | `8000`, `127.0.0.1`                          |
-| `HAZEWATCH_STATE_DIR`                  | where state lives                           | `.state/hazewatch`                           |
+| `HAZE_STATE_DIR`                       | where state lives                           | `.state/haze`                                |
 | `HAZE_OPERATOR_TOKEN`                  | protects `/api/heartbeat/tick` off-loopback | unset (loopback only)                        |
 
 Malaysian places beyond the frontend list come from `server/config/locations-malaysia.json` (rebuild with `node server/scripts/build-malaysia-locations.mjs`; coordinates from GeoNames via the Open-Meteo Geocoding API, CC BY 4.0).
@@ -70,7 +70,7 @@ The spec defines polling only; SSE is a HazeWatch addition.
 ## What is real and what is not
 
 - **Real:** World Model and H-MEM (pinned Meterless reference engines), HazeOps retrieval from
-  four sources, evidence pinning with SHA-256, Manager deadlines (300 s per job, 2 at once,
+  four sources, evidence pinning with SHA-256, separate bounded coordinator and source-refresh pools (2 jobs per pool,
   3 attempts per source call, 20 s each).
 - **Not connected:** EvidenceCritic (independent checks) and WorkerShield (the AI agent). So
   nothing is marked "verified", and chat answers are templates filled from real records, not

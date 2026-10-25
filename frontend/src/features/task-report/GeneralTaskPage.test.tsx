@@ -1,0 +1,180 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router';
+import { describe, expect, it, vi } from 'vitest';
+import type { AgentRun } from '../dashboard/useAgentRun.ts';
+import {
+  artifactId,
+  fixtureTask,
+  receipt,
+  taskId,
+} from '../../services/agents/testFixtures.ts';
+import { GeneralTaskReport } from './GeneralTaskPage.tsx';
+
+function taskRun(): AgentRun {
+  return {
+    events: [],
+    status: 'completed',
+    statusText: 'Answer ready.',
+    startedAt: null,
+    serviceLabel: 'Fixture',
+    ask: vi.fn(),
+    cancel: vi.fn(),
+    task: {
+      id: taskId,
+      taskUrl: `/api/tasks/${taskId}`,
+      schemaVersion: 'haze.task.v3',
+      status: 'completed',
+      record: fixtureTask(),
+    },
+    operationPending: false,
+    operationError: null,
+    receipt: null,
+    control: vi.fn(),
+    update: vi.fn(),
+    importSource: vi.fn(),
+    capabilities: [],
+    capabilitiesError: null,
+    latestAnswer: null,
+  };
+}
+
+const render = (run: AgentRun) =>
+  renderToStaticMarkup(
+    createElement(
+      MemoryRouter,
+      null,
+      createElement(GeneralTaskReport, { taskId, run }),
+    ),
+  );
+
+describe('general task reports', () => {
+  it('renders the original objective, saved evidence answer, review and currency', () => {
+    const run = taskRun();
+    const record = run.task!.record!;
+    record.result!.currency = 'stale';
+    const markup = render(run);
+    expect(markup).toContain('Explain the supplied evidence.');
+    expect(markup).toContain('Server task: completed');
+    expect(markup).toContain('The source supports a limited explanation. [E1]');
+    expect(markup).toContain('needs review');
+    expect(markup).toContain('Stale result');
+    expect(markup).toContain('Exact source');
+    expect(markup).toContain('Continue in a new run');
+    expect(markup).not.toContain('Filled in from a template');
+    expect(markup).not.toContain('href="/task/');
+    expect(markup).toContain(
+      '<details><summary>Actual execution receipts (0)</summary>',
+    );
+  });
+
+  it('shows only actual receipts belonging to the requested task', () => {
+    const run = taskRun();
+    const own = receipt(1, 'assignment.started', 'Manager');
+    const unrelated = {
+      ...receipt(2, 'another-task-event', 'HazeOps'),
+      task_id: artifactId,
+    };
+    run.events = [own, unrelated].map((item) => ({
+      type: 'task_event',
+      runId: item.run_id,
+      at: item.at,
+      message: item.message,
+      receipt: item,
+    }));
+    const markup = render(run);
+    expect(markup).toContain('Actual assignment.started');
+    expect(markup).toContain('Manager');
+    expect(markup).not.toContain('another-task-event');
+    expect(markup).not.toContain('World Model');
+    expect(markup).not.toContain('No execution receipts loaded yet.');
+  });
+
+  it('keeps saved server failure and partial results visible after observation ends', () => {
+    const run = taskRun();
+    run.status = 'failed';
+    run.statusText = 'Source retrieval failed.';
+    run.task!.record!.status = 'failed';
+    run.task!.record!.error = {
+      code: 'SOURCE_UNAVAILABLE',
+      message: 'Source retrieval failed.',
+    };
+    const markup = render(run);
+    expect(markup).toContain('Server task: failed');
+    expect(markup).toContain('role="alert">Source retrieval failed.');
+    expect(markup).toContain('Saved result');
+    expect(markup).toContain('aria-busy="false"');
+    expect(markup).not.toContain('Stop waiting');
+  });
+
+  it('renders waiting questions and paused controls without claiming active work', () => {
+    const run = taskRun();
+    run.status = 'waiting';
+    run.statusText = 'Waiting for clarification or source material.';
+    run.task!.record!.status = 'waiting';
+    run.task!.record!.questions = [
+      {
+        id: taskId,
+        task_id: taskId,
+        run_id: run.task!.record!.current_run_id,
+        objective_revision: 1,
+        question: 'Which supplied document should be analyzed?',
+        kind: 'human',
+        status: 'open',
+        created_at: run.task!.record!.created_at,
+      },
+    ];
+    expect(render(run)).toContain(
+      'Which supplied document should be analyzed?',
+    );
+    expect(render(run)).toContain('aria-busy="false"');
+    run.status = 'paused';
+    run.statusText = 'Task paused. Saved work is retained.';
+    run.task!.record!.status = 'paused';
+    const paused = render(run);
+    expect(paused).toContain('Server task: paused');
+    expect(paused).toContain('Resume task');
+    expect(paused).toContain('aria-busy="false"');
+    expect(paused).toContain(
+      '<details open=""><summary>Actual execution receipts (0)</summary>',
+    );
+  });
+
+  it('distinguishes stopping observation from server cancellation', () => {
+    const run = taskRun();
+    run.task!.record!.status = 'running';
+    run.status = 'cancelled';
+    run.statusText =
+      'Stopped waiting. Check the saved task for its server status.';
+    const stopped = render(run);
+    expect(stopped).toContain('Server task: running');
+    expect(stopped).toContain('Stopped waiting.');
+    expect(stopped).not.toContain('Stop waiting</button>');
+    run.status = 'task_cancelled';
+    run.statusText =
+      'The server cancelled this task. Saved artifacts remain available.';
+    run.task!.record!.status = 'cancelled';
+    expect(render(run)).toContain('Server task: cancelled');
+  });
+
+  it('shows transport/readback errors while retaining the last saved server status', () => {
+    const run = taskRun();
+    run.status = 'failed';
+    run.task!.record!.status = 'running';
+    run.observationError = 'Task request failed (503).';
+    const markup = render(run);
+    expect(markup).toContain('Server task: running');
+    expect(markup).toContain('role="alert">Task request failed (503).');
+    run.task = null;
+    expect(render(run)).toContain('Task request failed (503).');
+  });
+
+  it('does not display another task as the requested report', () => {
+    const run = taskRun();
+    run.task!.id = artifactId;
+    const markup = render(run);
+    expect(markup).not.toContain('Explain the supplied evidence.');
+    expect(markup).not.toContain('Saved result');
+    expect(markup).not.toContain('Continue in a new run');
+  });
+});

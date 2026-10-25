@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { fixtureResult } from '../../services/agents/testFixtures.ts';
 import { TaskResult } from './TaskResult.tsx';
@@ -8,11 +9,17 @@ describe('general result shell and optional domain details', () => {
   it('renders generic results, pinned sources, review, and work products without domain fields', () => {
     const result = fixtureResult();
     const markup = renderToStaticMarkup(
-      createElement(TaskResult, {
-        evidence: { taskUrl: '/api/tasks/fixture', result },
-      }),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(TaskResult, {
+          evidence: { taskUrl: '/api/tasks/fixture', result },
+        }),
+      ),
     );
     expect(markup).toContain('Work products');
+    expect(markup).toContain('href="/task/fixture"');
+    expect(markup).toContain('Open task report');
     expect(markup).toContain('Exact source');
     expect(markup).toContain('Result: partial. Review: needs review.');
     expect(markup).toContain('Observations are unavailable.');
@@ -25,9 +32,13 @@ describe('general result shell and optional domain details', () => {
     result.currency = 'stale';
     result.review.status = 'rejected';
     const markup = renderToStaticMarkup(
-      createElement(TaskResult, {
-        evidence: { taskUrl: '/api/tasks/fixture', result },
-      }),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(TaskResult, {
+          evidence: { taskUrl: '/api/tasks/fixture', result },
+        }),
+      ),
     );
     expect(markup).toContain('Stale result');
     expect(markup).toContain('Review: rejected');

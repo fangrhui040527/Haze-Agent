@@ -33,6 +33,7 @@ export interface DemoState {
 }
 
 const STORAGE_KEY = 'haze.demo.dataset.v1';
+const LEGACY_STORAGE_KEY = 'hazewatch.demo.dataset.v1';
 export const SEED_URL = `${import.meta.env.BASE_URL}demo-data/demo-data.seed.json`;
 
 export const demoStore = createStore<DemoState>({
@@ -81,14 +82,18 @@ export function loadDemoDataset(): Promise<DemoDataset> {
   const current = demoStore.get().dataset;
   if (current) return Promise.resolve(current);
   loading ??= (async () => {
-    const saved = readLocal<unknown>(STORAGE_KEY, null);
-    if (saved !== null) {
+    for (const key of [STORAGE_KEY, LEGACY_STORAGE_KEY]) {
+      const saved = readLocal<unknown>(key, null);
+      if (saved === null) continue;
       const result = validateDataset(saved);
       if (result.ok) {
-        replace(rebaseDataset(result.dataset, Date.now()), 'saved', false);
+        // Only remove the old copy after the renamed key is safely persisted.
+        // If storage is full, the original remains available on the next load.
+        const migrating = key === LEGACY_STORAGE_KEY;
+        replace(rebaseDataset(result.dataset, Date.now()), 'saved', migrating);
+        if (migrating && !demoStore.get().saveWarning) removeLocal(key);
         return demoStore.get().dataset as DemoDataset;
       }
-      removeLocal(STORAGE_KEY);
     }
     replace(rebaseDataset(await fetchSeed(), Date.now()), 'seed', false);
     return demoStore.get().dataset as DemoDataset;
@@ -115,8 +120,10 @@ export function importDataset(dataset: DemoDataset): void {
 }
 
 export async function resetToSeed(): Promise<void> {
+  const seed = await fetchSeed();
   removeLocal(STORAGE_KEY);
-  replace(rebaseDataset(await fetchSeed(), Date.now()), 'seed', false);
+  removeLocal(LEGACY_STORAGE_KEY);
+  replace(rebaseDataset(seed, Date.now()), 'seed', false);
 }
 
 /** Merge simulated items (new or revised) into the in-memory dataset. */

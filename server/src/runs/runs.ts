@@ -59,6 +59,8 @@ export interface RunDependencies {
   hazeops: HazeOps;
   manager: Manager;
   runtime: Runtime;
+  /** Separate bounded pool: coordinators must not occupy the slots their refreshes need. */
+  watcherRuntime: Runtime;
   memory: ChatMemory;
   snapshot: () => { items: HazeItem[]; locations: Location[] };
   freshItems: () => HazeItem[];
@@ -99,13 +101,25 @@ export class RunService {
     )) {
       this.runs.delete(old);
     }
-    const { jobId } = this.deps.runtime.admit(
+    const { jobId, promise } = this.deps.runtime.admit(
       `run:${id}`,
       `Chat run ${id}`,
       CHAT_RUN_DEADLINE_MS,
       (signal) => this.execute(run, signal),
     );
     run.jobId = jobId;
+    void promise.catch((error: unknown) => {
+      if (run.done) return;
+      const message = error instanceof Error ? error.message : String(error);
+      this.emit(run, {
+        type: 'run_failed',
+        agent: 'manager',
+        error: message,
+        retryable: true,
+        message,
+      });
+      this.finish(run);
+    });
     return id;
   }
 
@@ -407,6 +421,7 @@ export class RunService {
     brief: Brief,
     signal: AbortSignal,
   ): Promise<string | null> {
+    signal.throwIfAborted();
     const ids = new Set(places.map((p) => p.id));
     const items = this.deps.freshItems().filter((i) => ids.has(i.locationId));
     const staleSources = new Set(
@@ -427,7 +442,7 @@ export class RunService {
 
     const jobs = watcherIds.map(
       (id) =>
-        this.deps.runtime.admit(
+        this.deps.watcherRuntime.admit(
           `watcher:${id}`,
           `HazeOps ${id} (chat refresh)`,
           WATCHER_DEADLINE_MS,
@@ -440,14 +455,25 @@ export class RunService {
             ),
         ).promise,
     );
-    const budget = new Promise<'timeout'>((resolve) => {
-      const timer = setTimeout(() => resolve('timeout'), RETRIEVAL_BUDGET_MS);
-      signal.addEventListener('abort', () => {
-        clearTimeout(timer);
-        resolve('timeout');
-      });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onAbort: (() => void) | undefined;
+    const budget = new Promise<'timeout'>((resolve, reject) => {
+      timer = setTimeout(() => resolve('timeout'), RETRIEVAL_BUDGET_MS);
+      onAbort = () =>
+        reject(
+          signal.reason instanceof Error ? signal.reason : new Error('aborted'),
+        );
+      if (signal.aborted) onAbort();
+      else signal.addEventListener('abort', onAbort, { once: true });
     });
-    const outcome = await Promise.race([Promise.allSettled(jobs), budget]);
+    let outcome:
+      PromiseSettledResult<Awaited<(typeof jobs)[number]>>[] | 'timeout';
+    try {
+      outcome = await Promise.race([Promise.allSettled(jobs), budget]);
+    } finally {
+      clearTimeout(timer);
+      if (onAbort) signal.removeEventListener('abort', onAbort);
+    }
     if (outcome === 'timeout') {
       return `HazeOps started a refresh of ${watcherIds.join(', ')} but it did not finish within ${RETRIEVAL_BUDGET_MS / 1000} s; this answer uses the records already stored.`;
     }

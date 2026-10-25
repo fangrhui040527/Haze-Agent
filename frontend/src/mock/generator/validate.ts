@@ -59,7 +59,8 @@ export function validateDataset(input: unknown): ValidationResult {
 
   if (!isObject(input))
     return { ok: false, errors: ['The file is not a JSON object.'], warnings };
-  if (input.schemaVersion !== DATASET_SCHEMA_VERSION) {
+  const legacySchema = input.schemaVersion === 'hazewatch.demo.v1';
+  if (input.schemaVersion !== DATASET_SCHEMA_VERSION && !legacySchema) {
     err(
       `schemaVersion: expected "${DATASET_SCHEMA_VERSION}", got ${JSON.stringify(input.schemaVersion)}`,
     );
@@ -169,5 +170,12 @@ export function validateDataset(input: unknown): ValidationResult {
     errors.push(`…stopped after ${MAX_ERRORS} errors.`);
   return errors.length > 0
     ? { ok: false, errors, warnings }
-    : { ok: true, dataset: input as unknown as DemoDataset, warnings };
+    : {
+        ok: true,
+        dataset: {
+          ...input,
+          schemaVersion: DATASET_SCHEMA_VERSION,
+        } as unknown as DemoDataset,
+        warnings,
+      };
 }

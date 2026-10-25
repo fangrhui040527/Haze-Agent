@@ -93,6 +93,34 @@ export interface NearbyReading {
 
 export const NEARBY_SENSOR_KM = 20;
 
+/** Use the recorded validity interval, rather than turning any stored peak into a new forecast. */
+export function forecastWindow(
+  item: HazeItem,
+  now = Date.now(),
+): {
+  label: string;
+  current: boolean;
+} {
+  const forecast = item.forecast;
+  if (!forecast) return { label: 'validity unavailable', current: false };
+  const from = Date.parse(forecast.validFrom);
+  const to = Date.parse(forecast.validTo);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from)
+    return { label: 'invalid validity interval', current: false };
+  const interval = `${forecast.validFrom} to ${forecast.validTo}`;
+  if (to <= now) return { label: `expired; valid ${interval}`, current: false };
+  if (item.status === 'stale' || item.status === 'retracted')
+    return { label: `${item.status}; valid ${interval}`, current: false };
+  return { label: `valid ${interval}`, current: true };
+}
+
+function forecastDescription(item: HazeItem): string {
+  const window = forecastWindow(item);
+  return window.current
+    ? `Model forecast (${window.label}): ${item.forecast!.direction}, peaking near ${round1(item.forecast!.expectedPm25)}`
+    : `The stored model forecast is ${window.label}. No current forecast is available from this record`;
+}
+
 function placeSummary(
   place: Location,
   items: HazeItem[],
@@ -130,7 +158,7 @@ function placeSummary(
   }
   if (forecast?.forecast) {
     lines.push(
-      `Model forecast for the next 24 h: ${forecast.forecast.direction}, peaking near ${round1(forecast.forecast.expectedPm25)} ${cite(forecast, citations)}.`,
+      `${forecastDescription(forecast)} ${cite(forecast, citations)}.`,
     );
   }
   if (hotspots?.fire) {
@@ -202,7 +230,7 @@ export function composeAnswer(input: {
     const forecast = items.find((i) => i.id === `hz-forecast-${first.id}`);
     if (forecast?.forecast) {
       paragraphs.push(
-        `For ${first.name}, the CAMS model expects PM2.5 to be ${forecast.forecast.direction} over the next 24 hours, peaking near ${round1(forecast.forecast.expectedPm25)} ${cite(forecast, citations)}.`,
+        `${first.name}: ${forecastDescription(forecast)} ${cite(forecast, citations)}.`,
         'This is a regional model forecast, not an observation, and it has not been checked against sensors.',
       );
     } else {

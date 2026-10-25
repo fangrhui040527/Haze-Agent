@@ -43,7 +43,9 @@ distinguish modeled values from observations, and identify coverage gaps.” Edi
 dates for your request. Dates are UTC, the end is exclusive, and the maximum interval is 31 days.
 The answer links exact captured evidence and shows coverage, gaps, assumptions, review scope
 and actual execution provenance. **Stop waiting** detaches the browser; an admitted task remains
-readable through **Saved task**. Retrying a submission keeps its idempotency key.
+readable through **Saved task**. **Open task report** opens that same task at `/task/:id`,
+including its actual receipts, source material, questions, controls and current result.
+Retrying a submission keeps its idempotency key.
 
 Every task uses the general v3 protocol. Only an objective is required. Attach or paste
 UTF-8 text, Markdown, CSV, or JSON source material (up to 1 MiB per source), and provide
@@ -68,11 +70,13 @@ archived history; new questions always use the evidence task API.
 
 ## 2. What's on screen
 
-| Page      | URL          | Purpose                                                                                                    |
-| --------- | ------------ | ---------------------------------------------------------------------------------------------------------- |
-| Dashboard | `/`          | Live table (top), chat (bottom left), agent office (bottom right)                                          |
-| Detail    | `/item/:id`  | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline |
-| Demo Data | `/demo-data` | Developer tool: view, regenerate, import/export data and simulate dashboard updates                        |
+| Page             | URL           | Purpose                                                                                                    |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| Dashboard        | `/`           | Live table (top), chat (bottom left), agent office (bottom right)                                          |
+| Detail           | `/item/:id`   | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline |
+| Task report      | `/task/:id`   | Saved general task, live receipts, clarification, controls and results                                     |
+| Dashboard report | `/report/:id` | Template report from the separate dashboard server                                                         |
+| Demo Data        | `/demo-data`  | Developer tool: view, regenerate, import/export data and simulate dashboard updates                        |
 
 Things worth trying on the Demo Data page:
 

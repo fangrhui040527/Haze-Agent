@@ -1,17 +1,21 @@
 import type { AgentAnswer } from '../../shared/types/agents.ts';
+import { Link } from 'react-router';
 import { WorkProducts } from './WorkProducts.tsx';
 import styles from './ChatPanel.module.css';
 export function TaskResult({
   evidence,
   stale = false,
   showAnswer = false,
+  linkToReport = true,
 }: {
   evidence: NonNullable<AgentAnswer['evidence']>;
   stale?: boolean;
   showAnswer?: boolean;
+  linkToReport?: boolean;
 }) {
   const { result, taskUrl } = evidence;
   const baseUrl = taskUrl.replace(/\/api\/tasks\/[^/]+$/, '');
+  const taskId = /\/api\/tasks\/([^/?#]+)$/.exec(taskUrl)?.[1];
   const isStale = stale || result.currency === 'stale';
   return (
     <div className={styles.evidence}>
@@ -109,6 +113,13 @@ export function TaskResult({
           </pre>
         </details>
       </details>
+      {linkToReport && taskId && (
+        <p>
+          <Link to={`/task/${encodeURIComponent(taskId)}`}>
+            Open task report
+          </Link>
+        </p>
+      )}
       <a href={taskUrl} target="_blank" rel="noreferrer">
         Saved task and run history
       </a>

@@ -10,6 +10,7 @@ import type {
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
+import { GeneralTaskPage } from './GeneralTaskPage.tsx';
 
 /**
  * A task report (Architecture v0.14 §17), written in front of the user: the steps
@@ -26,6 +27,16 @@ const reducedMotion = () =>
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function TaskPage() {
+  const { id = '' } = useParams();
+  // Existing dashboard reports used task_ identities before general task pages.
+  return id.startsWith('task_') ? (
+    <DashboardReportPage key={id} />
+  ) : (
+    <GeneralTaskPage key={id} taskId={id} />
+  );
+}
+
+export function DashboardReportPage() {
   const { id = '' } = useParams();
   const [steps, setSteps] = useState<TaskStep[]>([]);
   const [blocks, setBlocks] = useState<TaskBlock[]>([]);

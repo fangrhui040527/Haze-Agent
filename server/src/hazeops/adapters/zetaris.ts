@@ -165,7 +165,14 @@ export function zetarisAdapter(
         );
         const rows = extractRows(JSON.parse(fetched.raw.toString('utf8')));
         const values = rows.map((r) => {
-          const v = Number(r[query.columns.pm25]);
+          const raw = r[query.columns.pm25];
+          // Missing values and nonnumeric JSON types must never become zero.
+          if (
+            typeof raw !== 'number' &&
+            (typeof raw !== 'string' || raw.trim() === '')
+          )
+            return null;
+          const v = Number(raw);
           return Number.isFinite(v) ? v : null;
         });
         const pinned = pinEvidence({

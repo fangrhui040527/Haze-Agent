@@ -4,7 +4,8 @@
  * It makes no coordination decisions; that is the Manager's job.
  *
  * Every job brings its own deadline, sized to the work (v0.14 §12 retires the single
- * 300 s pipeline). At most two jobs run at once (v0.14 §4: two specialist slots).
+ * 300 s pipeline). Each pool runs at most two jobs at once. Coordinators and source
+ * watchers use separate pools so a waiting coordinator cannot block its own refresh.
  * A job asked for while the same job is already queued or running is coalesced into
  * it rather than started twice.
  */
@@ -135,9 +136,18 @@ export class Runtime {
     job.state = 'running';
     job.startedAt = new Date().toISOString();
     const remaining = Date.parse(job.deadlineAt) - Date.now();
-    const deadline = AbortSignal.timeout(Math.max(1, remaining));
+    const deadline =
+      remaining <= 0
+        ? AbortSignal.abort(
+            new DOMException(
+              'The job ran out of time while queued.',
+              'TimeoutError',
+            ),
+          )
+        : AbortSignal.timeout(remaining);
     const signal = AbortSignal.any([job.controller.signal, deadline]);
     try {
+      signal.throwIfAborted();
       const value = await job.work(signal);
       job.state = signal.aborted
         ? deadline.aborted

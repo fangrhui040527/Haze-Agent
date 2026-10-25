@@ -11,7 +11,7 @@ import type { DataService, DataSnapshot, LiveUpdate } from './DataService.ts';
  *
  *   GET /api/snapshot     -> DataSnapshot
  *   GET /api/items/:id    -> ItemDetail (404 -> null)
- *   GET /api/stream (SSE) -> "upsert" events carrying LiveUpdate
+ *   GET /api/stream (SSE) -> "reset" / "upsert" events carrying LiveUpdate
  */
 export class HttpDataService implements DataService {
   readonly label = 'Haze server (real data)';
@@ -49,9 +49,13 @@ export class HttpDataService implements DataService {
     // EventSource reconnects by itself after a dropped connection.
     const source = new EventSource(`${this.baseUrl}/api/stream`);
     source.addEventListener('hello', () => onStatus('live'));
-    source.addEventListener('upsert', (event) => {
+    const receive = (event: Event) => {
       onUpdate(JSON.parse((event as MessageEvent<string>).data) as LiveUpdate);
-    });
+    };
+    // Every connection begins with a snapshot, including reconnects. This also
+    // covers changes made between the initial HTTP load and subscribing.
+    source.addEventListener('reset', receive);
+    source.addEventListener('upsert', receive);
     source.onerror = () => {
       onStatus(source.readyState === EventSource.CLOSED ? 'error' : 'offline');
     };

@@ -36,5 +36,26 @@ describe.each(['/api/reports', '/api/tasks'])(
       expect(response.status).toBe(200);
       expect(await response.json()).toEqual(result);
     });
+
+    it.each(['running', 'failed', 'cancelled', 'timed_out'])(
+      'reports the actual %s state without fabricating a result',
+      async (state) => {
+        const status = {
+          taskId: 'report-1',
+          state,
+          error: state === 'running' ? null : `Report ${state}`,
+        };
+        const app = createApp({
+          tasks: {
+            exists: () => true,
+            result: () => null,
+            status: () => status,
+          },
+        } as unknown as AppDependencies);
+        const response = await app.request(`${prefix}/report-1`);
+        expect(response.status).toBe(state === 'running' ? 202 : 200);
+        expect(await response.json()).toEqual(status);
+      },
+    );
   },
 );
