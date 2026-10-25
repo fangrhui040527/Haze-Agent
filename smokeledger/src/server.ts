@@ -13,7 +13,9 @@ import { executeRun, getRun, InputError } from "./run.ts";
 import { tick } from "./heartbeat.ts";
 import { approve, draftNotice, listCases } from "./cases.ts";
 import { ask } from "./agent.ts";
-import { verifyEvidence } from "./query.ts";
+import { loadEvidence, verifyEvidence } from "./query.ts";
+import { judge } from "./judge.ts";
+import { withRun, type RunCounters } from "./tracing/context.ts";
 import { hmem, memoryStatus } from "./meterless/hmem.ts";
 import { worldModel, worldModelStatus } from "./meterless/worldModel.ts";
 import { hostedAvailable } from "./llm.ts";
@@ -73,6 +75,23 @@ async function resumeUnfinished() {
   }
 }
 
+/** Run a standalone check under its own counters so its remote calls are reported, never implied. */
+async function counted<T>(op: string, fn: () => Promise<T>): Promise<T & { provenance: Record<string, unknown> }> {
+  const ctx: RunCounters = {
+    run_id: `${op}-${Date.now()}`,
+    mode: CONFIG.sampleMode ? "offline_sample" : "live",
+    engine_operations_executed: {},
+    remote_calls_executed: {},
+    remote_calls_skipped: {},
+    remote_call_ids: [],
+    failures: [],
+    deadlineMs: Date.now() + CONFIG.limits.taskSeconds * 1000,
+  };
+  const result = await withRun(ctx, fn);
+  const { run_id: _id, deadlineMs: _deadline, ...provenance } = ctx;
+  return { ...result, provenance };
+}
+
 type Handler = (b: Record<string, unknown>, m: RegExpMatchArray) => Promise<[number, unknown]>;
 const routes: [string, RegExp, Handler][] = [
   ["GET", /^\/health$/, async () => [200, await health()]],
@@ -108,7 +127,26 @@ const routes: [string, RegExp, Handler][] = [
     const r = await ask(String(b.question ?? ""));
     return [200, { ...r, answer: r.verified ? r.answer : null, evidence: r.evidence.map(({ rows, ...e }) => e) }];
   }],
-  ["GET", /^\/api\/evidence\/([^/]+)\/verify$/, async (_b, m) => [200, await verifyEvidence(m[1])]],
+  ["GET", /^\/api\/evidence\/([^/]+)\/verify$/, async (_b, m) => [200, await counted("verify", () => verifyEvidence(m[1]))]],
+  [
+    "POST",
+    /^\/api\/claims\/check$/,
+    async (b) => {
+      // Read-only: cited ids, uncited numbers and guilt wording; Nemotron judge lane only when hosted inference is configured.
+      if (typeof b.text !== "string" || !b.text.trim() || b.text.length > 20_000) throw new InputError("text is required (at most 20000 characters)");
+      const ids = b.evidence_ids;
+      if (!Array.isArray(ids) || ids.length > 200 || !ids.every((id) => typeof id === "string")) throw new InputError("evidence_ids must be an array of at most 200 strings");
+      const useModel = !CONFIG.sampleMode && hostedAvailable();
+      return [
+        200,
+        await counted("claim-check", async () => {
+          const evidence = await loadEvidence(ids as string[]);
+          const verdict = await judge(b.text as string, evidence, { useModel });
+          return { ...verdict, checked_evidence_ids: evidence.map((e) => e.evidence_id), lanes: useModel ? ["deterministic", "nemotron_judge"] : ["deterministic"] };
+        }),
+      ];
+    },
+  ],
   [
     "POST",
     /^\/api\/fixtures\/([^/]+)$/,
