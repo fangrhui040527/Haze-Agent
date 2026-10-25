@@ -1,0 +1,25 @@
+{
+  "name": "haze-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Haze API server: Meterless World Model + H-MEM engines and the HazeOps evidence retriever",
+  "type": "module",
+  "engines": {
+    "node": ">=24.12"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=../.env src/index.ts",
+    "dev": "node --watch --env-file-if-exists=../.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.13"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}

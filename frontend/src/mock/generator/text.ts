@@ -170,7 +170,7 @@ export function detailsFor(f: TextFacts, rng: Rng): string[] {
     case 'health':
       paragraphs.push(
         `Health guidance for ${location.name} was updated (fictional notice).`,
-        'This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.',
+        'This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.',
       );
       break;
     case 'disruption':

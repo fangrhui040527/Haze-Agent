@@ -30,3 +30,6 @@ secrets/
 .DS_Store
 Thumbs.db
 tmp/
+
+# Office lock files (e.g. ~$document.docx while Word has it open)
+~$*

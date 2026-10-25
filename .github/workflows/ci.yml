@@ -37,6 +37,8 @@ jobs:
         run: npm ci
       - name: Install locked frontend dependencies
         run: npm ci --prefix frontend
+      - name: Install locked server dependencies
+        run: npm ci --prefix server
       - name: Verify engine and workflow pins
         run: npm run verify:pins
       - name: Check types
@@ -59,6 +61,10 @@ jobs:
         run: npm test
       - name: Run pinned upstream engine conformance
         run: npm run test:engines
+      - name: Check Haze server types
+        run: npm run typecheck --prefix server
+      - name: Run Haze server tests (needs the build above)
+        run: npm test --prefix server
 
   postgres:
     name: PostgreSQL saver integration

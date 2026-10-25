@@ -48,7 +48,7 @@ export function AgentOffice({
 }) {
   const reduced = useReducedMotion();
   const [visible, setVisible] = useLocalStorageState(
-    'hazewatch.office.visible',
+    'haze.office.visible',
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   const [internalSelected, setInternalSelected] = useState<AgentId | null>(

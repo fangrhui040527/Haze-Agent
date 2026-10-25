@@ -11,6 +11,13 @@ export default defineConfig({
   plugins: [react(), demoChatPlugin()],
   server: {
     open: true,
+    // The Haze server (server/) listens on 127.0.0.1:8000 by default.
+    proxy: {
+      '/api': {
+        target: process.env.HAZE_API ?? 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],

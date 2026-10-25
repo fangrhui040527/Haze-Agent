@@ -39,7 +39,7 @@ import {
 } from './text.ts';
 
 export const DEMO_NOTICE =
-  'FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the HazeWatch interface. Do not use it for health or safety decisions.';
+  'FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the Haze interface. Do not use it for health or safety decisions.';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
@@ -374,6 +374,8 @@ function excerptFor(
       return `"Thick haze blanketed ${name} this morning," the outlet reported${pm25 !== null ? `, quoting ${pm25} µg/m³` : ''}.`;
     case 'community':
       return `${ctx.rng.int(3, 40)} users reported smoke smell in ${f.district}.`;
+    case 'data_platform':
+      return `Query result for ${name}: PM2.5 ${pm25 ?? 'n/a'} µg/m³.`;
   }
 }
 

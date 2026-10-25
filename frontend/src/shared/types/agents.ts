@@ -12,6 +12,7 @@
  */
 
 import type { AgentId } from './domain.ts';
+import type { TaskLink } from './tasks.ts';
 import type { DemoChatResponse } from '../../../../app/demo/chat-contract.ts';
 import type {
   DemoAgentEvent,
@@ -41,13 +42,17 @@ export interface AgentAnswer {
     | 'model'
     | 'template_fallback'
     | 'computed_demo'
-    | 'input_required';
+    | 'input_required'
+    /** 'template' = filled in from real records by a fixed template, no AI model involved. */
+    | 'template';
   fictional: boolean;
   durationMs: number;
   /** Validated domain result and resolved plans, kept together for faithful chat rendering. */
   scheduling?: DemoChatResponse;
   /** Live role execution receipts, separate from checked historical artifacts. */
   agentExecution?: DemoAgentExecution;
+  /** Set when the Manager opened a task report instead of answering in the chat. */
+  task?: TaskLink;
 }
 
 export interface AskRequest {

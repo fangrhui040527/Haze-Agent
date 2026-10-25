@@ -291,7 +291,7 @@ function drawBackWall(ctx: Ctx): void {
   rect(ctx, C.baseboard, 0, 30, OFFICE_WIDTH, 2);
 
   // Reception sign
-  const sign = 'HAZEWATCH';
+  const sign = 'HAZE';
   const sw = textWidth(sign) + 6;
   const sx = Math.round(RECEPTION_W / 2 - sw / 2);
   rect(ctx, C.outline, sx - 1, 7, sw + 2, 11);

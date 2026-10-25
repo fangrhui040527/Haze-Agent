@@ -55,6 +55,7 @@ export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
   news: 'News outlet',
   community: 'Community report',
   low_cost_sensor: 'Low-cost sensor',
+  data_platform: 'Data platform',
 };
 
 export const EVIDENCE_KIND_LABELS: Record<EvidenceKind, string> = {

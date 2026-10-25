@@ -46,7 +46,7 @@ export function LiveDataProvider({ children }: { children: ReactNode }) {
   const [freshIds, setFreshIds] = useState<ReadonlySet<string>>(new Set());
   const [connection, setConnection] = useState<ConnectionStatus>('connecting');
   const [autoApply, setAutoApply] = useLocalStorageState(
-    'hazewatch.table.autoApply',
+    'haze.table.autoApply',
     false,
   );
   const [attempt, setAttempt] = useState(0);
