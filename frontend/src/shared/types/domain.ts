@@ -27,7 +27,8 @@ export type SourceKind =
   | 'government'
   | 'news'
   | 'community'
-  | 'low_cost_sensor';
+  | 'low_cost_sensor'
+  | 'data_platform';
 
 /** How a piece of evidence was produced. Never mix these up in the UI. */
 export type EvidenceKind = 'observation' | 'forecast' | 'modeled' | 'report';
@@ -94,7 +95,9 @@ export interface Weather {
 export interface FireInfo {
   hotspotCount: number;
   maxFrpMw: number | null;
-  landType: 'peat' | 'forest' | 'agriculture' | 'grassland' | 'mixed';
+  /** 'unknown' for real satellite detections: a hotspot alone does not show the land type. */
+  landType:
+    'peat' | 'forest' | 'agriculture' | 'grassland' | 'mixed' | 'unknown';
   detectionConfidence: 'low' | 'nominal' | 'high';
 }
 

@@ -117,4 +117,20 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
     }
     expect(taskRequests).toEqual([]);
   });
+
+  it('passes dashboard data and report routes to the server proxy without admitting a general task', async () => {
+    for (const path of [
+      '/api/health',
+      '/api/snapshot',
+      '/api/items/hz-example',
+      '/api/stream',
+      '/api/runs',
+      '/api/reports/report-id/events',
+    ]) {
+      const response = await requestTo(mode, path);
+      expect(response.fellThrough).toBe(true);
+      expect(response.writeHead).not.toHaveBeenCalled();
+    }
+    expect(taskRequests).toEqual([]);
+  });
 });

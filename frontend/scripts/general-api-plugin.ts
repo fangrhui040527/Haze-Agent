@@ -67,6 +67,16 @@ export function generalApiPlugin(): Plugin {
     response: ServerResponse,
     next: () => void,
   ) => {
+    // The dashboard server owns these routes. Let Vite proxy them after the
+    // local general task handler has claimed its own endpoints.
+    if (
+      /^\/api\/(?:health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:[/?]|$)/.test(
+        request.url ?? '',
+      )
+    ) {
+      next();
+      return;
+    }
     if (!/^\/api(?:[/?]|$)/.test(request.url ?? '')) {
       next();
       return;

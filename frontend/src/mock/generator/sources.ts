@@ -32,7 +32,7 @@ const S = (
     cadence,
     licenceNote,
     reliabilityNote,
-    url: `https://example.org/hazewatch-demo/sources/${id}`,
+    url: `https://example.org/haze-demo/sources/${id}`,
   },
   scope,
 });

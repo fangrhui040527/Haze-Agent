@@ -1,9 +1,20 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import { fixtureTask } from '../../services/agents/testFixtures.ts';
 import { ChatPanel } from './ChatPanel.tsx';
+
+function renderChat(run = idleRun()) {
+  return renderToStaticMarkup(
+    createElement(
+      MemoryRouter,
+      null,
+      createElement(ChatPanel, { run, prefill: null }),
+    ),
+  );
+}
 
 function idleRun(): AgentRun {
   return {
@@ -29,20 +40,20 @@ function idleRun(): AgentRun {
 
 describe('chat after crew demo retirement', () => {
   let saved: unknown[];
+  let storageKey: string;
   beforeEach(() => {
     saved = [];
+    storageKey = 'haze.chat.v1';
     vi.stubGlobal('localStorage', {
       getItem: (key: string) =>
-        key === 'hazewatch.chat.v1' ? JSON.stringify(saved) : null,
+        key === storageKey ? JSON.stringify(saved) : null,
       setItem: vi.fn(),
     });
   });
   afterEach(() => vi.unstubAllGlobals());
 
   it('offers the current evidence example without a crew-demo launch action', () => {
-    const markup = renderToStaticMarkup(
-      createElement(ChatPanel, { run: idleRun(), prefill: null }),
-    );
+    const markup = renderChat();
     expect(markup).toContain(
       'Explain the main conclusions in my attached sources',
     );
@@ -53,6 +64,7 @@ describe('chat after crew demo retirement', () => {
   });
 
   it('retains saved legacy text and safely ignores retired structured payloads', () => {
+    storageKey = 'hazewatch.chat.v1';
     saved = [
       {
         id: 'old',
@@ -65,9 +77,7 @@ describe('chat after crew demo retirement', () => {
         agentExecution: 'old receipt shape',
       },
     ];
-    const markup = renderToStaticMarkup(
-      createElement(ChatPanel, { run: idleRun(), prefill: null }),
-    );
+    const markup = renderChat();
     expect(markup).toContain('Historical fictional comparison.');
     expect(markup).toContain(
       'Archived crew demo. Saved text is retained; structured scheduling',
@@ -91,11 +101,30 @@ describe('chat after crew demo retirement', () => {
         },
       },
     ];
-    const markup = renderToStaticMarkup(
-      createElement(ChatPanel, { run: idleRun(), prefill: null }),
-    );
+    const markup = renderChat();
     expect(markup).toContain('Stale result');
     expect(markup).toContain('Currency: stale');
+  });
+
+  it('keeps a saved dashboard report link and labels its template source', () => {
+    saved = [
+      {
+        id: 'report-answer',
+        role: 'agents',
+        at: '2026-10-25T00:00:00Z',
+        state: 'done',
+        source: 'template',
+        paragraphs: ['Report opened.'],
+        task: {
+          taskId: 'report-1',
+          title: 'Outdoor work plan',
+          kind: 'scheduling',
+        },
+      },
+    ];
+    const markup = renderChat();
+    expect(markup).toContain('href="/task/report-1"');
+    expect(markup).toContain('Template answer from real records');
   });
 
   it('keeps saved task access and explicit server cancellation after polling detaches', () => {
@@ -110,9 +139,7 @@ describe('chat after crew demo retirement', () => {
       taskUrl: '/api/tasks/current',
       status: 'running',
     };
-    const markup = renderToStaticMarkup(
-      createElement(ChatPanel, { run, prefill: null }),
-    );
+    const markup = renderChat(run);
     expect(markup).toContain('Stopped waiting. Check the saved task');
     expect(markup).toContain('href="/api/tasks/current"');
     expect(markup).toContain('Cancel task');

@@ -26,7 +26,12 @@ import {
   updateMockSettings,
   type MockSettings,
 } from '../../mock/settings.ts';
-import { dataService, mockDataService } from '../../services/data/index.ts';
+import {
+  dataService,
+  demoPreference,
+  mockDataService,
+  setShowDemoWithReal,
+} from '../../services/data/index.ts';
 import { useStore } from '../../shared/lib/store.ts';
 import { CATEGORY_LABELS, STATUS_LABELS } from '../../shared/lib/labels.ts';
 import type { DemoDataset } from '../../shared/types/dataset.ts';
@@ -82,7 +87,7 @@ export function DemoDataPage() {
   }, []);
 
   const dataset = demo.dataset;
-  const usingMock = dataService === mockDataService;
+  const preference = useStore(demoPreference);
 
   const flash = (text: string) => {
     setMessage(text);
@@ -126,7 +131,7 @@ export function DemoDataPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `hazewatch-demo-data-seed${dataset.seed}-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `haze-demo-data-seed${dataset.seed}-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -139,12 +144,26 @@ export function DemoDataPage() {
         interface before the backend is ready.
       </div>
 
-      {!usingMock && (
-        <StateMessage kind="info" title="The dashboard is not using mock data.">
-          It uses “{dataService.label}”. Changes here only affect the mock.
-          Switch in <code>src/services/data/index.ts</code>.
-        </StateMessage>
-      )}
+      <Panel className={styles.block}>
+        <h2>Real data vs demo data</h2>
+        <p>
+          Dashboard source now: <strong>{dataService.label}</strong>.
+        </p>
+        <label>
+          <input
+            type="checkbox"
+            checked={preference.showDemoWithReal}
+            onChange={(e) => setShowDemoWithReal(e.target.checked)}
+          />{' '}
+          Show fictional demo data next to real data
+        </label>
+        <p>
+          Off by default: when the Haze server has real data, demo data is
+          hidden. When the server is unreachable or has no records yet, demo
+          data is shown with the DEMO banner. Changes below only affect demo
+          data.
+        </p>
+      </Panel>
 
       <Panel className={styles.block}>
         <h1>Demo data</h1>

@@ -12,6 +12,7 @@
  */
 
 import type { AgentId } from './domain.ts';
+import type { TaskLink } from './tasks.ts';
 import type {
   TaskEvent,
   TaskRecord,
@@ -87,9 +88,11 @@ export interface AgentAnswer {
   paragraphs: string[];
   citations: Citation[];
   /** Where the words came from. Shown to the user; never claim "model" for a template. */
-  source: 'mock_template' | 'evidence_model' | 'evidence_fixture';
+  source: 'mock_template' | 'evidence_model' | 'evidence_fixture' | 'template';
   fictional: boolean;
   durationMs: number;
+  /** Optional template report opened by the separate dashboard server. */
+  task?: TaskLink;
   evidence?: {
     taskUrl: string;
     result: TaskResult;

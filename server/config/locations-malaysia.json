@@ -1,0 +1,1088 @@
+{
+  "description": "Malaysian places watched by HazeOps in addition to the frontend location list. GeoNames data (CC BY 4.0), via the Open-Meteo Geocoding API and, when a GeoNames username is set, the GeoNames search API (populated places of 15,000+ people).",
+  "generatedAt": "2026-10-24T12:33:02.792Z",
+  "generator": "server/scripts/build-malaysia-locations.mjs",
+  "sources": ["curated list"],
+  "places": [
+    {
+      "location": {
+        "id": "batu-pahat",
+        "name": "Batu Pahat",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.8548,
+        "lon": 102.9325,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Johor",
+      "geonamesId": 1732687,
+      "population": 156236,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "iskandar-puteri",
+        "name": "Iskandar Puteri",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.39324,
+        "lon": 103.62322,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "large"
+      },
+      "state": "Johor",
+      "geonamesId": 10063567,
+      "population": 575977,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kluang",
+        "name": "Kluang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.03046,
+        "lon": 103.31689,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Johor",
+      "geonamesId": 1732811,
+      "population": 323762,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kota-tinggi",
+        "name": "Kota Tinggi",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.7381,
+        "lon": 103.8999,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Johor",
+      "geonamesId": 1732738,
+      "population": 52743,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "mersing",
+        "name": "Mersing",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.4312,
+        "lon": 103.8405,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Johor",
+      "geonamesId": 1732826,
+      "population": 22007,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "muar",
+        "name": "Muar town",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.0442,
+        "lon": 102.5689,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Johor",
+      "geonamesId": 1732869,
+      "population": 314776,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "pasir-gudang",
+        "name": "Pasir Gudang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.462,
+        "lon": 103.9053,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "large"
+      },
+      "state": "Johor",
+      "geonamesId": 1732722,
+      "population": 534659,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "pontian",
+        "name": "Pontian",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.4866,
+        "lon": 103.3896,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Johor",
+      "geonamesId": 1732711,
+      "population": 1787,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "segamat",
+        "name": "Segamat",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.5148,
+        "lon": 102.8158,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Johor",
+      "geonamesId": 1732846,
+      "population": 69816,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kulim",
+        "name": "Kulim",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.36499,
+        "lon": 100.56177,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Kedah",
+      "geonamesId": 1734393,
+      "population": 170889,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "langkawi",
+        "name": "Langkawi (Kuah)",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 6.32649,
+        "lon": 99.8432,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Kedah",
+      "geonamesId": 1222396,
+      "population": 30212,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "sungai-petani",
+        "name": "Sungai Petani",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.647,
+        "lon": 100.48772,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "large"
+      },
+      "state": "Kedah",
+      "geonamesId": 1735498,
+      "population": 544851,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "gua-musang",
+        "name": "Gua Musang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.88441,
+        "lon": 101.96857,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Kelantan",
+      "geonamesId": 1734651,
+      "population": 19731,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kuala-krai",
+        "name": "Kuala Krai",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.5313,
+        "lon": 102.19925,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Kelantan",
+      "geonamesId": 1735572,
+      "population": 105007,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "pasir-mas",
+        "name": "Pasir Mas",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 6.04934,
+        "lon": 102.13987,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Kelantan",
+      "geonamesId": 1736372,
+      "population": 230424,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "labuan",
+        "name": "Labuan",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.28028,
+        "lon": 115.2475,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Labuan",
+      "geonamesId": 1733782,
+      "population": 95120,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "alor-gajah",
+        "name": "Alor Gajah",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.3804,
+        "lon": 102.2089,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Melaka",
+      "geonamesId": 1734745,
+      "population": 20163,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "port-dickson",
+        "name": "Port Dickson",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.52462,
+        "lon": 101.79651,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Negeri Sembilan",
+      "geonamesId": 1734815,
+      "population": 119300,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "bentong",
+        "name": "Bentong Town",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.52229,
+        "lon": 101.90866,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1779790,
+      "population": 49213,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "cameron-highlands",
+        "name": "Cameron Highlands (Tanah Rata)",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.46361,
+        "lon": 101.3763,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1735262,
+      "population": 7000,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "jerantut",
+        "name": "Jerantut",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.936,
+        "lon": 102.3626,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1732602,
+      "population": 33606,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "pekan",
+        "name": "Pekan",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.4836,
+        "lon": 103.3996,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1734971,
+      "population": 31826,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "raub",
+        "name": "Raub",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.7899,
+        "lon": 101.857,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1732663,
+      "population": 40024,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "temerloh",
+        "name": "Temerluh",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.4506,
+        "lon": 102.4176,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Pahang",
+      "geonamesId": 1735022,
+      "population": 59916,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "bukit-mertajam",
+        "name": "Bukit Mertajam",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.36301,
+        "lon": 100.4667,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Penang",
+      "geonamesId": 1735079,
+      "population": 212329,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "butterworth",
+        "name": "Butterworth",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.3991,
+        "lon": 100.36382,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Penang",
+      "geonamesId": 1735076,
+      "population": 107591,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kampar",
+        "name": "Kampar",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.3,
+        "lon": 101.15,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Perak",
+      "geonamesId": 1735274,
+      "population": 19056,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kuala-kangsar",
+        "name": "Kuala Kangsar",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.76667,
+        "lon": 100.93333,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Perak",
+      "geonamesId": 1734599,
+      "population": 39331,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "lumut",
+        "name": "Lumut",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.2323,
+        "lon": 100.6298,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Perak",
+      "geonamesId": 1735450,
+      "population": 39595,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "sitiawan",
+        "name": "Sitiawan",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.2168,
+        "lon": 100.6996,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Perak",
+      "geonamesId": 1735453,
+      "population": 156234,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "taiping",
+        "name": "Taiping",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.85,
+        "lon": 100.73333,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Perak",
+      "geonamesId": 1734586,
+      "population": 217647,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "teluk-intan",
+        "name": "Teluk Anson",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.02219,
+        "lon": 101.02083,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Perak",
+      "geonamesId": 1735459,
+      "population": 232800,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kangar",
+        "name": "Kangar",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 6.4414,
+        "lon": 100.19862,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Perlis",
+      "geonamesId": 1736278,
+      "population": 63869,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "putrajaya",
+        "name": "Putrajaya",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.93527,
+        "lon": 101.69112,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Putrajaya",
+      "geonamesId": 6697380,
+      "population": 50000,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "beaufort",
+        "name": "Beaufort",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.3473,
+        "lon": 115.7455,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sabah",
+      "geonamesId": 1733874,
+      "population": 15855,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "keningau",
+        "name": "Keningau",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.3378,
+        "lon": 116.1602,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sabah",
+      "geonamesId": 1734098,
+      "population": 77650,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kudat",
+        "name": "Kudat",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 6.88732,
+        "lon": 116.82364,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sabah",
+      "geonamesId": 1736458,
+      "population": 32393,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "lahad-datu",
+        "name": "Lahad Datu",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.02298,
+        "lon": 118.32897,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Sabah",
+      "geonamesId": 1733953,
+      "population": 105622,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "sandakan",
+        "name": "Sandakan",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.8402,
+        "lon": 118.1179,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Sabah",
+      "geonamesId": 1734052,
+      "population": 439050,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "semporna",
+        "name": "Semporna",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.48178,
+        "lon": 118.61119,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sabah",
+      "geonamesId": 1733697,
+      "population": 62641,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "tawau",
+        "name": "Tawau",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.24482,
+        "lon": 117.89115,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Sabah",
+      "geonamesId": 1734199,
+      "population": 372615,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "bintulu",
+        "name": "Bintulu",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.16667,
+        "lon": 113.03333,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1737486,
+      "population": 151617,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kapit",
+        "name": "Kapit",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.99546,
+        "lon": 112.93254,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1737185,
+      "population": 33014,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "limbang",
+        "name": "Limbang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.75477,
+        "lon": 115.01011,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1737714,
+      "population": 38093,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "mukah",
+        "name": "Mukah",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.89435,
+        "lon": 112.09145,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1735339,
+      "population": 33478,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "sarikei",
+        "name": "Sarikei",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.11667,
+        "lon": 111.51667,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1735837,
+      "population": 44039,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "sri-aman",
+        "name": "Sri Aman",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 1.24722,
+        "lon": 111.45278,
+        "timeZone": "Asia/Kuching",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Sarawak",
+      "geonamesId": 1735799,
+      "population": 47313,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "ampang",
+        "name": "Ampang Resettlement",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.13333,
+        "lon": 101.76667,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Selangor",
+      "geonamesId": 1783151,
+      "population": null,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "banting",
+        "name": "Banting",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.8136,
+        "lon": 101.50185,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Selangor",
+      "geonamesId": 1734781,
+      "population": 48240,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "cyberjaya",
+        "name": "Cyberjaya",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.92281,
+        "lon": 101.65718,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Selangor",
+      "geonamesId": 6930887,
+      "population": 79200,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kajang",
+        "name": "Kajang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 2.99424,
+        "lon": 101.78875,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Selangor",
+      "geonamesId": 10941913,
+      "population": 236240,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kuala-kubu-bharu",
+        "name": "Kuala Kubu Bharu",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.5638,
+        "lon": 101.6581,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Selangor",
+      "geonamesId": 1732676,
+      "population": 194387,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kuala-selangor",
+        "name": "Kuala Selangor",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.35,
+        "lon": 101.25,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Selangor",
+      "geonamesId": 1732891,
+      "population": 55887,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "petaling-jaya",
+        "name": "Petaling Jaya",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.10726,
+        "lon": 101.60671,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "large"
+      },
+      "state": "Selangor",
+      "geonamesId": 1735158,
+      "population": 807879,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "puchong",
+        "name": "Puchong",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3,
+        "lon": 101.61667,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Selangor",
+      "geonamesId": 1749822,
+      "population": 375181,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "rawang",
+        "name": "Rawang",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.3213,
+        "lon": 101.5767,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Selangor",
+      "geonamesId": 1735150,
+      "population": 199095,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "subang-jaya",
+        "name": "Subang Jaya",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 3.04384,
+        "lon": 101.58062,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "large"
+      },
+      "state": "Selangor",
+      "geonamesId": 8504423,
+      "population": 708296,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "dungun",
+        "name": "Dungun",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.775,
+        "lon": 103.4162,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Terengganu",
+      "geonamesId": 1734308,
+      "population": 34767,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kemaman",
+        "name": "Kemaman (Cukai)",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 4.25,
+        "lon": 103.41667,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "small"
+      },
+      "state": "Terengganu",
+      "geonamesId": 1732945,
+      "population": 82425,
+      "origin": "curated"
+    },
+    {
+      "location": {
+        "id": "kuala-terengganu",
+        "name": "Kuala Terengganu",
+        "region": "Southeast Asia",
+        "country": "Malaysia",
+        "countryCode": "MY",
+        "lat": 5.3302,
+        "lon": 103.1408,
+        "timeZone": "Asia/Kuala_Lumpur",
+        "aqiStandard": "Malaysia Air Pollutant Index (API)",
+        "populationBand": "medium"
+      },
+      "state": "Terengganu",
+      "geonamesId": 1734705,
+      "population": 426500,
+      "origin": "curated"
+    }
+  ]
+}

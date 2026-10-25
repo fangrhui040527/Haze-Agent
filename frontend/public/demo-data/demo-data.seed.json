@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "hazewatch.demo.v1",
+  "schemaVersion": "haze.demo.v1",
   "fictional": true,
-  "notice": "FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the HazeWatch interface. Do not use it for health or safety decisions.",
+  "notice": "FICTIONAL DEMO DATA. Every value, source and event in this file is invented to test the Haze interface. Do not use it for health or safety decisions.",
   "seed": 2026,
   "generatedAt": "2026-10-24T05:59:58.435Z",
   "locations": [
@@ -436,7 +436,7 @@
       "cadence": "≈4 passes per day, ~3 h processing delay",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Detects heat anomalies; clouds and smoke can hide fires; a hotspot is not a confirmed fire.",
-      "url": "https://example.org/hazewatch-demo/sources/orbital-firewatch"
+      "url": "https://example.org/haze-demo/sources/orbital-firewatch"
     },
     {
       "id": "skylens-aerosol",
@@ -447,7 +447,7 @@
       "cadence": "1 pass per day",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Measures aerosol in the whole air column, not at ground level.",
-      "url": "https://example.org/hazewatch-demo/sources/skylens-aerosol"
+      "url": "https://example.org/haze-demo/sources/skylens-aerosol"
     },
     {
       "id": "cumulus-model",
@@ -458,7 +458,7 @@
       "cadence": "Issued twice daily",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Coarse ~40 km grid; city-level detail is approximate.",
-      "url": "https://example.org/hazewatch-demo/sources/cumulus-model"
+      "url": "https://example.org/haze-demo/sources/cumulus-model"
     },
     {
       "id": "openair-hub",
@@ -469,7 +469,7 @@
       "cadence": "Hourly",
       "licenceNote": "Fictional: imagine \"attribution required\".",
       "reliabilityNote": "Aggregates official monitors; inherits their outages.",
-      "url": "https://example.org/hazewatch-demo/sources/openair-hub"
+      "url": "https://example.org/haze-demo/sources/openair-hub"
     },
     {
       "id": "airswarm",
@@ -480,7 +480,7 @@
       "cadence": "Every 2 minutes",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Low-cost optical sensors read high in humid air unless corrected.",
-      "url": "https://example.org/hazewatch-demo/sources/airswarm"
+      "url": "https://example.org/haze-demo/sources/airswarm"
     },
     {
       "id": "global-wire",
@@ -491,7 +491,7 @@
       "cadence": "Continuous",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Reports are leads, not measurements.",
-      "url": "https://example.org/hazewatch-demo/sources/global-wire"
+      "url": "https://example.org/haze-demo/sources/global-wire"
     },
     {
       "id": "smokespotter",
@@ -502,7 +502,7 @@
       "cadence": "As reported",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Unverified personal reports; useful for early warning.",
-      "url": "https://example.org/hazewatch-demo/sources/smokespotter"
+      "url": "https://example.org/haze-demo/sources/smokespotter"
     },
     {
       "id": "asean-haze-desk",
@@ -513,7 +513,7 @@
       "cadence": "Daily bulletin",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Official regional summary; updated once a day.",
-      "url": "https://example.org/hazewatch-demo/sources/asean-haze-desk"
+      "url": "https://example.org/haze-demo/sources/asean-haze-desk"
     },
     {
       "id": "equator-monitoring",
@@ -524,7 +524,7 @@
       "cadence": "Hourly",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Reference-grade stations; occasional maintenance gaps.",
-      "url": "https://example.org/hazewatch-demo/sources/equator-monitoring"
+      "url": "https://example.org/haze-demo/sources/equator-monitoring"
     },
     {
       "id": "straits-morning-post",
@@ -535,7 +535,7 @@
       "cadence": "Several times a day",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Local newspaper; figures may be rounded or quoted second-hand.",
-      "url": "https://example.org/hazewatch-demo/sources/straits-morning-post"
+      "url": "https://example.org/haze-demo/sources/straits-morning-post"
     },
     {
       "id": "monsoon-model",
@@ -546,7 +546,7 @@
       "cadence": "Issued 4 times daily",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Higher resolution than the global model for this region.",
-      "url": "https://example.org/hazewatch-demo/sources/monsoon-model"
+      "url": "https://example.org/haze-demo/sources/monsoon-model"
     },
     {
       "id": "sea-health-ministry",
@@ -557,7 +557,7 @@
       "cadence": "When issued",
       "licenceNote": "Fictional demo source: no licence applies.",
       "reliabilityNote": "Official health guidance; the only source used for health wording.",
-      "url": "https://example.org/hazewatch-demo/sources/sea-health-ministry"
+      "url": "https://example.org/haze-demo/sources/sea-health-ministry"
     }
   ],
   "items": [
@@ -2173,7 +2173,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Jakarta was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): traffic, industry and nearby burning. Based on 1 source(s)."
       ],
       "status": "unverified",
@@ -6499,7 +6499,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Kuantan was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): peat fires around Pekan plus regional smoke. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -8767,7 +8767,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Kota Bharu was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): open burning on farmland. Based on 3 source(s)."
       ],
       "status": "conflicting",
@@ -10613,7 +10613,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Klang was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): port and industrial emissions plus smoke from Sumatra. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -13060,7 +13060,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Medan was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): land clearing in North Sumatra and traffic. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -15780,7 +15780,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Palembang was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): peat and plantation fires. Based on 2 source(s)."
       ],
       "status": "verified",
@@ -16275,7 +16275,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Medan was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): land clearing in North Sumatra and traffic. Based on 2 source(s)."
       ],
       "status": "verified",
@@ -16431,7 +16431,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Kota Kinabalu was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): occasional smoke from Borneo fires. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -19495,7 +19495,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Kuantan was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): peat fires around Pekan plus regional smoke. Based on 3 source(s)."
       ],
       "status": "partial",
@@ -19865,7 +19865,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for George Town was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): regional smoke and traffic. Based on 1 source(s)."
       ],
       "status": "retracted",
@@ -27230,7 +27230,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Banjarmasin was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): peat and swamp fires in South Kalimantan. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -29405,7 +29405,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Pekanbaru was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): peatland fires in Riau. Based on 1 source(s)."
       ],
       "status": "partial",
@@ -30491,7 +30491,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Bandar Seri Begawan was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): smoke from Borneo peat fires. Based on 2 source(s)."
       ],
       "status": "verified",
@@ -31190,7 +31190,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Ipoh was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): regional smoke held in the Kinta Valley. Based on 3 source(s)."
       ],
       "status": "verified",
@@ -31717,7 +31717,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Hanoi was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): straw burning and winter inversions. Based on 2 source(s)."
       ],
       "status": "stale",
@@ -32227,7 +32227,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Hat Yai was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): smoke from Sumatra reaching southern Thailand. Based on 2 source(s)."
       ],
       "status": "stale",
@@ -32705,7 +32705,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Ho Chi Minh City was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): traffic and dry-season dust. Based on 1 source(s)."
       ],
       "status": "partial",
@@ -34638,7 +34638,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Ipoh was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): regional smoke held in the Kinta Valley. Based on 3 source(s)."
       ],
       "status": "partial",
@@ -35294,7 +35294,7 @@
       "summary": "Official guidance notice (demo text). Not medical advice.",
       "details": [
         "Health guidance for Klang was updated (fictional notice).",
-        "This is demo text. Real guidance must come from the local health authority; HazeWatch does not give medical advice.",
+        "This is demo text. Real guidance must come from the local health authority; Haze does not give medical advice.",
         "Typical haze driver here (demo profile): port and industrial emissions plus smoke from Sumatra. Based on 3 source(s)."
       ],
       "status": "conflicting",

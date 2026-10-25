@@ -32,7 +32,7 @@ export interface DemoState {
   saveWarning: string | null;
 }
 
-const STORAGE_KEY = 'hazewatch.demo.dataset.v1';
+const STORAGE_KEY = 'haze.demo.dataset.v1';
 export const SEED_URL = `${import.meta.env.BASE_URL}demo-data/demo-data.seed.json`;
 
 export const demoStore = createStore<DemoState>({

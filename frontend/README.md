@@ -1,9 +1,9 @@
-# HazeWatch frontend
+# Haze frontend
 
 A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World Model, H-Mem,
 EvidenceCritic, WorkerShield) shown as a pixel-art office.
 
-> **Status: read-only evidence chat plus a fictional dashboard table.** General chat uses the
+> **Status: read-only evidence chat plus a live dashboard with fictional fallback.** General chat uses the
 > durable task API and a single configured Zetaris SmokeLedger PM2.5 source. Missing access
 > or provider failures are explicit errors; no mock answer is substituted. Operational actions
 > and publication remain outside this milestone. See [implementation and verification](../docs/evidence/milestone-v014.md).
@@ -104,7 +104,7 @@ frontend/
    │  ├─ demo-data/            Demo Data page
    │  └─ dashboard/            main page + useAgentRun (one run shared by chat and office)
    ├─ services/
-   │  ├─ data/                 DataService interface, MockDataService, ZetarisDataService (TODO), index.ts ← swap here
+   │  ├─ data/                 DataService, MockDataService, HttpDataService, CompositeDataService, index.ts ← swap here
    │  └─ agents/               AgentService interface, HttpAgentService, optional offline mock, index.ts
    ├─ mock/                    everything fake: generator, simulator, demo store, mock answers, mock settings
    ├─ shared/
@@ -150,29 +150,33 @@ Imports use explicit `.ts` / `.tsx` extensions (needed so Node can run the data 
 
 ---
 
-## 5. Swapping the mock data for the real backend (Zetaris)
+## 5. Real data from the Haze server
 
-The fictional dashboard reads data through `DataService` (`src/services/data/DataService.ts`):
+The dashboard reads data through `DataService` (`src/services/data/DataService.ts`):
 `loadSnapshot()`, `getItem(id)`, `subscribe(onUpdate, onStatus)`.
 
-1. Implement the TODOs in `src/services/data/ZetarisDataService.ts`, mapping the backend's JSON into
-   `HazeItem` / `Location` / `Source` (`src/shared/types/domain.ts`).
-2. In **`src/services/data/index.ts`** (the only file to change), replace
-   `export const dataService: DataService = mockDataService;` with
-   `export const dataService: DataService = new ZetarisDataService(import.meta.env.VITE_API_BASE_URL);`
-3. Copy `.env.example` to `.env.local` and set `VITE_API_BASE_URL`.
+- `HttpDataService` reads the Haze server (`../server`): `/api/snapshot`, `/api/items/:id` and the
+  `/api/stream` SSE feed. In development Vite proxies `/api` to `http://127.0.0.1:8000` (override with
+  `HAZE_API`); in a build, set `VITE_API_BASE_URL`.
+- `CompositeDataService` (used in `src/services/data/index.ts`) shows **real data when the server has it** and
+  falls back to the fictional demo data when the server is unreachable or empty. The Demo Data page has a
+  toggle to show demo data next to real data (off by default).
+- Real item ids start with `hz-`; demo ids never do.
+- Chat always uses the general v3 evidence task API. Dashboard server availability does not select a mock chat backend.
 
 **Important:** the browser must **never** call Zetaris directly or hold Zetaris credentials. Anything in
 `VITE_*` variables ships to every visitor. The adapter calls _our_ backend API, and the backend talks to Zetaris.
-This dashboard adapter remains an unimplemented placeholder. The separate evidence task API
-already uses the server-side Zetaris integration; it does not populate the dashboard table.
+The dashboard server and the general evidence task runtime remain separate services.
+Run `npm ci --prefix server` and `npm start --prefix server` from the repository root for real dashboard data.
+Its report pages use `/api/reports/:id/events`; the general evidence protocol owns `/api/tasks`.
+Vite dev and preview proxy dashboard routes to `http://127.0.0.1:8000` (override with `HAZE_API`).
 
 ---
 
 ## 6. Evidence task API and actual execution events
 
-`src/services/agents/index.ts` selects `HttpAgentService` for all questions. The table uses fictional
-dashboard data; table items are never passed as trusted evidence context.
+`src/services/agents/index.ts` selects `HttpAgentService` for all questions. The table can show real
+dashboard data and explicitly fictional fallback data; table items are never passed as trusted evidence context.
 
 The HTTP adapter posts `haze.task.request.v3` to `/api/tasks`, then polls
 `/api/tasks/:id/events?after=CURSOR` and `/api/tasks/:id`. Shared Zod schemas validate admission,

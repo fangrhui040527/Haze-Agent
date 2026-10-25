@@ -32,7 +32,7 @@ function Header() {
           <span className={styles.logo} aria-hidden="true">
             ▦
           </span>{' '}
-          HazeWatch
+          Haze
         </Link>
         {live.fictional && (
           <Badge

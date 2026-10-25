@@ -47,7 +47,7 @@ const NO_FILTERS: Filters = {
   locationId: '',
   category: '',
   status: '',
-  sort: 'rank',
+  sort: 'newest',
 };
 
 function matches(ranked: RankedItem, f: Filters): boolean {
@@ -74,7 +74,7 @@ export function LiveTable() {
   const now = useNow(30_000);
   const isNarrow = useMediaQuery('(max-width: 767px)');
   const [filters, setFilters] = useSessionState<Filters>(
-    'hazewatch.table.filters',
+    'haze.table.filters.v2',
     NO_FILTERS,
   );
   const [searchDraft, setSearchDraft] = useState(filters.search);
@@ -108,10 +108,10 @@ export function LiveTable() {
   useEffect(() => {
     const box = scrollRef.current;
     if (!box || live.status !== 'ready') return;
-    const saved = Number(sessionStorage.getItem('hazewatch.table.scroll') ?? 0);
+    const saved = Number(sessionStorage.getItem('haze.table.scroll') ?? 0);
     if (saved > 0) box.scrollTop = saved;
     const onScroll = () =>
-      sessionStorage.setItem('hazewatch.table.scroll', String(box.scrollTop));
+      sessionStorage.setItem('haze.table.scroll', String(box.scrollTop));
     box.addEventListener('scroll', onScroll, { passive: true });
     return () => box.removeEventListener('scroll', onScroll);
   }, [live.status]);
@@ -126,7 +126,8 @@ export function LiveTable() {
       return next;
     });
   const filtersActive =
-    JSON.stringify({ ...filters, sort: 'rank' }) !== JSON.stringify(NO_FILTERS);
+    JSON.stringify({ ...filters, sort: NO_FILTERS.sort }) !==
+    JSON.stringify(NO_FILTERS);
 
   return (
     <section className={styles.wrapper} aria-labelledby="live-table-title">
@@ -266,8 +267,8 @@ export function LiveTable() {
           ) : (
             <table className={styles.table}>
               <caption className="visually-hidden">
-                Haze information ranked by score. Use the score button to see
-                why an item has its rank.
+                Haze information, newest first by default. Use the score button
+                to see why an item has its rank.
               </caption>
               <thead>
                 <tr>

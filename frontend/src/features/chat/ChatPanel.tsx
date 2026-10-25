@@ -5,7 +5,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   AgentRunError,
   AgentTaskCancelledError,
@@ -13,6 +13,7 @@ import {
 import { useLocalStorageState, useNow } from '../../shared/hooks/hooks.ts';
 import { isAbortError } from '../../shared/lib/delay.ts';
 import { formatDuration } from '../../shared/lib/time.ts';
+import { readLocal } from '../../shared/lib/store.ts';
 import type {
   AgentAnswer,
   AskRequest,
@@ -46,6 +47,7 @@ interface ChatMessage {
   scheduling?: unknown;
   agentExecution?: unknown;
   evidence?: AgentAnswer['evidence'];
+  task?: AgentAnswer['task'];
   stale?: boolean;
   state: 'pending' | 'done' | 'error' | 'cancelled' | 'task_cancelled';
   error?: string;
@@ -65,6 +67,7 @@ const EXAMPLE_PROMPTS = [
 
 const SOURCE_LABEL = {
   mock_template: 'Demo answer (template)',
+  template: 'Template answer from real records (no AI model connected)',
   model: 'Archived crew demo',
   template_fallback: 'Archived template answer',
   computed_demo: 'Archived crew demo',
@@ -89,10 +92,11 @@ export function ChatPanel({
   run: AgentRun;
   prefill: ChatPrefill | null;
 }) {
+  const navigate = useNavigate();
   // Saved answers stay in this browser, including text from retired demo results.
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
-    'hazewatch.chat.v1',
-    [],
+    'haze.chat.v1',
+    readLocal<ChatMessage[]>('hazewatch.chat.v1', []),
   );
   const [draft, setDraft] = useState('');
   const [sources, setSources] = useState<Artifact[]>([]);
@@ -253,7 +257,11 @@ export function ChatPanel({
         citations: answer.citations,
         source: answer.source,
         evidence: answer.evidence,
+        task: answer.task,
       });
+      // The Manager opened a task report: show it being written.
+      if (answer.task)
+        void navigate(`/task/${encodeURIComponent(answer.task.taskId)}`);
     } catch (error) {
       if (error instanceof AgentTaskCancelledError)
         finish({ state: 'task_cancelled' });
@@ -540,6 +548,13 @@ function MessageBody({
       ))}
       {m.evidence?.result?.schema_version === 'haze.task.result.v3' && (
         <TaskResult evidence={m.evidence} stale={stale} />
+      )}
+      {m.task && (
+        <p>
+          <Link to={`/task/${encodeURIComponent(m.task.taskId)}`}>
+            Open the report: {m.task.title}
+          </Link>
+        </p>
       )}
       {m.citations && m.citations.length > 0 && (
         <p className={styles.citations}>
