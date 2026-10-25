@@ -84,8 +84,8 @@ function Footer() {
   return (
     <footer className={styles.footer}>
       Not medical advice. Follow your local authorities. Sources are listed on
-      each item. Table items are fictional samples; evidence answers identify
-      their source and execution mode.
+      each item. Fictional samples are labeled as demo data; evidence answers
+      identify their source and execution mode.
     </footer>
   );
 }

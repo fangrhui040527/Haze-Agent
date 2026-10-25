@@ -1,25 +1,25 @@
-# 05 — HazeWatch World Model data model
+# 05 — Haze World Model data model
 
-> The contract between the HazeWatch engines layer and anything that writes into it
+> The contract between the Haze engines layer and anything that writes into it
 > (HazeOps today; EvidenceCritic, WorkerShield and teammates' agents later).
 > Written 24 Oct 2026. Implemented in `server/src/world/hazeWorld.ts`.
 
 ## Where it lives
 
 - **Engine:** the pinned Meterless World Model reference (revision `1742dec`), loaded through
-  `app/adapters/meterless/loader.ts` (hash-checked). Namespace **`hazewatch`**, separate from any
+  `app/adapters/meterless/loader.ts` (hash-checked). Namespace **`haze`**, separate from any
   crew-scheduling data.
-- **File:** `.state/hazewatch/world/.world/hazewatch.json` (git-ignored).
-- **One writer:** only the HazeWatch server process opens this file. The reference engine keeps
+- **File:** `.state/haze/world/.world/haze.json` (git-ignored).
+- **One writer:** only the Haze server process opens this file. The reference engine keeps
   state in memory and rewrites the whole file on every write, so two processes would overwrite
   each other. Other agents must call the server (or run inside it), never open the file.
 - **Raw bytes are not in the World Model.** Each retrieved response is archived once in
-  `.state/hazewatch/raw/<sha256>.json`; the World Model keeps the hash and metadata
+  `.state/haze/raw/<sha256>.json`; the World Model keeps the hash and metadata
   (Spec §10: raw archives hold bytes, canonical records hold meaning and status).
 
 ## Rules every writer follows
 
-1. **Always use `externalKey`** (`system: "hazewatch"`). Without it the World Model matches by
+1. **Always use `externalKey`** (`system: "haze"`). Without it the World Model matches by
    name similarity and can auto-merge look-alike names.
 2. **Every write carries provenance** `{ kind, by, at, url?, checksum?, runId? }`. `at` is the
    observation time, never the wall clock, which keeps re-ingest idempotent.
@@ -34,12 +34,12 @@
 
 Entity ids follow the engine's grammar `type:system:id`.
 
-| Type       | Id example                            | Attributes                                                                                                              | Written by         |
-| ---------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `location` | `location:hazewatch:klang`            | region, country, countryCode, lat, lon, timeZone, aqiStandard, populationBand (+ latest fact values, set by the engine) | server config sync |
-| `source`   | `source:hazewatch:src-openaq`         | the frontend `Source` fields + `watcherId`, `freshnessMinutes`                                                          | server config sync |
-| `station`  | `station:hazewatch:openaq-3400978`    | lat, lon, provider, isMonitor, sensorId, nearestLocationId, distanceKm                                                  | HazeOps (OpenAQ)   |
-| `evidence` | `evidence:hazewatch:src-openaq:9f2c…` | a subset of `haze.evidence.v2` (Spec §4.1), see below                                                                   | HazeOps            |
+| Type       | Id example                       | Attributes                                                                                                              | Written by         |
+| ---------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `location` | `location:haze:klang`            | region, country, countryCode, lat, lon, timeZone, aqiStandard, populationBand (+ latest fact values, set by the engine) | server config sync |
+| `source`   | `source:haze:src-openaq`         | the frontend `Source` fields + `watcherId`, `freshnessMinutes`                                                          | server config sync |
+| `station`  | `station:haze:openaq-3400978`    | lat, lon, provider, isMonitor, sensorId, nearestLocationId, distanceKm                                                  | HazeOps (OpenAQ)   |
+| `evidence` | `evidence:haze:src-openaq:9f2c…` | a subset of `haze.evidence.v2` (Spec §4.1), see below                                                                   | HazeOps            |
 
 Klang is the first configured location (the first target user's place); locations are data,
 so any configured city works the same way.
@@ -90,5 +90,5 @@ until EvidenceCritic exists.
 ## How a new agent plugs in
 
 Add a writer method in `HazeWorld` (or call the server's API) that follows the rules above,
-pick a predicate name, and add its projection in `projection.ts`. Ask the HazeWatch engines
+pick a predicate name, and add its projection in `projection.ts`. Ask the Haze engines
 owner before adding entity types.

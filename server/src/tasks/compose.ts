@@ -11,6 +11,7 @@ import type {
 import type { Framing } from '../manager/manager.ts';
 import {
   NEARBY_SENSOR_KM,
+  forecastWindow,
   pm25,
   round1,
   STATUS_WORDS,
@@ -78,8 +79,10 @@ function conditionsTable(
     ]);
   if (forecast?.forecast)
     rows.push([
-      'Model forecast, next 24 h',
-      `${forecast.forecast.direction}, peak near ${round1(forecast.forecast.expectedPm25)}`,
+      `Model forecast (${forecastWindow(forecast).label})`,
+      forecastWindow(forecast).current
+        ? `${forecast.forecast.direction}, peak near ${round1(forecast.forecast.expectedPm25)}`
+        : 'No current forecast available from this record',
       STATUS_WORDS[forecast.status],
       `${time(forecast.observedAt)} ${cite(forecast)}`,
     ]);
@@ -173,7 +176,7 @@ export function composeTask(input: {
     blocks.push({ type: 'bullets', items: nextRequirements.slice(0, 3) });
     gaps.push(
       'No crew, roster or task data was provided.',
-      'Only a 24-hour forecast peak is on record, not an hourly forecast.',
+      'Any stored forecast is a period peak, not an hourly forecast; its validity interval and freshness must cover the requested work.',
       'No reviewed method links PM2.5 readings to safe working hours.',
     );
     assumptions = [

@@ -123,7 +123,7 @@ describe('chat after crew demo retirement', () => {
       },
     ];
     const markup = renderChat();
-    expect(markup).toContain('href="/task/report-1"');
+    expect(markup).toContain('href="/report/report-1"');
     expect(markup).toContain('Template answer from real records');
   });
 
@@ -145,5 +145,7 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Cancel task');
     expect(markup).toContain('Pause task');
     expect(markup).toContain('Saved task');
+    expect(markup).toContain('href="/task/current"');
+    expect(markup).toContain('Open task report');
   });
 });

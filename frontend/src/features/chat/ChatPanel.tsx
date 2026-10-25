@@ -261,7 +261,7 @@ export function ChatPanel({
       });
       // The Manager opened a task report: show it being written.
       if (answer.task)
-        void navigate(`/task/${encodeURIComponent(answer.task.taskId)}`);
+        void navigate(`/report/${encodeURIComponent(answer.task.taskId)}`);
     } catch (error) {
       if (error instanceof AgentTaskCancelledError)
         finish({ state: 'task_cancelled' });
@@ -551,7 +551,7 @@ function MessageBody({
       )}
       {m.task && (
         <p>
-          <Link to={`/task/${encodeURIComponent(m.task.taskId)}`}>
+          <Link to={`/report/${encodeURIComponent(m.task.taskId)}`}>
             Open the report: {m.task.title}
           </Link>
         </p>
@@ -642,6 +642,11 @@ function StatusLine({ run }: { run: AgentRun }) {
         >
           Saved task
         </a>
+      )}
+      {run.task && (
+        <Link to={`/task/${encodeURIComponent(run.task.id)}`}>
+          Open task report
+        </Link>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getConnInfo } from '@hono/node-server/conninfo';
 import { streamSSE } from 'hono/streaming';
 import type { AskRequest } from '../../../frontend/src/shared/types/agents.ts';
+import type { LiveUpdate } from '../../../frontend/src/services/data/DataService.ts';
 import type {
   HazeItem,
   Location,
@@ -29,6 +30,7 @@ export interface AppDependencies {
   hazeops: HazeOps;
   manager: Manager;
   runtime: Runtime;
+  watcherRuntime?: Runtime;
   runs: RunService;
   tasks: TaskService;
   memory: ChatMemory;
@@ -38,7 +40,7 @@ export interface AppDependencies {
     locations: Location[];
     sources: Source[];
   };
-  onItemsChanged: (listener: (items: HazeItem[]) => void) => () => void;
+  onItemsChanged: (listener: (update: LiveUpdate) => void) => () => void;
   tick: () => string[];
   config: {
     coverage: string;
@@ -110,27 +112,55 @@ export function createApp(deps: AppDependencies): Hono {
   app.get('/api/stream', (c) =>
     streamSSE(c, async (stream) => {
       let open = true;
-      const unsubscribe = deps.onItemsChanged((items) => {
-        void stream.writeSSE({
-          event: 'upsert',
-          data: JSON.stringify({
-            kind: 'upsert',
-            items,
-            asOf: new Date().toISOString(),
-          }),
+      let writes = Promise.resolve();
+      const send = (update: LiveUpdate) => {
+        writes = writes.then(async () => {
+          if (open)
+            await stream.writeSSE({
+              event: update.kind,
+              data: JSON.stringify(update),
+            });
         });
+        // A disconnected client must not leave a rejected write unhandled.
+        void writes.catch(() => {
+          open = false;
+        });
+      };
+      let initializing = true;
+      const buffered: LiveUpdate[] = [];
+      const unsubscribe = deps.onItemsChanged((update) => {
+        if (initializing) buffered.push(update);
+        else send(update);
       });
       stream.onAbort(() => {
         open = false;
         unsubscribe();
       });
-      await stream.writeSSE({
-        event: 'hello',
-        data: JSON.stringify({ at: new Date().toISOString() }),
-      });
-      while (open) {
-        await stream.sleep(KEEP_ALIVE_MS);
-        if (open) await stream.writeSSE({ event: 'ping', data: '' });
+      try {
+        // Subscribe first, then send a replacement on every connection. This covers
+        // missed reconnect events and the gap after GET /api/snapshot.
+        send({
+          kind: 'reset',
+          snapshot: {
+            ...deps.snapshot(),
+            asOf: new Date().toISOString(),
+            fictional: false,
+          },
+        });
+        initializing = false;
+        for (const update of buffered) send(update);
+        await writes;
+        await stream.writeSSE({
+          event: 'hello',
+          data: JSON.stringify({ at: new Date().toISOString() }),
+        });
+        while (open) {
+          await stream.sleep(KEEP_ALIVE_MS);
+          if (open) await stream.writeSSE({ event: 'ping', data: '' });
+        }
+      } finally {
+        open = false;
+        unsubscribe();
       }
     }),
   );
@@ -139,7 +169,9 @@ export function createApp(deps: AppDependencies): Hono {
   app.get('/api/manager/assignments', (c) =>
     c.json(deps.manager.assignments()),
   );
-  app.get('/api/runtime/jobs', (c) => c.json(deps.runtime.jobs()));
+  app.get('/api/runtime/jobs', (c) =>
+    c.json([...deps.runtime.jobs(), ...(deps.watcherRuntime?.jobs() ?? [])]),
+  );
 
   // Spec §15.2: operator/service-only bounded scan.
   app.post('/api/heartbeat/tick', (c) => {
@@ -269,9 +301,9 @@ export function createApp(deps: AppDependencies): Hono {
       const id = c.req.param('id');
       if (!deps.tasks.exists(id)) return c.json({ error: 'not found' }, 404);
       const result = deps.tasks.result(id);
-      return result
-        ? c.json(result)
-        : c.json({ taskId: id, state: 'running' }, 202);
+      if (result) return c.json(result);
+      const status = deps.tasks.status(id)!;
+      return c.json(status, status.state === 'running' ? 202 : 200);
     });
 
     app.get(`${prefix}/:id/events`, (c) => {

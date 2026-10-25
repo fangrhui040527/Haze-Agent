@@ -5,6 +5,7 @@ import type {
   Location,
 } from '../../frontend/src/shared/types/domain.ts';
 import type { NearbyReading } from './runs/answer.ts';
+import type { LiveUpdate } from '../../frontend/src/services/data/DataService.ts';
 import { createApp } from './api/app.ts';
 import { loadConfig, REPOSITORY_ROOT } from './config.ts';
 import { openEngines } from './engines.ts';
@@ -27,6 +28,7 @@ import { Runtime } from './runtime/runtime.ts';
 import { RunService } from './runs/runs.ts';
 import { TaskService } from './tasks/tasks.ts';
 import { HazeWorld, localId } from './world/hazeWorld.ts';
+import { createLiveUpdateTracker } from './world/liveUpdates.ts';
 import {
   projectItems,
   projectLocations,
@@ -88,6 +90,7 @@ await world.syncLocations(locations, configAt);
 await world.syncSources(hazeops.specs(), configAt);
 
 const runtime = new Runtime();
+const watcherRuntime = new Runtime();
 const manager = new Manager();
 const memory = new ChatMemory(engines.memory);
 
@@ -105,21 +108,14 @@ const snapshot = () => {
   };
 };
 
-// Live table updates: recompute after World Model writes and push only changed rows.
-const itemListeners = new Set<(items: HazeItem[]) => void>();
-const lastSent = new Map<string, string>();
-const keyOf = (i: HazeItem) =>
-  `${i.revision}|${i.status}|${i.observedAt}|${i.updatedAt}`;
-for (const item of snapshot().items) lastSent.set(item.id, keyOf(item));
+// Push changed rows, or a full replacement when rows disappear.
+const itemListeners = new Set<(update: LiveUpdate) => void>();
+const trackUpdates = createLiveUpdateTracker(snapshot());
 let pending: ReturnType<typeof setTimeout> | null = null;
 const publishChanges = () => {
   pending = null;
-  const changed = snapshot().items.filter(
-    (item) => lastSent.get(item.id) !== keyOf(item),
-  );
-  for (const item of changed) lastSent.set(item.id, keyOf(item));
-  if (changed.length > 0)
-    for (const listener of itemListeners) listener(changed);
+  const update = trackUpdates(snapshot());
+  if (update) for (const listener of itemListeners) listener(update);
 };
 world.onFact(() => {
   pending ??= setTimeout(publishChanges, CHANGE_DEBOUNCE_MS);
@@ -157,6 +153,7 @@ const runs: RunService = new RunService({
   hazeops,
   manager,
   runtime,
+  watcherRuntime,
   memory,
   snapshot,
   freshItems: () => snapshot().items,
@@ -175,7 +172,7 @@ const tasks = new TaskService({
 const tick = (): string[] => {
   const due = hazeops.dueWatchers(new Date());
   for (const id of due) {
-    runtime.admit(
+    watcherRuntime.admit(
       `watcher:${id}`,
       `HazeOps ${id}`,
       WATCHER_DEADLINE_MS,
@@ -199,6 +196,7 @@ const app = createApp({
   hazeops,
   manager,
   runtime,
+  watcherRuntime,
   runs,
   tasks,
   memory,
