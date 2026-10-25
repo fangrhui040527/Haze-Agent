@@ -14,7 +14,6 @@ import styles from './AgentOffice.module.css';
 import { OFFICE_HEIGHT, OFFICE_WIDTH, STATIONS } from './officeLayout.ts';
 import {
   deriveAgentStatuses,
-  isLocalCheckRun,
   OfficeModel,
   type AgentStatus,
   type Pose,
@@ -57,9 +56,12 @@ export function AgentOffice({
   const isControlled = externalSelected !== undefined;
   const selected = isControlled ? externalSelected : internalSelected;
   const onSelect = externalOnSelect ?? setInternalSelected;
-  const statuses = useMemo(() => deriveAgentStatuses(run.events), [run.events]);
+  const statuses = useMemo(
+    () => deriveAgentStatuses(run.events, run.task?.status),
+    [run.events, run.task?.status],
+  );
   const levelB = run.events.some((e) => e.type === 'run_state');
-  const localCheck = isLocalCheckRun(run.events);
+  const taskEvents = run.events.filter((event) => event.type === 'task_event');
   const toggle = (id: AgentId) => onSelect(selected === id ? null : id);
 
   return (
@@ -91,16 +93,64 @@ export function AgentOffice({
           onSelect={onSelect}
         />
       )}
-      {localCheck && (
-        <p className={styles.note}>
-          This scheduling request uses local checks. No model agents are run.
-        </p>
-      )}
-      {levelB && !localCheck && (
+      {levelB && (
         <p className={styles.note}>
           The backend only reports the overall run state, so individual agent
           steps are not shown.
         </p>
+      )}
+      {taskEvents.length > 0 && (
+        <details className={styles.note}>
+          <summary>
+            Actual task execution receipts ({taskEvents.length})
+          </summary>
+          <ol>
+            {taskEvents.map((event) => (
+              <li key={event.receipt.cursor}>
+                <time dateTime={event.at}>
+                  {new Date(event.at).toISOString().slice(11, 19)} UTC
+                </time>
+                {' · '}
+                {event.receipt.actor}: {event.message}
+                {'assignment_id' in event.receipt &&
+                  event.receipt.assignment_id && (
+                    <span> · Assignment {event.receipt.assignment_id}</span>
+                  )}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      {run.task?.record && (
+        <section className={styles.assignments} aria-label="Actual assignments">
+          <h3>Assignments</h3>
+          {run.task.record.assignments.length === 0 ? (
+            <p>No specialist assignments have been admitted.</p>
+          ) : (
+            <ol>
+              {run.task.record.assignments.map((assignment) => (
+                <li key={assignment.id}>
+                  <strong>{assignment.role}</strong> ? {assignment.capability} ?{' '}
+                  {assignment.status}
+                  <p>{assignment.brief}</p>
+                  <small>
+                    Revision {assignment.revision}; brief acknowledged at
+                    revision {assignment.acknowledged_revision}. Evidence
+                    support: {assignment.support}. Output:{' '}
+                    {assignment.usability}.
+                  </small>
+                  {assignment.gaps.length > 0 && (
+                    <ul>
+                      {assignment.gaps.map((gap, index) => (
+                        <li key={index}>{gap}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
       )}
       <div className={styles.legendRegion}>
         <ul
@@ -255,7 +305,10 @@ function OfficeCanvas({
       model.apply(events[i]!, now, reduced || (catchingUp && !isLatest));
     }
     appliedRef.current = events.length;
-  }, [run.events, reduced]);
+    // A persisted server cancellation also stops the office after polling detached.
+    if (['cancelled', 'paused', 'waiting'].includes(run.task?.status ?? ''))
+      model.reset();
+  }, [run.events, run.task?.status, reduced]);
 
   useEffect(() => {
     if (modelRef.current) modelRef.current.ambient = !reduced;

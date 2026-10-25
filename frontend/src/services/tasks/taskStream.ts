@@ -6,7 +6,7 @@ const baseUrl = (
 
 /**
  * Follows one task report on the Haze server (server/src/tasks):
- *   GET /api/tasks/:id/events (SSE) -> "step" and "block" events, then "result" or "failed"
+ *   GET /api/reports/:id/events (SSE) -> "step" and "block" events, then "result" or "failed"
  * The server replays earlier events on connect, so reopening a report rebuilds it.
  * Returns a function that stops listening.
  */
@@ -16,7 +16,7 @@ export function followTask(
   onLost: () => void,
 ): () => void {
   const source = new EventSource(
-    `${baseUrl}/api/tasks/${encodeURIComponent(taskId)}/events`,
+    `${baseUrl}/api/reports/${encodeURIComponent(taskId)}/events`,
   );
   let finished = false;
   const handle = (e: Event) => {

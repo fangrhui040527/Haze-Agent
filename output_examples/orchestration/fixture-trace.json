@@ -1,0 +1,1822 @@
+{
+  "checked_at": "2026-10-25T09:18:28.907Z",
+  "mode": "fixture",
+  "readiness": "fixture-tested",
+  "live_readiness_pass": false,
+  "request": {
+    "schema_version": "haze.task.request.v2",
+    "objective": "Summarize PM2.5 evidence for Fixture Town during 2026-10-01T00:00:00Z to 2026-10-01T03:00:00Z, distinguish modeled samples from observations and identify coverage gaps.",
+    "scope": {
+      "location": "Fixture Town",
+      "period": {
+        "start": "2026-10-01T00:00:00Z",
+        "end": "2026-10-01T03:00:00Z"
+      }
+    }
+  },
+  "task": {
+    "schema_version": "haze.task.v2",
+    "id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+    "objective_revision": 1,
+    "generation": 1,
+    "original_request": {
+      "schema_version": "haze.task.request.v2",
+      "objective": "Summarize PM2.5 evidence for Fixture Town during 2026-10-01T00:00:00Z to 2026-10-01T03:00:00Z, distinguish modeled samples from observations and identify coverage gaps.",
+      "scope": {
+        "location": "Fixture Town",
+        "period": {
+          "start": "2026-10-01T00:00:00Z",
+          "end": "2026-10-01T03:00:00Z"
+        }
+      },
+      "context_refs": [],
+      "constraints": [],
+      "desired_deliverables": []
+    },
+    "scope": {
+      "location": "Fixture Town",
+      "period": {
+        "start": "2026-10-01T00:00:00Z",
+        "end": "2026-10-01T03:00:00Z"
+      }
+    },
+    "identity": {
+      "principal": "local-user",
+      "workspace": "local-workspace"
+    },
+    "status": "completed",
+    "mode": "fixture",
+    "permissions": {
+      "tools": [
+        "zetaris-smokeledger-pm25",
+        "pm25.compute",
+        "pm25.check",
+        "hmem-unavailable",
+        "world-model-unavailable"
+      ],
+      "effects": []
+    },
+    "limits": {
+      "deadline": "2026-10-25T09:23:27.789Z",
+      "max_model_calls": 5,
+      "max_tool_calls": 6,
+      "max_artifacts": 16,
+      "max_model_input_bytes": 16384,
+      "max_model_output_tokens": 700
+    },
+    "usage": {
+      "model_calls": 5,
+      "tool_calls": 5,
+      "artifacts": 9
+    },
+    "created_at": "2026-10-25T09:18:27.788Z",
+    "updated_at": "2026-10-25T09:18:28.048Z",
+    "assignments": [
+      {
+        "id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+        "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+        "role": "Manager",
+        "definition_version": "1",
+        "capability": "pm25-evidence-summary",
+        "objective_revision": 1,
+        "generation": 1,
+        "brief": "Select the registered PM2.5 capability and its bounded evidence, analysis and review assignments. Preserve all original constraints.",
+        "inputs": [],
+        "dependencies": [],
+        "tools": ["hmem-unavailable", "world-model-unavailable"],
+        "deadline": "2026-10-25T09:23:27.789Z",
+        "max_model_calls": 1,
+        "status": "completed",
+        "usage": {
+          "model_calls": 1,
+          "tool_calls": 2
+        },
+        "outputs": [
+          {
+            "id": "49ecb9bd-e697-4482-83de-cd5d99054b25",
+            "version": 1,
+            "sha256": "628af6de38286f3ee4aad25ab54e816054e907e0b4c7945c4b13c8023230069b"
+          }
+        ],
+        "assumptions": [],
+        "gaps": []
+      },
+      {
+        "id": "af89691f-5960-44e4-82b8-e948cde0f275",
+        "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+        "role": "HazeOps",
+        "definition_version": "1",
+        "capability": "pm25-evidence-summary",
+        "objective_revision": 1,
+        "generation": 1,
+        "brief": "Retrieve the exact requested PM2.5 evidence and identify provenance, coverage limitations and gaps.",
+        "inputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          }
+        ],
+        "dependencies": ["9b01ae93-7f55-4a0d-a988-277338b0978e"],
+        "tools": ["zetaris-smokeledger-pm25"],
+        "deadline": "2026-10-25T09:23:27.789Z",
+        "max_model_calls": 1,
+        "status": "completed",
+        "usage": {
+          "model_calls": 1,
+          "tool_calls": 1
+        },
+        "outputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+            "version": 1,
+            "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+          }
+        ],
+        "assumptions": [],
+        "gaps": [
+          "Synthetic integration fixture; no live source was queried.",
+          "Provider issuance and model grid support are unknown in this fixture."
+        ]
+      },
+      {
+        "id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+        "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+        "role": "WorkerShield",
+        "definition_version": "1",
+        "capability": "pm25-evidence-summary",
+        "objective_revision": 1,
+        "generation": 1,
+        "brief": "Calculate PM2.5 sample coverage and range reproducibly; explain modeled instantaneous values without health or causal claims.",
+        "inputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          }
+        ],
+        "dependencies": ["af89691f-5960-44e4-82b8-e948cde0f275"],
+        "tools": ["pm25.compute"],
+        "deadline": "2026-10-25T09:23:27.789Z",
+        "max_model_calls": 1,
+        "status": "completed",
+        "usage": {
+          "model_calls": 1,
+          "tool_calls": 1
+        },
+        "outputs": [
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          },
+          {
+            "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+            "version": 1,
+            "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+          }
+        ],
+        "assumptions": [
+          "The UTC interval includes its start and excludes its end. Coverage describes expected hourly sample timestamps, not continuous measurements or hourly averages.",
+          "No causal attribution, health advice, scientific qualification or operational decision is inferred.",
+          "Supporting context does not change the authorized scope, evidence source or permissions."
+        ],
+        "gaps": [
+          "Synthetic integration fixture; no live source was queried.",
+          "Provider issuance and model grid support are unknown in this fixture.",
+          "Provider issuance time is unknown; local collection, ingestion and retrieval times do not establish provider issuance.",
+          "Observational coverage was not assessed; model grid-cell support and town-wide representativeness remain unverified."
+        ]
+      },
+      {
+        "id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+        "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+        "role": "EvidenceCritic",
+        "definition_version": "1",
+        "capability": "pm25-evidence-summary",
+        "objective_revision": 1,
+        "generation": 1,
+        "brief": "Independently check exact source selections, recompute numerical results and review the producer claims. Do not review your own work.",
+        "inputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          },
+          {
+            "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+            "version": 1,
+            "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+          },
+          {
+            "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+            "version": 1,
+            "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+          },
+          {
+            "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+            "version": 1,
+            "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+          }
+        ],
+        "dependencies": ["91fd92da-e347-4220-b3bf-bc996b733ee0"],
+        "tools": ["pm25.check"],
+        "deadline": "2026-10-25T09:23:27.789Z",
+        "max_model_calls": 1,
+        "status": "completed",
+        "usage": {
+          "model_calls": 1,
+          "tool_calls": 1
+        },
+        "outputs": [
+          {
+            "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+            "version": 1,
+            "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+          },
+          {
+            "id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+            "version": 1,
+            "sha256": "2a4d1a643e95baa0d6f1207c0a3938d55bb0c9841710b2f9af935c3eb4d2f911"
+          },
+          {
+            "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+            "version": 1,
+            "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad"
+          }
+        ],
+        "assumptions": [],
+        "gaps": [
+          "Deterministic checks validate selection, sample counts, ranges and citations; they do not prove prose entailment or provide scientific qualification.",
+          "Provider issuance, native grid support, observations and source ingestion limitations remain unresolved.",
+          "Fixture model output only; this is not scientific qualification.",
+          "Model review does not establish scientific qualification or complete prose entailment."
+        ]
+      },
+      {
+        "id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+        "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+        "role": "Manager",
+        "definition_version": "1",
+        "capability": "pm25-evidence-summary",
+        "objective_revision": 1,
+        "generation": 1,
+        "brief": "Answer the original request using current supported artifacts and the independent review. Withhold rejected material and preserve caveats.",
+        "inputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          },
+          {
+            "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+            "version": 1,
+            "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad"
+          }
+        ],
+        "dependencies": ["7a061487-8f72-4491-9a04-d3df0f6b5c65"],
+        "tools": [],
+        "deadline": "2026-10-25T09:23:27.789Z",
+        "max_model_calls": 1,
+        "status": "completed",
+        "usage": {
+          "model_calls": 1,
+          "tool_calls": 0
+        },
+        "outputs": [
+          {
+            "id": "2d01f5a3-12cf-487c-8232-87e13269247b",
+            "version": 1,
+            "sha256": "60fd4f237b33cff08f7766b095d68dd3bae330ff7d03e4c0867df25d453c3096"
+          }
+        ],
+        "assumptions": [],
+        "gaps": []
+      }
+    ],
+    "result": {
+      "answer": "This is a synthetic integration example [E1]. Its deterministic analysis reports the modeled sample coverage and range for the requested period. No observations or live evidence were queried; provider issuance and spatial support remain unknown.",
+      "findings": [
+        {
+          "id": "F1",
+          "text": "3 modeled instantaneous PM2.5 samples for Fixture Town; range 12 to 14 µg/m³. These are model output, not observations or hourly averages.",
+          "citation_ids": ["E1"]
+        },
+        {
+          "id": "F2",
+          "text": "Only modeled evidence was queried. Observation availability and coverage remain unresolved.",
+          "citation_ids": ["E1"]
+        }
+      ],
+      "citations": [
+        {
+          "id": "E1",
+          "artifact_id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9",
+          "url": "/api/tasks/bead8c60-bcb5-4488-8a98-d4b684cf2619/artifacts/cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "label": "Exact Fixture Town PM2.5 selection",
+          "selection": {
+            "backend": "zetaris-rest",
+            "query": "FIXTURE: synthetic PM2.5 selection; no SQL was executed.",
+            "request_id": "fixture-pm25-selection",
+            "row_limit": 1500,
+            "returned_rows": 3,
+            "truncated": false,
+            "source_filter": "open-meteo-air-quality",
+            "selected_raw_row_indices": [0, 1, 2]
+          }
+        }
+      ],
+      "coverage": {
+        "requested": {
+          "location": "Fixture Town",
+          "period": {
+            "start": "2026-10-01T00:00:00Z",
+            "end": "2026-10-01T03:00:00Z"
+          }
+        },
+        "row_count": 3,
+        "usable_row_count": 3,
+        "modeled_count": 3,
+        "observation_count": 0,
+        "unknown_kind_count": 0,
+        "missing_intervals": [],
+        "status": "available"
+      },
+      "assumptions": [
+        "The UTC interval includes its start and excludes its end. Coverage describes expected hourly sample timestamps, not continuous measurements or hourly averages.",
+        "No causal attribution, health advice, scientific qualification or operational decision is inferred.",
+        "Supporting context does not change the authorized scope, evidence source or permissions."
+      ],
+      "unresolved_gaps": [
+        "Synthetic integration fixture; no live source was queried.",
+        "Provider issuance and model grid support are unknown in this fixture.",
+        "Provider issuance time is unknown; local collection, ingestion and retrieval times do not establish provider issuance.",
+        "Observational coverage was not assessed; model grid-cell support and town-wide representativeness remain unverified."
+      ],
+      "review": {
+        "status": "supported",
+        "scope": "Independent numerical recomputation and separate model inspection of exact producer artifacts; informational use only.",
+        "limitations": [
+          "Deterministic checks validate selection, sample counts, ranges and citations; they do not prove prose entailment or provide scientific qualification.",
+          "Provider issuance, native grid support, observations and source ingestion limitations remain unresolved.",
+          "Fixture model output only; this is not scientific qualification.",
+          "Model review does not establish scientific qualification or complete prose entailment."
+        ],
+        "artifact_id": "3a232123-28f6-4fcd-a489-442cd835aa15"
+      },
+      "provenance": {
+        "mode": "fixture",
+        "source": "zetaris-smokeledger-pm25",
+        "retrieved_at": "2026-10-01T03:00:00Z",
+        "model": {
+          "provider": "fixture",
+          "model": "fixture-nightshift",
+          "calls": 5,
+          "max_output_tokens": 700,
+          "usage": "not_reported_by_adapter",
+          "receipt": {
+            "response_model": "fixture-model",
+            "response_id": null,
+            "input_tokens": null,
+            "output_tokens": null
+          }
+        },
+        "tool_calls": 5,
+        "method": "haze.pm25.coverage.v1"
+      },
+      "schema_version": "haze.task.result.v2",
+      "completion": "full"
+    }
+  },
+  "events": [
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.790Z",
+      "type": "task_admitted",
+      "actor": "Manager",
+      "message": "Persisted the bounded hybrid evidence request.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 1
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.797Z",
+      "type": "task_started",
+      "actor": "Manager",
+      "message": "Started the bounded hybrid evidence workflow.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 2
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.801Z",
+      "type": "assignment_admitted",
+      "actor": "Manager",
+      "message": "Admitted Manager with versioned inputs and bounded tools.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "role": "Manager",
+        "definition_version": "1"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 3
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.803Z",
+      "type": "assignment_started",
+      "actor": "Manager",
+      "message": "Executing Manager in a separate bounded context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 4
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.849Z",
+      "type": "tool_started",
+      "actor": "Manager",
+      "message": "Charged the admitted tool attempt before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "hmem-unavailable",
+        "attempt": 1
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 5
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.852Z",
+      "type": "tool_completed",
+      "actor": "Manager",
+      "message": "The admitted tool returned.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "hmem-unavailable"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 6
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.854Z",
+      "type": "optional_unavailable",
+      "actor": "Manager",
+      "message": "No H-Mem recall adapter is configured.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "port": "hmem-unavailable"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 7
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.856Z",
+      "type": "tool_started",
+      "actor": "Manager",
+      "message": "Charged the admitted tool attempt before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "world-model-unavailable",
+        "attempt": 2
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 8
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.858Z",
+      "type": "tool_completed",
+      "actor": "Manager",
+      "message": "The admitted tool returned.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "world-model-unavailable"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 9
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.860Z",
+      "type": "optional_unavailable",
+      "actor": "Manager",
+      "message": "No World Model snapshot adapter is configured.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "port": "world-model-unavailable"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 10
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.862Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed optional context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 11
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.870Z",
+      "type": "model_started",
+      "actor": "Manager",
+      "message": "Charged a bounded model turn before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "executor": "fixture-nightshift",
+        "phase": "ManagerPlan",
+        "max_output_tokens": 700
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 12
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.874Z",
+      "type": "artifact_saved",
+      "actor": "Manager",
+      "message": "Saved immutable model-turn.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "49ecb9bd-e697-4482-83de-cd5d99054b25",
+        "sha256": "628af6de38286f3ee4aad25ab54e816054e907e0b4c7945c4b13c8023230069b",
+        "kind": "model-turn"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 13
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.876Z",
+      "type": "model_completed",
+      "actor": "Manager",
+      "message": "Saved the actual model output and returned receipt.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "artifact_id": "49ecb9bd-e697-4482-83de-cd5d99054b25",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "phase": "ManagerPlan"
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 14
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.878Z",
+      "type": "assignment_completed",
+      "actor": "Manager",
+      "message": "Manager returned versioned work products.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "outputs": [
+          {
+            "id": "49ecb9bd-e697-4482-83de-cd5d99054b25",
+            "version": 1,
+            "sha256": "628af6de38286f3ee4aad25ab54e816054e907e0b4c7945c4b13c8023230069b"
+          }
+        ]
+      },
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "cursor": 15
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.880Z",
+      "type": "assignment_admitted",
+      "actor": "Manager",
+      "message": "Admitted HazeOps with versioned inputs and bounded tools.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "role": "HazeOps",
+        "definition_version": "1"
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 16
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.881Z",
+      "type": "assignment_admitted",
+      "actor": "Manager",
+      "message": "Admitted WorkerShield with versioned inputs and bounded tools.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "role": "WorkerShield",
+        "definition_version": "1"
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 17
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.883Z",
+      "type": "assignment_admitted",
+      "actor": "Manager",
+      "message": "Admitted EvidenceCritic with versioned inputs and bounded tools.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "role": "EvidenceCritic",
+        "definition_version": "1"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 18
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.885Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed planning.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 19
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.891Z",
+      "type": "assignment_started",
+      "actor": "HazeOps",
+      "message": "Executing HazeOps in a separate bounded context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 20
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.894Z",
+      "type": "tool_started",
+      "actor": "HazeOps",
+      "message": "Charged the admitted tool attempt before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "zetaris-smokeledger-pm25",
+        "attempt": 3
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 21
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.896Z",
+      "type": "tool_completed",
+      "actor": "HazeOps",
+      "message": "The admitted tool returned.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "zetaris-smokeledger-pm25"
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 22
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.901Z",
+      "type": "artifact_saved",
+      "actor": "HazeOps",
+      "message": "Saved immutable evidence-capture.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+        "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9",
+        "kind": "evidence-capture"
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 23
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.903Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed evidence retrieval.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 24
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.910Z",
+      "type": "model_started",
+      "actor": "HazeOps",
+      "message": "Charged a bounded model turn before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "executor": "fixture-nightshift",
+        "phase": "HazeOps",
+        "max_output_tokens": 700
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 25
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.914Z",
+      "type": "artifact_saved",
+      "actor": "HazeOps",
+      "message": "Saved immutable model-turn.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+        "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0",
+        "kind": "model-turn"
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 26
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.916Z",
+      "type": "model_completed",
+      "actor": "HazeOps",
+      "message": "Saved the actual model output and returned receipt.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "artifact_id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "phase": "HazeOps"
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 27
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.918Z",
+      "type": "assignment_completed",
+      "actor": "HazeOps",
+      "message": "HazeOps returned versioned work products.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "outputs": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+            "version": 1,
+            "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+          }
+        ]
+      },
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "cursor": 28
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.920Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed evidence interpretation.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 29
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.927Z",
+      "type": "assignment_started",
+      "actor": "WorkerShield",
+      "message": "Executing WorkerShield in a separate bounded context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 30
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.930Z",
+      "type": "tool_started",
+      "actor": "WorkerShield",
+      "message": "Charged the admitted tool attempt before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "pm25.compute",
+        "attempt": 4
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 31
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.934Z",
+      "type": "tool_completed",
+      "actor": "WorkerShield",
+      "message": "The admitted tool returned.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "pm25.compute"
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 32
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.937Z",
+      "type": "artifact_saved",
+      "actor": "WorkerShield",
+      "message": "Saved immutable coverage-analysis.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "3a689076-b445-4a02-815f-ff87a7635682",
+        "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6",
+        "kind": "coverage-analysis"
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 33
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.939Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed deterministic analysis.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 34
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.949Z",
+      "type": "model_started",
+      "actor": "WorkerShield",
+      "message": "Charged a bounded model turn before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "executor": "fixture-nightshift",
+        "phase": "WorkerShield",
+        "max_output_tokens": 700
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 35
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.953Z",
+      "type": "artifact_saved",
+      "actor": "WorkerShield",
+      "message": "Saved immutable model-turn.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+        "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876",
+        "kind": "model-turn"
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 36
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.955Z",
+      "type": "model_completed",
+      "actor": "WorkerShield",
+      "message": "Saved the actual model output and returned receipt.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "artifact_id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "phase": "WorkerShield"
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 37
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.958Z",
+      "type": "assignment_completed",
+      "actor": "WorkerShield",
+      "message": "WorkerShield returned versioned work products.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "outputs": [
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          },
+          {
+            "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+            "version": 1,
+            "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+          }
+        ]
+      },
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "cursor": 38
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.961Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed analysis explanation.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 39
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.968Z",
+      "type": "assignment_started",
+      "actor": "EvidenceCritic",
+      "message": "Executing EvidenceCritic in a separate bounded context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 40
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.972Z",
+      "type": "tool_started",
+      "actor": "EvidenceCritic",
+      "message": "Charged the admitted tool attempt before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "pm25.check",
+        "attempt": 5
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 41
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.978Z",
+      "type": "tool_completed",
+      "actor": "EvidenceCritic",
+      "message": "The admitted tool returned.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "tool": "pm25.check"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 42
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.981Z",
+      "type": "artifact_saved",
+      "actor": "EvidenceCritic",
+      "message": "Saved immutable independent-numerical-check.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+        "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6",
+        "kind": "independent-numerical-check"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 43
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.983Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed independent deterministic checks.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 44
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:27.994Z",
+      "type": "model_started",
+      "actor": "EvidenceCritic",
+      "message": "Charged a bounded model turn before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "executor": "fixture-nightshift",
+        "phase": "EvidenceCritic",
+        "max_output_tokens": 700
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 45
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.004Z",
+      "type": "artifact_saved",
+      "actor": "EvidenceCritic",
+      "message": "Saved immutable model-turn.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+        "sha256": "2a4d1a643e95baa0d6f1207c0a3938d55bb0c9841710b2f9af935c3eb4d2f911",
+        "kind": "model-turn"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 46
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.007Z",
+      "type": "model_completed",
+      "actor": "EvidenceCritic",
+      "message": "Saved the actual model output and returned receipt.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "artifact_id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "phase": "EvidenceCritic"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 47
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.012Z",
+      "type": "artifact_saved",
+      "actor": "EvidenceCritic",
+      "message": "Saved immutable independent-review.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+        "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad",
+        "kind": "independent-review"
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 48
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.014Z",
+      "type": "assignment_completed",
+      "actor": "EvidenceCritic",
+      "message": "EvidenceCritic returned versioned work products.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "outputs": [
+          {
+            "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+            "version": 1,
+            "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+          },
+          {
+            "id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+            "version": 1,
+            "sha256": "2a4d1a643e95baa0d6f1207c0a3938d55bb0c9841710b2f9af935c3eb4d2f911"
+          },
+          {
+            "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+            "version": 1,
+            "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad"
+          }
+        ]
+      },
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "cursor": 49
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.017Z",
+      "type": "workflow_step",
+      "actor": "Runtime",
+      "message": "Completed independent model review.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 50
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.025Z",
+      "type": "assignment_admitted",
+      "actor": "Manager",
+      "message": "Admitted Manager with versioned inputs and bounded tools.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "role": "Manager",
+        "definition_version": "1"
+      },
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 51
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.027Z",
+      "type": "assignment_started",
+      "actor": "Manager",
+      "message": "Executing Manager in a separate bounded context.",
+      "objective_revision": 1,
+      "generation": 1,
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 52
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.031Z",
+      "type": "model_started",
+      "actor": "Manager",
+      "message": "Charged a bounded model turn before execution.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "executor": "fixture-nightshift",
+        "phase": "ManagerSynthesis",
+        "max_output_tokens": 700
+      },
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 53
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.038Z",
+      "type": "artifact_saved",
+      "actor": "Manager",
+      "message": "Saved immutable model-turn.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "id": "2d01f5a3-12cf-487c-8232-87e13269247b",
+        "sha256": "60fd4f237b33cff08f7766b095d68dd3bae330ff7d03e4c0867df25d453c3096",
+        "kind": "model-turn"
+      },
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 54
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.041Z",
+      "type": "model_completed",
+      "actor": "Manager",
+      "message": "Saved the actual model output and returned receipt.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "artifact_id": "2d01f5a3-12cf-487c-8232-87e13269247b",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        },
+        "phase": "ManagerSynthesis"
+      },
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 55
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.046Z",
+      "type": "assignment_completed",
+      "actor": "Manager",
+      "message": "Manager returned versioned work products.",
+      "objective_revision": 1,
+      "generation": 1,
+      "data": {
+        "outputs": [
+          {
+            "id": "2d01f5a3-12cf-487c-8232-87e13269247b",
+            "version": 1,
+            "sha256": "60fd4f237b33cff08f7766b095d68dd3bae330ff7d03e4c0867df25d453c3096"
+          }
+        ]
+      },
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "cursor": 56
+    },
+    {
+      "schema_version": "haze.task.event.v2",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "at": "2026-10-25T09:18:28.049Z",
+      "type": "task_completed",
+      "actor": "Manager",
+      "message": "Delivered the informational result with exact sources and explicit review limits.",
+      "objective_revision": 1,
+      "generation": 1,
+      "cursor": 57
+    }
+  ],
+  "artifacts": [
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "49ecb9bd-e697-4482-83de-cd5d99054b25",
+      "version": 1,
+      "sha256": "628af6de38286f3ee4aad25ab54e816054e907e0b4c7945c4b13c8023230069b",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "9b01ae93-7f55-4a0d-a988-277338b0978e",
+      "producer": "Manager",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "model-turn",
+      "dependencies": [],
+      "created_at": "2026-10-25T09:18:27.873Z",
+      "content": {
+        "phase": "ManagerPlan",
+        "executor": "fixture-nightshift",
+        "configured_route": {
+          "provider": "fixture",
+          "model": "fixture-nightshift"
+        },
+        "mode": "fixture",
+        "text": "{\"capability\":\"pm25-evidence-summary\",\"roles\":[\"HazeOps\",\"WorkerShield\",\"EvidenceCritic\"]}",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        }
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+      "version": 1,
+      "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "producer": "HazeOps",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "evidence-capture",
+      "dependencies": [],
+      "created_at": "2026-10-25T09:18:27.901Z",
+      "content": {
+        "source": "zetaris-smokeledger-pm25",
+        "kind": "modeled",
+        "units": "µg/m³",
+        "location": "Fixture Town",
+        "retrieved_at": "2026-10-01T03:00:00Z",
+        "issued_at": null,
+        "rows": [
+          {
+            "start": "2026-10-01T00:00:00.000Z",
+            "end": "2026-10-01T00:00:00.000Z",
+            "value": 12,
+            "issued_at": null,
+            "location": "Fixture Town",
+            "ingested_at": "2026-10-01T03:00:00Z",
+            "latitude": 3.0449,
+            "longitude": 101.4456
+          },
+          {
+            "start": "2026-10-01T01:00:00.000Z",
+            "end": "2026-10-01T01:00:00.000Z",
+            "value": 13,
+            "issued_at": null,
+            "location": "Fixture Town",
+            "ingested_at": "2026-10-01T03:00:00Z",
+            "latitude": 3.0449,
+            "longitude": 101.4456
+          },
+          {
+            "start": "2026-10-01T02:00:00.000Z",
+            "end": "2026-10-01T02:00:00.000Z",
+            "value": 14,
+            "issued_at": null,
+            "location": "Fixture Town",
+            "ingested_at": "2026-10-01T03:00:00Z",
+            "latitude": 3.0449,
+            "longitude": 101.4456
+          }
+        ],
+        "raw": "{\"data\":[{\"town\":\"Fixture Town\",\"valid_utc\":\"2026-10-01T00:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":12,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T03:00:00Z\",\"lat\":3.0449,\"lon\":101.4456},{\"town\":\"Fixture Town\",\"valid_utc\":\"2026-10-01T01:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":13,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T03:00:00Z\",\"lat\":3.0449,\"lon\":101.4456},{\"town\":\"Fixture Town\",\"valid_utc\":\"2026-10-01T02:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":14,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T03:00:00Z\",\"lat\":3.0449,\"lon\":101.4456}]}",
+        "selection": {
+          "backend": "zetaris-rest",
+          "query": "FIXTURE: synthetic PM2.5 selection; no SQL was executed.",
+          "request_id": "fixture-pm25-selection",
+          "row_limit": 1500,
+          "returned_rows": 3,
+          "truncated": false,
+          "source_filter": "open-meteo-air-quality",
+          "selected_raw_row_indices": [0, 1, 2]
+        },
+        "limitations": [
+          "Synthetic integration fixture; no live source was queried.",
+          "Provider issuance and model grid support are unknown in this fixture."
+        ],
+        "mode": "live",
+        "temporal_support": "instantaneous",
+        "sample_interval_minutes": 60,
+        "units_reference": "https://open-meteo.com/en/docs/air-quality-api"
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+      "version": 1,
+      "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "af89691f-5960-44e4-82b8-e948cde0f275",
+      "producer": "HazeOps",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "model-turn",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:27.914Z",
+      "content": {
+        "phase": "HazeOps",
+        "executor": "fixture-nightshift",
+        "configured_route": {
+          "provider": "fixture",
+          "model": "fixture-nightshift"
+        },
+        "mode": "fixture",
+        "text": "{\"summary\":\"The synthetic selection [E1] contains instantaneous modeled samples. No live retrieval or observations were used; issuance and spatial support are unknown.\"}",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        }
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "3a689076-b445-4a02-815f-ff87a7635682",
+      "version": 1,
+      "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "producer": "WorkerShield",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "coverage-analysis",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:27.936Z",
+      "content": {
+        "method": "haze.pm25.coverage.v1",
+        "scope": {
+          "location": "Fixture Town",
+          "period": {
+            "start": "2026-10-01T00:00:00Z",
+            "end": "2026-10-01T03:00:00Z"
+          }
+        },
+        "coverage": {
+          "requested": {
+            "location": "Fixture Town",
+            "period": {
+              "start": "2026-10-01T00:00:00Z",
+              "end": "2026-10-01T03:00:00Z"
+            }
+          },
+          "row_count": 3,
+          "usable_row_count": 3,
+          "modeled_count": 3,
+          "observation_count": 0,
+          "unknown_kind_count": 0,
+          "missing_intervals": [],
+          "status": "available"
+        },
+        "range": {
+          "min": 12,
+          "max": 14
+        },
+        "findings": [
+          {
+            "id": "F1",
+            "text": "3 modeled instantaneous PM2.5 samples for Fixture Town; range 12 to 14 µg/m³. These are model output, not observations or hourly averages.",
+            "citation_ids": ["E1"]
+          },
+          {
+            "id": "F2",
+            "text": "Only modeled evidence was queried. Observation availability and coverage remain unresolved.",
+            "citation_ids": ["E1"]
+          }
+        ],
+        "assumptions": [
+          "The UTC interval includes its start and excludes its end. Coverage describes expected hourly sample timestamps, not continuous measurements or hourly averages.",
+          "No causal attribution, health advice, scientific qualification or operational decision is inferred.",
+          "Supporting context does not change the authorized scope, evidence source or permissions."
+        ],
+        "unresolved_gaps": [
+          "Synthetic integration fixture; no live source was queried.",
+          "Provider issuance and model grid support are unknown in this fixture.",
+          "Provider issuance time is unknown; local collection, ingestion and retrieval times do not establish provider issuance.",
+          "Observational coverage was not assessed; model grid-cell support and town-wide representativeness remain unverified."
+        ]
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+      "version": 1,
+      "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "91fd92da-e347-4220-b3bf-bc996b733ee0",
+      "producer": "WorkerShield",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "model-turn",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        },
+        {
+          "id": "3a689076-b445-4a02-815f-ff87a7635682",
+          "version": 1,
+          "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:27.953Z",
+      "content": {
+        "phase": "WorkerShield",
+        "executor": "fixture-nightshift",
+        "configured_route": {
+          "provider": "fixture",
+          "model": "fixture-nightshift"
+        },
+        "mode": "fixture",
+        "text": "{\"summary\":\"The deterministic fixture calculation counts hourly sample timestamps and reports its exact coverage and range [E1]. It does not establish continuous exposure or health effects.\"}",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        }
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+      "version": 1,
+      "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "producer": "EvidenceCritic",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "independent-numerical-check",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        },
+        {
+          "id": "3a689076-b445-4a02-815f-ff87a7635682",
+          "version": 1,
+          "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:27.981Z",
+      "content": {
+        "checks": [
+          "Evidence runtime shape, authorized scope, instantaneous model semantics and exact raw row selection.",
+          "Independent scan of finite nonnegative values, modeled/observation counts and minimum/maximum.",
+          "Independent expected-hour enumeration, missing-span merging, truncation status and E1-only finding citations."
+        ],
+        "findings": [],
+        "valid": true,
+        "limitations": [
+          "Deterministic checks validate selection, sample counts, ranges and citations; they do not prove prose entailment or provide scientific qualification.",
+          "Provider issuance, native grid support, observations and source ingestion limitations remain unresolved."
+        ]
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+      "version": 1,
+      "sha256": "2a4d1a643e95baa0d6f1207c0a3938d55bb0c9841710b2f9af935c3eb4d2f911",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "producer": "EvidenceCritic",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "model-turn",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        },
+        {
+          "id": "3a689076-b445-4a02-815f-ff87a7635682",
+          "version": 1,
+          "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+        },
+        {
+          "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+          "version": 1,
+          "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+        },
+        {
+          "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+          "version": 1,
+          "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+        },
+        {
+          "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+          "version": 1,
+          "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:28.004Z",
+      "content": {
+        "phase": "EvidenceCritic",
+        "executor": "fixture-nightshift",
+        "configured_route": {
+          "provider": "fixture",
+          "model": "fixture-nightshift"
+        },
+        "mode": "fixture",
+        "text": "{\"verdict\":\"supported\",\"findings\":[],\"limitations\":[\"Fixture model output only; this is not scientific qualification.\"]}",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        }
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+      "version": 1,
+      "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+      "producer": "EvidenceCritic",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "independent-review",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        },
+        {
+          "id": "3a689076-b445-4a02-815f-ff87a7635682",
+          "version": 1,
+          "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+        },
+        {
+          "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+          "version": 1,
+          "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+        },
+        {
+          "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+          "version": 1,
+          "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+        },
+        {
+          "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+          "version": 1,
+          "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+        },
+        {
+          "id": "a8afd4cf-7dbb-4f3a-a564-9670336d7cb6",
+          "version": 1,
+          "sha256": "2a4d1a643e95baa0d6f1207c0a3938d55bb0c9841710b2f9af935c3eb4d2f911"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:28.012Z",
+      "content": {
+        "schema_version": "haze.review.v1",
+        "reviewer_assignment_id": "7a061487-8f72-4491-9a04-d3df0f6b5c65",
+        "reviewed_artifacts": [
+          {
+            "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+            "version": 1,
+            "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+          },
+          {
+            "id": "3a689076-b445-4a02-815f-ff87a7635682",
+            "version": 1,
+            "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+          },
+          {
+            "id": "7509a7a9-83f8-400b-86cb-75d34392bd01",
+            "version": 1,
+            "sha256": "5386cd33671c4078d3b29f9a79909be2f50de29461ce5dc3d31ef99ee0789fe6"
+          },
+          {
+            "id": "22685f4d-f3b2-48e1-90d1-25f405077054",
+            "version": 1,
+            "sha256": "7fc30e3dbc96dbcdd7488b63ebbcc32784bd8bcc1818064eec71c966f1ac7bb0"
+          },
+          {
+            "id": "96dc4f97-619f-4f6b-986d-d4422d9421bf",
+            "version": 1,
+            "sha256": "8d3dfc9ae9d030e18cf29e54d98b6bc97f5883e6dddb1b80b0be3d0adf954876"
+          }
+        ],
+        "checks": [
+          "Evidence runtime shape, authorized scope, instantaneous model semantics and exact raw row selection.",
+          "Independent scan of finite nonnegative values, modeled/observation counts and minimum/maximum.",
+          "Independent expected-hour enumeration, missing-span merging, truncation status and E1-only finding citations."
+        ],
+        "verdict": "supported",
+        "findings": [],
+        "limitations": [
+          "Deterministic checks validate selection, sample counts, ranges and citations; they do not prove prose entailment or provide scientific qualification.",
+          "Provider issuance, native grid support, observations and source ingestion limitations remain unresolved.",
+          "Fixture model output only; this is not scientific qualification.",
+          "Model review does not establish scientific qualification or complete prose entailment."
+        ]
+      }
+    },
+    {
+      "schema_version": "haze.artifact.v2",
+      "id": "2d01f5a3-12cf-487c-8232-87e13269247b",
+      "version": 1,
+      "sha256": "60fd4f237b33cff08f7766b095d68dd3bae330ff7d03e4c0867df25d453c3096",
+      "task_id": "bead8c60-bcb5-4488-8a98-d4b684cf2619",
+      "assignment_id": "2ae761f6-a1e2-4795-8858-3c7cde0bce1c",
+      "producer": "Manager",
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "model-turn",
+      "dependencies": [
+        {
+          "id": "cc08581d-820d-41ff-8bb1-16bdbbab3e77",
+          "version": 1,
+          "sha256": "1a3eb0fe822846ede5c9ae9cbf9c1763c72efcad1f331752d26c9b6e70f158c9"
+        },
+        {
+          "id": "3a689076-b445-4a02-815f-ff87a7635682",
+          "version": 1,
+          "sha256": "9ebb9a11f250daf6ca55acbd9a642f241f5f8f70868f8db86d7d87829dc942c6"
+        },
+        {
+          "id": "3a232123-28f6-4fcd-a489-442cd835aa15",
+          "version": 1,
+          "sha256": "58304b006d1f87d2f5e8f35163db28565b3bedde6dc3292b30367fa3bab947ad"
+        }
+      ],
+      "created_at": "2026-10-25T09:18:28.038Z",
+      "content": {
+        "phase": "ManagerSynthesis",
+        "executor": "fixture-nightshift",
+        "configured_route": {
+          "provider": "fixture",
+          "model": "fixture-nightshift"
+        },
+        "mode": "fixture",
+        "text": "{\"answer\":\"This is a synthetic integration example [E1]. Its deterministic analysis reports the modeled sample coverage and range for the requested period. No observations or live evidence were queried; provider issuance and spatial support remain unknown.\"}",
+        "receipt": {
+          "response_model": "fixture-model",
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null
+        }
+      }
+    }
+  ],
+  "restart": {
+    "task_unchanged": true,
+    "events_unchanged": true
+  },
+  "passed": true
+}

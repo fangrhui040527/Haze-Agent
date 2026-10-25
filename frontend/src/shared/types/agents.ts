@@ -2,10 +2,10 @@
  * The agent event contract.
  *
  * The chat, the status line and the pixel office render ONLY from these events.
- * The mock (src/services/agents/MockAgentService.ts) produces them today; a real backend
- * adapter must produce the same events (see README "Replacing the mock agent events").
+ * The HTTP adapter publishes durable task receipts. The optional offline mock uses
+ * local activity events, without depending on a retired backend contract.
  *
- * Three levels of detail are supported (docs/02-critique.md §5.3):
+ * Three levels of detail are supported by the optional offline mock:
  *   A. full per-agent events          -> full animation
  *   B. only `run_state` events        -> generic "working" animation, no invented handoffs
  *   C. no backend                     -> mock plays level A, labelled as a demo simulation
@@ -13,22 +13,73 @@
 
 import type { AgentId } from './domain.ts';
 import type { TaskLink } from './tasks.ts';
-import type { DemoChatResponse } from '../../../../app/demo/chat-contract.ts';
 import type {
-  DemoAgentEvent,
-  DemoAgentExecution,
-} from '../../../../app/demo/agent-contract.ts';
+  TaskEvent,
+  TaskRecord,
+  TaskResult,
+  TaskStatus,
+} from '../../../../app/contracts/tasks.ts';
+import type {
+  ArtifactRef,
+  JsonValue,
+} from '../../../../app/contracts/artifacts.ts';
 
 export type { AgentId };
 
-/** Browser and server share the same event contract. */
-export type AgentEvent = DemoAgentEvent;
+/** A durable task receipt. Its message and actor come directly from the server. */
+export interface TaskAgentEvent {
+  type: 'task_event';
+  runId: string;
+  at: string;
+  message: string;
+  receipt: TaskEvent;
+}
+
+/** Admission/readback identity, separate from execution receipts. */
+export interface AgentTaskHandle {
+  id: string;
+  schemaVersion: 'haze.task.v3';
+  taskUrl: string;
+  status: TaskStatus;
+  mode?: 'live' | 'fixture' | 'replay';
+  record?: TaskRecord;
+}
+
+/** UI-only events for the offline mock and its office animation. */
+type ActivityAgentEvent = {
+  runId: string;
+  at: string;
+  message: string;
+} & (
+  | { type: 'run_started' | 'run_completed' | 'run_cancelled' }
+  | { type: 'run_state'; state: 'queued' | 'running' }
+  | {
+      type: 'agent_thinking' | 'agent_working' | 'agent_completed';
+      agent: AgentId;
+    }
+  | { type: 'agent_moving'; agent: AgentId; to: 'office' | 'reception' }
+  | { type: 'handoff'; from: AgentId; to: AgentId[]; payloadLabel: string }
+  | {
+      type: 'run_failed';
+      agent: AgentId | null;
+      error: string;
+      retryable: boolean;
+    }
+);
+
+export type AgentEvent = ActivityAgentEvent | TaskAgentEvent;
 
 export type AgentEventType = AgentEvent['type'];
 
 export interface Citation {
+  id?: string;
   label: string;
   itemId: string | null;
+  /** Exact immutable task artifact or versioned evidence selection. */
+  href?: string;
+  artifactId?: string;
+  sha256?: string;
+  selection?: unknown;
 }
 
 export interface AgentAnswer {
@@ -37,28 +88,27 @@ export interface AgentAnswer {
   paragraphs: string[];
   citations: Citation[];
   /** Where the words came from. Shown to the user; never claim "model" for a template. */
-  source:
-    | 'mock_template'
-    | 'model'
-    | 'template_fallback'
-    | 'computed_demo'
-    | 'input_required'
-    /** 'template' = filled in from real records by a fixed template, no AI model involved. */
-    | 'template';
+  source: 'mock_template' | 'evidence_model' | 'evidence_fixture' | 'template';
   fictional: boolean;
   durationMs: number;
-  /** Validated domain result and resolved plans, kept together for faithful chat rendering. */
-  scheduling?: DemoChatResponse;
-  /** Live role execution receipts, separate from checked historical artifacts. */
-  agentExecution?: DemoAgentExecution;
-  /** Set when the Manager opened a task report instead of answering in the chat. */
+  /** Optional template report opened by the separate dashboard server. */
   task?: TaskLink;
+  evidence?: {
+    taskUrl: string;
+    result: TaskResult;
+    objectiveRevision?: number;
+    runId?: string;
+  };
 }
 
 export interface AskRequest {
   question: string;
   /** Optional item the user asked about (from the detail page). */
   focusItemId: string | null;
+  /** Reused by a retry of the same submission; scoped by the server identity. */
+  idempotencyKey?: string;
+  contextRefs?: ArtifactRef[];
+  scope?: JsonValue;
 }
 
 export const AGENT_IDS: readonly AgentId[] = [
@@ -73,17 +123,20 @@ export const AGENT_IDS: readonly AgentId[] = [
 export const AGENT_INFO: Record<AgentId, { name: string; role: string }> = {
   manager: {
     name: 'Manager',
-    role: 'Receives your question, delegates, returns the answer',
+    role: 'Plans the task, creates assignments, and returns the result',
   },
   hazeops: { name: 'HazeOps', role: 'Gathers data from sources' },
-  worldmodel: { name: 'World Model', role: 'Archive of verified records' },
-  hmem: { name: 'H-Mem', role: 'Recalls similar past episodes' },
+  worldmodel: {
+    name: 'World Model',
+    role: 'Disabled in the general task service',
+  },
+  hmem: { name: 'H-Mem', role: 'Disabled in the general task service' },
   evidencecritic: {
     name: 'EvidenceCritic',
     role: 'Checks freshness, agreement and links',
   },
   workershield: {
     name: 'WorkerShield',
-    role: 'Explains what it means for people outdoors, using official guidance only',
+    role: 'Calculates evidence coverage and ranges with reproducible methods',
   },
 };

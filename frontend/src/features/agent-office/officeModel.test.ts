@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../shared/types/agents.ts';
+import type { TaskEvent } from '../../../../app/contracts/tasks.ts';
 import {
   DIVIDER_COL,
   DOOR_ROWS,
@@ -9,55 +10,113 @@ import {
   pointToTile,
   STATIONS,
 } from './officeLayout.ts';
-import {
-  deriveAgentStatuses,
-  isLocalCheckRun,
-  OfficeModel,
-} from './officeModel.ts';
+import { deriveAgentStatuses, OfficeModel } from './officeModel.ts';
 
 const base = { runId: 'r1', at: '2026-10-23T12:00:00Z', message: '' };
+function orchestrationTaskEvent(
+  type: string,
+  actor: TaskEvent['actor'],
+  cursor: number,
+): AgentEvent {
+  return {
+    ...base,
+    type: 'task_event',
+    message: `Actual ${type}`,
+    receipt: {
+      schema_version: 'haze.task.event.v3',
+      cursor,
+      task_id: base.runId,
+      run_id: base.runId,
+      at: base.at,
+      type,
+      actor,
+      message: `Actual ${type}`,
+      generation: 1,
+      objective_revision: 1,
+    },
+  };
+}
 
 describe('deriveAgentStatuses', () => {
-  it('does not claim model execution during or after a local scheduling check', () => {
+  it('stops office activity from persisted cancellation readback after event polling detached', () => {
+    const started = orchestrationTaskEvent(
+      'assignment_started',
+      'WorkerShield',
+      1,
+    );
+    const statuses = deriveAgentStatuses([started], 'cancelled');
+    for (const status of Object.values(statuses))
+      expect(status).toEqual({
+        state: 'idle',
+        text: 'Stopped after server cancellation',
+      });
+    const model = new OfficeModel();
+    model.apply(started, 0, true);
+    model.reset();
+    expect(model.runActive).toBe(false);
+    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
+  });
+  it('drives WorkerShield from assignment receipts and gives Runtime no model persona', () => {
+    const started = orchestrationTaskEvent(
+      'assignment_started',
+      'WorkerShield',
+      1,
+    );
+    const runtime = orchestrationTaskEvent('checkpoint_written', 'Runtime', 2);
+    const statuses = deriveAgentStatuses([started, runtime]);
+    expect(statuses.workershield).toEqual({
+      state: 'working',
+      text: 'Actual assignment_started',
+    });
+    expect(statuses.manager).toEqual({ state: 'idle', text: 'Idle' });
+    expect(statuses.hmem.state).toBe('idle');
+    expect(statuses.worldmodel.state).toBe('idle');
+    const model = new OfficeModel();
+    model.apply(started, 0, true);
+    model.apply(runtime, 1, true);
+    expect(model.actors.get('workershield')?.pose).toBe('working');
+    expect(model.actors.get('manager')?.pose).toBe('idle');
+    const cancelled = orchestrationTaskEvent('task_cancelled', 'Runtime', 3);
+    model.apply(cancelled, 2, true);
+    expect(model.runActive).toBe(false);
+    for (const status of Object.values(
+      deriveAgentStatuses([started, runtime, cancelled]),
+    ))
+      expect(status.state).toBe('idle');
+    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
+  });
+  it('shows only the participants identified by actual evidence task receipts', () => {
     const events: AgentEvent[] = [
-      { ...base, type: 'run_started', executionKind: 'local_check' },
-      { ...base, type: 'run_state', state: 'running' },
-    ];
-    expect(isLocalCheckRun(events)).toBe(true);
-    const assertNotRun = (items: AgentEvent[]) => {
-      for (const status of Object.values(deriveAgentStatuses(items))) {
-        expect(status).toEqual({
-          state: 'idle',
-          text: 'Not run (local check)',
-        });
-      }
-    };
-    assertNotRun(events);
-    assertNotRun([...events, { ...base, type: 'run_completed' }]);
-    assertNotRun([...events, { ...base, type: 'run_cancelled' }]);
-    assertNotRun([
-      ...events,
       {
         ...base,
-        type: 'run_failed',
-        agent: null,
-        error: 'unavailable',
-        retryable: true,
-      },
-    ]);
-
-    const nextRun: AgentEvent[] = [
-      ...events,
-      { ...base, type: 'run_started' },
-      {
-        ...base,
-        type: 'agent_working',
-        agent: 'hazeops',
-        message: 'Gathering data',
+        type: 'task_event',
+        message: 'Reading the selected source.',
+        receipt: {
+          cursor: 1,
+          task_id: 'task',
+          run_id: base.runId,
+          schema_version: 'haze.task.event.v3',
+          objective_revision: 1,
+          generation: 1,
+          at: base.at,
+          type: 'tool_started',
+          actor: 'HazeOps',
+          message: 'Reading the selected source.',
+        },
       },
     ];
-    expect(isLocalCheckRun(nextRun)).toBe(false);
-    expect(deriveAgentStatuses(nextRun).hazeops.state).toBe('working');
+    const statuses = deriveAgentStatuses(events);
+    expect(statuses.hazeops).toEqual({
+      state: 'working',
+      text: 'Reading the selected source.',
+    });
+    for (const id of [
+      'worldmodel',
+      'hmem',
+      'workershield',
+      'evidencecritic',
+    ] as const)
+      expect(statuses[id]).toEqual({ state: 'idle', text: 'Idle' });
   });
   it('follows a run step by step', () => {
     const events: AgentEvent[] = [
@@ -110,21 +169,29 @@ describe('deriveAgentStatuses', () => {
 });
 
 describe('OfficeModel', () => {
-  it('keeps model actors idle for local checks and resumes normal animation on an agent run', () => {
+  it('resets completed task activity before receiving a new current task', () => {
     const model = new OfficeModel();
+    model.apply(orchestrationTaskEvent('task_started', 'Manager', 1), 0, true);
     model.apply(
-      { ...base, type: 'run_started', executionKind: 'local_check' },
-      0,
+      orchestrationTaskEvent('assignment_started', 'HazeOps', 2),
+      1,
       true,
     );
-    model.apply({ ...base, type: 'run_state', state: 'running' }, 1, true);
-    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
-    model.apply({ ...base, type: 'run_completed' }, 2, true);
-    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
-    expect(model.runActive).toBe(false);
-    model.apply({ ...base, type: 'run_started' }, 3, true);
-    model.apply({ ...base, type: 'agent_working', agent: 'hazeops' }, 4, true);
     expect(model.actors.get('hazeops')?.pose).toBe('working');
+    model.apply(
+      orchestrationTaskEvent('assignment_completed', 'HazeOps', 3),
+      2,
+      true,
+    );
+    model.apply(
+      orchestrationTaskEvent('task_completed', 'Manager', 4),
+      3,
+      true,
+    );
+    expect(model.runActive).toBe(false);
+    model.apply(orchestrationTaskEvent('task_admitted', 'Runtime', 5), 4, true);
+    expect(model.runActive).toBe(true);
+    for (const actor of model.actors.values()) expect(actor.pose).toBe('idle');
   });
   it('walks the Manager to the office and back', () => {
     const model = new OfficeModel();

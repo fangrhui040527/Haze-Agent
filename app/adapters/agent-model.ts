@@ -1,10 +1,34 @@
+export interface AgentModelInput {
+  role: string;
+  instruction: string;
+  context: unknown;
+  /** Admitted by the runtime for this attempt and passed through unchanged. */
+  max_output_tokens?: number;
+  /** Strict JSON actions still undergo agent-owned schema validation after completion. */
+  json_mode?: boolean;
+}
+
+/** Provider-returned metadata; absent fields remain unknown, not inferred. */
+export interface AgentModelReceipt {
+  response_model: string | null;
+  response_id: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+}
+
+export interface AgentModelCompletion {
+  text: string;
+  receipt: AgentModelReceipt;
+}
+
 /** Server-only chat-completion adapter. Credentials never enter agent context. */
 export interface AgentModel {
   readonly selection: { provider: string; model: string };
-  complete(
-    input: { role: string; instruction: string; context: unknown },
+  complete(input: AgentModelInput, signal: AbortSignal): Promise<string>;
+  completeWithReceipt?(
+    input: AgentModelInput,
     signal: AbortSignal,
-  ): Promise<string>;
+  ): Promise<AgentModelCompletion>;
 }
 
 const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
@@ -15,6 +39,11 @@ const MAX_RESPONSE_BYTES = 65_536;
 const MAX_TEXT_CHARACTERS = 12_000;
 
 class ModelError extends Error {}
+
+/** Dispatch happened, but no provider receipt established the remote outcome. */
+export class AgentModelOutcomeUnknownError extends Error {
+  readonly outcome = 'unknown' as const;
+}
 
 function completionUrl(value: string | undefined): URL {
   let url: URL;
@@ -110,6 +139,29 @@ function assistantText(body: unknown): string {
   return message.content.trim();
 }
 
+function receiptText(value: unknown, apiKey: string): string | null {
+  if (typeof value !== 'string') return null;
+  const redacted = value.trim().replaceAll(apiKey, '[redacted]');
+  return redacted && redacted.length <= 256 ? redacted : null;
+}
+
+function receiptTokens(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
+}
+
+function completionReceipt(body: unknown, apiKey: string): AgentModelReceipt {
+  const response = isRecord(body) ? body : {};
+  const usage = isRecord(response.usage) ? response.usage : {};
+  return {
+    response_model: receiptText(response.model, apiKey),
+    response_id: receiptText(response.id, apiKey),
+    input_tokens: receiptTokens(usage.prompt_tokens),
+    output_tokens: receiptTokens(usage.completion_tokens),
+  };
+}
+
 export function resolveAgentModel(
   env: NodeJS.ProcessEnv,
   fetcher: typeof fetch = fetch,
@@ -150,108 +202,129 @@ export function resolveAgentModel(
       (provider === 'nvidia' ? NVIDIA_API_BASE_URL : undefined),
   );
 
-  return {
-    selection: { provider, model },
-    async complete(input, signal) {
+  const completeWithReceipt = async (
+    input: AgentModelInput,
+    signal: AbortSignal,
+  ): Promise<AgentModelCompletion> => {
+    if (signal.aborted) {
+      throw new DOMException(
+        'Agent model request was cancelled.',
+        'AbortError',
+      );
+    }
+    let body: string;
+    try {
+      if (
+        !input.role.trim() ||
+        input.role.length > 80 ||
+        !input.instruction.trim() ||
+        input.instruction.length > MAX_TEXT_CHARACTERS
+      ) {
+        throw new Error();
+      }
+      const context = JSON.stringify(input.context);
+      if (context === undefined) throw new Error();
+      const outputTokens = input.max_output_tokens ?? 1200;
+      if (
+        !Number.isSafeInteger(outputTokens) ||
+        outputTokens < 1 ||
+        outputTokens > 16_384
+      )
+        throw new Error();
+      body = JSON.stringify({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: `You are ${input.role}.\n${input.instruction}`,
+          },
+          { role: 'user', content: context },
+        ],
+        ...(provider === 'nvidia'
+          ? {
+              max_tokens: outputTokens,
+              ...(model === NVIDIA_DEFAULT_MODEL
+                ? { chat_template_kwargs: { enable_thinking: false } }
+                : {}),
+            }
+          : { max_completion_tokens: outputTokens }),
+        stream: false,
+        ...(input.json_mode
+          ? { response_format: { type: 'json_object' }, temperature: 0 }
+          : {}),
+      });
+      if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES)
+        throw new Error();
+    } catch {
+      throw new Error(
+        'Agent model input must be bounded, JSON-serializable context with a role and instruction.',
+      );
+    }
+
+    const deadline = new AbortController();
+    const timer = setTimeout(() => deadline.abort(), TIMEOUT_MS);
+    const requestSignal = AbortSignal.any([signal, deadline.signal]);
+    let onAbort: (() => void) | undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      onAbort = () => reject(new Error('Aborted'));
+      if (requestSignal.aborted) onAbort();
+      else requestSignal.addEventListener('abort', onAbort, { once: true });
+    });
+    try {
+      const request = async () => {
+        requestSignal.throwIfAborted();
+        const response = await fetcher(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body,
+          signal: requestSignal,
+          redirect: 'error',
+        });
+        if (!response.ok) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new ModelError(
+            'Agent model provider request failed. Check the server provider configuration.',
+          );
+        }
+        const responseBody = await readCompletion(response, requestSignal);
+        const text = assistantText(responseBody);
+        return {
+          text: text.replaceAll(apiKey, '[redacted]'),
+          receipt: completionReceipt(responseBody, apiKey),
+        };
+      };
+      return await Promise.race([request(), aborted]);
+    } catch (error) {
       if (signal.aborted) {
         throw new DOMException(
           'Agent model request was cancelled.',
           'AbortError',
         );
       }
-      let body: string;
-      try {
-        if (
-          !input.role.trim() ||
-          input.role.length > 80 ||
-          !input.instruction.trim() ||
-          input.instruction.length > MAX_TEXT_CHARACTERS
-        ) {
-          throw new Error();
-        }
-        const context = JSON.stringify(input.context);
-        if (context === undefined) throw new Error();
-        body = JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are ${input.role}.\n${input.instruction}`,
-            },
-            { role: 'user', content: context },
-          ],
-          ...(provider === 'nvidia'
-            ? {
-                max_tokens: 700,
-                ...(model === NVIDIA_DEFAULT_MODEL
-                  ? { chat_template_kwargs: { enable_thinking: false } }
-                  : {}),
-              }
-            : { max_completion_tokens: 700 }),
-          stream: false,
-        });
-        if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES)
-          throw new Error();
-      } catch {
-        throw new Error(
-          'Agent model input must be bounded, JSON-serializable context with a role and instruction.',
+      if (deadline.signal.aborted) {
+        // Upstream causes may contain credentials; retain only the safe outcome classification.
+        throw new AgentModelOutcomeUnknownError(
+          'Agent model request timed out after 60 seconds.',
         );
       }
-
-      const deadline = new AbortController();
-      const timer = setTimeout(() => deadline.abort(), TIMEOUT_MS);
-      const requestSignal = AbortSignal.any([signal, deadline.signal]);
-      let onAbort: (() => void) | undefined;
-      const aborted = new Promise<never>((_resolve, reject) => {
-        onAbort = () => reject(new Error('Aborted'));
-        if (requestSignal.aborted) onAbort();
-        else requestSignal.addEventListener('abort', onAbort, { once: true });
-      });
-      try {
-        const request = async () => {
-          requestSignal.throwIfAborted();
-          const response = await fetcher(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body,
-            signal: requestSignal,
-            redirect: 'error',
-          });
-          if (!response.ok) {
-            void response.body?.cancel().catch(() => undefined);
-            throw new ModelError(
-              'Agent model provider request failed. Check the server provider configuration.',
-            );
-          }
-          const text = assistantText(
-            await readCompletion(response, requestSignal),
-          );
-          return text.replaceAll(apiKey, '[redacted]');
-        };
-        return await Promise.race([request(), aborted]);
-      } catch (error) {
-        if (signal.aborted) {
-          throw new DOMException(
-            'Agent model request was cancelled.',
-            'AbortError',
-          );
-        }
-        if (deadline.signal.aborted) {
-          // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
-          throw new Error('Agent model request timed out after 60 seconds.');
-        }
-        if (error instanceof ModelError) throw error;
-        // eslint-disable-next-line preserve-caught-error -- Upstream causes may contain server credentials.
-        throw new Error(
-          'Agent model request or response failed. Check the server provider configuration.',
-        );
-      } finally {
-        clearTimeout(timer);
-        if (onAbort) requestSignal.removeEventListener('abort', onAbort);
-      }
+      if (error instanceof ModelError) throw error;
+      // Upstream causes may contain credentials; retain only the safe outcome classification.
+      throw new AgentModelOutcomeUnknownError(
+        'Agent model request or response failed. Check the server provider configuration.',
+      );
+    } finally {
+      clearTimeout(timer);
+      if (onAbort) requestSignal.removeEventListener('abort', onAbort);
+    }
+  };
+  return {
+    selection: { provider, model },
+    completeWithReceipt,
+    async complete(input, signal) {
+      return (await completeWithReceipt(input, signal)).text;
     },
   };
 }

@@ -221,86 +221,93 @@ export function createApp(deps: AppDependencies): Hono {
       : c.json({ error: 'not running' }, 409),
   );
 
-  // v0.14 §16: open a task report directly. Only scheduling and revenue recovery
-  // requests are task kinds for now; anything else belongs in the chat (/api/runs).
-  app.post('/api/tasks', async (c) => {
-    const body = (await c.req
-      .json()
-      .catch(() => null)) as Partial<AskRequest> | null;
-    const question =
-      typeof body?.question === 'string' ? body.question.trim() : '';
-    if (!question || question.length > 2000) {
-      return c.json(
-        {
-          error: 'malformed_input',
-          message: 'question must be 1–2000 characters',
-        },
-        400,
-      );
-    }
-    const { items, locations } = deps.snapshot();
-    const focusItemId =
-      typeof body?.focusItemId === 'string' ? body.focusItemId : null;
-    const framing = deps.manager.frame({ question, focusItemId }, locations, {
-      focusLocationId: items.find((i) => i.id === focusItemId)?.locationId,
-      fallbackLocationId: FALLBACK_LOCATION_ID,
-    });
-    if (framing.kind === 'general') {
-      return c.json(
-        {
-          error: 'unsupported_capability',
-          message:
-            'Only scheduling and revenue recovery requests open a task report. Ask other questions in the chat (POST /api/runs).',
-        },
-        422,
-      );
-    }
-    const task = deps.tasks.start({ ...framing, kind: framing.kind });
-    return c.json({ ...task, events: `/api/tasks/${task.taskId}/events` }, 202);
-  });
-
-  app.get('/api/tasks/:id', (c) => {
-    const id = c.req.param('id');
-    if (!deps.tasks.exists(id)) return c.json({ error: 'not found' }, 404);
-    const result = deps.tasks.result(id);
-    return result
-      ? c.json(result)
-      : c.json({ taskId: id, state: 'running' }, 202);
-  });
-
-  app.get('/api/tasks/:id/events', (c) => {
-    const id = c.req.param('id');
-    if (!deps.tasks.exists(id)) return c.json({ error: 'not found' }, 404);
-    return streamSSE(c, async (stream) => {
-      let resolveDone!: () => void;
-      const done = new Promise<void>((resolve) => {
-        resolveDone = resolve;
+  // Reports have a distinct path from the general v3 evidence task API.
+  // Keep the original server routes as aliases for existing direct clients.
+  for (const prefix of ['/api/reports', '/api/tasks']) {
+    // v0.14 §16: open a task report directly. Only scheduling and revenue recovery
+    // requests are task kinds for now; anything else belongs in the chat (/api/runs).
+    app.post(`${prefix}`, async (c) => {
+      const body = (await c.req
+        .json()
+        .catch(() => null)) as Partial<AskRequest> | null;
+      const question =
+        typeof body?.question === 'string' ? body.question.trim() : '';
+      if (!question || question.length > 2000) {
+        return c.json(
+          {
+            error: 'malformed_input',
+            message: 'question must be 1–2000 characters',
+          },
+          400,
+        );
+      }
+      const { items, locations } = deps.snapshot();
+      const focusItemId =
+        typeof body?.focusItemId === 'string' ? body.focusItemId : null;
+      const framing = deps.manager.frame({ question, focusItemId }, locations, {
+        focusLocationId: items.find((i) => i.id === focusItemId)?.locationId,
+        fallbackLocationId: FALLBACK_LOCATION_ID,
       });
-      let seq = 0;
-      const unsubscribe = deps.tasks.subscribe(id, (event) => {
-        seq += 1;
-        void stream.writeSSE({
-          id: String(seq),
-          event: event.type,
-          data: JSON.stringify(event),
+      if (framing.kind === 'general') {
+        return c.json(
+          {
+            error: 'unsupported_capability',
+            message:
+              'Only scheduling and revenue recovery requests open a task report. Ask other questions in the chat (POST /api/runs).',
+          },
+          422,
+        );
+      }
+      const task = deps.tasks.start({ ...framing, kind: framing.kind });
+      return c.json(
+        { ...task, events: `${prefix}/${task.taskId}/events` },
+        202,
+      );
+    });
+
+    app.get(`${prefix}/:id`, (c) => {
+      const id = c.req.param('id');
+      if (!deps.tasks.exists(id)) return c.json({ error: 'not found' }, 404);
+      const result = deps.tasks.result(id);
+      return result
+        ? c.json(result)
+        : c.json({ taskId: id, state: 'running' }, 202);
+    });
+
+    app.get(`${prefix}/:id/events`, (c) => {
+      const id = c.req.param('id');
+      if (!deps.tasks.exists(id)) return c.json({ error: 'not found' }, 404);
+      return streamSSE(c, async (stream) => {
+        let resolveDone!: () => void;
+        const done = new Promise<void>((resolve) => {
+          resolveDone = resolve;
         });
-        if (event.type === 'result' || event.type === 'failed') resolveDone();
+        let seq = 0;
+        const unsubscribe = deps.tasks.subscribe(id, (event) => {
+          seq += 1;
+          void stream.writeSSE({
+            id: String(seq),
+            event: event.type,
+            data: JSON.stringify(event),
+          });
+          if (event.type === 'result' || event.type === 'failed') resolveDone();
+        });
+        stream.onAbort(() => {
+          unsubscribe();
+          resolveDone();
+        });
+        if (deps.tasks.isDone(id)) resolveDone();
+        await done;
+        await stream.writeSSE({ event: 'end', data: '' });
       });
-      stream.onAbort(() => {
-        unsubscribe();
-        resolveDone();
-      });
-      if (deps.tasks.isDone(id)) resolveDone();
-      await done;
-      await stream.writeSSE({ event: 'end', data: '' });
     });
-  });
 
-  app.post('/api/tasks/:id/cancel', (c) =>
-    deps.tasks.cancel(c.req.param('id'))
-      ? c.body(null, 204)
-      : c.json({ error: 'not running' }, 409),
-  );
+    app.post(`${prefix}/:id/cancel`, (c) =>
+      deps.tasks.cancel(c.req.param('id'))
+        ? c.body(null, 204)
+        : c.json({ error: 'not running' }, 409),
+    );
+  }
 
   app.post('/api/runs/:id/feedback', async (c) => {
     const body = (await c.req.json().catch(() => null)) as {

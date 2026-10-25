@@ -2,28 +2,61 @@ import type {
   AgentAnswer,
   AgentEvent,
   AskRequest,
+  AgentTaskHandle,
 } from '../../shared/types/agents.ts';
+import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
+import type {
+  Artifact,
+  ArtifactImport,
+} from '../../../../app/contracts/artifacts.ts';
+import type { CapabilityCard } from '../../../../app/contracts/capabilities.ts';
+import type {
+  ControlReceipt,
+  TaskControl,
+  TaskUpdate,
+} from '../../../../app/contracts/controls.ts';
 
-/**
- * Asks the agent system a question.
- *
- * While working, the implementation calls `onEvent` for every AgentEvent (see
- * src/shared/types/agents.ts). The chat, status line and pixel office render only from those
- * events, so a real backend can replace the mock without UI changes.
- *
- * - Resolves with the final answer.
- * - Rejects with an AbortError if `signal` is aborted (after emitting `run_cancelled`).
- * - Rejects with AgentRunError if the run fails (after emitting `run_failed`).
- */
 export interface AgentService {
   readonly label: string;
   ask(
     request: AskRequest,
     onEvent: (event: AgentEvent) => void,
     signal: AbortSignal,
+    onTask?: (task: AgentTaskHandle) => void,
   ): Promise<AgentAnswer>;
+  watchTask?(
+    taskId: string,
+    onEvent: (event: AgentEvent) => void,
+    signal: AbortSignal,
+    onTask?: (task: AgentTaskHandle) => void,
+  ): Promise<AgentAnswer>;
+  readTask?(taskId: string, signal?: AbortSignal): Promise<TaskRecord>;
+  updateTask?(
+    taskId: string,
+    update: TaskUpdate,
+    operationKey: string,
+    signal?: AbortSignal,
+  ): Promise<ControlReceipt>;
+  controlTask?(
+    taskId: string,
+    control: TaskControl,
+    operationKey: string,
+    signal?: AbortSignal,
+  ): Promise<ControlReceipt>;
+  importSource?(
+    source: ArtifactImport,
+    operationKey: string,
+    signal?: AbortSignal,
+  ): Promise<Artifact>;
+  readArtifact?(artifactId: string, signal?: AbortSignal): Promise<Artifact>;
+  capabilities?(signal?: AbortSignal): Promise<CapabilityCard[]>;
 }
-
+export class AgentTaskCancelledError extends Error {
+  constructor() {
+    super('The server cancelled this task. Saved artifacts remain available.');
+    this.name = 'AgentTaskCancelledError';
+  }
+}
 export class AgentRunError extends Error {
   readonly retryable: boolean;
   constructor(message: string, retryable: boolean) {

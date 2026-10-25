@@ -1,0 +1,14 @@
+{
+  "schema_version": "haze.task.request.v2",
+  "objective": "Summarize PM2.5 evidence for Fixture Town during 2026-10-01T00:00:00Z to 2026-10-01T03:00:00Z, distinguish modeled samples from observations and identify coverage gaps.",
+  "scope": {
+    "location": "Fixture Town",
+    "period": {
+      "start": "2026-10-01T00:00:00Z",
+      "end": "2026-10-01T03:00:00Z"
+    }
+  },
+  "context_refs": [],
+  "constraints": [],
+  "desired_deliverables": []
+}

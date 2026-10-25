@@ -17,7 +17,7 @@ type EventInput = AgentEvent extends infer E
   : never;
 
 /**
- * Simulates the whole agent flow (docs/03-ui-design.md §7.3) and answers from demo data.
+ * Simulates the whole agent flow (docs/frontend/03-ui-design.md §7.3) and answers from demo data.
  * Behaviour is controlled from the Demo Data page (speed, failure rate, event detail level).
  */
 export class MockAgentService implements AgentService {

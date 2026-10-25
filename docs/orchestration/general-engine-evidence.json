@@ -1,0 +1,393 @@
+{
+  "schema_version": "haze.verification.evidence.v1",
+  "recorded_date": "2026-10-25",
+  "toolchain": {
+    "node": "24.22.1",
+    "npm": "11.8.0"
+  },
+  "checks": {
+    "command": "npm run check",
+    "passed": true,
+    "backend_test_files": 18,
+    "backend_tests": 202,
+    "frontend_test_files": 12,
+    "frontend_tests": 70,
+    "hmem_conformance": 13,
+    "world_model_conformance": 8,
+    "postgres": "Not run locally; separately configured CI service."
+  },
+  "source_credential_configured": false,
+  "live_source_readiness": "unverified",
+  "records": [
+    {
+      "report": ".state/general-verification/a29a350c-a278-4e5e-9a7a-3b468ba058f2/report.json",
+      "report_sha256": "a9fe7a17769ac8d24099b2b0f767e5dc850f63550ff5e53cabb591edb3ac8253",
+      "checked_at": "2026-10-25T11:43:08.265Z",
+      "mode": "fixture",
+      "passed": true,
+      "live_readiness_pass": false,
+      "restart_unchanged": true,
+      "duplicate_delivery": true,
+      "tasks": {
+        "general": {
+          "task_id": "7d78f35a-a778-446e-b8c9-b82b071fb722",
+          "status": "completed",
+          "completion": "full",
+          "usage": {
+            "model_calls": 0,
+            "tool_calls": 0,
+            "artifacts": 4,
+            "assignments": 4
+          },
+          "assignments": [
+            {
+              "definition_id": "core.manager.plan",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "evidence-synthesis.extract",
+              "definition_version": "evidence-extract.v3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "evidence-synthesis.v3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "evidence-synthesis.review",
+              "definition_version": "evidence-review.v3",
+              "agent_version": "evidence-critic.v3",
+              "capability_version": "evidence-synthesis.v3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "core.manager.synthesis",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            }
+          ],
+          "uncertainty": [
+            "Source authenticity has not been independently established.",
+            "Scientific validity and full prose entailment remain unverified."
+          ]
+        },
+        "investigation": {
+          "task_id": "44003f04-2f32-4c0c-b497-db4bdb7d6c83",
+          "status": "completed",
+          "completion": "partial",
+          "usage": {
+            "model_calls": 0,
+            "tool_calls": 1,
+            "artifacts": 8,
+            "assignments": 6
+          },
+          "assignments": [
+            {
+              "definition_id": "core.manager.plan",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "pm25.retrieve",
+              "definition_version": "3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "partial"
+            },
+            {
+              "definition_id": "pm25.analyze",
+              "definition_version": "3",
+              "agent_version": "workershield.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "pm25.check",
+              "definition_version": "3",
+              "agent_version": "evidence-critic.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "pm25.observation-gap",
+              "definition_version": "3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "gap"
+            },
+            {
+              "definition_id": "core.manager.synthesis",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            }
+          ],
+          "uncertainty": [
+            "This selection contains model output, not observations or hourly averages.",
+            "Synthetic fixture; no live source was queried.",
+            "Provider issuance, observation coverage and model grid support are unknown.",
+            "Provider issuance time is unknown; local collection, ingestion and retrieval times do not establish provider issuance.",
+            "Observational coverage was not assessed; model grid-cell support and town-wide representativeness remain unverified.",
+            "Deterministic checks validate selection, sample counts, ranges and citations; they do not prove prose entailment or provide scientific qualification.",
+            "Provider issuance, native grid support, observations and source ingestion limitations remain unresolved.",
+            "No causal attribution, health advice or operational decision is supported."
+          ]
+        }
+      },
+      "attempts": [
+        {
+          "id": "456525d2-3013-41a7-a9af-c68c86ded7db",
+          "kind": "tool",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "tool": "zetaris-smokeledger-pm25",
+            "version": "3",
+            "mode": "fixture",
+            "input": {
+              "location": "Fixture Town",
+              "period": {
+                "start": "2026-10-01T00:00:00Z",
+                "end": "2026-10-01T03:00:00Z"
+              }
+            }
+          }
+        }
+      ],
+      "peer_messages": 2
+    },
+    {
+      "report": ".state/general-verification/7468ac6d-128c-4953-ba7b-ea82f4fb922d/report.json",
+      "report_sha256": "37e3716f0e0b106ed2fb771bc334dd8578cfd8c9bb6aeaceb80119ff082dee9f",
+      "checked_at": "2026-10-25T11:36:16.369Z",
+      "mode": "live",
+      "passed": false,
+      "live_readiness_pass": false,
+      "restart_unchanged": true,
+      "duplicate_delivery": true,
+      "tasks": {
+        "general": {
+          "task_id": "9582a2b6-89c9-45d5-afd0-a34e4ca351c6",
+          "status": "completed",
+          "completion": "full",
+          "usage": {
+            "model_calls": 2,
+            "tool_calls": 0,
+            "artifacts": 2,
+            "assignments": 3
+          },
+          "assignments": [
+            {
+              "definition_id": "core.manager.plan",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "evidence-synthesis.extract",
+              "definition_version": "evidence-extract.v3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "evidence-synthesis.v3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "core.manager.synthesis",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            }
+          ],
+          "uncertainty": [
+            "Source authenticity has not been independently established."
+          ]
+        },
+        "investigation": {
+          "task_id": "96e4e125-b660-48f3-9531-6e68a0edec32",
+          "status": "completed",
+          "completion": "partial",
+          "usage": {
+            "model_calls": 2,
+            "tool_calls": 1,
+            "artifacts": 6,
+            "assignments": 6
+          },
+          "assignments": [
+            {
+              "definition_id": "core.manager.plan",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            },
+            {
+              "definition_id": "pm25.retrieve",
+              "definition_version": "3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "gap"
+            },
+            {
+              "definition_id": "pm25.analyze",
+              "definition_version": "3",
+              "agent_version": "workershield.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "gap"
+            },
+            {
+              "definition_id": "pm25.check",
+              "definition_version": "3",
+              "agent_version": "evidence-critic.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "gap"
+            },
+            {
+              "definition_id": "pm25.observation-gap",
+              "definition_version": "3",
+              "agent_version": "hazeops.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "gap"
+            },
+            {
+              "definition_id": "core.manager.synthesis",
+              "definition_version": "3",
+              "agent_version": "manager.v3",
+              "capability_version": "3",
+              "status": "completed",
+              "support": "supported"
+            }
+          ],
+          "uncertainty": [
+            "The Zetaris adapter is unavailable: ZETARIS_API_KEY is missing. No other source was queried.",
+            "No source capture to analyze.",
+            "No numerical analysis available.",
+            "No causal attribution, health advice or operational decision is supported."
+          ]
+        }
+      },
+      "attempts": [
+        {
+          "id": "80a07e1f-caea-41cb-9ea8-934da3045664",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200
+          },
+          "receipt": {
+            "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "response_id": "chatcmpl-b35d36ea-cc38-42f8-9b99-c39cb9fa1db7",
+            "input_tokens": 2197,
+            "output_tokens": 84
+          }
+        },
+        {
+          "id": "bcc4b392-153f-46ba-aab9-e44ae0664765",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200
+          },
+          "receipt": {
+            "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "response_id": "chatcmpl-cd67b796-6707-43df-b5e3-eda5eebc82d9",
+            "input_tokens": 692,
+            "output_tokens": 37
+          }
+        },
+        {
+          "id": "7ae0e79a-f567-431f-9a90-86fd6c394f95",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200
+          },
+          "receipt": {
+            "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "response_id": "chatcmpl-3beedb89-fdac-499b-8b8a-99ee6ad379ab",
+            "input_tokens": 2288,
+            "output_tokens": 449
+          }
+        },
+        {
+          "id": "a60717cf-5b9d-462c-96e0-ad8b6eee9a9e",
+          "kind": "tool",
+          "status": "failed",
+          "accepted": false,
+          "details": {
+            "tool": "zetaris-smokeledger-pm25",
+            "version": "3",
+            "mode": "live",
+            "input": {
+              "location": "Klang",
+              "period": {
+                "start": "2026-10-24T00:00:00Z",
+                "end": "2026-10-25T00:00:00Z"
+              }
+            }
+          },
+          "error": "The Zetaris adapter is unavailable: ZETARIS_API_KEY is missing. No other source was queried."
+        },
+        {
+          "id": "5b61c6c7-357b-4562-b751-cf636b35fc10",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200
+          },
+          "receipt": {
+            "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "response_id": "chatcmpl-948526cb-bc1f-4c76-84b9-4a5c239bff9d",
+            "input_tokens": 895,
+            "output_tokens": 141
+          }
+        }
+      ],
+      "peer_messages": 0
+    }
+  ],
+  "direct_response_trace": {
+    "report": ".state/general-verification/c22c5eef-5cae-4b98-805f-cc6a3f18493a/report.json",
+    "report_sha256": "cf1fed28970077ca230d3c3d3ab5617dc69143d8d907af3ee127c1f280b1306e",
+    "checked_at": "2026-10-25T11:23:46.307Z",
+    "task_id": "0ac7b6d2-bb93-46dd-8c00-8f36c1a59cfe",
+    "status": "completed",
+    "assignment_definitions": ["core.manager.plan"],
+    "receipts": [
+      {
+        "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "response_id": "chatcmpl-c63b83a5-1931-495f-9966-9fe9a4cedfa2",
+        "input_tokens": 2195,
+        "output_tokens": 77
+      }
+    ]
+  }
+}

@@ -59,10 +59,10 @@ the Copernicus Atmosphere Monitoring Service (CAMS) and Open-Meteo.
 | `POST /api/runs`               | ask a question → `{ runId }`                                           |
 | `GET /api/runs/:id/events`     | SSE: `agent` events (`AgentEvent`), then `answer`                      |
 | `POST /api/runs/:id/cancel`    | cancel a run                                                           |
-| `POST /api/tasks`              | open a task report (scheduling or revenue recovery only; others → 422) |
-| `GET /api/tasks/:id`           | the finished result envelope (v0.14 §16), 202 while running            |
-| `GET /api/tasks/:id/events`    | SSE: `step` and `block` events as the report is written, then `result` |
-| `POST /api/tasks/:id/cancel`   | cancel a task                                                          |
+| `POST /api/reports`            | open a task report (scheduling or revenue recovery only; others → 422) |
+| `GET /api/reports/:id`         | the finished result envelope (v0.14 §16), 202 while running            |
+| `GET /api/reports/:id/events`  | SSE: `step` and `block` events as the report is written, then `result` |
+| `POST /api/reports/:id/cancel` | cancel a task                                                          |
 | `POST /api/runs/:id/feedback`  | `{ kind: helpful                                                       | not_helpful | wrong }` → H-MEM feedback |
 
 The spec defines polling only; SSE is a HazeWatch addition.
@@ -94,3 +94,6 @@ npm run typecheck
 ```
 
 Data model: [`docs/05-world-model-data-model.md`](../docs/05-world-model-data-model.md).
+
+The original `/api/tasks` report endpoints remain aliases for direct server clients.
+The frontend uses `/api/reports` so these template reports do not collide with the separate general v3 evidence task API at `/api/tasks`.

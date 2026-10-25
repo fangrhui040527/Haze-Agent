@@ -40,8 +40,10 @@ CREATE TABLE IF NOT EXISTS wind (
 );
 
 -- Hourly PM2.5 per town. kind = 'observed' (ground stations) or 'model' (CAMS).
--- issued_utc = when a model forecast was fetched; NULL for observations and
--- for hindsight downloads (past_days). Backtests only use rows issued before "now".
+-- issued_utc = provider-confirmed issuance, otherwise NULL. ingested_utc is
+-- local receipt time and must not establish provider issuance or backtest eligibility.
+-- Legacy Open-Meteo rows may contain local collection times in issued_utc;
+-- consumers must treat those legacy values as unverified, not provider issue times.
 CREATE TABLE IF NOT EXISTS pm25 (
   town        TEXT NOT NULL,
   valid_utc   TIMESTAMPTZ NOT NULL,

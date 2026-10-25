@@ -1,6 +1,4 @@
 import {
-  lazy,
-  Suspense,
   useEffect,
   useRef,
   useState,
@@ -10,28 +8,27 @@ import {
 import { Link, useNavigate } from 'react-router';
 import {
   AgentRunError,
-  KLANG_CREW_EXAMPLE,
+  AgentTaskCancelledError,
 } from '../../services/agents/index.ts';
 import { useLocalStorageState, useNow } from '../../shared/hooks/hooks.ts';
 import { isAbortError } from '../../shared/lib/delay.ts';
 import { formatDuration } from '../../shared/lib/time.ts';
-import type { AgentAnswer, Citation } from '../../shared/types/agents.ts';
+import { readLocal } from '../../shared/lib/store.ts';
+import type {
+  AgentAnswer,
+  AskRequest,
+  Citation,
+} from '../../shared/types/agents.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
+import type { Artifact } from '../../../../app/contracts/artifacts.ts';
+import { TaskResult } from './TaskResult.tsx';
+import { TaskQuestions } from './TaskQuestions.tsx';
+import { TaskControls } from './TaskControls.tsx';
+import { SourceImport, sourceReferences } from './SourceImport.tsx';
 import styles from './ChatPanel.module.css';
-
-const ScheduleResult = lazy(() =>
-  import('./ScheduleResult.tsx').then((module) => ({
-    default: module.ScheduleResult,
-  })),
-);
-const AgentExecution = lazy(() =>
-  import('./AgentExecution.tsx').then((module) => ({
-    default: module.AgentExecution,
-  })),
-);
 
 interface ChatMessage {
   id: string;
@@ -40,35 +37,43 @@ interface ChatMessage {
   text?: string;
   paragraphs?: string[];
   citations?: Citation[];
-  source?: AgentAnswer['source'];
-  scheduling?: AgentAnswer['scheduling'];
-  agentExecution?: AgentAnswer['agentExecution'];
+  source?:
+    | AgentAnswer['source']
+    | 'model'
+    | 'template_fallback'
+    | 'computed_demo'
+    | 'input_required';
+  /** Old browser history is retained as text, without loading retired contracts. */
+  scheduling?: unknown;
+  agentExecution?: unknown;
+  evidence?: AgentAnswer['evidence'];
   task?: AgentAnswer['task'];
-  state: 'pending' | 'done' | 'error' | 'cancelled';
+  stale?: boolean;
+  state: 'pending' | 'done' | 'error' | 'cancelled' | 'task_cancelled';
   error?: string;
   retryable?: boolean;
   /** For retry. */
   question?: string;
   focusItemId?: string | null;
+  idempotencyKey?: string;
+  contextRefs?: AskRequest['contextRefs'];
+  scope?: AskRequest['scope'];
 }
 
 const EXAMPLE_PROMPTS = [
-  KLANG_CREW_EXAMPLE,
-  "What's the haze situation in Kuala Lumpur?",
-  'Compare Kuala Lumpur and Johor Bahru today',
-  'Will the haze in Kuching get worse tomorrow?',
-  'Is it safe to run outside in Shah Alam?',
-  "What's driving haze in Pekanbaru?",
-  'What changed in the last few hours?',
+  'Explain the main conclusions in my attached sources and identify what remains uncertain.',
+  'Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24, distinguish modeled values from observations, and identify coverage gaps.',
 ];
 
 const SOURCE_LABEL = {
   mock_template: 'Demo answer (template)',
-  model: 'AI model answer',
-  template_fallback: 'Template fallback (AI unavailable)',
-  computed_demo: 'Computed fictional sample · no AI model run',
-  input_required: 'Planning input needed',
   template: 'Template answer from real records (no AI model connected)',
+  model: 'Archived crew demo',
+  template_fallback: 'Archived template answer',
+  computed_demo: 'Archived crew demo',
+  input_required: 'Archived input request',
+  evidence_model: 'Live evidence · model synthesis',
+  evidence_fixture: 'Fixture evidence · model orchestration',
 } as const;
 
 const MAX_STORED = 50;
@@ -88,12 +93,15 @@ export function ChatPanel({
   prefill: ChatPrefill | null;
 }) {
   const navigate = useNavigate();
-  // History, including live role receipts, stays in this browser.
+  // Saved answers stay in this browser, including text from retired demo results.
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
     'haze.chat.v1',
-    [],
+    readLocal<ChatMessage[]>('hazewatch.chat.v1', []),
   );
   const [draft, setDraft] = useState('');
+  const [sources, setSources] = useState<Artifact[]>([]);
+  const [scope, setScope] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -112,16 +120,36 @@ export function ChatPanel({
     }
   }, [prefill]);
 
+  // Once observed stale, a saved answer remains historical when another task is selected.
+  useEffect(() => {
+    const record = run.task?.record;
+    if (!record) return;
+    let changed = false;
+    const next = messagesRef.current.map((message) => {
+      const evidence = message.evidence;
+      if (message.stale || !evidence || evidence.taskUrl !== run.task?.taskUrl)
+        return message;
+      if (
+        (evidence.objectiveRevision ?? 1) < record.objective_revision ||
+        (evidence.runId && evidence.runId !== record.current_run_id) ||
+        evidence.result.currency === 'stale'
+      ) {
+        changed = true;
+        return { ...message, stale: true };
+      }
+      return message;
+    });
+    if (changed) {
+      messagesRef.current = next;
+      setMessages(next);
+    }
+  }, [run.task, setMessages]);
+
   // Keep the newest message visible, also when a pending message turns into an answer or error.
   useEffect(() => {
     const list = listRef.current;
     if (list) {
-      const newest = list.lastElementChild as HTMLElement | null;
-      // A schedule is taller than the chat viewport: start at its summary.
-      list.scrollTop =
-        messages.at(-1)?.scheduling && newest
-          ? newest.offsetTop - list.offsetTop
-          : list.scrollHeight;
+      list.scrollTop = list.scrollHeight;
     }
   }, [messages]);
 
@@ -164,10 +192,26 @@ export function ChatPanel({
     setMessages(messagesRef.current);
   };
 
-  const send = async (question: string, focus: string | null) => {
+  const send = async (
+    question: string,
+    focus: string | null,
+    submissionKey?: string,
+    savedContext?: Pick<AskRequest, 'contextRefs' | 'scope'>,
+  ) => {
     const trimmed = question.trim();
-    if (!trimmed || run.status === 'running') return;
+    if (!trimmed || ['running', 'waiting', 'paused'].includes(run.status))
+      return;
+    let parsedScope;
+    try {
+      if (savedContext?.scope !== undefined) parsedScope = savedContext.scope;
+      else if (scope.trim()) parsedScope = JSON.parse(scope);
+    } catch {
+      setInputError('Scope must be valid JSON. Correct it or leave it empty.');
+      return;
+    }
+    setInputError(null);
     const pendingId = newId();
+    const idempotencyKey = submissionKey ?? crypto.randomUUID();
     save([
       ...messagesRef.current,
       {
@@ -184,6 +228,9 @@ export function ChatPanel({
         state: 'pending',
         question: trimmed,
         focusItemId: focus,
+        idempotencyKey,
+        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
+        scope: parsedScope,
       },
     ]);
     setDraft('');
@@ -197,21 +244,28 @@ export function ChatPanel({
       );
 
     try {
-      const answer = await run.ask({ question: trimmed, focusItemId: focus });
+      const answer = await run.ask({
+        question: trimmed,
+        focusItemId: focus,
+        idempotencyKey,
+        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
+        ...(parsedScope !== undefined ? { scope: parsedScope } : {}),
+      });
       finish({
         state: 'done',
         paragraphs: answer.paragraphs,
         citations: answer.citations,
         source: answer.source,
-        scheduling: answer.scheduling,
-        agentExecution: answer.agentExecution,
+        evidence: answer.evidence,
         task: answer.task,
       });
       // The Manager opened a task report: show it being written.
       if (answer.task)
         void navigate(`/task/${encodeURIComponent(answer.task.taskId)}`);
     } catch (error) {
-      if (isAbortError(error)) finish({ state: 'cancelled' });
+      if (error instanceof AgentTaskCancelledError)
+        finish({ state: 'task_cancelled' });
+      else if (isAbortError(error)) finish({ state: 'cancelled' });
       else
         finish({
           state: 'error',
@@ -233,7 +287,19 @@ export function ChatPanel({
     }
   };
 
-  const running = run.status === 'running';
+  const running = ['running', 'waiting', 'paused'].includes(run.status);
+  const currentRecord = run.task?.record;
+  const currentResultInHistory = Boolean(
+    currentRecord &&
+    messages.some(
+      (message) =>
+        message.evidence &&
+        message.evidence.taskUrl === run.task?.taskUrl &&
+        (message.evidence.objectiveRevision ?? 1) ===
+          currentRecord.objective_revision &&
+        message.evidence.runId === currentRecord.current_run_id,
+    ),
+  );
 
   return (
     <section className={styles.chat} aria-labelledby="chat-title">
@@ -254,8 +320,8 @@ export function ChatPanel({
       {messages.length === 0 ? (
         <div className={styles.empty}>
           <p>
-            Ask about haze in the demo data or compare the fictional Klang crew
-            schedule. Try:
+            Describe what you need to understand or investigate. Attach source
+            material when useful; the agents will ask for missing information.
           </p>
           <ul className={styles.prompts}>
             {EXAMPLE_PROMPTS.map((p) => (
@@ -263,7 +329,11 @@ export function ChatPanel({
                 <button
                   type="button"
                   className={styles.prompt}
-                  onClick={() => void send(p, null)}
+                  onClick={() => {
+                    setDraft(p);
+                    setFocusItemId(null);
+                    inputRef.current?.focus();
+                  }}
                   disabled={running}
                 >
                   {p}
@@ -275,7 +345,7 @@ export function ChatPanel({
       ) : (
         <ol
           ref={listRef}
-          className={`${styles.messages} ${messages.some((m) => m.scheduling) ? styles.withSchedule : ''}`}
+          className={styles.messages}
           role="log"
           aria-label="Conversation"
         >
@@ -290,15 +360,79 @@ export function ChatPanel({
               <MessageBody
                 message={m}
                 onRetry={() =>
-                  m.question && void send(m.question, m.focusItemId ?? null)
+                  m.question &&
+                  void send(
+                    m.question,
+                    m.focusItemId ?? null,
+                    m.idempotencyKey,
+                    { contextRefs: m.contextRefs, scope: m.scope },
+                  )
                 }
                 retryDisabled={running}
+                stale={
+                  Boolean(m.stale) ||
+                  Boolean(
+                    m.evidence &&
+                    run.task &&
+                    m.evidence.taskUrl === run.task.taskUrl &&
+                    run.task.record &&
+                    ((m.evidence.objectiveRevision ?? 1) <
+                      run.task.record.objective_revision ||
+                      (m.evidence.runId &&
+                        m.evidence.runId !== run.task.record.current_run_id) ||
+                      run.task.record.result?.currency === 'stale'),
+                  )
+                }
               />
             </li>
           ))}
         </ol>
       )}
 
+      {run.task?.record && (
+        <div className={styles.currentTask}>
+          <TaskControls run={run} />
+          <TaskQuestions run={run} />
+          {run.task.record.result &&
+            !currentResultInHistory &&
+            (run.task.record.result.currency === 'current' ||
+              !messages.some(
+                (message) => message.evidence?.taskUrl === run.task?.taskUrl,
+              )) && (
+              <TaskResult
+                evidence={{
+                  taskUrl: run.task.taskUrl,
+                  result: run.task.record.result,
+                }}
+                showAnswer
+              />
+            )}
+        </div>
+      )}
+      <SourceImport
+        sources={sources}
+        onChange={setSources}
+        importSource={run.importSource}
+        disabled={running}
+      />
+      <details className={styles.scopeInput}>
+        <summary>Optional task scope</summary>
+        <label htmlFor="task-scope">
+          Scope as JSON, interpreted by the selected capability
+        </label>
+        <textarea
+          id="task-scope"
+          rows={2}
+          value={scope}
+          onChange={(event) => setScope(event.target.value)}
+          disabled={running}
+        />
+      </details>
+      {inputError && (
+        <p role="alert" className={styles.cancellationError}>
+          {inputError}
+        </p>
+      )}
       <form className={styles.form} onSubmit={onSubmit}>
         <label htmlFor="chat-input" className="visually-hidden">
           Your question
@@ -311,7 +445,7 @@ export function ChatPanel({
           placeholder="Type a question… (Enter to send, Shift+Enter for a new line)"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          maxLength={500}
+          maxLength={16000}
         />
         <Button
           type="submit"
@@ -334,6 +468,27 @@ export function ChatPanel({
         </p>
       )}
 
+      {run.capabilities.length > 0 && (
+        <details className={styles.capabilities}>
+          <summary>Available capabilities</summary>
+          <ul>
+            {run.capabilities.map((capability) => (
+              <li key={capability.id}>
+                <strong>{capability.id}</strong> ? {capability.readiness}
+                <p>{capability.purpose}</p>
+                <ul>
+                  {capability.limitations.map((limitation, index) => (
+                    <li key={index}>{limitation}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {run.capabilitiesError && (
+        <p className={styles.muted}>{run.capabilitiesError}</p>
+      )}
       <StatusLine run={run} />
     </section>
   );
@@ -343,10 +498,12 @@ function MessageBody({
   message: m,
   onRetry,
   retryDisabled,
+  stale,
 }: {
   message: ChatMessage;
   onRetry: () => void;
   retryDisabled: boolean;
+  stale: boolean;
 }) {
   if (m.role === 'user') return <p className={styles.bubble}>{m.text}</p>;
   if (m.state === 'pending')
@@ -356,11 +513,21 @@ function MessageBody({
       </p>
     );
   if (m.state === 'cancelled')
-    return <p className={`${styles.bubble} ${styles.muted}`}>Cancelled.</p>;
+    return (
+      <p className={`${styles.bubble} ${styles.muted}`}>
+        Stopped waiting. Any admitted evidence task remains saved on the server.
+      </p>
+    );
+  if (m.state === 'task_cancelled')
+    return (
+      <p className={`${styles.bubble} ${styles.muted}`}>
+        The server cancelled this task. Saved artifacts remain available.
+      </p>
+    );
   if (m.state === 'error')
     return (
       <div className={`${styles.bubble} ${styles.error}`} role="alert">
-        <p>Sorry, the agents couldn't answer: {m.error}</p>
+        <p>The agents couldn't answer: {m.error}</p>
         {m.retryable && m.question && (
           <Button size="small" onClick={onRetry} disabled={retryDisabled}>
             Retry
@@ -370,14 +537,18 @@ function MessageBody({
     );
   return (
     <div className={styles.bubble}>
-      {m.agentExecution && (
+      {(m.scheduling !== undefined || m.agentExecution !== undefined) && (
         <p className={styles.source}>
-          AI model commentary on the fictional sample
+          Archived crew demo. Saved text is retained; structured scheduling
+          details are no longer available.
         </p>
       )}
       {m.paragraphs?.map((p, i) => (
         <p key={i}>{p}</p>
       ))}
+      {m.evidence?.result?.schema_version === 'haze.task.result.v3' && (
+        <TaskResult evidence={m.evidence} stale={stale} />
+      )}
       {m.task && (
         <p>
           <Link to={`/task/${encodeURIComponent(m.task.taskId)}`}>
@@ -385,21 +556,22 @@ function MessageBody({
           </Link>
         </p>
       )}
-      {m.agentExecution && (
-        <Suspense fallback={<p role="status">Loading agent execution…</p>}>
-          <AgentExecution execution={m.agentExecution} />
-        </Suspense>
-      )}
-      {m.scheduling && (
-        <Suspense fallback={<p role="status">Loading schedule result…</p>}>
-          <ScheduleResult response={m.scheduling} />
-        </Suspense>
-      )}
       {m.citations && m.citations.length > 0 && (
         <p className={styles.citations}>
           Sources:{' '}
           {m.citations.map((c, i) =>
-            c.itemId ? (
+            c.href ? (
+              <a
+                key={i}
+                href={c.href}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.citation}
+                title={c.sha256 ? `SHA-256 ${c.sha256}` : undefined}
+              >
+                [{c.id ?? i + 1}] {c.label}
+              </a>
+            ) : c.itemId ? (
               <Link
                 key={i}
                 to={`/item/${encodeURIComponent(c.itemId)}`}
@@ -417,7 +589,7 @@ function MessageBody({
       )}
       {m.source && (
         <p className={styles.source}>
-          <Badge tone={m.source === 'model' ? 'info' : 'neutral'}>
+          <Badge tone={m.source === 'evidence_model' ? 'info' : 'neutral'}>
             {SOURCE_LABEL[m.source]}
           </Badge>
         </p>
@@ -428,8 +600,16 @@ function MessageBody({
 
 /** The always-visible text version of what the agents are doing (screen-reader friendly). */
 function StatusLine({ run }: { run: AgentRun }) {
-  const now = useNow(run.status === 'running' ? 1000 : 60_000);
-  const running = run.status === 'running';
+  const observing = ['running', 'waiting', 'paused'].includes(run.status);
+  const now = useNow(observing ? 1000 : 60_000);
+  const running = observing;
+  const task = run.events.findLast((event) => event.type === 'task_event');
+  const baseUrl: unknown = import.meta.env.VITE_API_BASE_URL;
+  const savedTaskUrl =
+    run.task?.taskUrl ??
+    (task
+      ? `${typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : ''}/api/tasks/${task.receipt.task_id}`
+      : undefined);
   return (
     <div
       className={`${styles.status} ${run.status === 'failed' ? styles.statusFailed : ''}`}
@@ -444,9 +624,24 @@ function StatusLine({ run }: { run: AgentRun }) {
         </span>
       )}
       {running && (
-        <Button size="small" variant="danger" onClick={run.cancel}>
-          Cancel
+        <Button size="small" variant="ghost" onClick={run.cancel}>
+          Stop waiting
         </Button>
+      )}
+      {run.operationError && !run.task?.record && (
+        <p role="alert" className={styles.cancellationError}>
+          {run.operationError}
+        </p>
+      )}
+      {savedTaskUrl && (
+        <a
+          href={savedTaskUrl}
+          target="_blank"
+          rel="noreferrer"
+          className={styles.citation}
+        >
+          Saved task
+        </a>
       )}
     </div>
   );

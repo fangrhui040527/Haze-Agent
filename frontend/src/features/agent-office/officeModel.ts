@@ -3,6 +3,7 @@ import {
   AGENT_INFO,
   type AgentEvent,
   type AgentId,
+  type AgentTaskHandle,
 } from '../../shared/types/agents.ts';
 import {
   findPath,
@@ -69,6 +70,13 @@ const HIGHLIGHT_MS = 1200;
 const WANDER_DELAY_MS: [number, number] = [8_000, 25_000];
 const WANDER_STAY_MS: [number, number] = [2_500, 6_000];
 const PET_REST_MS: [number, number] = [3_000, 9_000];
+const TASK_ACTORS: Record<string, AgentId | null> = {
+  Manager: 'manager',
+  HazeOps: 'hazeops',
+  WorkerShield: 'workershield',
+  EvidenceCritic: 'evidencecritic',
+  Runtime: null,
+} as const;
 
 const near = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) <= 1;
 
@@ -90,8 +98,6 @@ export class OfficeModel {
   };
   /** True between run_started and the end of the run. */
   runActive = false;
-  /** A local contract check does not imply execution by any displayed model agent. */
-  private localCheck = false;
 
   /** Wandering and the cat; can be switched off at any time (reduced motion). */
   ambient: boolean;
@@ -107,7 +113,6 @@ export class OfficeModel {
     this.packets = [];
     this.highlights.clear();
     this.runActive = false;
-    this.localCheck = false;
     for (const id of AGENT_IDS) {
       this.actors.set(id, {
         id,
@@ -195,8 +200,59 @@ export class OfficeModel {
 
   apply(event: AgentEvent, now: number, instant: boolean): void {
     switch (event.type) {
+      case 'task_event': {
+        const { type, actor } = event.receipt;
+        const id = TASK_ACTORS[actor];
+        if (type === 'task_admitted') this.reset();
+        if (type === 'task_admitted' || type === 'task_started')
+          this.runActive = true;
+        if (
+          type === 'tool_started' ||
+          type === 'model_started' ||
+          type === 'assignment_started' ||
+          type === 'task_started'
+        )
+          if (id) this.setPose(id, 'working', now, instant);
+        if (
+          type === 'tool_completed' ||
+          type === 'model_completed' ||
+          type === 'review_completed' ||
+          type === 'assignment_completed'
+        )
+          if (id) this.setPose(id, 'done', now, instant);
+        if (
+          id &&
+          (type === 'assignment_waiting' ||
+            type === 'assignment_paused' ||
+            type === 'assignment_stale')
+        )
+          this.setPose(id, 'idle', now, instant);
+        if (id && type === 'assignment_failed')
+          this.setPose(id, 'error', now, instant);
+        if (type === 'task_completed') this.endRun('done', instant, now);
+        if (
+          type === 'task_cancelled' ||
+          type === 'task_paused' ||
+          type === 'task_waiting'
+        ) {
+          for (const actor of this.actors.values())
+            this.setPose(actor.id, 'idle', now, instant);
+          this.endRun('idle', instant, now);
+        }
+        if (type === 'task_failed' || type === 'task_timed_out') {
+          for (const actor of this.actors.values()) {
+            if (
+              actor.id !== 'manager' &&
+              (actor.pose === 'working' || actor.pose === 'thinking')
+            )
+              this.setPose(actor.id, 'idle', now, instant);
+          }
+          if (id) this.setPose(id, 'error', now, instant);
+          this.endRun('error', instant, now);
+        }
+        break;
+      }
       case 'run_started':
-        this.localCheck = event.executionKind === 'local_check';
         this.packets = [];
         this.highlights.clear();
         for (const a of this.actors.values()) {
@@ -211,7 +267,6 @@ export class OfficeModel {
         break;
       case 'run_state':
         this.runActive = true;
-        if (this.localCheck) break;
         if (event.state === 'queued') this.setPose('manager', 'thinking', now);
         else {
           this.walk('manager', MEETING_SPOT, 'idle', instant);
@@ -260,13 +315,9 @@ export class OfficeModel {
       case 'run_completed':
         for (const id of AGENT_IDS)
           if (id !== 'manager') this.setPose(id, 'idle', now, instant);
-        this.endRun(this.localCheck ? 'idle' : 'done', instant, now);
+        this.endRun('done', instant, now);
         break;
       case 'run_failed':
-        if (this.localCheck) {
-          this.endRun('idle', instant, now);
-          break;
-        }
         if (event.agent && event.agent !== 'manager')
           this.setPose(event.agent, 'error', now, instant);
         this.endRun('error', instant, now);
@@ -421,15 +472,9 @@ export interface AgentStatus {
   text: string;
 }
 
-export function isLocalCheckRun(events: readonly AgentEvent[]): boolean {
-  return (
-    events.findLast((event) => event.type === 'run_started')?.executionKind ===
-    'local_check'
-  );
-}
-
 export function deriveAgentStatuses(
   events: readonly AgentEvent[],
+  taskStatus?: AgentTaskHandle['status'],
 ): Record<AgentId, AgentStatus> {
   const result = Object.fromEntries(
     AGENT_IDS.map((id) => [id, { state: 'idle', text: 'Idle' }]),
@@ -437,20 +482,62 @@ export function deriveAgentStatuses(
   const set = (id: AgentId, state: Pose, text: string) => {
     result[id] = { state, text };
   };
-  let localCheck = false;
   for (const e of events) {
     switch (e.type) {
-      case 'run_started':
-        localCheck = e.executionKind === 'local_check';
-        if (localCheck) {
-          for (const id of AGENT_IDS) set(id, 'idle', 'Not run (local check)');
+      case 'task_event': {
+        const id = TASK_ACTORS[e.receipt.actor];
+        const type = e.receipt.type;
+        if (type === 'task_admitted')
+          for (const actor of AGENT_IDS) set(actor, 'idle', 'Idle');
+        if (
+          type === 'task_cancelled' ||
+          type === 'task_paused' ||
+          type === 'task_waiting'
+        ) {
+          for (const actor of AGENT_IDS)
+            set(
+              actor,
+              'idle',
+              type === 'task_cancelled'
+                ? 'Stopped after server cancellation'
+                : e.message,
+            );
           break;
         }
+        if (type === 'task_failed' || type === 'task_timed_out') {
+          for (const actor of AGENT_IDS) {
+            if (
+              result[actor].state === 'working' ||
+              result[actor].state === 'thinking'
+            )
+              set(actor, 'idle', 'Stopped after task failure');
+          }
+        }
+        if (!id) break;
+        const state =
+          type === 'task_failed' ||
+          type === 'task_timed_out' ||
+          type === 'assignment_failed'
+            ? 'error'
+            : [
+                  'assignment_waiting',
+                  'assignment_paused',
+                  'assignment_stale',
+                ].includes(type)
+              ? 'idle'
+              : type.endsWith('_completed')
+                ? 'done'
+                : type.endsWith('_started')
+                  ? 'working'
+                  : result[id].state;
+        set(id, state, e.message);
+        break;
+      }
+      case 'run_started':
         for (const id of AGENT_IDS) set(id, 'idle', 'Idle');
         set('manager', 'thinking', 'Received a question');
         break;
       case 'run_state':
-        if (localCheck) break;
         if (e.state === 'queued')
           set('manager', 'thinking', 'Waiting in the queue');
         else {
@@ -486,19 +573,22 @@ export function deriveAgentStatuses(
         set(e.agent, 'done', 'Done');
         break;
       case 'run_completed':
-        if (localCheck) break;
         set('manager', 'done', 'Delivered the answer');
         break;
       case 'run_failed':
-        if (localCheck) break;
         if (e.agent) set(e.agent, 'error', `Failed: ${e.error}`);
         set('manager', 'error', 'Run failed');
         break;
       case 'run_cancelled':
-        if (localCheck) break;
         for (const id of AGENT_IDS) set(id, 'idle', 'Idle');
         break;
     }
   }
+  if (taskStatus === 'paused' || taskStatus === 'waiting')
+    for (const id of AGENT_IDS)
+      set(id, 'idle', taskStatus === 'paused' ? 'Paused' : 'Waiting');
+  if (taskStatus === 'cancelled')
+    for (const id of AGENT_IDS)
+      set(id, 'idle', 'Stopped after server cancellation');
   return result;
 }

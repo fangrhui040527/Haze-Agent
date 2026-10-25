@@ -1,145 +1,84 @@
 # Haze Agent
 
-Repository and development foundation for Haze Agent. The reference design is the supplied [v0.13 architecture](docs/Haze_Agent_Architecture_v0.13.pdf). The [demo scope and implementation status](docs/demo-scope.md) define the bounded slice and the limits of the code delivered here. The earlier [compatibility spike](docs/compatibility-probe.md) retains its original v0.8 scope; its results do not establish the new domain workflow.
+Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The production capabilities cover source-backed explanations, episode investigations, and the existing modeled PM2.5 methods.
 
-The scaffold uses TypeScript `StateGraph` from `@langchain/langgraph` and runs in this process. It does not require a hosted LangGraph service. LangGraph supplies orchestration and checkpoint infrastructure; Haze has four domain roles: **Manager, HazeOps, WorkerShield, and EvidenceCritic**.
+The reusable engine separates browser-safe contracts, authoritative SQLite state, bounded agent execution, typed tools and domain capabilities. Corrections, questions, imported sources, controls, immutable work products and independent numerical review are visible in the application. See the [general engine guide](docs/orchestration/general-engine.md) and [Architecture v0.14](docs/architecture/Haze_Agent_Architecture_v0.14.pdf).
 
-The [execution graph](app/graph.ts) validates execution metadata in one infrastructure node. The separate [compatibility spike](app/compatibility/graph.ts) executes the real local engines, resumes a persistent SQLite thread in a fresh process, and probes an explicitly selected provider. [Engine adapters](app/adapters/meterless/index.ts) delegate to the pinned Meterless references. The [v2 domain contracts](app/contracts/index.ts) add executable planning, run-request and result validation; they are separate from the metadata graph. On top of them, [input and evidence validation](app/validation/index.ts), [a deterministic import boundary](app/import/loader.ts) and [native-interval evidence linkage](app/evidence/linkage.ts) make the fictional sample pack loadable through one shared boundary; the [sample data pack release note](docs/sample-data-pack.md) records its manifest, source notes and limits. The [demo review package](docs/demo-contract-review.md) adds a deterministic section 23 historical engineering trace, supplemental handoff schemas and independent calculation checks, with human review pending and publication disabled.
-
-## Repository structure
-
-```text
-Haze-Agent/
-├── app/                  # Core TypeScript agent and checkpoint infrastructure
-│   ├── adapters/         # Meterless engines and provider integrations
-│   ├── checkpoints/      # Persistent saver helpers
-│   ├── compatibility/    # Engine, provider and restart proof
-│   ├── contracts/        # Closed v2 domain contracts and semantic validation
-│   ├── evidence/         # Interval arithmetic, source selection and evidence linkage
-│   ├── import/           # Deterministic sample-pack import boundary
-│   └── validation/       # Coded input and evidence findings
-├── data/                 # Small static data and data-source notes
-├── scripts/              # Build, verification and example helpers
-├── Dockerfile            # Reproducible Node build and offline example
-├── input_examples/       # Metadata samples, synthetic v2 fixtures and derived negative cases
-├── output_examples/      # Metadata outputs, a synthetic v2 result fixture and the case ledger
-├── schemas/              # Generated Draft 2020-12 domain schemas
-├── logs/                 # Local JSONL execution traces (ignored)
-├── .env.example          # Placeholder configuration; no real keys
-├── README.md             # Setup, usage, dependencies, architecture and limitations
-├── package.json          # Node runtime dependencies and development commands
-├── package-lock.json     # Exact Node dependency graph
-├── tests/                # Unit and PostgreSQL integration tests
-├── docs/                 # Architecture and implementation documentation
-└── third_party/          # Immutable, pinned upstream engine sources
-```
+The v1/v2 task paths and routing flags are retired. Old protocol tags are rejected with v3 guidance. Historical databases and checkpoint directories remain archival and are never automatically migrated or served by the new API. The earlier crew scheduling backend also remains retired; see the [retirement record](docs/history/legacy-retirement.md).
 
 ## Develop locally
 
-Use the exact Node version in [.nvmrc](.nvmrc) and npm version declared by `packageManager` in [package.json](package.json). Then run:
+Use Node **24.22.1** and npm **11.8.0**, as pinned in [.nvmrc](.nvmrc) and [package.json](package.json):
 
 ```sh
-npm install --global npm@11.8.0
 npm ci
-npm run check
+npm --prefix frontend ci
+npm run build
+npm --prefix frontend run dev
 ```
 
-Commit `package-lock.json` with dependency changes. Use `npm ci` for a reproducible installation; do not replace the lockfile with another package manager's lockfile.
+Configure the existing model route in server-only `.env` using the placeholders in [.env.example](.env.example). Configure existing Zetaris access in `third_party/zetaris/.env.local` or process environment: `ZETARIS_API_KEY`, `ZETARIS_REST_URL` and `ZETARIS_ORG_ID`. Keep credentials out of browser `VITE_*` variables. The application does not provision these services or create credentials.
 
-The runtime uses Node, TypeScript, LangGraph, Zod and checkpoint saver packages. Exact versions are declared in [package.json](package.json) and [package-lock.json](package-lock.json).
+A general request needs only its objective. Import text, Markdown, CSV or JSON when the answer needs your source material. For example:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for commands, test setup, and review conventions.
+> Explain the supplied report and identify what its evidence does and does not establish.
 
-## Run the examples
+A PM2.5 investigation additionally needs a domain scope, either explicitly or through a bounded phrase such as:
 
-Install dependencies and build once, then run an input from [input_examples/](input_examples/):
+> Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
+
+The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v1` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
+
+## Verify general execution
 
 ```sh
-npm ci
-npm run build
+npm run check
+npm run tasks:verify -- --fixture
+npm run tasks:verify -- --live Klang 2026-10-24T00:00:00Z 2026-10-25T00:00:00Z
+```
+
+`check` includes root formatting, types, lint, build, unit and engine checks, frontend build/tests, and a fresh-process general fixture verification. Use `npm run tasks:test` for focused engine/domain tests. For an explicitly synthetic development server, build first and run `node scripts/serve-tasks.mjs --fixture`. Normal execution never substitutes fixtures, switches providers or retries automatically.
+
+The fixture verifier imports a source, completes a general explanation and a PM2.5 investigation, checks duplicate delivery, captures exact artifacts/events and verifies unchanged readback after process restart. A fixture pass establishes integration behavior only. Live readiness requires a captured configured model and source-tool trace; missing access or a failed attempt never advances readiness. See the [implementation record](docs/orchestration/general-engine-verification.md).
+
+## Repository layout
+
+Browse the [documentation index](docs/README.md) for guides grouped by topic.
+
+| Path                                  | Purpose                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `app/tasks/`                          | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
+| `app/orchestration/`                  | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
+| `app/contracts/`                      | Browser-safe v3 contracts and separate server-only canonical serialization                 |
+| `app/agents/`, `app/capabilities/`    | Versioned agents and independently registered domain methods                               |
+| `app/adapters/`, `app/checkpoints/`   | Pinned Meterless facades, provider integration and checkpoint helpers                      |
+| `app/compatibility/`, `app/graph.ts`  | Engine/restart proof and offline metadata graph                                            |
+| `frontend/`                           | Chat, evidence results, source samples and agent execution display                         |
+| `scripts/`, `tests/`                  | Build, verification, examples and regression checks                                        |
+| `input_examples/`, `output_examples/` | Offline metadata examples and explicit orchestration fixtures                              |
+| `third_party/`                        | Pinned engine sources and retained Zetaris deployment/data-source tooling                  |
+| `docs/`                               | Current architecture, implementation notes and labeled historical design records           |
+
+## Offline infrastructure and engine pins
+
+The metadata graph uses TypeScript `StateGraph` from `@langchain/langgraph` in this process; no hosted LangGraph service is required. After building, run an offline example:
+
+```sh
 npm start -- input_examples/01-minimal.json
 ```
 
-Each example invokes the checkpoint metadata graph with disposable `MemorySaver` state and prints deterministic JSON containing `runId`, `artifactIds`, `graphVersion` and `schemaVersion`. Compare the result with its same-named file in [output_examples/](output_examples/). These samples require no provider credentials or network access after installation and build.
+It prints deterministic execution metadata and writes an ignored JSONL trace under `logs/`. Matching expected outputs are in `output_examples/`. Its numeric `schemaVersion: 2` is an infrastructure metadata version, separate from the task request versions.
 
-To save a result and choose the trace directory:
+[engine_sources.json](engine_sources.json) binds immutable Meterless source revisions, complete file inventories and SHA-256 checksums. The build verifies those sources before generating ignored `vendor/` and `dist/` output. Preserve upstream lockfiles, licenses and notices; see [engine pins](docs/infrastructure/engine-pins.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The [Dockerfile](Dockerfile) uses a digest-pinned Node image and runs the first offline metadata example by default.
 
-```sh
-npm start -- input_examples/01-minimal.json --output result.json --logs-dir logs
-```
+`npm run probe:compatibility` separately tests pinned engines, a selected provider and fresh-process SQLite checkpoint readback. Its [original infrastructure scope](docs/infrastructure/compatibility-probe.md) remains useful independently of task execution.
 
-The runner writes local JSONL execution traces under `logs/` by default. Trace files are ignored by Git. The examples exercise metadata validation and checkpoint wiring; they do not execute the compatibility probe or the Haze domain roles. Their numeric `schemaVersion: 2` is an execution-metadata version, not `haze.planning.v2`, `haze.run.v2` or `haze.result.v2`.
+## Persistence and current limits
 
-## Validate the v0.13 contracts
+Task records, assignments, charged attempts, actions, control receipts, questions, peer messages and immutable artifacts use local SQLite under `.state/general-v1` by default. The storage-format marker is checked before opening SQLite. One application process owns a directory. LangGraph checkpoints hold references to authoritative records; they do not replace those records.
 
-After building, validate the shared synthetic examples and their bindings:
+Restart fences old workers. Accepted completed work remains available, while calls interrupted without a receipt retain their charge and unknown outcome. Explicit resume requests a replacement attempt under the original deadline and remaining budget; expired work requires an explicitly linked continuation run with fresh reservations. No automatic retry occurs.
 
-```sh
-npm run contracts:check
-npm run contracts:validate -- planning input_examples/v2/planning.json
-npm run contracts:validate -- run input_examples/v2/run.json --surface historical_harness
-npm run contracts:validate -- result output_examples/v2/result.json
-```
+The application retains a local single-user boundary, two active tasks and two shared specialist slots. It supports configurable bounded resources and one purpose-bound peer channel per run. Source attribution is not proof of authenticity. World Model accepted-state decisions, external effects, memory capture, publication, alerts and scheduled monitoring remain disabled. Fixture checks, model prose and engine conformance do not confer scientific or operational qualification.
 
-The closed [JSON Schemas](schemas/) use Draft 2020-12 and are generated from the [Zod contracts](app/contracts/index.ts). Runtime validation also enforces formats and domain relationships that a standalone schema pass cannot establish. Regenerate schemas with `npm run contracts:generate` after a deliberate contract change and rebuild first when TypeScript source has changed.
-
-[Planning input](input_examples/v2/planning.json), [run request](input_examples/v2/run.json) and [result](output_examples/v2/result.json) are matching **synthetic contract fixtures**. Their demo-local references and hashes describe local fixtures, not accepted canonical records. The result illustrates a historical, publication-disabled response with explicit gaps. It was not produced by a planner, agent, independent numerical checker or provider call. `contracts:validate` validates a file; it does not admit or execute a planning job. See [demo-scope.md](docs/demo-scope.md) for the scope, invariants and remaining implementation boundaries.
-
-## Check the demo review package
-
-The separate [review fixture](examples/demo-review/package.json) traces the section 23 baseline and both alternatives, an essential-evidence gap and a search cutoff with a verified incumbent through Evidence & Inputs, Planner, Verification and typed WorkerShield inputs. It uses the existing v2 envelopes and small [handoff contracts](app/contracts/handoffs.ts). Its producer and separate engineering checker recompute fixed-work/full-occupancy constraints, interval values, worker/activity protections, fictional policy qualification and movement ranking.
-
-```sh
-npm run build
-npm run demo:check
-```
-
-Use `npm run demo:generate` to deliberately regenerate the review package after changing its source. Generation captures a timestamp and fresh immutable IDs; `demo:check` replays the saved timestamp and verifies the committed bytes, bindings, calculation and error cases. These commands make no provider calls and do not execute WorkerShield. Every record is fictional and demo-local; exact human review and contract sign-off remain pending. All results keep publication disabled and operational eligibility false. The [review document](docs/demo-contract-review.md) contains the actual entry-point inventory, handoff/owner table, concise review checklist and decisions blocking shared integration or operating use. No agreement is claimed and no members are contacted.
-
-## Pinned engines and workflow
-
-[engine_sources.json](engine_sources.json) records immutable revisions, source
-selections and SHA-256 checksums for the Agentathon starter, H-MEM and World
-Model. `npm run build` verifies and vendors checked-in upstream source, including
-the starter's H-MEM services, and packages World Model separately. Runtime needs
-no clone, dependency installation or model download. Upstream lockfiles,
-Apache-2.0 licenses and copyright notices are preserved; see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-[Workflow versions](app/workflow_versions.json) pin LangGraph and saver packages,
-graph revision 1 and execution metadata schema 2. Older checkpoints require an
-explicit migration. [Engine pin documentation](docs/engine-pins.md) describes
-builds, loaded implementations, compatibility and updates.
-
-The [Dockerfile](Dockerfile) uses a digest-pinned Node image and performs engine
-vendoring during build. Its default command runs the first metadata example.
-For an offline packaging smoke test:
-
-```sh
-docker build -t haze-engines .
-docker run --rm --network none haze-engines
-```
-
-## Persistence boundaries
-
-- `MemorySaver` is for disposable tests.
-- SQLite is the persistent option for a single process. The [SQLite helper](app/checkpoints/sqlite.ts) requires an explicit state directory; callers close its database handle after use.
-- PostgreSQL is the production persistence path, with a dedicated integration test.
-
-Checkpoints retain graph execution state and domain IDs. H-MEM and World Model remain the memory and evidence services; the spike reads their stores again after restart. A checkpoint ID is not authoritative evidence for a Haze decision.
-
-## Compatibility proof
-
-Set `STATE_DIR` and run `npm run probe:compatibility`. This command builds the pinned engines and starts two sequential Node processes. It records exact installed versions, engine hashes, checkpoint IDs, SQLite durability settings, restart/readback checks and provider status in `STATE_DIR/compatibility/<thread_id>/report.json`.
-
-The probe CLI reads an ignored local `.env` file. Select `HAZE_PROVIDER=nvidia` and configure `NVIDIA_API_KEY` there; optionally set `HAZE_MODEL`. NVIDIA without a key is reported as blocked and exits unsuccessfully. `HAZE_PROVIDER=offline` runs the local proof and explicitly skips inference. `SAMPLE_MODE=true` enforces offline operation. See [probe setup and recorded results](docs/compatibility-probe.md).
-
-Keep credentials in local environment variables or ignored environment files. Commit only placeholder values in `.env.example`.
-
-## Limitations
-
-- The Klang chat sample has a bounded live LangGraph workflow for Manager, HazeOps, WorkerShield and EvidenceCritic, with actual model calls and pinned World Model/H-Mem operations. These roles review independently checked fictional fixtures; general domain planning, canonical admission and publication remain unimplemented. See [crew scheduling](docs/chat-crew-scheduling.md).
-- The new local producer/checker executes only the bounded fictional review case. It does not supply a general scheduler, HTTP admission, exact human review or canonical publication/current-read capability.
-- The integration layer currently contains Meterless engines and an explicitly selected provider probe. Zetaris integration is not implemented.
-- The example runner uses disposable memory checkpoints. Persistent restart proof is a separate compatibility command; SQLite supports a single process, while PostgreSQL has a dedicated integration test.
-- Passing samples, compatibility checks or upstream conformance tests establishes only the tested infrastructure and engine contracts. It does not validate haze science or establish production readiness.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and review conventions.

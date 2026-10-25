@@ -3,7 +3,7 @@
  * question needs more than a chat reply. For now only two kinds do: scheduling
  * outdoor work and recovering revenue lost to haze.
  *
- * The server streams a report block by block (GET /api/tasks/:id/events), then sends
+ * The server streams a report block by block (GET /api/reports/:id/events), then sends
  * the finished result. The browser renders only these blocks; it never computes values.
  */
 
