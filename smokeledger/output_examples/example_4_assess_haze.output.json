@@ -1,0 +1,550 @@
+{
+  "run_id": "judge-004",
+  "status": "success",
+  "mode": "offline_sample",
+  "reasoning_backend": "deterministic",
+  "source_backend": "sample_fixture",
+  "engine_versions": {
+    "hmem": {
+      "engine_name": "meterless-hmem",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/hmem",
+      "path": "engines/hmem/reference",
+      "vendored_to": "vendor/hmem",
+      "src_sha256": "e899794d6db656f91112b953e7c897ccc9354c126a143e953c24f084faee9007"
+    },
+    "world_model": {
+      "engine_name": "meterless-world-model",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/world-model",
+      "path": "engines/world-model/reference",
+      "vendored_to": "vendor/world-model",
+      "src_sha256": "52d8ee1bf697a4d309d2053a442fc4bca3b1fad53a2c824ce729a2f7337519e8"
+    },
+    "app": {
+      "name": "smokeledger-haze-harness",
+      "version": "0.7.0",
+      "workflowVersion": "haze-graph-1"
+    }
+  },
+  "workflow_backend": "langgraph",
+  "workflow_version": "haze-graph-1",
+  "thread_id": "judge-004",
+  "checkpoint_id": "1f1ce0da-246c-6640-8008-a79330c15e3c",
+  "engine_operations_executed": {
+    "world_model.upsertEntity": 2,
+    "world_model.relate": 1,
+    "hmem.query": 2,
+    "world_model.assertFact": 5,
+    "hmem.add": 1
+  },
+  "remote_calls_executed": {},
+  "remote_calls_skipped": {
+    "zetaris.sql": 9
+  },
+  "output": {
+    "summary": "Haze outlook for Batu Pahat in the requested window: 24-hour API 166-225, with a 15-71% chance of exceeding the school-closure level [E-4dacf0799c].",
+    "narrative": null,
+    "proposed_plan": {
+      "covered": [
+        "07:00-13:00 MYT (2026-10-05)"
+      ],
+      "uncovered": []
+    },
+    "claims": [
+      {
+        "id": "judge-004-h-obs",
+        "kind": "observation",
+        "text": "In the 24 hours before the assessment time, observed PM2.5 at Batu Pahat averaged 49.6 ug/m3 over 24 hours [E-a010ad35f9].",
+        "evidence_ids": [
+          "E-a010ad35f9"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791241200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "07:00-08:00 MYT: projected hourly PM2.5 131.5 ug/m3 (indicative hourly API 190); 24-hour API 166 with a 15% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791244800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "08:00-09:00 MYT: projected hourly PM2.5 135.9 ug/m3 (indicative hourly API 193); 24-hour API 168 with a 17% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791248400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "09:00-10:00 MYT: projected hourly PM2.5 140.1 ug/m3 (indicative hourly API 195); 24-hour API 170 with a 19% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791252000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "10:00-11:00 MYT: projected hourly PM2.5 144.2 ug/m3 (indicative hourly API 197); 24-hour API 172 with a 21% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791255600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "11:00-12:00 MYT: projected hourly PM2.5 148.1 ug/m3 (indicative hourly API 199); 24-hour API 174 with a 23% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791259200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "12:00-13:00 MYT: projected hourly PM2.5 151.9 ug/m3 (indicative hourly API 202); 24-hour API 176 with a 25% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791262800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "13:00-14:00 MYT: projected hourly PM2.5 155.5 ug/m3 (indicative hourly API 206); 24-hour API 178 with a 27% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791266400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "14:00-15:00 MYT: projected hourly PM2.5 158.9 ug/m3 (indicative hourly API 209); 24-hour API 181 with a 30% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791270000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "15:00-16:00 MYT: projected hourly PM2.5 162.2 ug/m3 (indicative hourly API 213); 24-hour API 183 with a 32% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791273600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "16:00-17:00 MYT: projected hourly PM2.5 165.2 ug/m3 (indicative hourly API 216); 24-hour API 185 with a 34% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791277200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "17:00-18:00 MYT: projected hourly PM2.5 168.1 ug/m3 (indicative hourly API 218); 24-hour API 187 with a 36% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791280800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "18:00-19:00 MYT: projected hourly PM2.5 170.7 ug/m3 (indicative hourly API 221); 24-hour API 188 with a 37% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791284400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "19:00-20:00 MYT: projected hourly PM2.5 173.1 ug/m3 (indicative hourly API 223); 24-hour API 190 with a 40% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791288000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "20:00-21:00 MYT: projected hourly PM2.5 175.3 ug/m3 (indicative hourly API 226); 24-hour API 192 with a 42% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791291600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "21:00-22:00 MYT: projected hourly PM2.5 177.2 ug/m3 (indicative hourly API 227); 24-hour API 194 with a 44% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791295200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "22:00-23:00 MYT: projected hourly PM2.5 178.9 ug/m3 (indicative hourly API 229); 24-hour API 196 with a 46% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791298800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "23:00-00:00 MYT: projected hourly PM2.5 180.4 ug/m3 (indicative hourly API 231); 24-hour API 198 with a 48% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791302400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "00:00-01:00 MYT: projected hourly PM2.5 181.5 ug/m3 (indicative hourly API 232); 24-hour API 200 with a 50% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791306000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "01:00-02:00 MYT: projected hourly PM2.5 182.4 ug/m3 (indicative hourly API 233); 24-hour API 203 with a 53% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791309600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "02:00-03:00 MYT: projected hourly PM2.5 183.0 ug/m3 (indicative hourly API 233); 24-hour API 206 with a 56% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791313200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "03:00-04:00 MYT: projected hourly PM2.5 183.2 ug/m3 (indicative hourly API 233); 24-hour API 209 with a 59% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791316800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "04:00-05:00 MYT: projected hourly PM2.5 183.1 ug/m3 (indicative hourly API 233); 24-hour API 212 with a 61% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791320400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "05:00-06:00 MYT: projected hourly PM2.5 182.7 ug/m3 (indicative hourly API 233); 24-hour API 214 with a 63% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791324000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "06:00-07:00 MYT: projected hourly PM2.5 182.0 ug/m3 (indicative hourly API 232); 24-hour API 217 with a 65% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791327600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "07:00-08:00 MYT: projected hourly PM2.5 180.9 ug/m3 (indicative hourly API 231); 24-hour API 219 with a 67% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791331200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "08:00-09:00 MYT: projected hourly PM2.5 179.4 ug/m3 (indicative hourly API 230); 24-hour API 221 with a 68% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791334800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "09:00-10:00 MYT: projected hourly PM2.5 177.6 ug/m3 (indicative hourly API 228); 24-hour API 222 with a 69% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791338400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "10:00-11:00 MYT: projected hourly PM2.5 175.5 ug/m3 (indicative hourly API 226); 24-hour API 223 with a 70% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791342000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "11:00-12:00 MYT: projected hourly PM2.5 173.0 ug/m3 (indicative hourly API 223); 24-hour API 224 with a 70% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-1791345600000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "12:00-13:00 MYT: projected hourly PM2.5 170.1 ug/m3 (indicative hourly API 220); 24-hour API 225 with a 71% chance of exceeding the school-closure level [E-4dacf0799c].",
+        "evidence_ids": [
+          "E-4dacf0799c"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-2",
+        "kind": "forecast",
+        "text": "Issued for Mon, 05 Oct 2026 20:00 MYT [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-3",
+        "kind": "forecast",
+        "text": "Now: the 24-hour average PM2.5 is 49.6 ug/m3, about API 136 [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-4",
+        "kind": "forecast",
+        "text": "Projected 24-hour API first goes above the school-closure level at Wed, 07 Oct 2026 01:00 MYT, reaching 203 [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-5",
+        "kind": "forecast",
+        "text": "Tue, 06 Oct 2026 07:00 MYT: projected API 166, chance it is above the closure level 15% [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-6",
+        "kind": "forecast",
+        "text": "Wed, 07 Oct 2026 07:00 MYT: projected API 219, chance it is above the closure level 67% [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-7",
+        "kind": "forecast",
+        "text": "Thu, 08 Oct 2026 07:00 MYT: projected API 184, chance it is above the closure level 33% [E-93adfce14e].",
+        "evidence_ids": [
+          "E-93adfce14e"
+        ]
+      },
+      {
+        "id": "judge-004-h-out-8",
+        "kind": "forecast",
+        "text": "Smoke plumes from today's fire clusters pass closest at Tue, 06 Oct 2026 04:00 MYT [E-93adfce14e]; the main clusters hold 22 fire detections, 12 on peat and 17 inside mapped concessions, between 0.2 and 0.7 degrees latitude and 101.5 and 102.0 degrees longitude [E-8cac4b1220].",
+        "evidence_ids": [
+          "E-93adfce14e",
+          "E-8cac4b1220"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-4dacf0799c",
+        "sha256": "4dacf0799c212f139a1ae4294e6fa792cfb3dca4f9d3e067238459ae0ec04d42",
+        "row_count": 30,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch, pm25_hour, pm25_24h, api, p_close, smoke_index\n       FROM projections WHERE run_id = 'fw-2026100512-h-48b9a4' AND town = 'Batu Pahat'\n        AND valid_utc >= CAST('2026-10-05T23:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-07T05:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      },
+      {
+        "evidence_id": "E-a010ad35f9",
+        "sha256": "a010ad35f9ee92367b5285d58edd145a8e75965ecb7599c851df642e4cb659b1",
+        "row_count": 2,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT)) AS latest_epoch FROM pm25\n      WHERE town = 'Batu Pahat' AND valid_utc > CAST('2026-10-04T12:00:00.000Z' AS TIMESTAMP) AND valid_utc <= CAST('2026-10-05T12:00:00.000Z' AS TIMESTAMP)\n      GROUP BY kind ORDER BY kind"
+      },
+      {
+        "evidence_id": "E-93adfce14e",
+        "sha256": "93adfce14e015bb393bd4e749bfedb92870e090cdd9414423dcadcfb04f57c87",
+        "row_count": 73,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch, pm25_24h, api, p_close, smoke_index FROM projections\n      WHERE run_id = 'fw-2026100512-h-48b9a4' AND town = 'Batu Pahat' ORDER BY valid_utc"
+      },
+      {
+        "evidence_id": "E-8cac4b1220",
+        "sha256": "8cac4b1220c2d07869c61f789eb90748bbced5eeb634c3a30f1d9a00306dfc55",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT COUNT(*) AS n_fires, SUM(frp) AS total_frp, SUM(CASE WHEN on_peat THEN 1 ELSE 0 END) AS peat_fires,\n                SUM(CASE WHEN concession_id IS NOT NULL THEN 1 ELSE 0 END) AS in_concessions,\n                MIN(lat) AS min_lat, MAX(lat) AS max_lat, MIN(lon) AS min_lon, MAX(lon) AS max_lon\n           FROM fires WHERE fire_id IN ('9d6ab7db0ab96e54','553e596bfdae01cf','e9f45863fae31d01','8790d4dd320c5ce0','ff213af7d5066574','78ed74bfa5023719','f466f593ac57b40b','4d2f59eeaf857f50','9346c56f6932d290','6548bc51c5375e92','b4fbba703b92d3e5','4dc61d3e0a435738','61462e33063ede85','362edbb9fd937eaa','f5d970b37353320d','1706d4eed08ba01b','c5adfcb05d872d12','955fd475ec863107','50ce50088f64a064','d23d6e2dd67cf954','867a70dcb72d9f5b','933157f5f43cc20f')"
+      },
+      {
+        "evidence_id": "E-5c69b21682",
+        "sha256": "5c69b21682ccb688a366919aab7c13593f243e4415e807394bccb9cc772269f3",
+        "row_count": 30,
+        "backend": "postgres",
+        "produced_by": "critic",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch FROM projections\n        WHERE run_id = 'fw-2026100512-h-48b9a4' AND town = 'Batu Pahat' AND pm25_hour IS NOT NULL\n          AND valid_utc >= CAST('2026-10-05T23:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-07T05:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      }
+    ],
+    "limitations": [
+      "Future hours use archived model values (hindsight), as in a replay or the offline sample: a test of the method, not a true forecast."
+    ],
+    "validity": {
+      "start": "2026-10-05T23:00:00.000Z",
+      "end": "2026-10-07T05:00:00.000Z",
+      "unserved": []
+    },
+    "messages": {
+      "bound_to": "fact_e6ca9eef64d402d3",
+      "previews": [
+        {
+          "audience": "parents",
+          "language": "ms",
+          "text": "Kepada Guru Kelas / Pentadbir Sekolah [nama sekolah],\n\nSaya, [nama ibu/bapa], ibu/bapa kepada [nama murid] ([kelas]), ingin memaklumkan bahawa anak saya tidak akan hadir ke sekolah pada Rabu, 7 Oktober 2026 kerana keadaan jerebu.\nBacaan Indeks Pencemar Udara (IPU) purata 24 jam di Batu Pahat dijangka sekitar 219, dan anak saya [menghidap asma / mempunyai masalah pernafasan].\nMakluman ini dibuat selaras dengan kelonggaran Kementerian Pendidikan yang membenarkan ibu bapa tidak menghantar anak ke sekolah semasa jerebu dengan memaklumkan pihak sekolah.\n\nSekian, terima kasih.\n[nama ibu/bapa], [no. telefon]"
+        },
+        {
+          "audience": "school",
+          "language": "ms",
+          "text": "MAKLUMAN KEPADA IBU BAPA\n\nUnjuran kualiti udara menunjukkan bacaan IPU di kawasan Batu Pahat berkemungkinan melebihi 200 menjelang Rabu, 7 Oktober 2026.\nSekiranya bacaan rasmi APIMS melebihi 200, sekolah akan ditutup serta-merta dan Pengajaran dan Pembelajaran di Rumah (PdPR) akan dilaksanakan.\nSila sediakan penjagaan anak dan pastikan anak yang menghidap asma membawa ubat. Pantau pengumuman rasmi sekolah."
+        }
+      ],
+      "status": "preview"
+    }
+  },
+  "rationale": "Projected from hourly PM2.5 (observed where available, model otherwise) as a rolling 24-hour average [E-4dacf0799c].",
+  "guidance_versions": [],
+  "assumptions": [
+    "District conditions are represented by Batu Pahat town-centre data."
+  ],
+  "change_reason": null,
+  "parent_run_id": null,
+  "critic": {
+    "final": {
+      "decision": "approve",
+      "findings": [],
+      "required_evidence": [],
+      "checks_run": [
+        "citations",
+        "independent re-query of cited evidence",
+        "coverage of requested window",
+        "hindsight disclosure"
+      ],
+      "independent_queries": [
+        "re-run:E-4dacf0799c",
+        "re-run:E-a010ad35f9",
+        "re-run:E-93adfce14e",
+        "re-run:E-8cac4b1220",
+        "E-5c69b21682"
+      ]
+    },
+    "rounds": 1,
+    "history": [
+      {
+        "decision": "approve",
+        "findings": []
+      }
+    ]
+  },
+  "agents": [
+    {
+      "role": "manager",
+      "version": "manager-1.0",
+      "executions": 5
+    },
+    {
+      "role": "hazeops",
+      "version": "hazeops-1.0",
+      "executions": 1
+    },
+    {
+      "role": "evidence_critic",
+      "version": "evidence-critic-1.0",
+      "executions": 1
+    },
+    {
+      "role": "communityalert",
+      "version": "communityalert-1.0",
+      "executions": 1
+    }
+  ],
+  "memory": {
+    "recalled": [],
+    "captured": "mem-1",
+    "audit_entries": 1
+  },
+  "snapshot_id": "S-8e231c31a007",
+  "conclusion_revision_id": "fact_e6ca9eef64d402d3",
+  "conclusion_status": "current",
+  "trace_id": "judge-004",
+  "log_file": "/tmp/tmp.g34ZwtWXyG/logs/trace-judge-004.jsonl",
+  "execution_time_seconds": 1.6,
+  "sponsor_integration_evidence": {
+    "zetaris": {
+      "executed": 0,
+      "skipped": 9,
+      "request_ids": []
+    },
+    "meterless_hmem": {
+      "hmem.query": 2,
+      "hmem.add": 1
+    },
+    "meterless_world_model": {
+      "world_model.upsertEntity": 2,
+      "world_model.relate": 1,
+      "world_model.assertFact": 5
+    },
+    "nightshift": {
+      "executed": 0,
+      "skipped": 0,
+      "available": false,
+      "model_route": "meterless/auto"
+    }
+  },
+  "error": null
+}
