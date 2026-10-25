@@ -161,3 +161,31 @@ test("crash/resume: an interrupted thread resumes from its checkpoint without re
   const agents = r.agents as { role: string; executions: number }[];
   assert.equal(agents.find((a) => a.role === "hazeops")!.executions, 1, "HazeOps not re-run after resume");
 });
+
+// Last on purpose: it removes the sample maps from the shared test state.
+test("missing concession and peat maps are reported as not assessed, never as 0%", opts, async () => {
+  const trace = (run_id: string) =>
+    run.executeRun({
+      run_id,
+      input: {
+        operation: "trace_sources",
+        town: "Batu Pahat",
+        timezone: "Asia/Kuala_Lumpur",
+        time_window: { start: "2026-10-06T02:00:00+08:00", end: "2026-10-07T02:00:00+08:00" },
+      },
+      options: { sample_mode: true },
+    });
+  const mapped = out(await trace("maps-present"));
+  assert.match(mapped.summary, /Fires inside mapped concessions: \d+% \(range/);
+
+  const { CONFIG } = await import("../src/config.ts");
+  await (await import("../src/db.ts")).db().query("DELETE FROM concessions");
+  fs.rmSync(path.join(CONFIG.geoDir, "peat.geojson"), { force: true });
+  const r = await trace("maps-missing");
+  const text = out(r).claims.map((c) => c.text).join("\n");
+  assert.match(text, /Fires inside mapped concessions: not assessed, because no concession map is loaded/);
+  assert.match(text, /Fires on peat: not assessed, because no peat map is loaded/);
+  assert.match(text, /Confidence: not assessed/);
+  assert.doesNotMatch(text, /(concessions|peat): 0%/);
+  assert.equal((r.sources as { confidence: string } | undefined)?.confidence ?? "not assessed", "not assessed");
+});

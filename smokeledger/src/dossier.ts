@@ -72,6 +72,10 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   const from = r.centerMs - r.windowHours * HOUR;
 
   const eRun = await evidence(`SELECT run_id, kind, town, center_utc, params FROM {src}.runs WHERE run_id = '${run}'`);
+  // Without a map, zero detections inside concessions or on peat means "not assessed", never 0%.
+  const eMaps = await evidence(`SELECT COUNT(*) AS concession_polygons FROM {src}.concessions`);
+  const concessionMap = Number(eMaps.rows[0]?.[0] ?? 0) > 0;
+  const peatMap = fs.existsSync(path.join(CONFIG.geoDir, "peat.geojson"));
   const eAir = await evidence(
     `SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(pm25) AS max_pm25 FROM {src}.pm25
       WHERE town = '${town}' AND valid_utc > ${ts(from)} AND valid_utc <= ${ts(r.centerMs)} GROUP BY kind ORDER BY kind`,
@@ -151,9 +155,21 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   );
   L.push("");
   L.push("## Findings");
-  L.push(`- Fires inside mapped concessions: ${range(concShare)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`);
-  L.push(`- Fires on peat: ${range(peatShare)} of the smoke signal, from ${peatShare.fires} detections ${id(eSplit)}.`);
-  L.push(`- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} when the wind speed is varied ${id(eSplit)}.`);
+  L.push(
+    concessionMap
+      ? `- Fires inside mapped concessions: ${range(concShare)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`
+      : `- Fires inside mapped concessions: not assessed, because no concession map is loaded; this is not evidence that the fires were outside concessions ${id(eMaps)}.`,
+  );
+  L.push(
+    peatMap
+      ? `- Fires on peat: ${range(peatShare)} of the smoke signal, from ${peatShare.fires} detections ${id(eSplit)}.`
+      : `- Fires on peat: not assessed, because no peat map is loaded; this is not evidence that the fires were off peat ${id(eSplit)}.`,
+  );
+  L.push(
+    concessionMap
+      ? `- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} when the wind speed is varied ${id(eSplit)}.`
+      : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eMaps)}.`,
+  );
   if (holders.length) {
     L.push("");
     L.push("## Concession holders whose land the smoke-relevant fires were on");
@@ -185,7 +201,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   L.push("- Every cited query can be re-run with: npm run sl -- verify <evidence id>.");
   const text = L.join("\n");
 
-  const all = [eRun, eAir, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
+  const all = [eRun, eAir, eMaps, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
   const findingsOnly = text.split("## What this does and does not show")[0];
   const det = await judge(findingsOnly, all, { useModel: false });
   if (!det.ok) throw new Error(`Template failed its own citation check: ${det.problems.join("; ")}`);
@@ -228,7 +244,14 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
     run_id: run,
     town: r.town.town,
     evidence: all,
-    summary: { concession: concShare, peat: peatShare, holders, countries, confidence, meanPm25: airModel ? num(airModel[2]) : null },
+    summary: {
+      concession: concShare,
+      peat: peatShare,
+      holders,
+      countries,
+      confidence: concessionMap ? confidence : "not assessed",
+      meanPm25: airModel ? num(airModel[2]) : null,
+    },
     text,
     narrative,
     narrativeVerdict,
