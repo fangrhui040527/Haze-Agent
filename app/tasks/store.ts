@@ -4044,7 +4044,7 @@ export class TaskStore {
       if (!subject) continue;
       const statedUse =
         candidate?.stated_use ??
-        (capability === 'damage-accounting'
+        (capability === 'damage-account-intake'
           ? 'damage-account:partial'
           : capability);
       const reasons: string[] = [];

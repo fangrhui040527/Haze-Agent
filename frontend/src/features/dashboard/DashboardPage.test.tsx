@@ -24,7 +24,7 @@ describe('dashboard Manager entry', () => {
     const markup = render();
     expect(markup).toContain('href="/manager"');
     expect(markup).toContain('Manager workspace');
-    expect(markup).toContain('Damage accounting');
+    expect(markup).toContain('Damage appraisal');
   });
 
   it('opens the current task directly from the dashboard', () => {

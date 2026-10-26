@@ -192,30 +192,30 @@ Source: [`app/contracts/damage-account.ts`](../../app/contracts/damage-account.t
 
 #### Damage collection and revision tool selection (4)
 
-Source: [`app/capabilities/damage-account/index.ts`](../../app/capabilities/damage-account/index.ts). Internal selection contracts used by the registered damage-account workflow.
+Source: [`app/capabilities/damage-appraisal/index.ts`](../../app/capabilities/damage-appraisal/index.ts). Internal selection contracts used by the registered damage-account workflow.
 
-| Schema                                                                              | Visibility |
-| ----------------------------------------------------------------------------------- | ---------- |
-| [`toolSelectionSchema`](../../app/capabilities/damage-account/index.ts#L60)         | Private    |
-| [`revisionSideSchema`](../../app/capabilities/damage-account/index.ts#L67)          | Private    |
-| [`revisionSelectionSchema`](../../app/capabilities/damage-account/index.ts#L71)     | Private    |
-| [`damageCollectionInputSchema`](../../app/capabilities/damage-account/index.ts#L75) | Private    |
+| Schema                                                                                | Visibility |
+| ------------------------------------------------------------------------------------- | ---------- |
+| [`toolSelectionSchema`](../../app/capabilities/damage-appraisal/index.ts#L60)         | Private    |
+| [`revisionSideSchema`](../../app/capabilities/damage-appraisal/index.ts#L67)          | Private    |
+| [`revisionSelectionSchema`](../../app/capabilities/damage-appraisal/index.ts#L71)     | Private    |
+| [`damageCollectionInputSchema`](../../app/capabilities/damage-appraisal/index.ts#L75) | Private    |
 
 #### Damage account component intake (9)
 
-Source: [`app/capabilities/damage-accounting/contracts.ts`](../../app/capabilities/damage-accounting/contracts.ts). The separate account/component manifest intake workflow registered alongside calculated damage accounting.
+Source: [`app/capabilities/damage-account-intake/contracts.ts`](../../app/capabilities/damage-account-intake/contracts.ts). The separate account/component manifest intake workflow registered alongside calculated damage accounting.
 
-| Schema                                                                                       | Visibility |
-| -------------------------------------------------------------------------------------------- | ---------- |
-| [`damageAccountTypeSchema`](../../app/capabilities/damage-accounting/contracts.ts#L9)        | Exported   |
-| [`damageAccountScopeSchema`](../../app/capabilities/damage-accounting/contracts.ts#L16)      | Exported   |
-| [`damageComponentRefSchema`](../../app/capabilities/damage-accounting/contracts.ts#L64)      | Exported   |
-| [`damageComponentCategorySchema`](../../app/capabilities/damage-accounting/contracts.ts#L70) | Exported   |
-| [`damageAccountManifestSchema`](../../app/capabilities/damage-accounting/contracts.ts#L77)   | Exported   |
-| [`damageAccountComponentSchema`](../../app/capabilities/damage-accounting/contracts.ts#L85)  | Exported   |
-| [`damageReviewTypeSchema`](../../app/capabilities/damage-accounting/contracts.ts#L106)       | Exported   |
-| [`damageAccountReviewSchema`](../../app/capabilities/damage-accounting/contracts.ts#L111)    | Exported   |
-| [`damageAccountLineageSchema`](../../app/capabilities/damage-accounting/contracts.ts#L121)   | Exported   |
+| Schema                                                                                           | Visibility |
+| ------------------------------------------------------------------------------------------------ | ---------- |
+| [`damageAccountTypeSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L9)        | Exported   |
+| [`damageAccountScopeSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L16)      | Exported   |
+| [`damageComponentRefSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L64)      | Exported   |
+| [`damageComponentCategorySchema`](../../app/capabilities/damage-account-intake/contracts.ts#L70) | Exported   |
+| [`damageAccountManifestSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L77)   | Exported   |
+| [`damageAccountComponentSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L85)  | Exported   |
+| [`damageReviewTypeSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L106)       | Exported   |
+| [`damageAccountReviewSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L111)    | Exported   |
+| [`damageAccountLineageSchema`](../../app/capabilities/damage-account-intake/contracts.ts#L121)   | Exported   |
 
 #### Damage inputs retrieved from World Model (5)
 
@@ -405,13 +405,13 @@ Sources: [TaskStore SQL](../../app/tasks/store.ts#L332) (20 tables) and [World M
 
 These five schemas exist, so they are not missing implementations. They are kept separate because declaration alone is not a wired feature. The consumer check covered current first-party application and frontend source, including dynamic-import consumers; type-only references do not count as validation.
 
-| Schema                      | Source                                                                                              | Defined shape                                                                                                            |
-| --------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `damageComponentRefsSchema` | [`app/capabilities/damage-account/inputs.ts`](../../app/capabilities/damage-account/inputs.ts#L227) | Record of string keys to exact artifact references.                                                                      |
-| `referenceSchema`           | [`app/contracts/common.ts`](../../app/contracts/common.ts#L17)                                      | Generic reference: `id`, `revision`, `sha256`; current artifact and World Model paths use their own reference contracts. |
-| `reasonSchema`              | [`app/contracts/common.ts`](../../app/contracts/common.ts#L23)                                      | Reason: `code`, `explanation`.                                                                                           |
-| `inputOriginSchema`         | [`app/contracts/common.ts`](../../app/contracts/common.ts#L27)                                      | Origin enum: `synthetic_fixture`, `captured_operating_case`, `live_operating_case`.                                      |
-| `worldRecordNotFoundSchema` | [`app/contracts/world-api.ts`](../../app/contracts/world-api.ts#L143)                               | World Model not-found error wrapper; not the currently consumed API error validator.                                     |
+| Schema                      | Source                                                                                                  | Defined shape                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `damageComponentRefsSchema` | [`app/capabilities/damage-appraisal/inputs.ts`](../../app/capabilities/damage-appraisal/inputs.ts#L227) | Record of string keys to exact artifact references.                                                                      |
+| `referenceSchema`           | [`app/contracts/common.ts`](../../app/contracts/common.ts#L17)                                          | Generic reference: `id`, `revision`, `sha256`; current artifact and World Model paths use their own reference contracts. |
+| `reasonSchema`              | [`app/contracts/common.ts`](../../app/contracts/common.ts#L23)                                          | Reason: `code`, `explanation`.                                                                                           |
+| `inputOriginSchema`         | [`app/contracts/common.ts`](../../app/contracts/common.ts#L27)                                          | Origin enum: `synthetic_fixture`, `captured_operating_case`, `live_operating_case`.                                      |
+| `worldRecordNotFoundSchema` | [`app/contracts/world-api.ts`](../../app/contracts/world-api.ts#L143)                                   | World Model not-found error wrapper; not the currently consumed API error validator.                                     |
 
 ## 3. Helpers and retired contracts are not missing schemas
 

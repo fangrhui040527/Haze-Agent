@@ -38,6 +38,7 @@
     "test:integration": "npm run build && node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/verify-general.mjs --fixture && node scripts/verify-damage-account.mjs --fixture && npm run test:crashes",
     "damage:verify": "npm run build && node --env-file-if-exists=.env scripts/verify-damage-account.mjs",
     "damage:demo": "npm run build && node scripts/demo-damage-account.mjs",
+    "nightshift:demo": "node scripts/demo-nightshift.mjs",
     "frontend:check": "npm --prefix frontend run build && npm --prefix frontend test",
     "check": "npm run verify:pins && npm run format:check && npm run typecheck && npm run lint && npm run build && npm test && npm run test:engines && npm run frontend:check && npm run test:integration",
     "tasks:test": "vitest run --project unit tests/unit/general-store.test.ts tests/unit/general-runtime.test.ts tests/unit/general-http.test.ts tests/unit/pm25-methods.test.ts",

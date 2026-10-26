@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  createDamageAccountAssignments,
-  createDamageAccountCapability,
-} from '../../app/capabilities/damage-account/index.js';
-import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-account/fixtures.js';
+  createDamageAppraisalAssignments,
+  createDamageAppraisalCapability,
+} from '../../app/capabilities/damage-appraisal/index.js';
+import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-appraisal/fixtures.js';
 import {
   exactDamageRef,
   normalizeDamageInputs,
-} from '../../app/capabilities/damage-account/inputs.js';
+} from '../../app/capabilities/damage-appraisal/inputs.js';
 import {
   boundedJsonSchema,
   type Artifact,
@@ -21,7 +21,7 @@ import { contractHash } from '../../app/contracts/json.js';
 import { taskRequestSchema } from '../../app/contracts/tasks.js';
 import type { AssignmentServices } from '../../app/orchestration/ports.js';
 
-const collect = createDamageAccountAssignments().find(
+const collect = createDamageAppraisalAssignments().find(
   (assignment) => assignment.id === 'damage.collect',
 )!;
 const gap = {
@@ -85,7 +85,7 @@ describe('damage collection intake routing', () => {
       context_refs: [ref],
     });
     const input =
-      createDamageAccountCapability().assignments(request)[0]!.input;
+      createDamageAppraisalCapability().assignments(request)[0]!.input;
     const { services, tool } = servicesFor([source], input);
 
     const result = await collect.execute!(services);

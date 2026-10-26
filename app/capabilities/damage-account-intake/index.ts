@@ -9,7 +9,7 @@ import {
   damageAccountManifestSchema,
   damageAccountScopeSchema,
 } from './contracts.js';
-import { damageAccountingWorldModelAdapter } from './world.js';
+import { damageAccountIntakeWorldModelAdapter } from './world.js';
 
 function artifactContent(artifact: Artifact): unknown {
   if (typeof artifact.content !== 'string') return artifact.content;
@@ -29,11 +29,11 @@ function exact(artifact: Artifact): ArtifactRef {
   };
 }
 
-export function createDamageAccountingCapability(): CapabilityDefinition {
+export function createDamageAccountIntakeCapability(): CapabilityDefinition {
   return {
     card: {
-      id: 'damage-accounting',
-      version: 'damage-accounting.v1',
+      id: 'damage-account-intake',
+      version: 'damage-account-intake.v1',
       purpose:
         'Organize supplied physical, financial-incidence, welfare, or source-fire account components without inventing impact estimates.',
       work_products: [
@@ -50,7 +50,7 @@ export function createDamageAccountingCapability(): CapabilityDefinition {
       ],
     },
     matches: (request) =>
-      /\b(damage account|damage accounting|revenue recovery|financial incidence|social welfare account)\b/iu.test(
+      /\b(damage[- ]account[- ]intake|damage account|damage accounting|revenue recovery|financial incidence|social welfare account)\b/iu.test(
         request.objective,
       ),
     assignments: (request) => [
@@ -63,16 +63,16 @@ export function createDamageAccountingCapability(): CapabilityDefinition {
         input: request.scope ?? null,
       },
     ],
-    worldModel: damageAccountingWorldModelAdapter,
+    worldModel: damageAccountIntakeWorldModelAdapter,
   };
 }
 
-export function createDamageAccountingAssignments(): AssignmentDefinition[] {
+export function createDamageAccountIntakeAssignments(): AssignmentDefinition[] {
   return [
     {
       id: 'damage-accounting.intake',
       version: 'damage-accounting-intake.v1',
-      capability: 'damage-accounting',
+      capability: 'damage-account-intake',
       agent: 'WorkerShield',
       tools: [],
       instructions:

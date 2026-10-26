@@ -6,7 +6,7 @@ Reviewed: 25 October 2026. Baseline: commit `ce5bf33` plus the current uncommitt
 
 ## Purpose and decision
 
-Add `DamageAccountant` as a dedicated specialist under the existing Manager. Give it a versioned `damage-account` capability containing accounting contracts, deterministic methods, input requirements and independent checks. Keep HazeOps responsible for evidence acquisition and EvidenceCritic responsible for independent review. WorkerShield continues to compare interventions and prepare plans; DamageAccountant accounts for supported harm and values the corresponding scenarios.
+Add `DamageAccountant` as a dedicated specialist under the existing Manager. Give it a versioned `damage-appraisal` capability containing accounting contracts, deterministic methods, input requirements and independent checks. Keep HazeOps responsible for evidence acquisition and EvidenceCritic responsible for independent review. WorkerShield continues to compare interventions and prepare plans; DamageAccountant accounts for supported harm and values the corresponding scenarios.
 
 Use the existing TypeScript, LangGraph, SQLite, provider adapter and v3 task API. Register the extension through `app/composition.ts`. Keep accounting-specific inputs and outputs out of general task admission and persistence logic.
 
@@ -131,9 +131,9 @@ The checker may share schemas and parsing utilities, but must not invoke produce
 
 - `app/agents/damage-accountant/index.ts` and `instructions.ts`: bounded specialist behavior, version and permitted actions.
 - `app/contracts/damage-account.ts`: browser-safe domain schemas and explicit versions.
-- `app/capabilities/damage-account/index.ts`: card, availability, assignments, prerequisites, review rules and optional tools.
-- `app/capabilities/damage-account/inputs.ts`, `scope.ts`, `physical.ts`, `valuation.ts`, `incidence.ts`, `reconcile.ts`, `publication.ts`: deterministic domain implementations.
-- `app/capabilities/damage-account/checker.ts` and `fixtures.ts`: independent checks and labeled synthetic cases.
+- `app/capabilities/damage-appraisal/index.ts`: card, availability, assignments, prerequisites, review rules and optional tools.
+- `app/capabilities/damage-appraisal/inputs.ts`, `scope.ts`, `physical.ts`, `valuation.ts`, `incidence.ts`, `reconcile.ts`, `publication.ts`: deterministic domain implementations.
+- `app/capabilities/damage-appraisal/checker.ts` and `fixtures.ts`: independent checks and labeled synthetic cases.
 - `app/contracts/capabilities.ts` and `app/composition.ts`: role and registration changes. Revisit the role-array bound only when a registered card requires it; execution concurrency remains unchanged.
 - `frontend/src/features/chat/DamageAccountResult.tsx` and `WorkProducts.tsx`: validated optional rendering with generic fallback. Render server results without browser accounting arithmetic.
 - `frontend/src/shared/types/domain.ts`, `agents.ts`, and `features/agent-office/officeModel.ts`, `sprites.ts`, `officeLayout.ts` plus affected renderer code: identity, actor mapping, appearance and reachable station.

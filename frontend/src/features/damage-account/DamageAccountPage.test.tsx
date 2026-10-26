@@ -59,7 +59,7 @@ function render(run: AgentRun, savedTaskId?: string) {
 describe('dedicated damage accounting page', () => {
   it('starts with a request-only World Model intake and keeps dashboard navigation available', () => {
     const markup = render(accountRun(false));
-    expect(markup).toContain('<h1>Damage accounting</h1>');
+    expect(markup).toContain('<h1>Damage appraisal</h1>');
     expect(markup).toMatch(/href="\/dashboard"[^>]*>Back to the dashboard/);
     expect(markup).toContain('Create an account');
     expect(markup).not.toContain('id="damage-source"');
@@ -195,7 +195,7 @@ describe('dedicated damage accounting page', () => {
     expect(markup).toContain('Open exact artifact');
     expect(markup).not.toContain('<details open="">');
     expect(markup).not.toContain('Loading work product...');
-    expect(markup).not.toContain('Damage accounting');
+    expect(markup).not.toContain('Damage appraisal');
     expect(markup).not.toContain('Account component records');
     expect(markup).not.toContain('Physical outcomes');
   });

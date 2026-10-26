@@ -24,11 +24,19 @@ export function devDisplayPlugin(): Plugin {
     configureServer(server) {
       let startupSeconds: string | undefined;
       server.printUrls = () => {
+        const urls = server.resolvedUrls;
+        if (process.send) {
+          process.send({
+            type: 'haze-dev-ready',
+            local: urls?.local ?? [],
+            network: urls?.network ?? [],
+          });
+          return;
+        }
         startupSeconds ??= (
           (Date.now() - Number(process.env.HAZE_DEV_STARTED_AT ?? Date.now())) /
           1000
         ).toFixed(1);
-        const urls = server.resolvedUrls;
         console.log(
           [
             '',
@@ -37,9 +45,10 @@ export function devDisplayPlugin(): Plugin {
             '',
             ...(urls?.local.map((url) => `  App     ${url}`) ?? []),
             ...(urls?.network.map((url) => `  Network ${url}`) ?? []),
-            '  Frontend + backend API',
+            '  Frontend + backend API: READY',
             '',
-            '  h + Enter: help | Ctrl+C: stop',
+            '  h + Enter: help | Ctrl+C: stop app',
+            '  Zetaris stays running | docker compose stop: stop Zetaris',
             '',
           ].join('\n'),
         );

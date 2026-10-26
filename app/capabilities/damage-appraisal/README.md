@@ -1,11 +1,11 @@
-# Damage account
+# Damage appraisal
 
 This capability builds damage accounts from retained, scoped physical quantities
 and compatible unit values. It keeps physical outcomes, financial incidence and
 selected social welfare in separate views, with exact source references,
 explicit omissions and an independent numerical review.
 
-The registered ID is `damage-account`, version `damage-account.v2`. HazeOps
+The registered ID is `damage-appraisal`, version `damage-appraisal.v2`. HazeOps
 retrieves evidence, DamageAccountant produces the account and EvidenceCritic
 checks the completed account and its components.
 
@@ -87,7 +87,7 @@ valuation paths must be compatible. Existing artifact and evidence-closure
 bounds apply. Fixture examples are synthetic software checks and are never
 substituted for missing live evidence.
 
-The sibling [damage-accounting](../damage-accounting/README.md) capability
+The sibling [damage-account-intake](../damage-account-intake/README.md) capability
 organizes supplied manifests and components. This folder owns the calculation,
 assembly and independent numerical-check workflow.
 

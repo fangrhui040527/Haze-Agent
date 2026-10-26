@@ -16,22 +16,39 @@ npm --prefix frontend ci
 npm run dev
 ```
 
-`npm run dev` builds the backend, then starts Vite with the frontend and the shared
-dashboard, task and World Model APIs, usually at `http://localhost:5173`. Keep this
-terminal running; stop it with `Ctrl+C`. Run the command again after backend changes
-to rebuild them. The standalone `tasks:serve` command is an alternative API entry
-point and must not run alongside Vite using the same state directory.
+`npm run dev` first runs `docker compose up --detach` to start Zetaris,
+checks its container status, builds the backend, then starts Vite
+with the frontend and the shared dashboard, task and World Model APIs, usually at
+`http://localhost:5173`. Docker Desktop must be running, with root `.env` and image
+registry access configured as described below. A failed startup step stops the
+command before the next step runs.
 
-The root dev command shows a compact Haze Agent banner with the actual app URL
-and total startup time, including the backend build. Build failures and runtime
-warnings remain visible. Edit `frontend/scripts/dev-display-plugin.ts` to customize
-the banner text. Use `npm run --silent dev` to also hide npm's initial script header;
-`npm run build` and `npm --prefix frontend run dev` retain their detailed output.
-Vite options still work, for example `npm run dev -- --port 5174`.
+Keep this terminal running; `Ctrl+C` stops the app and leaves the Zetaris containers
+running. Use `docker compose stop` to stop Zetaris. Run the dev command again after
+backend changes to rebuild them. The standalone `tasks:serve` command is an
+alternative API entry point and must not run alongside Vite using the same state
+directory.
 
-Zetaris is a separate service for external evidence retrieval. If you use the
-included local platform, configure root `.env` as described below, start Docker
-Desktop and then run:
+The root dev command shows one row each for Zetaris, the backend build and the app.
+In an interactive terminal, each row's status updates in place from `WAITING` to
+`STARTING`, then `STARTED`, `READY` or `FAILED`. Each starting component has a live
+elapsed timer that refreshes every 0.1 seconds and freezes when the step finishes.
+Compose progress and successful build output are captured so they do not print repeated status
+lines. Warnings, failure diagnostics and app runtime logs remain visible. Redirected
+output prints each component's final startup status once, without terminal escape
+codes.
+
+`STARTED` means Compose started the containers; the Zetaris row summarizes their
+current health and completed one-shot jobs. Check `docker compose ps --all` for
+individual container details. Successful `init` and `bootstrap` jobs normally show
+`Exited (0)`. The panel includes the actual app URL and total startup time, including
+Docker startup and the backend build. Edit `scripts/dev-status.mjs` to customize the
+panel. Use `npm run --silent dev` to also hide npm's initial script header. Vite
+options still work, for example `npm run dev -- --port 5174`.
+
+Zetaris is a separate service for external evidence retrieval. The root dev command
+starts the included local platform automatically. To start Zetaris independently,
+configure root `.env` as described below, start Docker Desktop and then run:
 
 ```sh
 docker compose up -d
@@ -97,6 +114,8 @@ A general request needs only its objective. Import text, Markdown, CSV or JSON w
 A PM2.5 investigation additionally needs a domain scope, either explicitly or through a bounded phrase such as:
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
+
+[damage-appraisal](app/capabilities/damage-appraisal/README.md) builds and reviews calculated damage accounts from retained evidence. [damage-account-intake](app/capabilities/damage-account-intake/README.md) validates supplied manifests and component completeness. These capabilities were previously named `damage-account` and `damage-accounting`.
 
 Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
 

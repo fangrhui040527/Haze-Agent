@@ -13,14 +13,20 @@ The Manager can use those definitions to choose specialist work for a request.
 | [episode-investigation](episode-investigation/README.md) | `episode-investigation` / `episode-investigation.v3` | Record scoped episode context and unresolved observation/attribution branches, with independent review of the references.                                 |
 | [pm25](pm25/README.md)                                   | `pm25-evidence-summary` / `3`                        | Retrieve stored modeled PM2.5 samples, calculate coverage and range, and independently check the numerical result.                                        |
 | [evidence-collection](evidence-collection/README.md)     | `evidence-collection` / `evidence-collection.v1`     | Collect one explicitly selected source's current haze evidence for bounded locations; retain exact raw material and coverage without granting acceptance. |
-| [damage-account](damage-account/README.md)               | `damage-account` / `damage-account.v2`               | Build separate physical, financial incidence and selected welfare views from retained accounting inputs, and independently reconstruct the account.       |
-| [damage-accounting](damage-accounting/README.md)         | `damage-accounting` / `damage-accounting.v1`         | Resolve supplied account manifests and component references, report missing components and preserve review/revision lineage.                              |
+| [damage-appraisal](damage-appraisal/README.md)           | `damage-appraisal` / `damage-appraisal.v2`           | Build separate physical, financial incidence and selected welfare views from retained accounting inputs, and independently reconstruct the account.       |
+| [damage-account-intake](damage-account-intake/README.md) | `damage-account-intake` / `damage-account-intake.v1` | Resolve supplied account manifests and component references, report missing components and preserve review/revision lineage.                              |
 
 Each linked README explains the capability's inputs, assignments, outputs, limits
-and source files. `damage-account` performs numerical accounting;
-`damage-accounting` handles existing component manifests. Episode investigation
+and source files. `damage-appraisal` performs numerical accounting;
+`damage-account-intake` handles existing component manifests. Episode investigation
 registers context/gap work by default; its factory accepts additional method
 plans, while PM2.5 retrieval and analysis are registered separately.
+
+The capability IDs were renamed from `damage-account` to `damage-appraisal` and
+from `damage-accounting` to `damage-account-intake`. Existing saved task records
+retain their original capability/version pins; start a new task to use the
+renamed capabilities. Artifact kinds, schema tags, assignment/tool IDs and the
+`/damage-account` interface URLs retain their existing names.
 
 ## Registration and execution
 

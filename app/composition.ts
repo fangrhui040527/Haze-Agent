@@ -8,10 +8,10 @@ import { workerShieldAgent } from './agents/workershield/index.js';
 import { evidenceCriticAgent } from './agents/evidence-critic/index.js';
 import { damageAccountantAgent } from './agents/damage-accountant/index.js';
 import {
-  createDamageAccountAssignments,
-  createDamageAccountCapability,
-  createDamageAccountTools,
-} from './capabilities/damage-account/index.js';
+  createDamageAppraisalAssignments,
+  createDamageAppraisalCapability,
+  createDamageAppraisalTools,
+} from './capabilities/damage-appraisal/index.js';
 import {
   createEvidenceSynthesisAssignments,
   createEvidenceSynthesisCapability,
@@ -26,10 +26,10 @@ import {
   createPm25Tools,
 } from './capabilities/pm25/index.js';
 import {
-  createDamageAccountingAssignments,
-  createDamageAccountingCapability,
-} from './capabilities/damage-accounting/index.js';
-import { damageAccountScopeSchema } from './capabilities/damage-accounting/contracts.js';
+  createDamageAccountIntakeAssignments,
+  createDamageAccountIntakeCapability,
+} from './capabilities/damage-account-intake/index.js';
+import { damageAccountScopeSchema } from './capabilities/damage-account-intake/contracts.js';
 import { HazeWorld } from './world/haze-world.js';
 import { HazeOpsService } from './agents/hazeops/service.js';
 import { loadDashboardConfig } from './dashboard/config.js';
@@ -37,7 +37,7 @@ import { DashboardService } from './dashboard/http.js';
 import type { TaskStore } from './tasks/store.js';
 import type { TaskIdentity } from './contracts/tasks.js';
 import { createWorldModelDamageInputTool } from './adapters/damage-input-adapter/index.js';
-import { damageWorldInputPolicy } from './capabilities/damage-account/world-input-policy.js';
+import { damageWorldInputPolicy } from './capabilities/damage-appraisal/world-input-policy.js';
 import {
   createEvidenceCollectionAssignments,
   createEvidenceCollectionCapability,
@@ -87,7 +87,7 @@ export function createExecutionRegistry(options: {
     damageAccountantAgent,
   ])
     registry.registerAgent(agent);
-  const calculatedDamage = createDamageAccountCapability();
+  const calculatedDamage = createDamageAppraisalCapability();
   registry.registerCapability({
     ...calculatedDamage,
     // Supplied manifest scopes belong to the separate account-intake workflow.
@@ -103,7 +103,7 @@ export function createExecutionRegistry(options: {
     // Explicit fresh collection is separate from summarizing stored samples.
     matches: (request) => !collection.matches(request) && pm25.matches(request),
   });
-  const componentIntake = createDamageAccountingCapability();
+  const componentIntake = createDamageAccountIntakeCapability();
   registry.registerCapability({
     ...componentIntake,
     // Manifest intake and calculation advertise different starting plans.
@@ -115,10 +115,10 @@ export function createExecutionRegistry(options: {
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
-    ...createDamageAccountAssignments(),
+    ...createDamageAppraisalAssignments(),
     ...createPm25Assignments(),
     ...createEvidenceCollectionAssignments(),
-    ...createDamageAccountingAssignments(),
+    ...createDamageAccountIntakeAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])
@@ -126,7 +126,7 @@ export function createExecutionRegistry(options: {
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
   for (const tool of createEvidenceCollectionTools(options))
     registry.registerTool(tool);
-  for (const tool of createDamageAccountTools(options))
+  for (const tool of createDamageAppraisalTools(options))
     registry.registerTool(tool);
   return registry;
 }
