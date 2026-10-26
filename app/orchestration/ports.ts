@@ -6,7 +6,7 @@ import type {
 } from '../adapters/agent-model.js';
 import type { Artifact, ArtifactRef } from '../contracts/artifacts.js';
 import type { AgentRole, CapabilityCard } from '../contracts/capabilities.js';
-import type { TaskRequest } from '../contracts/tasks.js';
+import type { Assignment, TaskRequest } from '../contracts/tasks.js';
 import type { WorldAssessment, WorldRecord } from '../contracts/world.js';
 import type { AgentAction } from './contracts.js';
 
@@ -23,6 +23,11 @@ export interface WorldModelRecordDraft {
   external_id: string;
   payload: WorldRecord['payload'];
   evidence: ArtifactRef[];
+  relationships?: {
+    kind: string;
+    external_id: string;
+    relationship: string;
+  }[];
 }
 export interface WorldModelAcceptanceCandidate {
   subject: WorldRecord['ref'];
@@ -44,6 +49,10 @@ export interface CapabilityWorldModelAdapter {
     records: readonly WorldRecord[];
     assessments: readonly WorldAssessment[];
     artifacts: readonly Artifact[];
+    assignments: readonly Pick<
+      Assignment,
+      'id' | 'revision' | 'definition_id' | 'role' | 'status' | 'support'
+    >[];
   }): WorldModelAcceptanceCandidate | undefined;
   requiredReviewCoverage(input: {
     request: TaskRequest;

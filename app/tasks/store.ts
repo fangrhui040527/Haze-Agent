@@ -161,6 +161,18 @@ export interface SaveArtifactOptions {
   assignment_revision?: number;
   evidence_origin?: Artifact['evidence_origin'];
 }
+export interface WorldProjectionRecordInput {
+  capability_id: string;
+  kind: string;
+  external_id: string;
+  payload: JsonValue;
+  evidence: ArtifactRef[];
+  relationships?: {
+    kind: string;
+    external_id: string;
+    relationship: string;
+  }[];
+}
 export interface StoreDefinitions {
   agents: Record<string, string>;
   capabilities: Record<string, string>;
@@ -1544,6 +1556,7 @@ export class TaskStore {
     runId: string,
     generation: number,
     input: TaskResult,
+    worldProjections: WorldProjectionRecordInput[] = [],
   ): TaskRecord {
     return this.atomic(() => {
       const task = this.core(taskId),
@@ -1632,6 +1645,83 @@ export class TaskStore {
           'unfinished_assignments',
           'Complete, fail, or cancel every assignment before committing the run result.',
         );
+      const worldScope = {
+        ...task.identity,
+        mode: task.mode,
+      };
+      const projectedRecords = new Map<
+        string,
+        ReturnType<WorldModelStore['putRecord']>['value']
+      >();
+      for (const projection of worldProjections) {
+        const record = this.world.putRecord({
+          scope: worldScope,
+          operation_key: `capability-projection:${contractHash({
+            capability: projection.capability_id,
+            kind: projection.kind,
+            external_id: projection.external_id,
+            payload: projection.payload,
+          })}`,
+          kind: projection.kind,
+          external_id: projection.external_id,
+          payload: projection.payload,
+          producer: { kind: 'service', id: projection.capability_id },
+        }).value;
+        projectedRecords.set(
+          `${projection.kind}:${projection.external_id}`,
+          record,
+        );
+        for (const evidenceRef of projection.evidence) {
+          const evidenceArtifact = this.artifact(
+            evidenceRef.id,
+            task.identity,
+            evidenceRef,
+          );
+          const evidenceRecord = this.world.projectArtifact(
+            evidenceArtifact,
+            task.mode,
+          ).value;
+          this.world.relate({
+            scope: worldScope,
+            operation_key: `capability-evidence:${contractHash({
+              capability: projection.capability_id,
+              record: record.ref,
+              evidence: evidenceRecord.ref,
+            })}`,
+            kind: 'supported_by',
+            from: record.ref,
+            to: evidenceRecord.ref,
+          });
+        }
+      }
+      for (const projection of worldProjections) {
+        const record = projectedRecords.get(
+          `${projection.kind}:${projection.external_id}`,
+        )!;
+        for (const relationship of projection.relationships ?? []) {
+          const target = projectedRecords.get(
+            `${relationship.kind}:${relationship.external_id}`,
+          );
+          if (!target)
+            return fail(
+              'invalid_world_projection',
+              'Capability projection references a record it did not produce.',
+              422,
+            );
+          this.world.relate({
+            scope: worldScope,
+            operation_key: `capability-relationship:${contractHash({
+              capability: projection.capability_id,
+              from: record.ref,
+              relationship: relationship.relationship,
+              to: target.ref,
+            })}`,
+            kind: relationship.relationship,
+            from: record.ref,
+            to: target.ref,
+          });
+        }
+      }
       task.result = result;
       delete task.error;
       this.putCore(task);

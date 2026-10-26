@@ -43,7 +43,7 @@ import {
   type ExecutionRegistry,
   type ToolContext,
 } from '../orchestration/ports.js';
-import { TaskStore } from './store.js';
+import { TaskStore, type WorldProjectionRecordInput } from './store.js';
 
 export const localTaskIdentity: TaskIdentity = {
   principal: 'local-user',
@@ -663,17 +663,20 @@ export class TaskRuntime {
             'invalid_citation',
             'A source-backed direct response must cite supplied exact sources.',
           );
+        const directTask = this.store.read(id, localTaskIdentity);
+        const result = this.result(
+          directTask,
+          plan.answer,
+          [],
+          directSources,
+          plan.uncertainty,
+        );
         this.store.saveResult(
           id,
           task.current_run_id,
           generation,
-          this.result(
-            this.store.read(id, localTaskIdentity),
-            plan.answer,
-            [],
-            directSources,
-            plan.uncertainty,
-          ),
+          result,
+          this.worldModelProjections(directTask, result),
         );
         return;
       }
@@ -931,27 +934,29 @@ export class TaskRuntime {
       usability: 'usable',
     });
     const fresh = this.current(id, generation, revision);
+    const result = this.result(
+      fresh,
+      answer,
+      artifacts
+        .filter(
+          (artifact) =>
+            artifact.kind !== 'assignment.summary' &&
+            !accepted.some(
+              (assignment) =>
+                assignment.role === 'EvidenceCritic' &&
+                assignment.id === artifact.assignment_id,
+            ),
+        )
+        .map(exact),
+      citations,
+      uncertainty,
+    );
     this.store.saveResult(
       id,
       task.current_run_id,
       generation,
-      this.result(
-        fresh,
-        answer,
-        artifacts
-          .filter(
-            (artifact) =>
-              artifact.kind !== 'assignment.summary' &&
-              !accepted.some(
-                (assignment) =>
-                  assignment.role === 'EvidenceCritic' &&
-                  assignment.id === artifact.assignment_id,
-              ),
-          )
-          .map(exact),
-        citations,
-        uncertainty,
-      ),
+      result,
+      this.worldModelProjections(fresh, result),
     );
     await this.boundary(this.store.read(id, localTaskIdentity));
   }
@@ -1612,6 +1617,76 @@ export class TaskRuntime {
           ),
       },
     });
+  }
+  private worldModelProjections(
+    task: TaskRecord,
+    result: TaskResult,
+  ): WorldProjectionRecordInput[] {
+    const references = new Map<string, ArtifactRef>();
+    const addReference = (ref: ArtifactRef) => {
+      references.set(`${ref.id}:${ref.version}:${ref.sha256}`, exact(ref));
+    };
+    for (const ref of task.original_request.context_refs) addReference(ref);
+    for (const assignment of task.assignments)
+      if (
+        assignment.run_id === task.current_run_id &&
+        assignment.objective_revision === task.objective_revision
+      ) {
+        for (const ref of [...assignment.inputs, ...assignment.outputs])
+          addReference(ref);
+      }
+    for (const ref of [
+      ...result.work_products,
+      ...result.sources.map((source) => source.artifact),
+      ...(result.review.artifact ? [result.review.artifact] : []),
+    ])
+      addReference(ref);
+
+    const artifacts = [...references.values()].map((ref) =>
+      this.readExact(task, ref),
+    );
+    const projections: WorldProjectionRecordInput[] = [];
+    for (const capabilityId of new Set(
+      task.assignments
+        .filter(
+          (assignment) =>
+            assignment.run_id === task.current_run_id &&
+            assignment.objective_revision === task.objective_revision &&
+            assignment.capability !== 'core.manager',
+        )
+        .map((assignment) => assignment.capability),
+    )) {
+      const adapter =
+        this.options.registry.capabilities.get(capabilityId)?.worldModel;
+      if (!adapter) continue;
+      for (const record of adapter.extract({
+        request: this.request(task),
+        artifacts,
+      })) {
+        for (const evidence of record.evidence)
+          if (
+            !references.has(
+              `${evidence.id}:${evidence.version}:${evidence.sha256}`,
+            )
+          )
+            throw new TaskError(
+              422,
+              'invalid_world_projection',
+              'Capability projection references evidence outside the task inputs and outputs.',
+            );
+        projections.push({
+          capability_id: capabilityId,
+          kind: record.kind,
+          external_id: record.external_id,
+          payload: json(record.payload),
+          evidence: record.evidence.map(exact),
+          ...(record.relationships === undefined
+            ? {}
+            : { relationships: record.relationships }),
+        });
+      }
+    }
+    return projections;
   }
   async close() {
     if (this.closed) return;

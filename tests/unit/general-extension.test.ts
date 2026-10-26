@@ -200,6 +200,7 @@ describe('task-family extensibility', () => {
         records: [projected],
         assessments: [],
         artifacts: [product],
+        assignments: [],
       }),
     ).toEqual({
       subject: projected.ref,

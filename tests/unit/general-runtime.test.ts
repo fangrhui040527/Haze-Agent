@@ -7,6 +7,7 @@ import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
 import type { TaskRecord } from '../../app/contracts/tasks.js';
 import type { AgentModel } from '../../app/adapters/agent-model.js';
 import { TaskStore } from '../../app/tasks/store.js';
+import { worldRecordSchema } from '../../app/contracts/world.js';
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -415,6 +416,38 @@ describe('general runtime', () => {
         .events.filter((event) => event.type === 'peer_message_sent'),
     ).toHaveLength(2);
     expect(task.usage.tool_calls).toBe(1);
+    const projectedRecords = instance.store.db
+      .prepare(
+        `SELECT body FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .all(
+        localTaskIdentity.principal,
+        localTaskIdentity.workspace,
+        task.mode,
+      ) as { body: string }[];
+    const projected = projectedRecords.map((row) =>
+      worldRecordSchema.parse(JSON.parse(row.body)),
+    );
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining([
+        'pm25_location',
+        'pm25_modeled_capture',
+        'pm25_analysis_reference',
+        'pm25_numerical_review_reference',
+      ]),
+    );
+    const relationshipCount = instance.store.db
+      .prepare(
+        `SELECT COUNT(*) AS count FROM world_relationships
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .get(
+        localTaskIdentity.principal,
+        localTaskIdentity.workspace,
+        task.mode,
+      ) as { count: number };
+    expect(relationshipCount.count).toBeGreaterThan(0);
     expect(
       task.result?.provenance.receipts.some(
         (receipt) =>
