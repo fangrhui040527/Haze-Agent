@@ -6,6 +6,9 @@
       "url": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-fire-emissions-gfas?tab=overview",
       "allowed_hosts": ["ads.atmosphere.copernicus.eu"],
       "purpose": "Candidate fire-radiative-power-derived emissions and plume injection metadata.",
+      "triage_role": "candidate_product",
+      "potential_inputs": ["fire_emissions", "fire_radiative_power"],
+      "known_limitations": "Product documentation is not acquired fire emissions data; verify species, units, temporal profiles, coverage, access terms, and uncertainty.",
       "terms": ["emission", "fire radiative power", "species", "resolution", "version", "injection"]
     },
     {
@@ -14,6 +17,9 @@
       "url": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-reanalysis-eac4?tab=overview",
       "allowed_hosts": ["ads.atmosphere.copernicus.eu"],
       "purpose": "Candidate historical global atmospheric-composition reanalysis; modeled, not monitor data.",
+      "triage_role": "candidate_product",
+      "potential_inputs": ["ambient_pm25_field"],
+      "known_limitations": "Modeled reanalysis is not direct monitoring or fire-attributed exposure; verify variables, units, grid, time coverage, validation, and access.",
       "terms": ["PM2.5", "particulate", "resolution", "2003", "reanalysis", "uncertainty"]
     },
     {
@@ -22,6 +28,9 @@
       "url": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview",
       "allowed_hosts": ["cds.climate.copernicus.eu"],
       "purpose": "Candidate historical weather fields for reviewed transport-model inputs.",
+      "triage_role": "candidate_product",
+      "potential_inputs": ["meteorology"],
+      "known_limitations": "Documentation does not provide a configured transport model; verify required fields, units, grid, timestamps, domain, and retrieval requirements.",
       "terms": ["hourly", "resolution", "ensemble", "uncertainty", "1940", "wind"]
     },
     {
@@ -30,6 +39,9 @@
       "url": "https://www.worldpop.org/rest/data/pop",
       "allowed_hosts": ["www.worldpop.org", "hub.worldpop.org"],
       "purpose": "Official WorldPop catalogue endpoint; inspect available gridded product aliases and years.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["population_grid"],
+      "known_limitations": "Catalogue discovery is not population-grid acquisition; verify product, year, population strata, resolution, licensing, and geographic coverage.",
       "terms": ["Malaysia", "100m", "1km", "2015-2030", "2024", "constrained"]
     },
     {
@@ -38,6 +50,9 @@
       "url": "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php",
       "allowed_hosts": ["human-settlement.emergency.copernicus.eu"],
       "purpose": "Candidate Global Human Settlement Layer population-grid documentation and downloads.",
+      "triage_role": "candidate_product",
+      "potential_inputs": ["population_grid"],
+      "known_limitations": "Documentation/download links do not establish a compatible downloaded grid; verify reference year, strata, resolution, licensing, and coverage.",
       "terms": ["population", "resolution", "grid", "2020", "2030", "download"]
     },
     {
@@ -46,6 +61,9 @@
       "url": "https://developer.data.gov.my/static-api/data-catalogue",
       "allowed_hosts": ["developer.data.gov.my"],
       "purpose": "Official API documentation for discovering Malaysia government statistics datasets.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["malaysia_official_statistics_discovery"],
+      "known_limitations": "API documentation is not a specific outcome dataset; verify dataset definitions, schemas, units, licensing, and supported query limits.",
       "terms": ["health", "labour", "salary", "price", "population", "API"]
     },
     {
@@ -54,6 +72,9 @@
       "url": "https://data.gov.my/data-catalogue",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Browse official catalogue listings for health, deaths, pollution, labour and price datasets.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["health_baseline_discovery", "air_quality_context", "labour_context", "price_context"],
+      "known_limitations": "Catalogue listings are discovery leads; individual dataset definitions and data must be checked separately.",
       "terms": ["Healthcare", "Deaths", "Pollution", "Labour", "Prices", "Health", "hospital", "respiratory", "mortality", "admission", "absence", "wage", "cause", "workplace", "worker", "haze", "smoke", "peat", "burning", "illness"]
     },
     {
@@ -62,6 +83,9 @@
       "url": "https://data.gov.my/data-catalogue/deaths_district_sex",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Official annual all-cause deaths and crude death rates by residence district and sex; not cause-specific or haze-attributable.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["baseline_health_context"],
+      "known_limitations": "Annual all-cause district counts/rates do not provide cause-specific haze outcomes, event-period rates, age strata, or a risk function.",
       "terms": ["district", "sex", "deaths", "crude death rate", "population", "registration", "API", "license"]
     },
     {
@@ -70,6 +94,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=deaths_district_sex&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded three-row public API sample for aggregated annual all-cause district death counts and rates.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["baseline_health_context"],
+      "known_limitations": "Three rows are only a schema/sample check; all-cause annual data are not a cause-specific event baseline or haze-attributable outcome.",
       "terms": ["date", "state", "district", "sex", "abs", "rate"]
     },
     {
@@ -78,6 +105,9 @@
       "url": "https://data.gov.my/data-catalogue/healthcare_staff",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Official annual public-sector healthcare staff counts by state and type; capacity context, not health outcomes or unit costs.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["health_service_capacity"],
+      "known_limitations": "Staff counts describe service capacity, not health outcomes, treatment utilization, or cost per case.",
       "terms": ["staff", "doctor", "nurse", "state", "date", "healthcare", "license"]
     },
     {
@@ -86,6 +116,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=healthcare_staff&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded three-row public API sample for aggregated healthcare workforce counts.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["health_service_capacity"],
+      "known_limitations": "Three rows do not establish full coverage; capacity counts are not health outcomes or treatment costs, and field names need schema validation.",
       "terms": ["date", "state", "staff_type", "staff"]
     },
     {
@@ -94,6 +127,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded public API sample of monthly monitoring-station pollutant aggregates for comparison, not a gridded exposure product.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["ambient_pm25_validation"],
+      "known_limitations": "Small monthly station aggregates do not provide event-hour/day gridded population exposure or source attribution; verify pollutant and units.",
       "terms": ["date", "PM2.5", "PM10", "station", "pollutant"]
     },
     {
@@ -102,6 +138,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&contains=PM%202.5%40pollutant&sort=-date&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded sample of the three latest monthly PM2.5 values for comparison; not a gridded exposure product.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["ambient_pm25_validation"],
+      "known_limitations": "Three monthly values are a smoke-test sample only; they are not a complete time series, gridded exposure, or fire-attributed PM2.5.",
       "terms": ["date", "PM 2.5", "concentration"]
     },
     {
@@ -110,6 +149,9 @@
       "url": "https://data.gov.my/data-catalogue/lfs_month",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Official monthly national/state Labour Force Survey indicators; not event-related absence or lost workdays.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["labour_context"],
+      "known_limitations": "General labour-market indicators do not measure haze-attributable absence, lost hours, or productivity.",
       "terms": ["employment", "unemployment", "labour force", "monthly", "state", "survey", "license"]
     },
     {
@@ -118,6 +160,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=lfs_month&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded three-row API sample of monthly labour-market aggregates.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["labour_context"],
+      "known_limitations": "Three rows are not event-specific worker absence or lost productivity and do not establish complete temporal/geographic coverage.",
       "terms": ["date", "state", "employment", "unemployment", "rate"]
     },
     {
@@ -126,6 +171,9 @@
       "url": "https://data.gov.my/data-catalogue/wages_real_state",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Official annual real mean/median monthly wages by state at 2010 prices; wage context, not measured haze-related work loss.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["work_valuation_context", "price_context"],
+      "known_limitations": "State wage context may support valuation only with an approved method; it is not haze-attributable lost work and requires price-year compatibility.",
       "terms": ["wages", "state", "monthly", "2010 prices", "employees", "license"]
     },
     {
@@ -134,6 +182,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=wages_real_state&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded three-row API sample of annual state wage statistics.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["work_valuation_context", "price_context"],
+      "known_limitations": "Three rows do not establish full coverage or event-related work loss; validate field names, currency/price basis, and target-worker applicability.",
       "terms": ["date", "state", "wages_median_real", "wages_mean_real"]
     },
     {
@@ -142,6 +193,9 @@
       "url": "https://data.gov.my/data-catalogue/hospital_beds",
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Official annual public-sector active hospital bed counts; service capacity, not health outcomes or treatment unit costs.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["health_service_capacity"],
+      "known_limitations": "Bed counts describe public-sector capacity, not haze-related admissions, resource use, or treatment cost.",
       "terms": ["hospital beds", "state", "district", "hospital type", "date", "license"]
     },
     {
@@ -150,6 +204,9 @@
       "url": "https://api.data.gov.my/data-catalogue/?id=hospital_beds&limit=3",
       "allowed_hosts": ["api.data.gov.my"],
       "purpose": "Bounded three-row API sample of annual public hospital bed counts.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["health_service_capacity"],
+      "known_limitations": "Three rows are only a sample; bed counts do not measure haze-related outcomes, utilization, or treatment costs.",
       "terms": ["date", "state", "district", "type", "beds"]
     },
     {
@@ -158,6 +215,9 @@
       "url": "https://developer.data.gov.my/static-api/opendosm",
       "allowed_hosts": ["developer.data.gov.my"],
       "purpose": "Official OpenDOSM API documentation linked from the Data.gov.my API guide.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["malaysia_official_statistics_discovery"],
+      "known_limitations": "Documentation is not a downloaded dataset; verify each dataset's schema, units, coverage, terms, and endpoint separately.",
       "terms": ["dataset", "API", "query", "response", "download", "population"]
     },
     {
@@ -166,6 +226,9 @@
       "url": "https://open.dosm.gov.my/",
       "allowed_hosts": ["open.dosm.gov.my"],
       "purpose": "Official DOSM open-data portal; discover documented datasets and download/API links.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["malaysia_official_statistics_discovery"],
+      "known_limitations": "Portal discovery does not establish that candidate tables contain event-specific model inputs; validate each dataset independently.",
       "terms": ["health", "labour", "wage", "salary", "price", "download", "API"]
     },
     {
@@ -174,6 +237,9 @@
       "url": "https://open.dosm.gov.my/data-catalogue/population_district",
       "allowed_hosts": ["open.dosm.gov.my"],
       "purpose": "District-level population candidate; not a population grid.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["population_context"],
+      "known_limitations": "Administrative district totals are not a population raster; grid allocation and population strata would require separate data/methods.",
       "terms": ["population", "district", "year", "sex", "age", "download"]
     },
     {
@@ -182,6 +248,9 @@
       "url": "https://open.dosm.gov.my/data-catalogue/air_pollution",
       "allowed_hosts": ["open.dosm.gov.my"],
       "purpose": "Official monthly air-pollution dataset candidate; verify variables and monitoring basis.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["ambient_pm25_validation"],
+      "known_limitations": "Monthly monitoring data are not necessarily event-resolution gridded exposure; verify pollutant definitions, station coverage, and units.",
       "terms": ["air pollution", "PM2.5", "PM10", "monthly", "station", "unit"]
     },
     {
@@ -190,6 +259,9 @@
       "url": "https://open.dosm.gov.my/dashboard/labour-market",
       "allowed_hosts": ["open.dosm.gov.my"],
       "purpose": "Official labour-market context; not by itself a haze-attributable work-disruption dataset.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["labour_context"],
+      "known_limitations": "Labour-market dashboard indicators do not directly measure event-related absence, lost workdays, or reduced productivity.",
       "terms": ["labour", "employment", "unemployment", "wages", "data", "download"]
     },
     {
@@ -198,6 +270,9 @@
       "url": "https://open.dosm.gov.my/dashboard/producer-prices",
       "allowed_hosts": ["open.dosm.gov.my"],
       "purpose": "Official producer-price context; not a source of health-outcome unit costs.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["price_context"],
+      "known_limitations": "Producer-price indices may support price adjustment only where methodologically appropriate; they are not treatment costs or welfare values.",
       "terms": ["producer", "price", "index", "methodology", "data", "download"]
     },
     {
@@ -206,6 +281,9 @@
       "url": "https://www.who.int/publications/i/item/9789240034228",
       "allowed_hosts": ["www.who.int"],
       "purpose": "Health evidence and guideline reference; not a Malaysia-specific risk-function approval.",
+      "triage_role": "method_reference",
+      "potential_inputs": ["risk_function_method_reference"],
+      "known_limitations": "Guidelines are not necessarily a quantitative concentration-response function and do not establish Malaysia-specific applicability.",
       "terms": ["health", "risk", "PM2.5", "evidence", "uncertainty", "exposure"]
     },
     {
@@ -214,6 +292,9 @@
       "url": "https://www.who.int/data/gho/info/gho-odata-api",
       "allowed_hosts": ["www.who.int"],
       "purpose": "Official documentation for the WHO Global Health Observatory OData API.",
+      "triage_role": "catalogue_documentation",
+      "potential_inputs": ["health_baseline_discovery"],
+      "known_limitations": "API documentation does not identify a suitable local cause-specific event baseline; verify indicators, definitions, dimensions, and returned coverage.",
       "terms": ["indicator", "filter", "country", "TimeDimension", "OData", "API"]
     },
     {
@@ -222,6 +303,9 @@
       "url": "https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates",
       "allowed_hosts": ["www.who.int"],
       "purpose": "WHO Global Health Estimates theme page for mortality indicators and technical sources.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["baseline_health_context"],
+      "known_limitations": "Country-level estimates may not match local causes, strata, geography, event period, or official national statistics.",
       "terms": ["mortality", "cause", "estimates", "data", "indicator", "method"]
     },
     {
@@ -230,6 +314,9 @@
       "url": "https://www.who.int/data/gho/data/indicators/indicator-details/GHO/gho-ghe-ncd-mortality-rate",
       "allowed_hosts": ["www.who.int"],
       "purpose": "WHO metadata for age-standardized NCD mortality rates; broad baseline context, not haze-attributable outcomes.",
+      "triage_role": "supporting_context",
+      "potential_inputs": ["baseline_health_context"],
+      "known_limitations": "Age-standardized broad NCD rates are not event-specific attributable outcomes; check outcome definition, strata, geography, and time coverage.",
       "terms": ["mortality rate", "age-standardized", "cause", "age", "sex", "estimates"]
     },
     {
@@ -238,6 +325,9 @@
       "url": "https://ghoapi.azureedge.net/api/Indicator?$filter=contains(IndicatorName,%27NCD%20mortality%20rate%27)&$top=5",
       "allowed_hosts": ["ghoapi.azureedge.net"],
       "purpose": "Bounded official GHO indicator catalogue query to identify API codes for the documented NCD mortality indicator.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["health_baseline_discovery"],
+      "known_limitations": "Indicator lookup is metadata discovery, not a validated local outcome series or complete baseline data.",
       "terms": ["IndicatorCode", "IndicatorName", "mortality"]
     },
     {
@@ -246,6 +336,9 @@
       "url": "https://ghoapi.azureedge.net/api/WHOSIS_000001?$filter=SpatialDim%20eq%20%27MYS%27",
       "allowed_hosts": ["ghoapi.azureedge.net"],
       "purpose": "Bounded Malaysia-filtered example using the WHO-documented API pattern; life expectancy is not a cause-specific haze input.",
+      "triage_role": "bounded_api_sample",
+      "potential_inputs": ["health_baseline_context"],
+      "known_limitations": "Life-expectancy sample does not provide cause-specific haze baseline rates; bounded response and country-level scope limit use.",
       "terms": ["SpatialDim", "TimeDimensionBegin", "NumericValue", "MYS", "WHOSIS_000001"]
     },
     {
@@ -254,6 +347,9 @@
       "url": "https://www.epa.gov/benmap/benmap-manual-and-supporting-documentation",
       "allowed_hosts": ["www.epa.gov"],
       "purpose": "Method/software reference for health-impact analysis; US functions are not automatically transferable to Malaysia.",
+      "triage_role": "method_reference",
+      "potential_inputs": ["health_impact_method_reference"],
+      "known_limitations": "US documentation or risk functions do not establish methodological approval or population applicability in Malaysia.",
       "terms": ["risk", "concentration-response", "health impact", "uncertainty", "BenMAP", "population"]
     }
   ]

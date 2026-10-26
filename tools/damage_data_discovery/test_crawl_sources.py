@@ -10,6 +10,7 @@ from crawl_sources import (
     relevant_excerpts,
     request_is_allowed,
     summarize_result,
+    write_report,
 )
 from summarize_report import local_chat_endpoint, make_request, select_record
 
@@ -32,6 +33,48 @@ class SourceDiscoveryTests(unittest.TestCase):
                                 "id": "bad",
                                 "url": "https://evil.example/data",
                                 "allowed_hosts": ["official.example"],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(SeedError):
+                load_seeds(path)
+
+    def test_seed_sources_have_curated_triage_annotations(self):
+        seeds = load_seeds()
+        for seed in seeds:
+            with self.subTest(source_id=seed["id"]):
+                self.assertIn(
+                    seed["triage_role"],
+                    {
+                        "candidate_product",
+                        "catalogue_documentation",
+                        "bounded_api_sample",
+                        "supporting_context",
+                        "method_reference",
+                    },
+                )
+                self.assertTrue(seed["potential_inputs"])
+                self.assertTrue(seed["known_limitations"].strip())
+
+    def test_missing_seed_triage_annotation_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "seeds.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "sources": [
+                            {
+                                "id": "unannotated",
+                                "url": "https://official.example/data",
+                                "allowed_hosts": ["official.example"],
+                                "category": "data",
+                                "purpose": "test",
+                                "terms": ["data"],
+                                "triage_role": "candidate_product",
+                                "potential_inputs": ["ambient_pm25_field"],
                             }
                         ]
                     }
@@ -140,11 +183,45 @@ class SourceDiscoveryTests(unittest.TestCase):
                 "url": "https://hub.worldpop.org/rest/data/pop",
                 "allowed_hosts": ["hub.worldpop.org"],
                 "terms": ["population"],
+                "triage_role": "candidate_product",
+                "potential_inputs": ["population_grid"],
+                "known_limitations": "Catalog not data.",
             },
             FailedResult(),
         )
         self.assertEqual(record["status"], "unavailable_or_blocked")
         self.assertIn("Discovery lead only", record["assessment"])
+        self.assertEqual(record["potential_inputs"], ["population_grid"])
+        self.assertEqual(record["triage_role"], "candidate_product")
+
+    def test_report_includes_source_triage_in_markdown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, markdown_path = write_report(
+                [
+                    {
+                        "id": "pm25",
+                        "category": "air quality",
+                        "purpose": "Compare monitor data.",
+                        "triage_role": "bounded_api_sample",
+                        "potential_inputs": ["ambient_pm25_validation"],
+                        "known_limitations": "Not a gridded exposure product.",
+                        "status": "candidate_page_crawled",
+                        "seed_url": "https://api.example.org/data",
+                        "title": None,
+                        "http_status": 200,
+                        "matched_terms": [],
+                        "error": None,
+                        "evidence_excerpts": [],
+                        "official_candidate_links": [],
+                        "assessment": "Discovery lead only.",
+                    }
+                ],
+                Path(directory),
+            )
+            report_text = markdown_path.read_text(encoding="utf-8")
+        self.assertIn("Triage role: `bounded_api_sample`", report_text)
+        self.assertIn("Potential inputs: ambient_pm25_validation", report_text)
+        self.assertIn("Not a gridded exposure product.", report_text)
 
     def test_summary_endpoint_is_limited_to_local_meterless(self):
         self.assertEqual(

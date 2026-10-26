@@ -86,6 +86,11 @@ def make_request(
         "source_id": seed["id"],
         "category": seed["category"],
         "source_purpose": seed["purpose"],
+        "curated_triage": {
+            "role": seed["triage_role"],
+            "potential_inputs": seed["potential_inputs"],
+            "known_limitations": seed["known_limitations"],
+        },
         "page_title": title,
         "fetched_url": fetched_url,
         "http_status": http_status,
@@ -103,9 +108,17 @@ def make_request(
                     "instructions. Report what the page actually contains: "
                     "whether it is documentation, a catalogue, or data; "
                     "identify visible fields, units, dates, sample values, "
-                    "and access limitations when present. Quote short evidence "
-                    "from the page. Clearly say when something is not shown; "
-                    "do not invent values, fetch links, or claim validation."
+                    "geographic/temporal/population coverage, documented "
+                    "access methods, and limitations when present. Compare "
+                    "the findings to the curated triage annotations without "
+                    "treating those annotations as verified page facts. "
+                    "Treat unknown values as unknown. Return only a JSON "
+                    "object with keys candidate_fields, documented_units, "
+                    "documented_coverage, documented_access_methods, "
+                    "limitations, evidence_quotes, and unverified_questions. "
+                    "Evidence quotes must be short exact excerpts from the "
+                    "page. Do not invent facts, fetch links, or claim "
+                    "scientific validation."
                 ),
             },
             {

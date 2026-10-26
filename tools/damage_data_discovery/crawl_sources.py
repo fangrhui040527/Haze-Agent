@@ -35,6 +35,15 @@ class SeedError(ValueError):
     pass
 
 
+TRIAGE_ROLES = {
+    "candidate_product",
+    "catalogue_documentation",
+    "bounded_api_sample",
+    "supporting_context",
+    "method_reference",
+}
+
+
 def load_seeds(path: Path = SEEDS_PATH) -> list[dict]:
     data = json.loads(path.read_text(encoding="utf-8"))
     seeds = data.get("sources")
@@ -49,6 +58,9 @@ def load_seeds(path: Path = SEEDS_PATH) -> list[dict]:
         seed_id = seed.get("id")
         url = seed.get("url")
         hosts = seed.get("allowed_hosts")
+        triage_role = seed.get("triage_role")
+        potential_inputs = seed.get("potential_inputs")
+        known_limitations = seed.get("known_limitations")
         if not isinstance(seed_id, str) or not seed_id or seed_id in seen_ids:
             raise SeedError(f"Missing or duplicate source id: {seed_id!r}")
         if not isinstance(url, str) or url in seen_urls:
@@ -64,6 +76,17 @@ def load_seeds(path: Path = SEEDS_PATH) -> list[dict]:
             or parts.hostname.lower() not in {host.lower() for host in hosts}
         ):
             raise SeedError(f"Unsafe or unapproved seed URL for {seed_id}: {url}")
+        if (
+            triage_role not in TRIAGE_ROLES
+            or not isinstance(potential_inputs, list)
+            or not potential_inputs
+            or not all(isinstance(item, str) and item.strip() for item in potential_inputs)
+            or not isinstance(known_limitations, str)
+            or not known_limitations.strip()
+        ):
+            raise SeedError(
+                f"Missing or invalid source triage annotations for {seed_id}."
+            )
         seen_ids.add(seed_id)
         seen_urls.add(url)
     return seeds
@@ -160,6 +183,9 @@ def summarize_result(seed: dict, result: object) -> dict:
         "id": seed["id"],
         "category": seed["category"],
         "purpose": seed["purpose"],
+        "triage_role": seed["triage_role"],
+        "potential_inputs": seed["potential_inputs"],
+        "known_limitations": seed["known_limitations"],
         "status": "candidate_page_crawled" if success else "unavailable_or_blocked",
         "seed_url": seed["url"],
         "final_url": final_url,
@@ -239,6 +265,9 @@ async def _crawl(seeds: list[dict]) -> list[dict]:
                         "id": seed["id"],
                         "category": seed["category"],
                         "purpose": seed["purpose"],
+                        "triage_role": seed["triage_role"],
+                        "potential_inputs": seed["potential_inputs"],
+                        "known_limitations": seed["known_limitations"],
                         "status": "unavailable_or_blocked",
                         "seed_url": seed["url"],
                         "final_url": None,
@@ -289,6 +318,9 @@ def write_report(records: list[dict], output_dir: Path = OUTPUT_DIR) -> tuple[Pa
                 f"- Status: `{record['status']}`",
                 f"- Page: {record['seed_url']}",
                 f"- Purpose: {record['purpose']}",
+                f"- Triage role: `{record['triage_role']}`",
+                f"- Potential inputs: {', '.join(record['potential_inputs'])}",
+                f"- Known limitations: {record['known_limitations']}",
             ]
         )
         if record["title"]:

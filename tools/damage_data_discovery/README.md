@@ -13,6 +13,11 @@ terms, scientific applicability and the supported Zetaris path are checked
 separately. The EPA page is a method reference only, not evidence that US risk
 functions apply in Malaysia.
 
+Every reviewed seed includes curated triage annotations: its role, potential
+model inputs it may support, and known limitations. These annotations are
+research guidance rather than automatically verified facts and appear beside
+the crawl evidence in generated reports.
+
 ## Run
 
 From the Haze-Agent repository root:
@@ -71,6 +76,11 @@ list available seeds, `--dry-run` to validate selection without network
 requests, or `--crawl-only` to test the crawl and print a short excerpt without
 calling NVIDIA. The fetched page text is sent to NVIDIA in the normal run, so
 review it and the provider's data-handling terms before running the experiment.
+Nemotron is prompted to return JSON identifying candidate fields, documented
+units, coverage, access methods, limitations, short exact evidence quotes, and
+questions that remain unverified. The response is not parsed as trusted
+metadata; check every claim against the provider's official documentation
+before relying on it or changing the curated seed annotations.
 
 ## Screenshot coverage
 

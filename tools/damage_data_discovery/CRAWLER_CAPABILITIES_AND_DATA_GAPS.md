@@ -35,17 +35,24 @@ The current implementation can:
 - Extract bounded, keyword-relevant page excerpts, matched terms, page status,
   and same-host links for later manual review into a local JSON/Markdown
   discovery report.
+- Carry curated per-seed annotations for its research role, potentially
+  relevant model inputs, and known limitations into those reports.
 - For a few Data.gov.my entries, request a deliberately small sample through
   the public API. A tested PM2.5 seed returned three monthly values.
 - In the separate Nemotron experiment, fetch one reviewed page and ask
-  Nemotron to inspect the bounded page text. The crawl-only option can inspect
-  the fetched excerpt without contacting NVIDIA.
+  Nemotron to identify candidate fields, units, coverage, documented access
+  methods, limitations, and exact evidence quotes from bounded page text. The
+  crawl-only option can inspect the fetched excerpt without contacting NVIDIA.
 
 These are discovery functions, not evidence that the data is complete,
 licensed for the intended use, correctly interpreted, representative, or
 appropriate for a causal health or economic estimate. The standard discovery
 crawler processes its reviewed seeds serially; the Nemotron experiment handles
 one selected seed per run.
+
+Nemotron output is not automatically parsed or accepted as verified metadata.
+Review model-extracted claims against official documentation before changing
+curated annotations or using a dataset.
 
 Relevant implementation and source inventory:
 

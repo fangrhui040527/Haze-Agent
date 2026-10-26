@@ -54,6 +54,9 @@ class NemotronCrawlTests(unittest.TestCase):
                 "id": "pm25",
                 "category": "air quality",
                 "purpose": "Sample public pollution data",
+                "triage_role": "bounded_api_sample",
+                "potential_inputs": ["ambient_pm25_validation"],
+                "known_limitations": "Not a gridded exposure product.",
             },
             "PM2.5 data",
             "https://api.example.org/data",
@@ -64,6 +67,14 @@ class NemotronCrawlTests(unittest.TestCase):
         evidence = json.loads(payload["messages"][1]["content"])
         self.assertEqual(len(evidence["page_text"]), MAX_PAGE_CHARS)
         self.assertEqual(payload["model"], "test-model")
+        self.assertIn(
+            "documented_access_methods",
+            payload["messages"][0]["content"],
+        )
+        self.assertEqual(
+            evidence["curated_triage"]["potential_inputs"],
+            ["ambient_pm25_validation"],
+        )
         self.assertTrue(
             payload["extra_body"]["chat_template_kwargs"]["enable_thinking"]
         )

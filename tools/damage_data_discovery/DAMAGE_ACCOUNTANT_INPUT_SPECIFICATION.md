@@ -140,6 +140,34 @@ functions, and source-specific metadata need upstream storage and processing;
 do not force them into an accounting `effects` row without a documented,
 reproducible transformation.
 
+## Seed triage input labels
+
+The reviewed seed inventory uses the following short labels in
+`potential_inputs`. A label means the source may help locate or inform that
+input; it is not a claim that the source provides a complete or acceptable
+dataset.
+
+| Label | Meaning |
+|---|---|
+| `fire_emissions` | Fire emissions by species and time for an approved attribution method. |
+| `fire_radiative_power` | Satellite/product fire activity or radiative-power input used by some emissions methods. |
+| `meteorology` | Weather fields needed by a reviewed transport/dispersion method. |
+| `ambient_pm25_field` | Candidate gridded or modeled PM2.5 concentration field. |
+| `population_grid` | Candidate spatial population counts for exposure/health weighting. |
+| `baseline_health_context` | Context or discovery for baseline health rates; individual sources may not satisfy outcome-specific requirements. |
+| `health_baseline_context` | Country-level or aggregate health baseline context, not necessarily compatible with event-specific outcomes or strata. |
+| `health_baseline_discovery` | Documentation or metadata discovery for potential health baseline datasets. |
+| `health_service_capacity` | Health-service capacity context, not outcome incidence or unit treatment cost. |
+| `ambient_pm25_validation` | Monitor/air-quality data potentially useful for context or model validation, not automatically population exposure. |
+| `labour_context` | General labour-market context, not event-caused work disruption. |
+| `work_valuation_context` | Possible wage/earnings valuation context, not a measured work-loss quantity. |
+| `price_context` | General price-index or price-basis context, not a health cost or welfare value by itself. |
+| `air_quality_context` | General air-quality dataset discovery/context. |
+| `population_context` | Administrative population context, not necessarily a compatible gridded population product. |
+| `malaysia_official_statistics_discovery` | Catalogue/API discovery for Malaysian official statistics. |
+| `risk_function_method_reference` | Health-risk guidance/method literature; not automatically a quantitative or locally applicable function. |
+| `health_impact_method_reference` | General health-impact method/software documentation. |
+
 ## Sign-off checklist
 
 Before promoting any pilot input to an account, confirm:
