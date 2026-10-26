@@ -58,7 +58,7 @@ function Header() {
         </span>
         <nav className={styles.nav} aria-label="Main">
           <NavLink
-            to="/"
+            to="/dashboard"
             end
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`

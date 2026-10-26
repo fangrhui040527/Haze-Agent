@@ -59,7 +59,7 @@ describe('dedicated damage accounting page', () => {
   it('starts with a request-only World Model intake and keeps dashboard navigation available', () => {
     const markup = render(accountRun(false));
     expect(markup).toContain('<h1>Damage accounting</h1>');
-    expect(markup).toMatch(/href="\/"[^>]*>Back to the dashboard/);
+    expect(markup).toMatch(/href="\/dashboard"[^>]*>Back to the dashboard/);
     expect(markup).toContain('Create an account');
     expect(markup).not.toContain('id="damage-source"');
     expect(markup).not.toContain('type="file"');

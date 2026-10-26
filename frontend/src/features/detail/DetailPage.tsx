@@ -144,7 +144,7 @@ export function DetailPage() {
             kind="empty"
             title="Item not found."
             action={
-              <Link to="/" className={buttonClass()}>
+              <Link to="/dashboard" className={buttonClass()}>
                 Go to the dashboard
               </Link>
             }
@@ -163,7 +163,7 @@ export function DetailPage() {
   const passed = item.checks.filter((c) => c.result === 'pass').length;
 
   const ask = () =>
-    navigate('/', {
+    navigate('/dashboard', {
       state: {
         ask: {
           question: `Tell me more about: "${item.headline}"`,
