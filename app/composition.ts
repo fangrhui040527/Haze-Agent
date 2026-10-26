@@ -6,6 +6,12 @@ import { managerAgent } from './agents/manager/index.js';
 import { hazeOpsAgent } from './agents/hazeops/index.js';
 import { workerShieldAgent } from './agents/workershield/index.js';
 import { evidenceCriticAgent } from './agents/evidence-critic/index.js';
+import { damageAccountantAgent } from './agents/damage-accountant/index.js';
+import {
+  createDamageAccountAssignments,
+  createDamageAccountCapability,
+  createDamageAccountTools,
+} from './capabilities/damage-account/index.js';
 import {
   createEvidenceSynthesisAssignments,
   createEvidenceSynthesisCapability,
@@ -31,17 +37,22 @@ export function createExecutionRegistry(options: {
     hazeOpsAgent,
     workerShieldAgent,
     evidenceCriticAgent,
+    damageAccountantAgent,
   ])
     registry.registerAgent(agent);
+  registry.registerCapability(createDamageAccountCapability());
   registry.registerCapability(createPm25Capability());
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
+    ...createDamageAccountAssignments(),
     ...createPm25Assignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])
     registry.registerAssignment(assignment);
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
+  for (const tool of createDamageAccountTools(options))
+    registry.registerTool(tool);
   return registry;
 }

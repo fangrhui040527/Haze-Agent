@@ -6,6 +6,7 @@ import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
+import { ManagerWorkspace } from './ManagerWorkspace.tsx';
 import styles from './TaskPage.module.css';
 
 /** Restore this report's identity rather than whichever task was last open. */
@@ -90,6 +91,7 @@ export function GeneralTaskReport({
           </>
         )}
       </div>
+      {record && <ManagerWorkspace record={record} />}
       <details open={!record?.result || observing}>
         <summary>Actual execution receipts ({receipts.length})</summary>
         {receipts.length > 0 ? (

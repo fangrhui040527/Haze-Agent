@@ -9,6 +9,17 @@ import {
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
+  GraphLedger,
+  graphThreadId,
+  type GraphAuthority,
+} from './graph-ledger.js';
+import {
+  managerDecisionSchema,
+  managerStateSchema,
+  type ManagerDecision,
+  type ManagerState,
+} from '../contracts/manager.js';
+import {
   canonicalJson,
   contractHash,
   parseContractJson,
@@ -46,8 +57,9 @@ import {
   type TaskResult,
 } from '../contracts/tasks.js';
 
-export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v1';
+export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v2';
 export const STORAGE_MARKER = 'storage-format.json';
+export const MIGRATION_PENDING = 'migration-in-progress.json';
 const now = () => new Date().toISOString();
 const terminal = (status: string) =>
   ['completed', 'failed', 'cancelled', 'timed_out'].includes(status);
@@ -87,6 +99,38 @@ export interface AssignmentDefinition {
   inputs?: ArtifactRef[];
   tools?: string[];
   max_model_calls?: number;
+}
+export interface ManagerFence {
+  run_id: string;
+  objective_revision: number;
+  plan_revision: number;
+  generation?: number;
+}
+export interface ManagerInspection extends ManagerFence {
+  artifact: ArtifactRef;
+  excerpt: string;
+  inspected_at: string;
+}
+export interface ManagerDispatchReceipt {
+  decision_id: string;
+  run_id: string;
+  objective_revision: number;
+  plan_revision: number;
+  applied_plan_revision: number;
+  status: 'applied';
+  result: JsonValue;
+  created_at: string;
+}
+export interface ManagerPlanChanges {
+  create?: AssignmentDefinition[];
+  revise?: ({ id: string; brief: string } & Partial<
+    Pick<
+      AssignmentDefinition,
+      'input' | 'dependencies' | 'inputs' | 'tools' | 'max_model_calls'
+    >
+  >)[];
+  retire?: string[];
+  reuse?: { artifact: ArtifactRef; reason: string }[];
 }
 export interface AttemptRecord {
   id: string;
@@ -158,6 +202,7 @@ export interface SaveArtifactOptions {
   generation?: number;
   assignment_revision?: number;
   evidence_origin?: Artifact['evidence_origin'];
+  required_tools?: string[];
 }
 export interface StoreDefinitions {
   agents: Record<string, string>;
@@ -172,14 +217,23 @@ export interface StoreDefinitions {
 /** Authoritative row transitions. Checkpoints reference rows; they never replace task snapshots. */
 export class TaskStore {
   readonly db: DatabaseSync;
+  readonly graph: GraphLedger;
   readonly directory: string;
   private definitions: StoreDefinitions | undefined;
   private transactionDepth = 0;
   constructor(
-    directory = '.state/general-v1',
-    options: { recover?: boolean } = {},
+    directory = '.state/general-v2',
+    options: { recover?: boolean; migration?: boolean } = {},
   ) {
     this.directory = resolve(directory);
+    if (
+      !options.migration &&
+      existsSync(join(this.directory, MIGRATION_PENDING))
+    )
+      fail(
+        'migration_incomplete',
+        'This target migration is incomplete; preserve it for inspection and migrate again into a separate target.',
+      );
     const marker = join(this.directory, STORAGE_MARKER);
     if (existsSync(this.directory)) {
       if (!existsSync(marker) && readdirSync(this.directory).length)
@@ -199,7 +253,7 @@ export class TaskStore {
         }
         if (
           canonicalJson(value) !==
-          canonicalJson({ format: GENERAL_STORAGE_FORMAT, schema_version: 1 })
+          canonicalJson({ format: GENERAL_STORAGE_FORMAT, schema_version: 2 })
         )
           fail(
             'incompatible_state_directory',
@@ -212,7 +266,7 @@ export class TaskStore {
     if (!existsSync(marker))
       writeFileSync(
         marker,
-        JSON.stringify({ format: GENERAL_STORAGE_FORMAT, schema_version: 1 }),
+        JSON.stringify({ format: GENERAL_STORAGE_FORMAT, schema_version: 2 }),
         { flag: 'wx' },
       );
     this.db = new DatabaseSync(join(this.directory, 'tasks.sqlite'));
@@ -235,11 +289,959 @@ export class TaskStore {
       CREATE TABLE IF NOT EXISTS channels(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,run_id TEXT NOT NULL UNIQUE,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS channel_history(run_id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(run_id,revision));
       CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL,key TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(channel_id,key));
-      CREATE TABLE IF NOT EXISTS checkpoints(run_id TEXT PRIMARY KEY,body TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS checkpoints(run_id TEXT PRIMARY KEY,body TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS manager_state(run_id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS manager_state_history(run_id TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,PRIMARY KEY(run_id,fingerprint));
+      CREATE TABLE IF NOT EXISTS manager_decisions(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,run_id TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,receipt TEXT);
+      CREATE TABLE IF NOT EXISTS assignment_history(assignment_id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(assignment_id,revision));`);
+    this.graph = new GraphLedger(
+      this.db,
+      (operation) => this.atomic(operation),
+      (authority) => this.assertGraphAuthority(authority),
+    );
+    for (const row of this.db.prepare('SELECT id FROM runs').all() as {
+      id: string;
+    }[])
+      if (!this.graph.version(row.id)) this.graph.register(row.id, 'legacy');
+    for (const row of this.db
+      .prepare('SELECT run_id,body FROM manager_state')
+      .all() as (Row & { run_id: string })[]) {
+      if (!this.compatibleManagerState(row.body))
+        this.archiveManagerState(row.run_id, row.body);
+    }
     if (options.recover !== false) this.recover();
+  }
+  executionVersion(runId: string) {
+    return this.graph.version(runId);
+  }
+  assertGraphExecution(runId: string) {
+    return this.graph.assertVersion(runId);
+  }
+  private assertGraphAuthority(authority: GraphAuthority) {
+    const task = this.core(authority.task_id),
+      run = this.run(authority.run_id);
+    this.assertGraphExecution(run.id);
+    const assignment = authority.assignment_id
+      ? this.assignment(authority.assignment_id, task.id)
+      : undefined;
+    this.assertCurrent(task, run, assignment, authority.generation);
+    if (
+      task.objective_revision !== authority.objective_revision ||
+      (assignment && assignment.revision !== authority.assignment_revision)
+    )
+      fail('stale_execution', 'Graph operation authority has been fenced.');
   }
   configureDefinitions(definitions: StoreDefinitions) {
     this.definitions = copy(definitions);
+    this.atomic(() => {
+      for (const row of this.db
+        .prepare('SELECT body FROM tasks')
+        .all() as Row[]) {
+        const task = decode<TaskCore>(row.body),
+          run = this.run(task.current_run_id);
+        if (terminal(run.status)) continue;
+        const coordinator = this.allAssignments(run.id).find(
+          (item) => item.definition_id === 'core.manager.coordinator',
+        );
+        if (!coordinator) continue;
+        const registered = definitions.assignments?.[coordinator.definition_id];
+        if (
+          definitions.agents['Manager'] !== coordinator.agent_version ||
+          definitions.capabilities[coordinator.capability] !==
+            coordinator.capability_version ||
+          (definitions.assignments &&
+            (!registered ||
+              registered.version !== coordinator.definition_version ||
+              registered.role !== 'Manager' ||
+              registered.capability !== coordinator.capability))
+        ) {
+          const state = this.managerState(task.id, task.identity);
+          if (state?.upgrade_required) continue;
+          const raw = this.db
+            .prepare('SELECT body FROM manager_state WHERE run_id=?')
+            .get(run.id) as Row | undefined;
+          if (raw) this.archiveManagerState(run.id, raw.body);
+          this.db
+            .prepare('DELETE FROM manager_state WHERE run_id=?')
+            .run(run.id);
+          const replacement = this.initializeManager(task.id, run.id);
+          replacement.upgrade_required =
+            'The pinned Manager version is unavailable. Explicit continuation starts a linked run under the current Manager; previous coordination state is preserved without reinterpretation.';
+          this.putManager(replacement);
+          run.generation++;
+          run.status = 'paused';
+          for (const assignment of this.allAssignments(run.id))
+            if (!terminal(assignment.status)) {
+              assignment.status = 'paused';
+              delete assignment.lease_token;
+              this.putAssignment(assignment);
+            }
+          this.markUnknown(run.id);
+          this.closeChannels(run.id);
+          this.putRun(run);
+          this.appendEvent(
+            task.id,
+            'manager_upgrade_required',
+            'Runtime',
+            replacement.upgrade_required,
+          );
+        }
+      }
+    });
+  }
+  private archiveManagerState(runId: string, body: string) {
+    this.db
+      .prepare('INSERT OR IGNORE INTO manager_state_history VALUES(?,?,?)')
+      .run(runId, contentHash(body), body);
+  }
+  private compatibleManagerState(body: string): ManagerState | undefined {
+    try {
+      const parsed = managerStateSchema.safeParse(decode(body));
+      return parsed.success ? parsed.data : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  private initializeManager(taskId: string, runId: string): ManagerState {
+    const state: ManagerState = {
+      version: 'manager.v4',
+      run_id: runId,
+      plan_revision: 0,
+      last_handled_event_cursor: 0,
+      plans: [],
+      decisions: [],
+      inspections: [],
+      pending_events: [],
+      dispatch_receipts: [],
+    };
+    this.db
+      .prepare('INSERT INTO manager_state VALUES(?,?,?)')
+      .run(runId, taskId, JSON.stringify(state));
+    return state;
+  }
+  private putManager(state: ManagerState) {
+    this.db
+      .prepare('UPDATE manager_state SET body=? WHERE run_id=?')
+      .run(JSON.stringify(managerStateSchema.parse(state)), state.run_id);
+  }
+  managerState(
+    taskId: string,
+    identity: TaskIdentity,
+  ): ManagerState | undefined {
+    const task = this.core(taskId, identity);
+    const row = this.db
+      .prepare('SELECT body FROM manager_state WHERE run_id=? AND task_id=?')
+      .get(task.current_run_id, taskId) as Row | undefined;
+    if (!row) return undefined;
+    const state = this.compatibleManagerState(row.body);
+    if (!state) return undefined;
+    state.pending_events = decode<JsonValue[]>(
+      JSON.stringify(
+        this.materialManagerEvents(
+          taskId,
+          state.run_id,
+          state.last_handled_event_cursor,
+        ),
+      ),
+    );
+    return state;
+  }
+  private materialManagerEvents(
+    taskId: string,
+    runId: string,
+    after: number,
+  ): TaskEvent[] {
+    const material = new Set([
+      'task_admitted',
+      'objective_revised',
+      'assignment_completed',
+      'assignment_failed',
+      'assignment_timed_out',
+      'assignment_waiting',
+      'artifact_saved',
+      'specialist_escalated',
+      'review_objection',
+      'control_resume',
+      'control_continue',
+      'restart_recovered',
+    ]);
+    return (
+      this.db
+        .prepare(
+          'SELECT cursor,body FROM events WHERE task_id=? AND cursor>? ORDER BY cursor',
+        )
+        .all(taskId, after) as (Row & { cursor: number })[]
+    )
+      .map((row) => ({
+        ...decode<Omit<TaskEvent, 'cursor'>>(row.body),
+        cursor: row.cursor,
+      }))
+      .filter(
+        (event) =>
+          event.run_id === runId &&
+          material.has(event.type) &&
+          !(
+            event.type === 'artifact_saved' &&
+            event.data &&
+            typeof event.data === 'object' &&
+            !Array.isArray(event.data) &&
+            event.data['kind'] === 'assignment.summary'
+          ),
+      );
+  }
+  pendingManagerEvents(taskId: string, identity: TaskIdentity): TaskEvent[] {
+    const task = this.core(taskId, identity),
+      state = this.managerState(taskId, identity);
+    return this.materialManagerEvents(
+      taskId,
+      task.current_run_id,
+      state?.last_handled_event_cursor ?? 0,
+    );
+  }
+  ensureManager(
+    taskId: string,
+    runId: string,
+    definition: AssignmentDefinition,
+  ): Assignment {
+    return this.atomic(() => {
+      const task = this.core(taskId),
+        run = this.run(runId);
+      this.assertCurrent(task, run);
+      if (
+        definition.role !== 'Manager' ||
+        definition.definition_id !== 'core.manager.coordinator'
+      )
+        fail(
+          'invalid_manager_coordinator',
+          'The persistent Manager requires its registered coordinator definition.',
+          422,
+        );
+      const state = this.managerState(taskId, task.identity);
+      if (!state || state.upgrade_required)
+        fail(
+          'manager_upgrade_required',
+          'Explicit continuation is required before using the new Manager.',
+        );
+      const previous = this.allAssignments(runId).find(
+        (assignment) => assignment.definition_id === 'core.manager.coordinator',
+      );
+      if (previous) {
+        state!.coordinator_assignment_id = previous.id;
+        this.putManager(state!);
+        if (terminal(previous.status)) {
+          this.preserveAssignment(previous);
+          previous.revision++;
+          previous.objective_revision = task.objective_revision;
+          previous.generation = run.generation;
+          previous.status = 'queued';
+          previous.acknowledged_revision = 0;
+          previous.usability = 'needs_review';
+          previous.outputs = [];
+          delete previous.lease_token;
+          delete previous.error;
+          this.putAssignment(previous);
+        }
+        return previous;
+      }
+      const coordinator = this.createAssignments(
+        taskId,
+        runId,
+        task.objective_revision,
+        [definition],
+      )[0]!;
+      state!.coordinator_assignment_id = coordinator.id;
+      this.putManager(state!);
+      return coordinator;
+    });
+  }
+  private assertManagerFence(taskId: string, fence: ManagerFence) {
+    const task = this.core(taskId),
+      run = this.run(fence.run_id);
+    this.assertCurrent(task, run, undefined, fence.generation);
+    const state = this.managerState(taskId, task.identity);
+    if (
+      !state ||
+      state.upgrade_required ||
+      fence.objective_revision !== task.objective_revision ||
+      fence.plan_revision !== state.plan_revision
+    )
+      fail(
+        'stale_manager_decision',
+        'Manager decision belongs to a corrected or superseded plan.',
+      );
+    return { task, run, state: state! };
+  }
+  recordManagerInspection(
+    taskId: string,
+    fence: ManagerFence,
+    ref: ArtifactRef,
+    excerpt: string,
+  ): ManagerInspection {
+    return this.atomic(() => {
+      const { task, state } = this.assertManagerFence(taskId, fence);
+      this.artifact(ref.id, task.identity, ref);
+      if (Buffer.byteLength(excerpt, 'utf8') > 12_000)
+        fail(
+          'manager_inspection_limit',
+          'Inspection excerpts must fit the bounded Manager context.',
+          422,
+        );
+      const inspection: ManagerInspection = {
+        artifact: { id: ref.id, version: ref.version, sha256: ref.sha256 },
+        run_id: fence.run_id,
+        objective_revision: fence.objective_revision,
+        plan_revision: fence.plan_revision,
+        excerpt,
+        inspected_at: now(),
+      };
+      state.inspections.push(inspection);
+      this.putManager(state);
+      return inspection;
+    });
+  }
+  applyManagerDecision(
+    taskId: string,
+    input: ManagerDecision,
+    execute: () => JsonValue = () => ({}),
+  ): ManagerDispatchReceipt {
+    return this.atomic(() => {
+      const decision = managerDecisionSchema.parse(input),
+        fingerprint = contentHash(decision);
+      const prior = this.db
+        .prepare(
+          'SELECT task_id,fingerprint,receipt FROM manager_decisions WHERE id=?',
+        )
+        .get(decision.id) as
+        | { task_id: string; fingerprint: string; receipt: string | null }
+        | undefined;
+      if (prior) {
+        if (prior.task_id !== taskId || prior.fingerprint !== fingerprint)
+          fail(
+            'idempotency_conflict',
+            'Manager decision ID reused with different content.',
+          );
+        if (!prior.receipt)
+          fail(
+            'manager_dispatch_incomplete',
+            'Manager decision has no committed dispatch receipt.',
+          );
+        return decode<ManagerDispatchReceipt>(prior.receipt!);
+      }
+      const { task, state } = this.assertManagerFence(taskId, decision);
+      const latest = this.db
+        .prepare('SELECT MAX(cursor) AS cursor FROM events WHERE task_id=?')
+        .get(taskId) as { cursor: number | null };
+      if (
+        decision.event_cursor < state.last_handled_event_cursor ||
+        decision.event_cursor > (latest.cursor ?? 0)
+      )
+        fail(
+          'invalid_manager_cursor',
+          'Manager event cursor is outside the admitted event range.',
+        );
+      for (const ref of decision.references)
+        this.artifact(ref.id, task.identity, ref);
+      this.db
+        .prepare('INSERT INTO manager_decisions VALUES(?,?,?,?,?,NULL)')
+        .run(
+          decision.id,
+          taskId,
+          decision.run_id,
+          fingerprint,
+          JSON.stringify(decision),
+        );
+      state.decisions.push({ decision, created_at: now() });
+      if (decision.interpretation)
+        state.interpretation = copy(decision.interpretation);
+      this.putManager(state);
+      const result = execute();
+      const committed = this.managerState(taskId, task.identity)!;
+      committed.last_handled_event_cursor = decision.event_cursor;
+      const receipt: ManagerDispatchReceipt = {
+        decision_id: decision.id,
+        run_id: decision.run_id,
+        objective_revision: decision.objective_revision,
+        plan_revision: decision.plan_revision,
+        applied_plan_revision: committed.plan_revision,
+        status: 'applied',
+        result,
+        created_at: now(),
+      };
+      committed.dispatch_receipts.push(receipt);
+      this.putManager(committed);
+      this.db
+        .prepare('UPDATE manager_decisions SET receipt=? WHERE id=?')
+        .run(JSON.stringify(receipt), decision.id);
+      this.appendEvent(
+        taskId,
+        'manager_decision_applied',
+        'Manager',
+        decision.explanation,
+        {
+          decision_id: decision.id,
+          action: decision.action.type,
+          plan_revision: committed.plan_revision,
+        },
+      );
+      return receipt;
+    });
+  }
+  private preserveAssignment(assignment: Assignment) {
+    this.db
+      .prepare('INSERT OR IGNORE INTO assignment_history VALUES(?,?,?)')
+      .run(assignment.id, assignment.revision, JSON.stringify(assignment));
+  }
+  /** Read dependency metadata for fencing, without disclosing revoked artifact content. */
+  private artifactAssignments(
+    refs: ArtifactRef[],
+    visited = new Set<string>(),
+  ): Set<string> {
+    const producers = new Set<string>();
+    for (const ref of refs) {
+      if (visited.has(ref.id)) continue;
+      visited.add(ref.id);
+      const row = this.db
+        .prepare('SELECT body FROM artifacts WHERE id=?')
+        .get(ref.id) as Row | undefined;
+      if (!row) continue;
+      const artifact = artifactSchema.parse(decode(row.body));
+      if (artifact.assignment_id) producers.add(artifact.assignment_id);
+      for (const producer of this.artifactAssignments(
+        artifact.dependencies,
+        visited,
+      ))
+        producers.add(producer);
+    }
+    return producers;
+  }
+  assignmentHistory(
+    taskId: string,
+    identity: TaskIdentity,
+    assignmentId: string,
+  ): Assignment[] {
+    this.core(taskId, identity);
+    this.assignment(assignmentId, taskId);
+    return (
+      this.db
+        .prepare(
+          'SELECT body FROM assignment_history WHERE assignment_id=? ORDER BY revision',
+        )
+        .all(assignmentId) as Row[]
+    ).map((row) => assignmentSchema.parse(decode(row.body)));
+  }
+  applyManagerPlan(
+    taskId: string,
+    decision: ManagerDecision,
+    changes: ManagerPlanChanges,
+  ): { revision: number; assignments: Assignment[] } {
+    return this.atomic(() => {
+      const { task, run, state } = this.assertManagerFence(taskId, decision);
+      const previous = this.allAssignments(run.id),
+        retire = new Set(changes.retire ?? []),
+        changed = new Set<string>([
+          ...retire,
+          ...(changes.revise ?? []).map((revision) => revision.id),
+        ]);
+      const failedWork = previous.filter((item) =>
+        ['failed', 'timed_out'].includes(item.status),
+      );
+      for (const replacement of changes.create ?? [])
+        if (
+          failedWork.some(
+            (item) =>
+              item.definition_id === replacement.definition_id &&
+              contentHash({
+                brief: item.brief,
+                input: item.input ?? null,
+                dependencies: item.dependencies,
+                inputs: item.inputs,
+                tools: item.tools,
+              }) ===
+                contentHash({
+                  brief: replacement.brief,
+                  input: replacement.input ?? null,
+                  dependencies: replacement.dependencies ?? [],
+                  inputs: replacement.inputs ?? [],
+                  tools: replacement.tools ?? [],
+                }),
+          )
+        )
+          fail(
+            'manager_no_progress',
+            'Repeating failed work requires a changed brief, evidence, dependency, or authorized alternative.',
+            422,
+          );
+      if (
+        [
+          ...(changes.retire ?? []),
+          ...(changes.revise ?? []).map((revision) => revision.id),
+        ].some((id, index, ids) => ids.indexOf(id) !== index)
+      )
+        fail(
+          'duplicate_assignment',
+          'Plan changes must name each assignment once.',
+          422,
+        );
+      for (const id of changed) {
+        const item = previous.find((assignment) => assignment.id === id);
+        if (!item || item.definition_id === 'core.manager.coordinator')
+          fail(
+            'invalid_manager_plan',
+            'Plan changes must name a current specialist assignment.',
+            422,
+          );
+      }
+      for (let expanded = true; expanded;) {
+        expanded = false;
+        for (const item of previous)
+          if (
+            !changed.has(item.id) &&
+            (item.dependencies.some((id) => changed.has(id)) ||
+              [...this.artifactAssignments(item.inputs)].some((id) =>
+                changed.has(id),
+              ))
+          ) {
+            changed.add(item.id);
+            expanded = true;
+          }
+      }
+      for (const item of previous) {
+        const revision = changes.revise?.find((entry) => entry.id === item.id);
+        if (!changed.has(item.id)) continue;
+        this.preserveAssignment(item);
+        if (retire.has(item.id)) {
+          item.status = 'cancelled';
+          item.usability = 'stale';
+        } else {
+          if (
+            revision &&
+            ['failed', 'timed_out'].includes(item.status) &&
+            contentHash({
+              brief: item.brief,
+              input: item.input ?? null,
+              dependencies: item.dependencies,
+              inputs: item.inputs,
+              tools: item.tools,
+            }) ===
+              contentHash({
+                brief: revision.brief,
+                input: revision.input ?? item.input ?? null,
+                dependencies: revision.dependencies ?? item.dependencies,
+                inputs: revision.inputs ?? item.inputs,
+                tools: revision.tools ?? item.tools,
+              })
+          )
+            fail(
+              'manager_no_progress',
+              'Repeating failed work requires a changed brief, evidence, dependency, or authorized alternative.',
+              422,
+            );
+          item.revision++;
+          if (revision) Object.assign(item, revision);
+          const registered =
+            this.definitions?.assignments?.[item.definition_id];
+          if (
+            item.tools.some(
+              (tool) =>
+                !task.permissions.tools.includes(tool) ||
+                (this.definitions && !this.definitions.tools.includes(tool)) ||
+                (registered && !registered.tools.includes(tool)),
+            )
+          )
+            fail(
+              'permission_denied',
+              'Rebrief tools exceed current grants.',
+              403,
+            );
+          if (
+            item.max_model_calls < item.usage.model_calls ||
+            item.max_model_calls > run.limits.max_model_calls
+          )
+            fail(
+              'assignment_model_limit',
+              'Rebrief allocation must cover charged calls within the original run budget.',
+              422,
+            );
+          item.status = revision ? 'queued' : 'paused';
+          item.usability = revision ? 'needs_review' : 'stale';
+          item.support = 'unknown';
+          item.outputs = [];
+          item.acknowledged_revision = 0;
+          item.inputs = item.inputs.filter((ref) => {
+            const artifact = this.artifactMetadata(ref.id, task.identity, ref);
+            return (
+              !artifact.assignment_id || !changed.has(artifact.assignment_id)
+            );
+          });
+          delete item.error;
+        }
+        delete item.lease_token;
+        item.objective_revision = task.objective_revision;
+        item.generation = run.generation;
+        this.putAssignment(item);
+        this.closeChannels(run.id, item.id);
+      }
+      for (const prior of (
+        this.db
+          .prepare(
+            'SELECT body FROM applicability WHERE task_id=? AND objective_revision=?',
+          )
+          .all(taskId, task.objective_revision) as Row[]
+      ).map((row) => decode<ArtifactApplicability>(row.body))) {
+        const artifact = this.artifactMetadata(
+          prior.artifact.id,
+          task.identity,
+          prior.artifact,
+        );
+        if (
+          (artifact.assignment_id && changed.has(artifact.assignment_id)) ||
+          [...this.artifactAssignments(artifact.dependencies)].some((id) =>
+            changed.has(id),
+          )
+        )
+          this.recordApplicability(
+            taskId,
+            task.identity,
+            prior.artifact,
+            false,
+            'Producer or dependency superseded by an explicit Manager plan.',
+            'Runtime',
+          );
+      }
+      const created = this.createAssignments(
+        taskId,
+        run.id,
+        task.objective_revision,
+        changes.create ?? [],
+      );
+      const all = this.allAssignments(run.id),
+        active = all.filter((item) => item.status !== 'cancelled');
+      const graph = new Map(active.map((item) => [item.id, item])),
+        visiting = new Set<string>(),
+        visited = new Set<string>();
+      const visit = (id: string) => {
+        if (visiting.has(id))
+          fail('dependency_cycle', 'Assignment graph must be acyclic.', 422);
+        if (visited.has(id)) return;
+        const item = graph.get(id);
+        if (!item)
+          fail(
+            'missing_prerequisite',
+            'Plan retains a dependency on retired or missing work.',
+            422,
+          );
+        visiting.add(id);
+        for (const dependency of new Set([
+          ...item!.dependencies,
+          ...[...this.artifactAssignments(item!.inputs)].filter((id) =>
+            graph.has(id),
+          ),
+        ]))
+          visit(dependency);
+        visiting.delete(id);
+        visited.add(id);
+      };
+      for (const item of active) visit(item.id);
+      for (const reuse of changes.reuse ?? [])
+        this.applyManagerApplicability(
+          taskId,
+          decision,
+          reuse.artifact,
+          true,
+          reuse.reason,
+        );
+      state.plan_revision++;
+      state.plans.push({
+        revision: state.plan_revision,
+        objective_revision: task.objective_revision,
+        decision_id: decision.id,
+        reason: decision.explanation,
+        assignment_revisions: all
+          .filter((item) => item.status !== 'cancelled')
+          .map((item) => ({ id: item.id, revision: item.revision })),
+        created_at: now(),
+      });
+      this.putManager(state);
+      const interrupted = (
+        this.db
+          .prepare('SELECT body FROM attempts WHERE task_id=?')
+          .all(taskId) as Row[]
+      )
+        .map((row) => decode<AttemptRecord>(row.body))
+        .some(
+          (attempt) =>
+            attempt.run_id === run.id &&
+            changed.has(attempt.assignment_id) &&
+            attempt.status === 'started',
+        );
+      if (interrupted) {
+        const fenced = this.run(run.id);
+        fenced.generation++;
+        fenced.status = 'paused';
+        this.markUnknown(run.id);
+        for (const assignment of this.allAssignments(run.id))
+          if (!terminal(assignment.status)) {
+            assignment.generation = fenced.generation;
+            assignment.status = 'paused';
+            delete assignment.lease_token;
+            this.putAssignment(assignment);
+          }
+        this.putRun(fenced);
+        this.appendEvent(
+          taskId,
+          'manager_replan_outcome_unknown',
+          'Runtime',
+          'Plan changes fenced an in-flight remote attempt. The charged unknown outcome requires explicit resume.',
+        );
+      }
+      this.appendEvent(
+        taskId,
+        'manager_plan_revised',
+        'Manager',
+        decision.explanation,
+        {
+          plan_revision: state.plan_revision,
+          created: created.map((item) => item.id),
+          revised: [...changed],
+        },
+      );
+      return {
+        revision: state.plan_revision,
+        assignments: this.allAssignments(run.id),
+      };
+    });
+  }
+  applyManagerApplicability(
+    taskId: string,
+    decision: ManagerDecision,
+    ref: ArtifactRef,
+    current: boolean,
+    reason: string,
+  ): ArtifactApplicability {
+    const { task, state } = this.assertManagerFence(taskId, decision);
+    if (
+      current &&
+      !state.inspections.some(
+        (inspection) =>
+          inspection.objective_revision === task.objective_revision &&
+          inspection.artifact.id === ref.id &&
+          inspection.artifact.version === ref.version &&
+          inspection.artifact.sha256 === ref.sha256,
+      )
+    )
+      fail(
+        'manager_inspection_required',
+        'Applicability requires actual inspection against the corrected objective.',
+        422,
+      );
+    const artifact = this.artifact(ref.id, task.identity, ref);
+    if (current && artifact.assignment_id) {
+      const producer = this.assignment(artifact.assignment_id, taskId);
+      if (
+        producer.revision !== artifact.assignment_revision ||
+        ['stale', 'cancelled'].includes(producer.status) ||
+        producer.usability === 'stale'
+      )
+        fail(
+          'artifact_not_applicable',
+          'Producer revision or dependency was superseded.',
+        );
+    }
+    if (current)
+      for (const dependency of artifact.dependencies) {
+        this.artifact(dependency.id, task.identity, dependency);
+        if (
+          !this.applicability(taskId, dependency.id, task.objective_revision)
+            ?.current
+        )
+          fail(
+            'artifact_not_applicable',
+            'Dependency applicability remains uncertain.',
+          );
+      }
+    return this.recordApplicability(
+      taskId,
+      task.identity,
+      ref,
+      current,
+      reason,
+      `Manager:${decision.id}`,
+    );
+  }
+  grantManagerPeerChannel(
+    taskId: string,
+    decision: ManagerDecision,
+    purpose: string,
+    participants: { assignment_id: string; revision: number }[],
+  ): PeerChannel {
+    this.assertManagerFence(taskId, decision);
+    for (const participant of participants) {
+      const assignment = this.assignment(participant.assignment_id, taskId);
+      if (assignment.revision !== participant.revision)
+        fail(
+          'stale_manager_decision',
+          'Peer grant names a superseded assignment revision.',
+        );
+      if (
+        assignment.role === 'Manager' ||
+        terminal(assignment.status) ||
+        assignment.usability === 'stale'
+      )
+        fail(
+          'invalid_peer_participant',
+          'Peer grants require current active specialist revisions.',
+          422,
+        );
+    }
+    return this.openPeerChannel(
+      taskId,
+      decision.run_id,
+      purpose,
+      participants.map((participant) => participant.assignment_id),
+    );
+  }
+  closeManagerAssignments(
+    taskId: string,
+    decision: ManagerDecision,
+    assignmentIds?: string[],
+  ) {
+    return this.atomic(() => {
+      const { run } = this.assertManagerFence(taskId, decision);
+      const interrupted = (
+        this.db
+          .prepare('SELECT body FROM attempts WHERE task_id=?')
+          .all(taskId) as Row[]
+      )
+        .map((row) => decode<AttemptRecord>(row.body))
+        .some(
+          (attempt) =>
+            attempt.run_id === run.id &&
+            attempt.status === 'started' &&
+            (!assignmentIds || assignmentIds.includes(attempt.assignment_id)),
+        );
+      if (interrupted) {
+        run.generation++;
+        run.status = 'paused';
+        this.markUnknown(run.id);
+      }
+      for (const assignment of this.allAssignments(run.id)) {
+        if (
+          assignmentIds &&
+          !assignmentIds.includes(assignment.id) &&
+          !interrupted
+        )
+          continue;
+        if (!terminal(assignment.status)) {
+          assignment.status =
+            assignment.definition_id === 'core.manager.coordinator'
+              ? interrupted
+                ? 'paused'
+                : 'completed'
+              : !assignmentIds || assignmentIds.includes(assignment.id)
+                ? 'cancelled'
+                : 'paused';
+          assignment.generation = run.generation;
+          delete assignment.lease_token;
+          this.putAssignment(assignment);
+        }
+      }
+      this.putRun(run);
+      this.closeChannels(run.id);
+      if (interrupted)
+        this.appendEvent(
+          taskId,
+          'manager_finalization_outcome_unknown',
+          'Runtime',
+          'Finalization fenced an in-flight remote attempt. Its outcome remains charged and unknown; explicit resume is required before committing a result.',
+        );
+      return { paused: interrupted };
+    });
+  }
+  recordManagerEscalation(
+    taskId: string,
+    assignmentId: string,
+    kind: string,
+    detail: string,
+  ) {
+    const task = this.core(taskId),
+      run = this.run(task.current_run_id),
+      assignment = this.assignment(assignmentId, taskId);
+    this.assertCurrent(task, run, assignment);
+    return this.appendEvent(
+      taskId,
+      'specialist_escalated',
+      assignment.role,
+      detail,
+      { kind },
+      assignmentId,
+    );
+  }
+  pauseManagerRecovery(
+    taskId: string,
+    fence: ManagerFence,
+    reason: string,
+  ): TaskRecord {
+    return this.atomic(() => {
+      const { task, run } = this.assertManagerFence(taskId, fence);
+      run.generation++;
+      run.status = 'paused';
+      for (const assignment of this.allAssignments(run.id))
+        if (!terminal(assignment.status)) {
+          assignment.status = 'paused';
+          assignment.generation = run.generation;
+          delete assignment.lease_token;
+          this.putAssignment(assignment);
+        }
+      this.markUnknown(run.id);
+      this.closeChannels(run.id);
+      this.putRun(run);
+      this.appendEvent(taskId, 'manager_recovery_paused', 'Runtime', reason);
+      return this.read(taskId, task.identity);
+    });
+  }
+  waitForManagerEvent(
+    taskId: string,
+    fence: ManagerFence,
+    reason: string,
+  ): TaskRecord {
+    return this.atomic(() => {
+      const { task, run } = this.assertManagerFence(taskId, fence);
+      const assignments = this.allAssignments(run.id);
+      const started = (
+        this.db
+          .prepare('SELECT body FROM attempts WHERE task_id=?')
+          .all(taskId) as Row[]
+      )
+        .map((row) => decode<AttemptRecord>(row.body))
+        .some(
+          (attempt) =>
+            attempt.run_id === run.id && attempt.status === 'started',
+        );
+      if (
+        started ||
+        assignments.some(
+          (assignment) =>
+            assignment.role !== 'Manager' && assignment.status === 'running',
+        )
+      )
+        fail(
+          'manager_wait_work_active',
+          'A durable Manager wait requires no active execution.',
+        );
+      run.status = 'waiting';
+      for (const assignment of assignments)
+        if (
+          assignment.definition_id === 'core.manager.coordinator' &&
+          !terminal(assignment.status)
+        ) {
+          assignment.status = 'waiting';
+          delete assignment.lease_token;
+          this.putAssignment(assignment);
+        }
+      this.putRun(run);
+      this.appendEvent(taskId, 'manager_waiting', 'Manager', reason);
+      return this.read(taskId, task.identity);
+    });
   }
   private atomic<T>(operation: () => T): T {
     if (this.transactionDepth) return operation();
@@ -339,13 +1341,18 @@ export class TaskStore {
       corrections: list('corrections'),
       questions: list('questions'),
       artifacts: list('applicability'),
+      ...(this.managerState(id, identity)
+        ? { manager: this.managerState(id, identity) }
+        : {}),
     });
   }
   listRecoverableTasks(): TaskRecord[] {
     return (this.db.prepare('SELECT body FROM tasks').all() as Row[])
       .map((row) => decode<TaskCore>(row.body))
-      .filter((task) =>
-        ['queued', 'running'].includes(this.run(task.current_run_id).status),
+      .filter(
+        (task) =>
+          this.executionVersion(task.current_run_id)?.engine === 'langgraph' &&
+          ['queued', 'running'].includes(this.run(task.current_run_id).status),
       )
       .map((task) => this.read(task.id, task.identity));
   }
@@ -480,6 +1487,8 @@ export class TaskStore {
           this.db
             .prepare('INSERT INTO runs VALUES(?,?,?)')
             .run(runId, id, JSON.stringify(run));
+          this.graph.register(runId);
+          this.initializeManager(task.id, runId);
           for (const ref of parsed.context_refs)
             this.recordApplicability(
               id,
@@ -487,7 +1496,7 @@ export class TaskStore {
               ref,
               true,
               'Source explicitly included at admission.',
-              'Manager',
+              'Runtime',
             );
           this.appendEvent(
             id,
@@ -509,25 +1518,51 @@ export class TaskStore {
     data?: JsonValue,
     assignmentId?: string,
   ): TaskEvent {
-    const task = this.core(taskId),
-      run = this.run(task.current_run_id);
-    const event = {
-      schema_version: 'haze.task.event.v3' as const,
-      task_id: taskId,
-      run_id: run.id,
-      objective_revision: task.objective_revision,
-      generation: run.generation,
-      at: now(),
-      type,
-      actor,
-      message,
-      ...(data === undefined ? {} : { data }),
-      ...(assignmentId ? { assignment_id: assignmentId } : {}),
-    };
-    const receipt = this.db
-      .prepare('INSERT INTO events(task_id,body) VALUES(?,?)')
-      .run(taskId, JSON.stringify(event));
-    return { ...event, cursor: Number(receipt.lastInsertRowid) };
+    return this.atomic(() => {
+      const task = this.core(taskId),
+        run = this.run(task.current_run_id);
+      const event = {
+        schema_version: 'haze.task.event.v3' as const,
+        task_id: taskId,
+        run_id: run.id,
+        objective_revision: task.objective_revision,
+        generation: run.generation,
+        at: now(),
+        type,
+        actor,
+        message,
+        ...(data === undefined ? {} : { data }),
+        ...(assignmentId ? { assignment_id: assignmentId } : {}),
+      };
+      const receipt = this.db
+        .prepare('INSERT INTO events(task_id,body) VALUES(?,?)')
+        .run(taskId, JSON.stringify(event));
+      const cursor = Number(receipt.lastInsertRowid);
+      if (!(type === 'restart_recovered' && run.status === 'waiting'))
+        this.graph.wake(taskId, cursor, type);
+      if (
+        this.executionVersion(run.id)?.engine === 'langgraph' &&
+        ['queued', 'running', 'waiting'].includes(run.status) &&
+        !(type === 'restart_recovered' && run.status === 'waiting') &&
+        this.materialManagerEvents(taskId, run.id, cursor - 1).some(
+          (item) => item.cursor === cursor,
+        )
+      ) {
+        const authority = {
+          task_id: taskId,
+          run_id: run.id,
+          generation: run.generation,
+          objective_revision: task.objective_revision,
+        };
+        this.graph.enqueue({
+          ...authority,
+          thread_id: graphThreadId('manager', authority),
+          kind: 'manager',
+          cursor,
+        });
+      }
+      return { ...event, cursor: Number(receipt.lastInsertRowid) };
+    });
   }
   events(id: string, identity: TaskIdentity, after = 0) {
     const task = this.read(id, identity);
@@ -553,6 +1588,7 @@ export class TaskStore {
     assignment?: Assignment,
     generation?: number,
   ) {
+    this.assertGraphExecution(run.id);
     if (
       task.current_run_id !== run.id ||
       task.objective_revision !== run.objective_revision ||
@@ -633,6 +1669,20 @@ export class TaskStore {
         fail('assignment_limit', 'Assignment reservation exhausted.', 422);
       const prior = this.allAssignments(runId),
         ids = new Set(prior.map((item) => item.id));
+      if (
+        prior.filter(
+          (item) => item.definition_id === 'core.manager.coordinator',
+        ).length +
+          definitions.filter(
+            (item) => item.definition_id === 'core.manager.coordinator',
+          ).length >
+        1
+      )
+        fail(
+          'manager_coordinator_limit',
+          'Each run retains exactly one persistent Manager coordinator.',
+          422,
+        );
       const created = definitions.map((definition) => {
         const id = definition.id ?? randomUUID();
         if (ids.has(id))
@@ -710,11 +1760,17 @@ export class TaskStore {
         const item = graph.get(id);
         if (!item) fail('missing_prerequisite', 'Unknown prerequisite.', 422);
         visiting.add(id);
-        for (const dep of item!.dependencies) visit(dep);
+        for (const dep of new Set([
+          ...item!.dependencies,
+          ...[...this.artifactAssignments(item!.inputs)].filter((producer) =>
+            graph.has(producer),
+          ),
+        ]))
+          visit(dep);
         visiting.delete(id);
         visited.add(id);
       };
-      for (const item of created) visit(item.id);
+      for (const item of [...prior, ...created]) visit(item.id);
       for (const item of created)
         this.db
           .prepare('INSERT INTO assignments VALUES(?,?,?,?)')
@@ -744,6 +1800,12 @@ export class TaskStore {
       )
         return null;
       const peers = this.allAssignments(run.id);
+      if (
+        assignment.usability === 'stale' &&
+        assignment.definition_id !== 'core.manager.coordinator' &&
+        peers.some((item) => item.definition_id === 'core.manager.coordinator')
+      )
+        return null;
       if (
         assignment.dependencies.some(
           (id) =>
@@ -775,6 +1837,7 @@ export class TaskStore {
       for (const ref of assignment.inputs) {
         this.artifact(ref.id, task.identity, ref);
         if (
+          assignment.definition_id !== 'core.manager.coordinator' &&
           !this.applicability(taskId, ref.id, task.objective_revision)?.current
         )
           fail(
@@ -867,12 +1930,23 @@ export class TaskStore {
           0,
           Math.ceil(run.limits.reserved_model_calls / 2) - synthesisUsed,
         );
-        const reviewRemaining = Math.max(
-          0,
-          Math.floor(run.limits.reserved_model_calls / 2) - reviewUsed,
+        const completedReview = this.allAssignments(run.id).some(
+          (item) =>
+            item.role === 'EvidenceCritic' &&
+            item.objective_revision === task.objective_revision &&
+            item.status === 'completed' &&
+            item.usability !== 'stale',
         );
+        const reviewRemaining = completedReview
+          ? 0
+          : Math.max(
+              0,
+              Math.floor(run.limits.reserved_model_calls / 2) - reviewUsed,
+            );
         const reserve =
-          (assignment.definition_id === 'core.manager.synthesis'
+          (['core.manager.synthesis', 'core.manager.coordinator'].includes(
+            assignment.definition_id,
+          )
             ? 0
             : synthesisRemaining) +
           (assignment.role === 'EvidenceCritic' ? 0 : reviewRemaining);
@@ -1192,18 +2266,7 @@ export class TaskStore {
     });
   }
   artifact(id: string, identity: TaskIdentity, ref?: ArtifactRef): Artifact {
-    const row = this.db
-      .prepare(
-        'SELECT body FROM artifacts WHERE id=? AND principal=? AND workspace=?',
-      )
-      .get(id, identity.principal, identity.workspace) as Row | undefined;
-    if (!row)
-      return fail(
-        'artifact_not_found',
-        'Artifact not found in this principal/workspace.',
-        404,
-      );
-    const artifact = artifactSchema.parse(decode(row.body));
+    const artifact = this.artifactMetadata(id, identity, ref);
     if (artifact.task_id) {
       const task = this.core(artifact.task_id, identity);
       if (
@@ -1217,6 +2280,25 @@ export class TaskStore {
           403,
         );
     }
+    return artifact;
+  }
+  private artifactMetadata(
+    id: string,
+    identity: TaskIdentity,
+    ref?: ArtifactRef,
+  ): Artifact {
+    const row = this.db
+      .prepare(
+        'SELECT body FROM artifacts WHERE id=? AND principal=? AND workspace=?',
+      )
+      .get(id, identity.principal, identity.workspace) as Row | undefined;
+    if (!row)
+      return fail(
+        'artifact_not_found',
+        'Artifact not found in this principal/workspace.',
+        404,
+      );
+    const artifact = artifactSchema.parse(decode(row.body));
     if (
       contentHash(artifact.content) !== artifact.sha256 ||
       (ref &&
@@ -1316,6 +2398,16 @@ export class TaskStore {
             : undefined;
       this.assertCurrent(task, run, assignment, options.generation);
       if (
+        options.required_tools?.some(
+          (tool) => !task.permissions.tools.includes(tool),
+        )
+      )
+        fail(
+          'permission_denied',
+          'Artifact provenance cannot use an ungranted tool.',
+          403,
+        );
+      if (
         assignment &&
         options.assignment_revision !== undefined &&
         assignment.revision !== options.assignment_revision
@@ -1356,6 +2448,7 @@ export class TaskStore {
         required_tools: [
           ...new Set([
             ...(assignment?.tools ?? []),
+            ...(options.required_tools ?? []),
             ...(options.dependencies ?? []).flatMap(
               (ref) => this.artifact(ref.id, identity, ref).required_tools,
             ),
@@ -1390,7 +2483,12 @@ export class TaskStore {
         'artifact_saved',
         assignment?.role ?? 'Runtime',
         `Saved immutable ${artifact.kind}.`,
-        { id: artifact.id, version: artifact.version, sha256: artifact.sha256 },
+        {
+          id: artifact.id,
+          version: artifact.version,
+          sha256: artifact.sha256,
+          kind: artifact.kind,
+        },
         assignment?.id,
       );
       return artifact;
@@ -1418,7 +2516,8 @@ export class TaskStore {
   ): ArtifactApplicability {
     return this.atomic(() => {
       const task = this.core(taskId, identity);
-      this.artifact(ref.id, identity, ref);
+      if (current) this.artifact(ref.id, identity, ref);
+      else this.artifactMetadata(ref.id, identity, ref);
       const body: ArtifactApplicability = {
         artifact: { id: ref.id, version: ref.version, sha256: ref.sha256 },
         task_id: taskId,
@@ -1662,6 +2761,7 @@ export class TaskStore {
           () => {
             const task = this.core(taskId, identity),
               run = this.run(task.current_run_id);
+            this.assertGraphExecution(run.id);
             this.expect(task, run, update);
             for (const ref of update.context_refs ?? [])
               this.artifact(ref.id, identity, ref);
@@ -1682,7 +2782,10 @@ export class TaskStore {
               for (const assignment of assignments)
                 if (
                   !affected.has(assignment.id) &&
-                  assignment.dependencies.some((id) => affected.has(id))
+                  (assignment.dependencies.some((id) => affected.has(id)) ||
+                    [...this.artifactAssignments(assignment.inputs)].some(
+                      (id) => affected.has(id),
+                    ))
                 ) {
                   affected.add(assignment.id);
                   changed = true;
@@ -1730,6 +2833,7 @@ export class TaskStore {
               .prepare('INSERT INTO corrections VALUES(?,?,?)')
               .run(correction.id, taskId, JSON.stringify(correction));
             for (const assignment of assignments) {
+              this.preserveAssignment(assignment);
               delete assignment.lease_token;
               assignment.objective_revision = task.objective_revision;
               assignment.generation = run.generation;
@@ -1740,10 +2844,12 @@ export class TaskStore {
                 assignment.acknowledged_revision = 0;
                 assignment.status = 'queued';
                 assignment.usability = 'stale';
+                if (assignment.definition_id === 'core.manager.coordinator')
+                  assignment.usability = 'needs_review';
                 assignment.brief += `\n\nExact ${update.kind} at objective revision ${task.objective_revision}:\n${update.passage}`;
                 assignment.outputs = [];
                 assignment.inputs = assignment.inputs.filter((ref) => {
-                  const artifact = this.artifact(ref.id, identity, ref);
+                  const artifact = this.artifactMetadata(ref.id, identity, ref);
                   return (
                     !artifact.assignment_id ||
                     !affected.has(artifact.assignment_id)
@@ -1770,7 +2876,7 @@ export class TaskStore {
                 .all(taskId, task.objective_revision - 1) as Row[]
             ).map((row) => decode<ArtifactApplicability>(row.body));
             for (const prior of previous) {
-              const artifact = this.artifact(
+              const artifact = this.artifactMetadata(
                   prior.artifact.id,
                   identity,
                   prior.artifact,
@@ -1819,9 +2925,9 @@ export class TaskStore {
                 taskId,
                 identity,
                 ref,
-                true,
-                'Source explicitly supplied with exact clarification/correction passage.',
-                'Manager',
+                false,
+                'New correction evidence requires an inspected Manager applicability decision.',
+                'Runtime',
               );
             this.appendEvent(
               taskId,
@@ -1948,18 +3054,49 @@ export class TaskStore {
               this.db
                 .prepare('INSERT INTO runs VALUES(?,?,?)')
                 .run(run.id, taskId, JSON.stringify(run));
+              this.graph.register(run.id);
               task.current_run_id = run.id;
+              this.initializeManager(taskId, run.id);
               if (task.result) task.result.currency = 'stale';
+              for (const row of this.db
+                .prepare(
+                  'SELECT artifact_id,objective_revision,body FROM applicability WHERE task_id=?',
+                )
+                .all(taskId) as (Row & {
+                artifact_id: string;
+                objective_revision: number;
+              })[]) {
+                const applicability = decode<ArtifactApplicability>(row.body);
+                applicability.current = false;
+                applicability.reason =
+                  'Historical artifact requires fresh applicability and support checks in the linked successor.';
+                this.db
+                  .prepare(
+                    'UPDATE applicability SET body=? WHERE task_id=? AND artifact_id=? AND objective_revision=?',
+                  )
+                  .run(
+                    JSON.stringify(applicability),
+                    taskId,
+                    row.artifact_id,
+                    row.objective_revision,
+                  );
+              }
               for (const ref of task.original_request.context_refs)
                 this.recordApplicability(
                   taskId,
                   identity,
                   ref,
-                  true,
-                  'Source permission and hash revalidated for explicit continuation.',
-                  'Manager',
+                  false,
+                  'Source permission and hash revalidated; the new Manager must inspect applicability for this continuation.',
+                  'Runtime',
                 );
             } else if (control.action === 'resume') {
+              this.assertGraphExecution(run.id);
+              if (this.managerState(taskId, identity)?.upgrade_required)
+                fail(
+                  'manager_upgrade_required',
+                  'This unfinished run uses the previous Manager. Explicitly continue to start a linked run under manager.v4.',
+                );
               if (!['paused', 'waiting'].includes(run.status))
                 fail(
                   'invalid_control_state',
@@ -1999,7 +3136,14 @@ export class TaskStore {
                   'Answer persisted questions before resuming.',
                 );
               run.generation++;
+              this.graph.replaceUnknown(run.id, run.generation);
               run.status = 'queued';
+              this.graph.rebindWaits({
+                task_id: taskId,
+                run_id: run.id,
+                generation: run.generation,
+                objective_revision: task.objective_revision,
+              });
               for (const assignment of this.allAssignments(run.id))
                 if (
                   ['paused', 'waiting', 'running'].includes(assignment.status)
@@ -2099,6 +3243,7 @@ export class TaskStore {
     });
   }
   private markUnknown(runId: string) {
+    this.graph.fence(runId);
     for (const row of this.db
       .prepare('SELECT id,body FROM attempts')
       .all() as (Row & { id: string })[]) {
@@ -2120,6 +3265,51 @@ export class TaskStore {
         const task = decode<TaskCore>(row.body),
           run = this.run(task.current_run_id);
         if (terminal(run.status)) continue;
+        if (this.executionVersion(run.id)?.engine === 'legacy') {
+          let manager = this.managerState(task.id, task.identity);
+          if (!manager) {
+            const raw = this.db
+              .prepare('SELECT body FROM manager_state WHERE run_id=?')
+              .get(run.id) as Row | undefined;
+            if (raw) this.archiveManagerState(run.id, raw.body);
+            this.db
+              .prepare('DELETE FROM manager_state WHERE run_id=?')
+              .run(run.id);
+            manager = this.initializeManager(task.id, run.id);
+          }
+          manager.upgrade_required =
+            'This unfinished run uses retired legacy orchestration. Explicitly Continue to start a linked LangGraph run; saved history and artifacts remain inspectable.';
+          this.putManager(manager);
+          run.generation++;
+          run.status = 'paused';
+          for (const assignment of this.allAssignments(run.id))
+            if (!terminal(assignment.status)) {
+              assignment.status = 'paused';
+              delete assignment.lease_token;
+              this.putAssignment(assignment);
+            }
+          this.markUnknown(run.id);
+          this.closeChannels(run.id);
+          this.putRun(run);
+          continue;
+        }
+        let manager = this.managerState(task.id, task.identity);
+        const requiresUpgrade = !manager;
+        if (requiresUpgrade) {
+          const raw = this.db
+            .prepare('SELECT body FROM manager_state WHERE run_id=?')
+            .get(run.id) as Row | undefined;
+          if (raw) {
+            this.archiveManagerState(run.id, raw.body);
+            this.db
+              .prepare('DELETE FROM manager_state WHERE run_id=?')
+              .run(run.id);
+          }
+          manager = this.initializeManager(task.id, run.id);
+          manager.upgrade_required =
+            'This unfinished run was created by the previous Manager. Explicit continuation starts a linked run under manager.v4; historical decisions remain unchanged.';
+          this.putManager(manager);
+        }
         const started = (
           this.db
             .prepare('SELECT body FROM attempts WHERE task_id=?')
@@ -2128,12 +3318,14 @@ export class TaskStore {
           .map((item) => decode<AttemptRecord>(item.body))
           .some((item) => item.run_id === run.id && item.status === 'started');
         run.generation++;
-        if (started) run.status = 'paused';
+        if (started || requiresUpgrade || manager?.upgrade_required)
+          run.status = 'paused';
         else if (run.status === 'running') run.status = 'queued';
         for (const assignment of this.allAssignments(run.id)) {
           assignment.generation = run.generation;
           if (assignment.status === 'running') {
-            assignment.status = started ? 'paused' : 'queued';
+            assignment.status =
+              started || requiresUpgrade ? 'paused' : 'queued';
             assignment.acknowledged_revision = 0;
           }
           delete assignment.lease_token;
@@ -2141,15 +3333,27 @@ export class TaskStore {
         }
         this.markUnknown(run.id);
         this.putRun(run);
+        this.graph.rebindWaits(
+          {
+            task_id: task.id,
+            run_id: run.id,
+            generation: run.generation,
+            objective_revision: task.objective_revision,
+          },
+          run.status !== 'paused',
+        );
         this.appendEvent(
           task.id,
-          'restart_recovered',
+          requiresUpgrade ? 'manager_upgrade_required' : 'restart_recovered',
           'Runtime',
-          started
-            ? 'Interrupted outcome unknown and charged; explicit resume admits replacement.'
-            : 'New lease generation acquired; accepted output and remaining budget preserved.',
+          requiresUpgrade
+            ? manager!.upgrade_required!
+            : started
+              ? 'Interrupted outcome unknown and charged; explicit resume admits replacement.'
+              : 'New lease generation acquired; accepted output and remaining budget preserved.',
         );
       }
+      this.graph.recover();
     });
   }
   saveCheckpoint(
@@ -2217,7 +3421,18 @@ export class TaskStore {
         return { assignment_id: id, revision: assignment.revision };
       });
       const previous = this.peerChannelForRun(runId, true);
-      if (previous && previous.objective_revision === task.objective_revision)
+      if (
+        previous &&
+        previous.objective_revision === task.objective_revision &&
+        (previous.status === 'open' ||
+          participants.every((participant) =>
+            previous.participants.some(
+              (prior) =>
+                prior.assignment_id === participant.assignment_id &&
+                prior.revision === participant.revision,
+            ),
+          ))
+      )
         fail(
           'peer_channel_limit',
           'Only one peer channel per run/objective revision.',
@@ -2362,7 +3577,13 @@ export class TaskStore {
         'peer_message_sent',
         'Runtime',
         'Purpose-bound peer message persisted.',
-        { channel_id: channelId, sender, recipient },
+        {
+          channel_id: channelId,
+          channel_revision: channel.revision,
+          sender,
+          recipient,
+          recipient_revision: message.recipient_revision,
+        },
       );
       return message;
     });
@@ -2417,6 +3638,65 @@ export class TaskStore {
       channel.objective_revision === this.run(runId).objective_revision
       ? channel
       : undefined;
+  }
+  wakeManager(taskId: string, cursor?: number): TaskRecord {
+    return this.atomic(() => {
+      const task = this.core(taskId),
+        run = this.run(task.current_run_id);
+      this.assertGraphExecution(run.id);
+      if (run.status !== 'waiting') return this.read(taskId, task.identity);
+      const wait = this.graph.wait(
+        graphThreadId('manager', {
+          task_id: taskId,
+          run_id: run.id,
+          generation: run.generation,
+          objective_revision: task.objective_revision,
+        }),
+      );
+      if (
+        wait?.status !== 'ready' ||
+        wait.wake_cursor === undefined ||
+        wait.wake_cursor <= wait.after_cursor ||
+        (cursor !== undefined &&
+          (cursor <= wait.after_cursor || cursor > wait.wake_cursor))
+      )
+        return this.read(taskId, task.identity);
+      const openQuestions = (
+        this.db
+          .prepare('SELECT body FROM questions WHERE task_id=?')
+          .all(taskId) as Row[]
+      )
+        .map((row) => decode<Question>(row.body))
+        .some(
+          (question) =>
+            question.run_id === run.id && question.status === 'open',
+        );
+      if (
+        openQuestions ||
+        this.managerState(taskId, task.identity)?.upgrade_required
+      )
+        return this.read(taskId, task.identity);
+      if (Date.parse(run.limits.deadline) <= Date.now())
+        fail(
+          'deadline_expired',
+          'Resume preserves expired deadline; explicitly continue for a new run.',
+          422,
+        );
+      run.status = 'queued';
+      for (const assignment of this.allAssignments(run.id))
+        if (
+          assignment.definition_id === 'core.manager.coordinator' &&
+          assignment.status === 'waiting'
+        ) {
+          assignment.status = 'queued';
+          assignment.generation = run.generation;
+          assignment.acknowledged_revision = 0;
+          delete assignment.lease_token;
+          this.putAssignment(assignment);
+        }
+      this.putRun(run);
+      return this.read(taskId, task.identity);
+    });
   }
   wakeAssignment(taskId: string, assignmentId: string): Assignment {
     return this.atomic(() => {

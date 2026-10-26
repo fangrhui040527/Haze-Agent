@@ -2,9 +2,41 @@ import type {
   AssignmentDefinition,
   CapabilityDefinition,
 } from '../../orchestration/ports.js';
+import { z } from 'zod';
+import { artifactRefSchema } from '../../contracts/artifacts.js';
 
 export function createEvidenceSynthesisCapability(): CapabilityDefinition {
   return {
+    prerequisites: [
+      {
+        definition_id: 'evidence-synthesis.review',
+        depends_on_definitions: ['evidence-synthesis.extract'],
+      },
+    ],
+    review_requirements: [
+      {
+        artifact_kind: 'evidence-synthesis.notes',
+        review_definition_id: 'evidence-synthesis.review',
+        producer_definition_ids: ['evidence-synthesis.extract'],
+      },
+    ],
+    normalizeReview(artifact) {
+      if (artifact.kind !== 'evidence-synthesis.review') return undefined;
+      const parsed = z
+        .object({
+          status: z.literal('supported'),
+          reviewed_artifacts: z.array(artifactRefSchema),
+          limitations: z.array(z.string()).default([]),
+        })
+        .safeParse(artifact.content);
+      return parsed.success
+        ? {
+            verdict: 'supported',
+            artifacts: parsed.data.reviewed_artifacts,
+            limitations: parsed.data.limitations,
+          }
+        : undefined;
+    },
     card: {
       id: 'evidence-synthesis',
       version: 'evidence-synthesis.v3',
@@ -133,6 +165,9 @@ export function createEvidenceSynthesisAssignments(): AssignmentDefinition[] {
           throw new Error('Source excerpt or immutable citation mismatch.');
         const artifact = services.save('evidence-synthesis.review', {
           status: 'supported',
+          reviewed_artifacts: [
+            { id: notes.id, version: notes.version, sha256: notes.sha256 },
+          ],
           checks: [
             'Exact source references',
             'Quotation prefix match',

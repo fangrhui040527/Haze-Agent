@@ -5,10 +5,72 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createExecutionRegistry } from '../../app/composition.js';
 import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
 import type { TaskRecord } from '../../app/contracts/tasks.js';
-import type { AgentModel } from '../../app/adapters/agent-model.js';
+import type {
+  AgentModel,
+  AgentModelInput,
+} from '../../app/adapters/agent-model.js';
 import { TaskStore } from '../../app/tasks/store.js';
 
 const cleanups: (() => Promise<void>)[] = [];
+/** Small scripted answers still exercise the current strict decision envelope and fences. */
+function scriptedManager(model: AgentModel): AgentModel {
+  const envelope = (text: string, input: AgentModelInput) => {
+    const action = JSON.parse(text) as Record<string, unknown>;
+    if (input.role !== 'Manager' || action.action) return text;
+    const context = input.context as {
+      run_id: string;
+      generation: number;
+      objective_revision: number;
+      plan_revision: number;
+      event_cursor: number;
+      request: { objective: string };
+    };
+    return JSON.stringify({
+      id: action.id,
+      run_id: context.run_id,
+      generation: context.generation,
+      objective_revision: context.objective_revision,
+      plan_revision: context.plan_revision,
+      event_cursor: context.event_cursor,
+      explanation: 'Scripted decision for the runtime behavior under test.',
+      references: [],
+      interpretation: {
+        scope: context.request.objective,
+        deliverables: ['A direct answer.'],
+        assumptions: [],
+        intended_use: 'Informational response.',
+        stopping_conditions: ['Return the requested answer.'],
+      },
+      action:
+        action.type === 'respond'
+          ? {
+              type: 'finalize',
+              answer: action.answer,
+              work_products: [],
+              sources: [],
+              uncertainty: action.uncertainty ?? [],
+              unfinished: [],
+            }
+          : { type: 'question', prompt: action.prompt },
+    });
+  };
+  return {
+    ...model,
+    complete: async (input, signal) =>
+      envelope(await model.complete(input, signal), input),
+    ...(model.completeWithReceipt
+      ? {
+          completeWithReceipt: async (
+            input: AgentModelInput,
+            signal: AbortSignal,
+          ) => {
+            const completion = await model.completeWithReceipt!(input, signal);
+            return { ...completion, text: envelope(completion.text, input) };
+          },
+        }
+      : {}),
+  };
+}
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
@@ -20,7 +82,7 @@ async function runtime(
     stateDirectory: directory,
     registry: createExecutionRegistry({ mode: options.mode ?? 'fixture' }),
     mode: options.mode ?? 'fixture',
-    ...(options.model ? { model: options.model } : {}),
+    ...(options.model ? { model: scriptedManager(options.model) } : {}),
   });
   cleanups.push(async () => {
     await instance.close();
@@ -196,7 +258,7 @@ describe('general runtime', () => {
       instance.store.attempts(paused.id, localTaskIdentity)[0]?.status,
     ).toBe('unknown');
   });
-  it('recovers a persisted validated undispatched response without another provider call', async () => {
+  it('pauses unfinished legacy Manager runs for explicit linked continuation without reinterpreting old actions', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'haze-pending-action-'));
     const store = new TaskStore(directory);
     store.configureDefinitions({
@@ -271,6 +333,9 @@ describe('general runtime', () => {
       response,
       action,
     );
+    store.db
+      .prepare('DELETE FROM manager_state WHERE run_id=?')
+      .run(admission.task.current_run_id);
     store.close();
     let calls = 0;
     const instance = new TaskRuntime({
@@ -290,10 +355,11 @@ describe('general runtime', () => {
       await rm(directory, { recursive: true, force: true });
     });
     const completed = await until(instance, admission.task.id, (task) =>
-      ['completed', 'failed'].includes(task.status),
+      ['paused', 'failed'].includes(task.status),
     );
-    expect(completed.status, completed.error?.message).toBe('completed');
-    expect(completed.result?.answer).toBe('Recovered accepted response.');
+    expect(completed.status, completed.error?.message).toBe('paused');
+    expect(completed.manager?.upgrade_required).toContain('Manager');
+    expect(completed.result).toBeUndefined();
     expect(completed.usage.model_calls).toBe(1);
     expect(calls).toBe(0);
   });
@@ -587,7 +653,7 @@ describe('general runtime', () => {
     expect(complete.limits.deadline).toBe(running.limits.deadline);
     expect(complete.assignments).toHaveLength(1);
   });
-  it('corrects investigation scope, preserves old products as stale, and reuses unaffected work only after checks', async () => {
+  it('corrects investigation scope and keeps old products held until explicit Manager reassessment', async () => {
     const instance = await runtime();
     const admission = instance.admit(
       {
@@ -650,7 +716,19 @@ describe('general runtime', () => {
         task.objective_revision === 2 &&
         ['completed', 'failed'].includes(task.status),
     );
-    expect(after.status, after.error?.message).toBe('completed');
+    expect(
+      after.status,
+      JSON.stringify({
+        error: after.error,
+        work: after.assignments.map((a) => ({
+          id: a.id,
+          definition: a.definition_id,
+          status: a.status,
+          usability: a.usability,
+        })),
+        decisions: after.manager?.decisions.slice(-4),
+      }),
+    ).toBe('completed');
     expect(after.result?.covered_scope).toMatchObject({ location: 'Klang' });
     expect(after.result?.currency).toBe('current');
     const oldAnalysis = before.result!.work_products.find(
@@ -662,12 +740,18 @@ describe('general runtime', () => {
       after.result?.work_products.some((ref) => ref.id === oldAnalysis.id),
     ).toBe(false);
     expect(
-      after.artifacts.some(
-        (entry) =>
-          entry.objective_revision === 2 &&
-          entry.current &&
-          /unaffected/.test(entry.reason),
-      ),
+      after.artifacts
+        .filter(
+          (entry) =>
+            entry.objective_revision === 2 &&
+            before.artifacts.some(
+              (prior) => prior.artifact.id === entry.artifact.id,
+            ),
+        )
+        .every((entry) => !entry.current),
+    ).toBe(true);
+    expect(
+      after.manager?.plans.some((plan) => plan.objective_revision === 2),
     ).toBe(true);
   });
 });

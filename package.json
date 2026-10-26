@@ -13,6 +13,7 @@
     "start": "node scripts/run-example.mjs",
     "tasks:serve": "node --env-file-if-exists=.env --env-file-if-exists=app/adapters/zetaris/.env.local scripts/serve-tasks.mjs",
     "tasks:verify": "npm run build && node --env-file-if-exists=.env --env-file-if-exists=app/adapters/zetaris/.env.local scripts/verify-general.mjs",
+    "manager:evaluate": "node --env-file-if-exists=.env scripts/evaluate-manager.mjs",
     "db:init": "docker compose up -d --wait smokeledger-db",
     "smokeledger:fetch:firms": "node --experimental-strip-types app/adapters/zetaris/sources/smokeledger/fetch_firms.ts",
     "smokeledger:fetch:wind": "node --experimental-strip-types app/adapters/zetaris/sources/smokeledger/open_meteo_wind/fetch.ts",
@@ -30,10 +31,14 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:postgres": "vitest run --project postgres",
-    "test:integration": "node scripts/verify-general.mjs --fixture",
+    "test:integration": "node scripts/verify-general.mjs --fixture && node scripts/verify-damage-account.mjs --fixture && npm run test:crashes",
+    "damage:verify": "npm run build && node --env-file-if-exists=.env scripts/verify-damage-account.mjs",
     "frontend:check": "npm --prefix frontend run build && npm --prefix frontend test",
     "check": "npm run verify:pins && npm run format:check && npm run typecheck && npm run lint && npm run build && npm test && npm run test:engines && npm run frontend:check && npm run test:integration",
-    "tasks:test": "vitest run --project unit tests/unit/general-store.test.ts tests/unit/general-runtime.test.ts tests/unit/general-http.test.ts tests/unit/pm25-methods.test.ts"
+    "tasks:test": "vitest run --project unit tests/unit/general-store.test.ts tests/unit/general-runtime.test.ts tests/unit/general-http.test.ts tests/unit/pm25-methods.test.ts",
+    "test:crashes": "node scripts/verify-langgraph-crashes.mjs",
+    "test:rollback": "node scripts/verify-langgraph-rollback.mjs",
+    "state:migrate": "node scripts/migrate-general-state.mjs"
   },
   "dependencies": {
     "@langchain/core": "1.2.20",

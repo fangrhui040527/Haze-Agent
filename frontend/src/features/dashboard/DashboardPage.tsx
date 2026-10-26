@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import type { AgentId } from '../../shared/types/agents.ts';
 import { Panel } from '../../shared/ui/States.tsx';
+import { buttonClass } from '../../shared/ui/Button.tsx';
 import { AgentOffice } from '../agent-office/AgentOffice.tsx';
 import { ChatPanel, type ChatPrefill } from '../chat/ChatPanel.tsx';
 import { LiveTable } from '../live-table/LiveTable.tsx';
@@ -33,6 +34,14 @@ export function DashboardPage() {
 
   return (
     <div className={styles.grid}>
+      <div className={styles.actions}>
+        <Link
+          to="/damage-account"
+          className={buttonClass('secondary', 'small')}
+        >
+          Damage accounting
+        </Link>
+      </div>
       <Panel className={styles.table}>
         <LiveTable />
       </Panel>

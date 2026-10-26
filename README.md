@@ -1,6 +1,6 @@
 # Haze Agent
 
-Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The production capabilities cover source-backed explanations, episode investigations, and the existing modeled PM2.5 methods.
+Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The registered capabilities cover source-backed explanations, episode investigations, modeled PM2.5 methods and imported-input damage accounting.
 
 The reusable engine separates browser-safe contracts, authoritative SQLite state, bounded agent execution, typed tools and domain capabilities. Corrections, questions, imported sources, controls, immutable work products and independent numerical review are visible in the application. See the [general engine guide](docs/orchestration/general-engine.md) and [Architecture v0.14](docs/architecture/Haze_Agent_Architecture_v0.14.pdf).
 
@@ -48,17 +48,22 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
 
-The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v1` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
+Open `/damage-account` for the separate damage-accounting workspace. Import typed `haze.damage.import.v1` JSON or CSV with a declared scope, physical quantities and compatible unit values, then request an account. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence is withheld, and imported assertions retain their scientific applicability limits. See the [DamageAccountant implementation report](docs/orchestration/damage-accountant-implementation-report.md) for input requirements and release scope.
+
+The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
+
+When the dashboard keeps an older `STATE_DIR`, set `HAZE_TASK_STATE_DIR=.state/general-v2` for Vite's task API. This isolates task storage without changing or migrating the dashboard's archive directory.
 
 ## Verify general execution
 
 ```sh
 npm run check
 npm run tasks:verify -- --fixture
+npm run damage:verify -- --fixture
 npm run tasks:verify -- --live Klang 2026-10-24T00:00:00Z 2026-10-25T00:00:00Z
 ```
 
-`check` includes root formatting, types, lint, build, unit and engine checks, frontend build/tests, and a fresh-process general fixture verification. Use `npm run tasks:test` for focused engine/domain tests. For an explicitly synthetic development server, build first and run `node scripts/serve-tasks.mjs --fixture`. Normal execution never substitutes fixtures, switches providers or retries automatically.
+`check` includes root formatting, types, lint, build, unit and engine checks, frontend build/tests, and fresh-process general and damage-account fixture verification. Use `npm run tasks:test` for focused engine/domain tests. For an explicitly synthetic development server, build first and run `node scripts/serve-tasks.mjs --fixture`. Normal execution never substitutes fixtures, switches providers or retries automatically.
 
 The fixture verifier imports a source, completes a general explanation and a PM2.5 investigation, checks duplicate delivery, captures exact artifacts/events and verifies unchanged readback after process restart. A fixture pass establishes integration behavior only. Live readiness requires a captured configured model and source-tool trace; missing access or a failed attempt never advances readiness. See the [implementation record](docs/orchestration/general-engine-verification.md).
 
@@ -97,7 +102,7 @@ It prints deterministic execution metadata and writes an ignored JSONL trace und
 
 ## Persistence and current limits
 
-Task records, assignments, charged attempts, actions, control receipts, questions, peer messages and immutable artifacts use local SQLite under `.state/general-v1` by default. The storage-format marker is checked before opening SQLite. One application process owns a directory. LangGraph checkpoints hold references to authoritative records; they do not replace those records.
+Task records, assignments, charged attempts, actions, control receipts, questions, peer messages and immutable artifacts use local SQLite under `.state/general-v2` by default. The storage-format marker is checked before opening SQLite. One application process owns a directory. LangGraph checkpoints hold record references and bounded execution state, including context, logical steps, decisions and responses. Application records remain authoritative for permissions, charges, accepted effects and results.
 
 Restart fences old workers. Accepted completed work remains available, while calls interrupted without a receipt retain their charge and unknown outcome. Explicit resume requests a replacement attempt under the original deadline and remaining budget; expired work requires an explicitly linked continuation run with fresh reservations. No automatic retry occurs.
 

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
 import { ExecutionRegistry } from '../../app/orchestration/ports.js';
+import { managerAgent } from '../../app/agents/manager/index.js';
 
 const instances: { runtime: TaskRuntime; directory: string }[] = [];
 afterEach(async () => {
@@ -22,11 +23,15 @@ describe('task-family extensibility', () => {
       'WorkerShield',
       'EvidenceCritic',
     ] as const)
-      registry.registerAgent({
-        id,
-        version: 'test.v1',
-        instructions: 'Use registered methods only.',
-      });
+      registry.registerAgent(
+        id === 'Manager'
+          ? managerAgent
+          : {
+              id,
+              version: 'test.v1',
+              instructions: 'Use registered methods only.',
+            },
+      );
     registry.registerCapability({
       card: {
         id: 'vocabulary-test',
@@ -90,8 +95,14 @@ describe('task-family extensibility', () => {
       'seven-assignments',
     );
     await expect
-      .poll(() => runtime.store.read(task_id, localTaskIdentity).status)
-      .toBe('completed');
+      .poll(
+        () => {
+          const t = runtime.store.read(task_id, localTaskIdentity);
+          return { status: t.status, error: t.error };
+        },
+        { timeout: 10000 },
+      )
+      .toEqual({ status: 'completed', error: undefined });
     const task = runtime.store.read(task_id, localTaskIdentity);
     const specialist = task.assignments.filter(
       (assignment) => assignment.role !== 'Manager',

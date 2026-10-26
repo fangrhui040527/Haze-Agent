@@ -26,7 +26,10 @@ export function createEpisodeInvestigationCapability(
       ],
     },
     matches: (request) =>
-      /episode|investigat|haze|pm2\.?5/i.test(request.objective),
+      /episode|investigat|haze|pm2\.?5/i.test(request.objective) &&
+      !/^\s*(?:please\s+)?(?:explain|describe|interpret|what|why|how)\b.*\b(?:report|source|supplied|imported)\b/iu.test(
+        request.objective,
+      ),
     assignments: (request) => [
       ...methods,
       {
