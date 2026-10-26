@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as envFiles from '../../app/adapters/zetaris/scripts/env-files.ts';
-import { loadEnvironment } from '../../app/adapters/zetaris/sources/smokeledger/common.ts';
+import { loadEnvironment } from '../../app/adapters/zetaris/sources/shared/snapshot.ts';
 
 const candidatesForRoot = envFiles.envFileCandidates;
 const keys = [

@@ -182,7 +182,7 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
     expect(taskDirectories).toEqual([]);
     expect(taskRequests).toEqual([]);
   });
-  it('keeps task storage separate from the configured legacy dashboard directory', async () => {
+  it('uses the shared application override without changing a legacy directory setting', async () => {
     vi.stubEnv('STATE_DIR', '.state/legacy-dashboard');
     vi.stubEnv('HAZE_TASK_STATE_DIR', '.state/separate-general-tasks');
     await requestTo(mode, '/api/capabilities');
@@ -263,19 +263,25 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
     expect(taskRequests).toEqual([]);
   });
 
-  it('passes dashboard data and report routes to the server proxy without admitting a general task', async () => {
+  it('serves dashboard and task routes through the same local application handler', async () => {
     for (const path of [
       '/api/health',
       '/api/snapshot',
       '/api/items/hz-example',
+      '/api/evidence/ev-example',
       '/api/stream',
+      '/api/hazeops/watchers',
+      '/api/heartbeat/tick',
       '/api/runs',
       '/api/reports/report-id/events',
     ]) {
       const response = await requestTo(mode, path);
-      expect(response.fellThrough).toBe(true);
-      expect(response.writeHead).not.toHaveBeenCalled();
+      expect(response.fellThrough).toBe(false);
+      expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
     }
-    expect(taskRequests).toEqual([]);
+    expect(taskRequests).toContain('/api/snapshot');
+    expect(
+      taskDirectories.every((directory) => directory === taskDirectories[0]),
+    ).toBe(true);
   });
 });

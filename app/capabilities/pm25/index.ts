@@ -71,7 +71,7 @@ export function createPm25Capability(): CapabilityDefinition {
     },
     card: {
       id: 'pm25-evidence-summary',
-      version: '3',
+      version: '4',
       purpose:
         'Investigate bounded modeled PM2.5 evidence with reproducible analysis and independent numerical checking.',
       work_products: [
@@ -150,7 +150,7 @@ export function createPm25Tools(
   return [
     {
       id: PM25_SOURCE_ID,
-      version: '3',
+      version: '4',
       mode,
       manager_read_only: true,
       description:
@@ -192,7 +192,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
   return [
     {
       id: 'pm25.retrieve',
-      version: '3',
+      version: '4',
       capability,
       agent: 'HazeOps',
       tools: [PM25_SOURCE_ID],
@@ -259,7 +259,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.analyze',
-      version: '3',
+      version: '4',
       capability,
       agent: 'WorkerShield',
       tools: [],
@@ -344,7 +344,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.check',
-      version: '3',
+      version: '4',
       capability,
       agent: 'EvidenceCritic',
       tools: [],
@@ -427,7 +427,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.observation-gap',
-      version: '3',
+      version: '4',
       capability,
       agent: 'HazeOps',
       tools: [],

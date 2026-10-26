@@ -7,7 +7,7 @@ import { createTaskHandler } from '../../app/tasks/http.ts';
 import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.ts';
 import { envFileCandidates } from '../../app/adapters/zetaris/scripts/env-files.ts';
 
-/** Local evidence task API. Static hosting needs a backend. */
+/** One local application API for dashboard, HazeOps, tasks and the World Model. */
 export function generalApiPlugin(): Plugin {
   let env: NodeJS.ProcessEnv = process.env;
   let tasks: ReturnType<typeof createTaskHandler> | undefined;
@@ -25,7 +25,7 @@ export function generalApiPlugin(): Plugin {
     next: () => void,
   ) => {
     if (
-      !/^\/api\/(?:tasks|artifacts|capabilities|world)(?:[/?]|$)/.test(
+      !/^\/api\/(?:tasks|artifacts|capabilities|world|health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:[/?]|$)/.test(
         request.url ?? '',
       )
     ) {
@@ -34,7 +34,7 @@ export function generalApiPlugin(): Plugin {
     }
     try {
       // Vite creates the next server before closing the previous one. Acquire
-      // durable state only when a task request reaches the listening server.
+      // shared durable state only when an API request reaches the listening server.
       if (!tasks) {
         const policy = resolveWorldAcceptancePolicy(
           env.HAZE_WORLD_ACCEPTANCE_POLICY,
@@ -74,16 +74,6 @@ export function generalApiPlugin(): Plugin {
     response: ServerResponse,
     next: () => void,
   ) => {
-    // The dashboard server owns these routes. Let Vite proxy them after the
-    // local general task handler has claimed its own endpoints.
-    if (
-      /^\/api\/(?:health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:[/?]|$)/.test(
-        request.url ?? '',
-      )
-    ) {
-      next();
-      return;
-    }
     if (!/^\/api(?:[/?]|$)/.test(request.url ?? '')) {
       next();
       return;

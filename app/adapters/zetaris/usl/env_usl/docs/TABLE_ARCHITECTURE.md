@@ -1,44 +1,49 @@
-# Malaysia Environmental USL: Table Architecture & Raw Topology
+# Malaysia Environmental USL: Table Architecture
 
-This document explains why certain data sources require 345 individual REST tables in Zetaris while others require only 1, and how the virtualization layer combines them into 8 clean semantic tables.
+The sources use a mixture of REST federation and local FileStore snapshots.
+Air quality and wind now publish one normalized snapshot per provider source,
+instead of nesting PostgreSQL ingestion under a separate SmokeLedger source.
 
----
+## Raw table topology
 
-## 1. Raw Table Topology Matrix
+| Data source | Raw tables | Storage and refresh |
+| --- | --- | --- |
+| Open-Meteo air quality | One `OPEN_METEO_AIR_QUALITY.hourly_snapshot` | CSV FileStore snapshot published by `sources/air_quality/fetch_air_quality.ts` |
+| Open-Meteo wind | One `OPEN_METEO_WIND.hourly_snapshot` | CSV FileStore snapshot published by `sources/wind/fetch_wind.ts`; separate from the environmental USL |
+| NASA POWER climate | One REST table per selected location | Coordinate/date-keyed endpoints with a generated union view |
+| Data.gov.my weather | One `forecasts_raw` REST table | Nationwide response queried through Zetaris |
+| NASA FIRMS fires | One `active_fires` FileStore table | Downloaded CSV with location matching, published by the FIRMS source |
+| Windy point forecast | Two FileStore tables | One GFS and one CAMS CSV snapshot for the configured point |
+| Location dimensions | Two FileStore tables | Canonical location and administrative-code reference files |
 
-| Data Source | Raw Tables | Table Pattern | Why / Technical Reason |
-| :--- | :---: | :--- | :--- |
-| **Open-Meteo Air Quality** | **345** | `aq_<loc>_raw` | **Point-based coordinate API** (`?latitude=X&longitude=Y`). Requires a separate endpoint per coordinate; combined into 1 view via `UNION ALL`. |
-| **NASA POWER Climate** | **345** | `power_<loc>_raw` | **Point-based coordinate API** (`?latitude=X&longitude=Y`). Requires a separate endpoint per coordinate; combined into 1 view via `UNION ALL`. |
-| **Data.gov.my Weather** | **1** | `forecasts_raw` | **Nationwide bulk API**. Single API response returns forecasts for all 440 Malaysian locations in one JSON array. |
-| **NASA FIRMS Fires** | **1** | `active_fires` | **Bulk Bounding Box CSV**. Downloads nationwide satellite fire hotspots directly into a single CSV on disk. |
-| **Windy Point Forecast** | **2** | `windy_gfs_raw`, `windy_cams_raw` | **FileStore CSV snapshot**. `fetch_windy.ts` writes one CSV per model (GFS weather, CAMS air quality) for a single point and registers them as FileStore tables. |
-| **Location Dimension** | **2** | `location_dim`, `location_code` | **Canonical Reference Files**. Read directly from local static CSV reference datasets in FileStore. |
+The physical count depends on which sources and NASA POWER locations are
+registered. Air-quality and wind location coverage changes their snapshot row
+counts, rather than creating a raw REST table per location.
 
-> **Summary:**
-> * **Point-based coordinate APIs** (Open-Meteo & NASA POWER) 👉 **345 tables each** (690 total raw REST tables).
-> * **Nationwide / bulk APIs** (Data.gov.my & NASA FIRMS) 👉 **1 table each**.
-> * **Windy Point Forecast** 👉 **2 FileStore CSV tables** (one per model, single point).
-> * **Total**: **696 Physical Raw Tables** (690 REST + 6 FileStore) → Virtualized into **8 clean semantic layer entities** in `lightning.metastore.malaysia_env_usl`.
+## Stable views and task consumption
 
----
+`air_quality.hourly_observations` exposes the normalized air-quality snapshot.
+Its fields include `location_name`, requested coordinates, UTC
+`observation_time`, PM2.5/PM10 values, local `ingested_utc` and provider
+`issued_utc` when known. The current PM2.5 task queries this base view directly.
+An environmental USL activation may consume the same view, but that separate
+model lifecycle is not a prerequisite for the task.
 
-## 2. How the 345-Table `UNION ALL` Works
+`wind.hourly_observations` exposes 10 m and 850 hPa winds as `u`/`v` components
+with their location, valid time and local receipt metadata.
 
-Instead of exposing 345 individual tables to end-users or querying them one by one, Zetaris compiles them into a single virtual view:
+## Refresh boundary
 
-```sql
--- Zetaris compiles all 345 location endpoints into a single virtual view
-CREATE SCHEMASTORE VIEW hourly_observations WITH CONTAINER air_quality AS
-SELECT 'Kangar' AS location_name, 6.4414 AS lat, ... FROM aq_kangar_raw
-UNION ALL
-SELECT 'Arau'   AS location_name, 6.4297 AS lat, ... FROM aq_arau_raw
-UNION ALL
--- ... (all 345 location tables) ...
-UNION ALL
-SELECT 'Tawau'  AS location_name, 4.2447 AS lat, ... FROM aq_tawau_raw;
-```
+Queries read the published files without making new Open-Meteo API calls.
+Run `npm run zetaris:fetch:pm25` or `npm run zetaris:fetch:wind` to fetch and
+publish newer rows. Both commands accept repeated `--location` IDs and an
+offline `--dry-run` preview. A `--skip-api` run republishes cached data.
 
-### Core Architecture Benefits:
-1. **Zero-ETL Virtualization:** Data remains at the external REST API endpoints until runtime. No heavy database ingestion or data duplication is needed for live forecast queries.
-2. **Predicate Pushdown:** When a user executes `WHERE location_name = 'Kuala Lumpur'`, Zetaris pushes the predicate down to call **only** Kuala Lumpur's REST endpoint, bypassing the other 344 network calls.
+The snapshot merges matching location/time rows (plus level for wind), keeps
+previously collected hours and leaves other locations intact. Matching values
+can be replaced; this is not an immutable model-run archive. Exact task captures
+remain separate and retain the response used by that task.
+
+Data.gov.my and NASA POWER retain their REST access paths. Filtering by
+location and date is still useful for all sources, but a filter over the
+air-quality snapshot does not select an upstream HTTP endpoint.

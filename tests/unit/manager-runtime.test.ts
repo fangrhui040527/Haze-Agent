@@ -171,7 +171,8 @@ async function until(
   id: string,
   predicate: (task: TaskRecord) => boolean,
 ) {
-  const deadline = Date.now() + 5000;
+  // SQLite and LangGraph work can exceed 5s on shared Windows runners.
+  const deadline = Date.now() + 20_000;
   while (Date.now() < deadline) {
     const task = instance.store.read(id, localTaskIdentity);
     if (predicate(task)) return task;

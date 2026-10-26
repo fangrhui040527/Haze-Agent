@@ -1,18 +1,33 @@
 -- =============================================================================
--- Open-Meteo Air Quality REST Table & Container Registration
+-- Open-Meteo Air Quality stored snapshot registration
 -- =============================================================================
 
 CREATE LIGHTNING DATABASE OPEN_METEO_AIR_QUALITY
-DESCRIBE BY "Open-Meteo air quality API";
+DESCRIBE BY "Open-Meteo air quality stored snapshots";
 
 CREATE SCHEMASTORE CONTAINER air_quality;
 
--- Sample REST table registration (dynamically created for each canonical location):
-CREATE LIGHTNING REST TABLE aq_kuala_lumpur
+-- fetch_air_quality.ts publishes a complete CSV before executing this SQL.
+-- Keep raw timestamps as UTC strings; only the typed view converts numbers.
+CREATE LIGHTNING FILESTORE TABLE hourly_snapshot
 FROM OPEN_METEO_AIR_QUALITY
-REQUEST(
-    endpoint "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=3.1412&longitude=101.68653&hourly=pm2_5,pm10&timezone=Asia%2FKuala_Lumpur",
-    method "get",
-    response_type "json",
-    http_encoding "URLENCODED"
-) HEADER () BODY ();
+FORMAT CSV OPTIONS (
+    PATH "/home/zetaris/customer-data/shared/air_quality/snapshot.csv",
+    header "true", inferSchema "false", nullValue ""
+);
+
+UPDATE LIGHTNING FILESTORE TABLE hourly_snapshot FROM OPEN_METEO_AIR_QUALITY OPTIONS (
+    PATH "/home/zetaris/customer-data/shared/air_quality/snapshot.csv",
+    header "true", inferSchema "false", nullValue ""
+);
+
+CREATE OR REPLACE SCHEMASTORE VIEW hourly_observations WITH CONTAINER air_quality AS
+SELECT location_name,
+    CAST(requested_latitude AS DOUBLE) AS requested_latitude,
+    CAST(requested_longitude AS DOUBLE) AS requested_longitude,
+    observation_time,
+    CAST(pm2_5_ug_m3 AS DOUBLE) AS pm2_5_ug_m3,
+    CAST(pm10_ug_m3 AS DOUBLE) AS pm10_ug_m3,
+    ingested_utc,
+    CAST(NULL AS TIMESTAMP) AS issued_utc
+FROM OPEN_METEO_AIR_QUALITY.hourly_snapshot;

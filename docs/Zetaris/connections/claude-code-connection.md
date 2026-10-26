@@ -4,6 +4,7 @@ Open this repository in Claude Code. The repository's `CLAUDE.md` loads the
 root `AGENTS.md`, which sets the connection, SQL, and permission rules.
 
 <a id="contents"></a>
+
 ## 1. Purpose
 
 Use Claude Code to inspect a Zetaris instance, run Lightning SQL, or work

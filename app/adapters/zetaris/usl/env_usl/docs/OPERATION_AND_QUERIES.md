@@ -7,28 +7,41 @@ Operational execution guide and cross-source SQL queries for the Zetaris Unified
 ## 1. Operational Playbook
 
 ### Cold Start / Day-0 Bootstrap
-When setting up a fresh environment with no existing tables or databases:
+For the current PM2.5 task, publish its base sources first; environmental USL
+compilation is optional:
+
+```powershell
+npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
+```
+
+Review the plan before rerunning without `--dry-run`. This publishes air-quality
+and wind FileStore snapshots plus the FIRMS source, without PostgreSQL. Existing
+SmokeLedger rows are retained under `legacy/smokeledger/` and are not migrated
+automatically.
+
+The broader environmental and law models have their own lifecycle. When
+setting up those models on a fresh environment:
 
 ```bash
 # Bootstrap BOTH Environmental USL + Law USL (default — no flag needed)
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts
 # or using npx tsx:
-npx tsx app/zetaris/usl/bootstrap_usl.ts
+npx tsx app/adapters/zetaris/usl/bootstrap_usl.ts
 
 # Bootstrap ONLY the Environmental USL (malaysia_env_usl)
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only
-npx tsx app/zetaris/usl/bootstrap_usl.ts --env-only
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-only
+npx tsx app/adapters/zetaris/usl/bootstrap_usl.ts --env-only
 
 # Bootstrap ONLY the Law USL (malaysia_law_usl)
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --law-only
-npx tsx app/zetaris/usl/bootstrap_usl.ts --law-only
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --law-only
+npx tsx app/adapters/zetaris/usl/bootstrap_usl.ts --law-only
 
 # Fast bootstrap (skips 345 NASA POWER tables for quicker test deployment)
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
 
 # Preview execution steps without applying changes
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --dry-run
-node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --dry-run
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
 ```
 
 > **Windy in the bootstrap:** `bootstrap_usl.ts` builds Windy at `[Env Step 6/7]`. It runs `windy_register.sql` (filling the `${WINDY_API_KEY}` placeholder from `.env`), then `windy_view.sql`, and activates the two Windy USL tables during step 7. If `WINDY_API_KEY` is not set, Windy registration is skipped with a warning and the rest of the bootstrap continues.
@@ -36,21 +49,34 @@ node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --dr
 ---
 
 ### Daily Morning Routine
-Run when you need to roll forward FIRMS satellite detections and NASA POWER date-keyed views:
+Run when you need to collect newer source snapshots or roll NASA POWER date-keyed views forward:
 
 ```bash
+# Refresh Open-Meteo snapshots for a selected location:
+npm run zetaris:fetch:pm25 -- --location kuala-lumpur
+npm run zetaris:fetch:wind -- --location kuala-lumpur
+
+# Refresh air quality through the daily updater (test mode selects Kuala Lumpur):
+node --experimental-strip-types app/adapters/zetaris/usl/daily_update.ts --air-quality --test
+
 # Refresh NASA FIRMS Active Fires (past 5 days):
-node --experimental-strip-types app/zetaris/sources/nasa_firms/fetch_nasa_firms.ts --day-range 5
+node --experimental-strip-types app/adapters/zetaris/sources/nasa_firms/fetch_nasa_firms.ts --day-range 5
 
 # Refresh NASA POWER Climate (shifts target date to today - 4 days):
-node --experimental-strip-types app/zetaris/sources/nasa_power/fetch_nasa_power.ts
+node --experimental-strip-types app/adapters/zetaris/sources/nasa_power/fetch_nasa_power.ts
 
 # Refresh Windy Point Forecast (KL point; not part of daily_update.ts, run on demand):
-node --experimental-strip-types app/zetaris/sources/windy/fetch_windy.ts --all
+node --experimental-strip-types app/adapters/zetaris/sources/windy/fetch_windy.ts --all
 ```
 
 > **Note on Weather & Air Quality:**
-> Data.gov.my and Open-Meteo use live REST tables in Zetaris. They update **automatically on query execution** without running any daily update scripts.
+> Data.gov.my retains a live REST table. Open-Meteo air quality and wind now
+> use published FileStore CSV snapshots. Queries do not fetch newer API data;
+> rerun their source commands to publish updates. `--skip-api` republishes cached
+> data and keeps its original ingestion timestamps. Snapshot publication updates
+> the base views; do not assume it also refreshes an already activated USL copy.
+> The daily updater includes air-quality publication in its default run; use
+> `--air-quality` for that step alone and `--test` to select Kuala Lumpur.
 >
 > **Note on Windy:**
 > The two `windy_*` tables read from a FileStore CSV snapshot, not a live REST feed, so they do **not** update on query. Refresh them with `fetch_windy.ts` on demand; `daily_update.ts` excludes Windy because its Testing-tier key allows only 500 requests/day.
@@ -162,10 +188,10 @@ LIMIT 10;
 ---
 
 ### Predicate Pushdown Best Practice
-When querying point-based sources (Open-Meteo or NASA POWER), filter by `location_name` or `location_index` to leverage predicate pushdown and avoid scanning unnecessary endpoints:
+Filter by `location_name` or `location_index` and the requested time range to limit the selected rows. Open-Meteo air quality reads a FileStore snapshot; it does not make location-specific HTTP calls at query time. NASA POWER retains its REST-table path:
 
 ```sql
-SELECT 
+SELECT
     loc.location_name,
     aq.observation_time,
     aq.pm2_5_ug_m3

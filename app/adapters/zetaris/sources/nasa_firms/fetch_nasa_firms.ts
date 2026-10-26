@@ -30,7 +30,6 @@ const ZETARIS_ROOT = path.resolve(__dirname, "../../");
 const LOCATIONS_FILE = path.join(__dirname, "locations.json");
 const DATA_DIR = path.join(__dirname, "data");
 const CSV_DIR = path.join(DATA_DIR, "firms_csv");
-const FLAT_DIR = path.join(DATA_DIR, "firms_flat");
 const CONTAINER_PATH = "/home/zetaris/customer-data/shared/firms_flat";
 
 const FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/api/area/csv";
@@ -47,7 +46,7 @@ const MALAYSIA_REGIONS: Record<string, [number, number, number, number]> = {
 
 const LOCATION_BBOX_HALF = 0.25;
 
-const REGISTER_SQL = `
+export const REGISTER_SQL = `
 CREATE LIGHTNING DATABASE NASA_FIRMS_FILES
 DESCRIBE BY "NASA FIRMS active-fire CSV output";
 
@@ -59,12 +58,20 @@ OPTIONS (
     header "true",
     inferSchema "true"
 );
+
+UPDATE LIGHTNING FILESTORE TABLE active_fires
+FROM NASA_FIRMS_FILES
+OPTIONS (
+    PATH "/home/zetaris/customer-data/shared/firms_flat",
+    header "true",
+    inferSchema "true"
+);
 `.trim();
 
 // Cross-platform python executable detection
 const PYTHON_BIN = process.env.PYTHON_BIN ?? (process.platform === "win32" ? "python" : "python3");
 
-interface LocationRecord {
+export interface LocationRecord {
   id: string;
   name: string;
   latitude: number;
@@ -143,16 +150,19 @@ async function readLocations(): Promise<LocationRecord[]> {
   }));
 }
 
-function parseCsv(csvText: string): RawFirmsRecord[] {
+export function parseCsv(csvText: string): RawFirmsRecord[] {
   const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length <= 1) return [];
+  if (lines.length === 0) throw new Error("NASA FIRMS returned an empty CSV response.");
 
   const header = lines[0]!.split(",").map((c) => c.trim().toLowerCase());
+  if (!["latitude", "longitude", "acq_date", "acq_time", "satellite", "frp"].every((name) => header.includes(name))) {
+    throw new Error("NASA FIRMS returned an invalid CSV header.");
+  }
   const records: RawFirmsRecord[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const parts = lines[i]!.split(",").map((c) => c.trim());
-    if (parts.length < header.length) continue;
+    if (parts.length !== header.length) throw new Error("NASA FIRMS returned an invalid CSV row.");
 
     const row: Record<string, string> = {};
     for (let j = 0; j < header.length; j++) {
@@ -227,10 +237,18 @@ function normalize(
 
     const utcIso = `${yyyy}-${mm}-${dd}T${hh}:${min}:00.000Z`;
     const utcDate = new Date(utcIso);
-
-    const acqUtcStr = isNaN(utcDate.getTime())
-      ? `${r.acq_date} ${paddedTime.slice(0, 2)}:${paddedTime.slice(2, 4)}:00+00:00`
-      : `${r.acq_date} ${paddedTime.slice(0, 2)}:${paddedTime.slice(2, 4)}:00+00:00`;
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(r.acq_date) ||
+      !/^\d{4}$/.test(paddedTime) || Number(hh) > 23 || Number(min) > 59 ||
+      !Number.isFinite(utcDate.getTime()) || utcDate.toISOString().slice(0, 10) !== r.acq_date ||
+      !Number.isFinite(Number(r.latitude)) || Math.abs(Number(r.latitude)) > 90 ||
+      !Number.isFinite(Number(r.longitude)) || Math.abs(Number(r.longitude)) > 180 ||
+      !r.latitude.trim() || !r.longitude.trim() || !r.frp.trim() ||
+      !Number.isFinite(Number(r.frp)) || Number(r.frp) < 0
+    ) {
+      throw new Error("NASA FIRMS returned an invalid fire record.");
+    }
+    const acqUtcStr = `${r.acq_date} ${hh}:${min}:00+00:00`;
 
     // MYT = UTC + 8 hours
     const mytDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
@@ -312,73 +330,55 @@ async function writeOutput(
   return fresh.length;
 }
 
-async function fetchFirmsData(
+export async function fetchFirmsData(
   outputDir: string,
   locations: LocationRecord[],
-  isFiltered = false,
-  dayRange = 1,
+  isFiltered: boolean,
+  dayRange: number,
+  mapKey: string,
+  fetcher: typeof fetch = fetch,
 ): Promise<number> {
-  await loadEnvironment();
-  const mapKey = process.env.FIRMS_MAP_KEY;
   if (!mapKey) {
-    console.log("Note: FIRMS_MAP_KEY not set. Using existing local FIRMS data.");
-    return 0;
+    throw new Error("FIRMS_MAP_KEY is required. Use --skip-api only to publish existing cached data.");
   }
 
   const seen = new Set<string>();
   let total = 0;
 
-  if (isFiltered) {
-    for (const loc of locations) {
-      const bbox = locationBbox(loc).join(",");
-      for (const source of FIRMS_SOURCES) {
-        const url = `${FIRMS_BASE}/${mapKey}/${source}/${bbox}/${dayRange}`;
-        try {
-          const resp = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-          if (resp.ok) {
-            const rawText = (await resp.text()).replace(/^\ufeff/, "");
-            const records = parseCsv(rawText);
-            if (records.length > 0) {
-              const norm = normalize(records, source, loc);
-              const written = await writeOutput(norm, outputDir, seen);
-              total += written;
-            }
-          }
-        } catch (e) {
-          console.log(`Warning: Failed to fetch from FIRMS for ${loc.name} (${e instanceof Error ? e.message : e})`);
+  const targets = isFiltered
+    ? locations.map((location) => ({ coordinates: locationBbox(location), location }))
+    : Object.values(MALAYSIA_REGIONS).map((coordinates) => ({ coordinates, location: undefined }));
+  for (const target of targets) {
+    for (const source of FIRMS_SOURCES) {
+      const url = `${FIRMS_BASE}/${encodeURIComponent(mapKey)}/${source}/${target.coordinates.join(",")}/${dayRange}`;
+      let response: Response;
+      let text: string;
+      try {
+        response = await fetcher(url, { signal: AbortSignal.timeout(60_000), redirect: "error" });
+        if (!response.ok) {
+          await response.body?.cancel();
+          throw new Error("HTTP failure");
         }
+        text = await response.text();
+      } catch {
+        // A transport error can contain the credential-bearing URL.
+        throw new Error(`NASA FIRMS ${source} request failed; no new snapshot was published.`);
       }
-    }
-  } else {
-    for (const coords of Object.values(MALAYSIA_REGIONS)) {
-      const bbox = coords.join(",");
-      for (const source of FIRMS_SOURCES) {
-        const url = `${FIRMS_BASE}/${mapKey}/${source}/${bbox}/${dayRange}`;
-        try {
-          const resp = await fetch(url, { signal: AbortSignal.timeout(60_000) });
-          if (resp.ok) {
-            const rawText = (await resp.text()).replace(/^\ufeff/, "");
-            const records = parseCsv(rawText);
-            if (records.length > 0) {
-              const norm = normalize(records, source, undefined, locations);
-              const written = await writeOutput(norm, outputDir, seen);
-              total += written;
-            }
-          }
-        } catch (e) {
-          console.log(`Warning: Failed to fetch from FIRMS (${e instanceof Error ? e.message : e})`);
-        }
-      }
+      const records = parseCsv(text.replace(/^\ufeff/, ""));
+      total += await writeOutput(normalize(records, source, target.location, locations), outputDir, seen);
     }
   }
 
   return total;
 }
 
-async function clearDataDir(dataDir: string): Promise<void> {
-  await fs.rm(dataDir, { recursive: true, force: true });
-  await fs.mkdir(path.join(dataDir, "firms_csv"), { recursive: true });
-  await fs.mkdir(path.join(dataDir, "firms_flat"), { recursive: true });
+async function removeStagingDirectory(directory: string): Promise<void> {
+  const resolved = path.resolve(directory);
+  const relative = path.relative(path.resolve(DATA_DIR), resolved);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative) || !path.basename(resolved).startsWith(".firms-stage-")) {
+    throw new Error("Refusing to remove a directory outside the FIRMS staging area.");
+  }
+  await fs.rm(resolved, { recursive: true, force: true });
 }
 
 async function getCsvFiles(dir: string): Promise<string[]> {
@@ -419,7 +419,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       cwd,
       stdio: "inherit",
       windowsHide: true,
-      shell: process.platform === "win32",
+      shell: false,
     });
 
     child.on("error", (err) => reject(err));
@@ -435,32 +435,37 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
 
 async function publishToContainer(flatDir: string, container: string): Promise<void> {
   const parentPath = path.posix.dirname(CONTAINER_PATH);
+  const suffix = crypto.randomBytes(12).toString("hex");
+  const staging = `${CONTAINER_PATH}.stage-${suffix}`;
+  const backup = `${CONTAINER_PATH}.previous-${suffix}`;
   try {
     await runCommand("docker", ["exec", "-u", "root", container, "mkdir", "-p", parentPath], ZETARIS_ROOT);
-    await runCommand("docker", ["exec", "-u", "root", container, "rm", "-rf", CONTAINER_PATH], ZETARIS_ROOT);
-    await runCommand("docker", ["cp", flatDir, `${container}:${parentPath}/`], ZETARIS_ROOT);
-    await runCommand("docker", ["exec", "-u", "root", container, "chown", "-R", "zetaris:zetaris", CONTAINER_PATH], ZETARIS_ROOT);
-    await runCommand("docker", ["exec", "-u", "root", container, "chmod", "-R", "777", CONTAINER_PATH], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "mkdir", "-p", staging], ZETARIS_ROOT);
+    await runCommand("docker", ["cp", `${flatDir}${path.sep}.`, `${container}:${staging}/`], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "chown", "-R", "zetaris:zetaris", staging], ZETARIS_ROOT);
+    await runCommand("docker", ["exec", "-u", "root", container, "chmod", "-R", "u=rwX,go=rX", staging], ZETARIS_ROOT);
+    const swap = `set -eu
+target="$1"
+staging="$2"
+backup="$3"
+if [ -e "$target" ]; then mv "$target" "$backup"; fi
+if mv "$staging" "$target"; then
+  rm -rf -- "$backup"
+else
+  if [ -e "$backup" ]; then mv "$backup" "$target"; fi
+  exit 1
+fi`;
+    await runCommand("docker", ["exec", "-u", "root", container, "sh", "-c", swap, "firms-swap", CONTAINER_PATH, staging, backup], ZETARIS_ROOT);
     console.log(`[Step] Published FIRMS flat CSVs to ${container}:${CONTAINER_PATH}/`);
-  } catch (e) {
-    console.log(`Note: Could not copy FIRMS CSVs to docker (${e instanceof Error ? e.message : e}). Ensure files exist at ${CONTAINER_PATH}/`);
+  } catch {
+    throw new Error("Publishing the NASA FIRMS snapshot to the Zetaris driver failed.");
   }
 }
 
 async function registerTable(dryRun: boolean): Promise<void> {
-  if (!dryRun) {
-    try {
-      const dropDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-firms-drop-"));
-      const dropFile = path.join(dropDir, "drop_table.sql");
-      try {
-        await fs.writeFile(dropFile, "DROP LIGHTNING DATABASE TABLE NASA_FIRMS_FILES.active_fires;\n", "utf-8");
-        await runCommand(PYTHON_BIN, ["scripts/run_sql.py", dropFile], ZETARIS_ROOT);
-      } finally {
-        await fs.rm(dropDir, { recursive: true, force: true });
-      }
-    } catch {
-      // Table may not exist yet; safe to ignore
-    }
+  if (dryRun) {
+    console.log(REGISTER_SQL);
+    return;
   }
 
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "zetaris-firms-"));
@@ -469,28 +474,27 @@ async function registerTable(dryRun: boolean): Promise<void> {
   try {
     await fs.writeFile(sqlFile, REGISTER_SQL, "utf-8");
     const cmdArgs = ["scripts/run_sql.py", "--skip-exists"];
-    if (dryRun) {
-      cmdArgs.push("--dry-run");
-    }
     cmdArgs.push(sqlFile);
 
     await runCommand(PYTHON_BIN, cmdArgs, ZETARIS_ROOT);
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    const relative = path.relative(path.resolve(os.tmpdir()), path.resolve(tempDir));
+    if (relative && !relative.startsWith("..") && !path.isAbsolute(relative) && path.basename(tempDir).startsWith("zetaris-firms-")) {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
   }
 }
 
-function parseCliArgs(): {
+export function parseCliArgs(args = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env): {
   locationIds: string[];
   dayRange: number;
   container: string;
   skipApi: boolean;
   dryRun: boolean;
 } {
-  const args = process.argv.slice(2);
   const locationIds: string[] = [];
   let dayRange = 3;
-  let container = "zetaris-driver-1";
+  let container = env.ZETARIS_DRIVER_CONTAINER || "zetaris-driver-1";
   let skipApi = false;
   let dryRun = false;
 
@@ -501,33 +505,68 @@ function parseCliArgs(): {
     } else if (arg === "--skip-api") {
       skipApi = true;
     } else if (arg === "--day-range") {
-      if (i + 1 < args.length) {
-        dayRange = parseInt(args[i + 1]!, 10) || 1;
-        i++;
-      }
+      const value = args[++i];
+      if (!value || value.startsWith("--")) throw new Error("--day-range requires a number.");
+      dayRange = Number(value);
     } else if (arg?.startsWith("--day-range=")) {
-      dayRange = parseInt(arg.slice("--day-range=".length), 10) || 1;
+      dayRange = Number(arg.slice("--day-range=".length));
     } else if (arg === "--container") {
-      if (i + 1 < args.length) {
-        container = args[i + 1]!;
-        i++;
-      }
+      const value = args[++i];
+      if (!value || value.startsWith("--")) throw new Error("--container requires a container name.");
+      container = value;
     } else if (arg?.startsWith("--container=")) {
       container = arg.slice("--container=".length);
     } else if (arg === "--location") {
-      if (i + 1 < args.length) {
-        locationIds.push(args[i + 1]!);
-        i++;
-      }
+      const value = args[++i];
+      if (!value || value.startsWith("--")) throw new Error("--location requires a location id.");
+      locationIds.push(value);
     } else if (arg?.startsWith("--location=")) {
       locationIds.push(arg.slice("--location=".length));
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
     }
   }
+
+  if (!Number.isInteger(dayRange) || dayRange < 1 || dayRange > 5) throw new Error("--day-range must be an integer from 1 to 5.");
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(container)) throw new Error("Invalid Zetaris driver container name.");
+  if (locationIds.some((id) => !id.trim())) throw new Error("--location requires a location id.");
 
   return { locationIds, dayRange, container, skipApi, dryRun };
 }
 
-async function main(): Promise<void> {
+async function commitCache(staging: string, replaceCsv: boolean): Promise<void> {
+  const names = replaceCsv ? ["firms_csv", "firms_flat"] : ["firms_flat"];
+  const committed: Array<{ name: string; hadPrevious: boolean }> = [];
+  try {
+    for (const name of names) {
+      const target = path.join(DATA_DIR, name);
+      const previous = path.join(staging, `previous_${name}`);
+      let hadPrevious = false;
+      try {
+        await fs.rename(target, previous);
+        hadPrevious = true;
+      } catch (error) {
+        if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      }
+      try {
+        await fs.rename(path.join(staging, name), target);
+      } catch (error) {
+        if (hadPrevious) await fs.rename(previous, target);
+        throw error;
+      }
+      committed.push({ name, hadPrevious });
+    }
+  } catch (error) {
+    for (const entry of committed.reverse()) {
+      await fs.rename(path.join(DATA_DIR, entry.name), path.join(staging, entry.name));
+      if (entry.hadPrevious) await fs.rename(path.join(staging, `previous_${entry.name}`), path.join(DATA_DIR, entry.name));
+    }
+    throw error;
+  }
+}
+
+export async function main(): Promise<void> {
+  await loadEnvironment();
   const { locationIds, dayRange, container, skipApi, dryRun } = parseCliArgs();
 
   const allLocations = await readLocations();
@@ -544,53 +583,51 @@ async function main(): Promise<void> {
       if (match) {
         selected.push(match);
       } else {
-        console.error(`Unknown location ID or name '${req}'.`);
-        process.exit(1);
+        throw new Error(`Unknown location ID or name '${req}'.`);
       }
     }
   }
 
-  if (!skipApi && !dryRun) {
-    console.log(`Clearing previous local FIRMS data in ${DATA_DIR}...`);
-    await clearDataDir(DATA_DIR);
-    if (isFiltered) {
-      const names = selected.map((l) => l.name).join(", ");
-      console.log(`Checking NASA FIRMS active fires for specific location(s): ${names}...`);
-    } else {
-      console.log("Checking NASA FIRMS active fires for nationwide Malaysia...");
-    }
-    const fetched = await fetchFirmsData(CSV_DIR, selected, isFiltered, dayRange);
-    console.log(`Fetched ${fetched} new active fire records.`);
-  }
-
-  console.log(`Flattening CSV partitions to ${FLAT_DIR}...`);
-  const count = await flattenCsv(CSV_DIR, FLAT_DIR);
-  console.log(`Flattened ${count} CSV files.`);
-
-  // If no fire records were fetched, write a header-only placeholder so Zetaris
-  // can always infer the schema from the FileStore table (avoids UNRESOLVED_COLUMN).
-  if (count === 0 && !dryRun) {
-    const placeholder = path.join(FLAT_DIR, "_empty_placeholder.csv");
-    const header = "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight,source,region,location_id,acq_utc,acq_myt";
-    await fs.writeFile(placeholder, header + "\n", "utf-8");
-    console.log("  ✓ No active fires found — wrote header-only placeholder CSV for schema inference.");
-  }
-
   if (dryRun) {
+    console.log(`[Dry run] Would ${skipApi ? "reuse cached FIRMS CSVs" : `fetch ${dayRange} days of FIRMS data for ${isFiltered ? selected.map((location) => location.name).join(", ") : "Malaysia"}`} in a staging directory.`);
+    console.log(`[Dry run] Would publish a complete snapshot to ${container}:${CONTAINER_PATH}.`);
     console.log("[Dry run] Registration statements:");
     await registerTable(true);
     return;
   }
 
-  console.log("Publishing FIRMS flat files to Zetaris container...");
-  await publishToContainer(FLAT_DIR, container);
-
-  console.log("Registering NASA_FIRMS_FILES.active_fires in Zetaris...");
-  await registerTable(false);
-  console.log("✓ NASA FIRMS active fire ingestion completed.");
+  const mapKey = process.env.FIRMS_MAP_KEY;
+  if (!skipApi && !mapKey) throw new Error("FIRMS_MAP_KEY is required. Use --skip-api only to publish existing cached data.");
+  if (skipApi && (await getCsvFiles(CSV_DIR)).length === 0) throw new Error("No cached FIRMS CSV snapshot exists. Fetch data before using --skip-api.");
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  const staging = await fs.mkdtemp(path.join(DATA_DIR, ".firms-stage-"));
+  const stagedCsv = path.join(staging, "firms_csv");
+  const stagedFlat = path.join(staging, "firms_flat");
+  try {
+    await fs.mkdir(stagedCsv);
+    if (!skipApi) {
+      const count = await fetchFirmsData(stagedCsv, selected, isFiltered, dayRange, mapKey!);
+      console.log(`Fetched ${count} active fire records.`);
+    }
+    const count = await flattenCsv(skipApi ? CSV_DIR : stagedCsv, stagedFlat);
+    if (count === 0) {
+      const header = "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight,source,region,location_id,acq_utc,acq_myt\n";
+      // A header-only file represents a successful zero-fire response, never a failed download.
+      await fs.writeFile(path.join(stagedFlat, "empty.csv"), header, "utf8");
+      if (!skipApi) await fs.writeFile(path.join(stagedCsv, "empty.csv"), header, "utf8");
+    }
+    await publishToContainer(stagedFlat, container);
+    await registerTable(false);
+    await commitCache(staging, !skipApi);
+    console.log("NASA FIRMS active fire ingestion completed.");
+  } finally {
+    await removeStagingDirectory(staging);
+  }
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : "NASA FIRMS ingestion failed.");
+    process.exitCode = 1;
+  });
+}

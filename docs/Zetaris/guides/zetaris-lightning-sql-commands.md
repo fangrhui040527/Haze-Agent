@@ -4,15 +4,15 @@
 
 Start with [your first SQL commands](../connections/lightning-recipe-reference.md), using the supplied `NY_TAXI` and `TPCDS_DB` samples.
 
-| Stage | Commands to learn | Prerequisites |
-|---|---|---|
-| Check execution | `SELECT 1`, `SHOW SERVER VERSION` | Login and query permission |
-| Discover sources | `SHOW LIGHTNING DATABASES`, `SHOW DATASOURCES` | Login; results are limited to your access |
-| Inspect sample tables | `SHOW LIGHTNING TABLES`, `DESCRIBE DATASOURCE TABLE` | Access to the supplied NY Taxi or TPCDS tables |
-| Read sample data | `SELECT ... LIMIT 5` | Query permission on an existing table |
-| Create views and connect more data | SchemaStore, file, REST and datasource commands | Creation permission, your own object names and the source-specific setup below |
-| Build models and pipelines | USL, DQ, pipeline and data-mart commands | Accessible source data and the required namespaces or containers |
-| Manage storage, access and cleanup | Export, cache, grant, revoke and drop commands | Writable storage or management permission, with a confirmed scope |
+| Stage                              | Commands to learn                                    | Prerequisites                                                                  |
+| ---------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Check execution                    | `SELECT 1`, `SHOW SERVER VERSION`                    | Login and query permission                                                     |
+| Discover sources                   | `SHOW LIGHTNING DATABASES`, `SHOW DATASOURCES`       | Login; results are limited to your access                                      |
+| Inspect sample tables              | `SHOW LIGHTNING TABLES`, `DESCRIBE DATASOURCE TABLE` | Access to the supplied NY Taxi or TPCDS tables                                 |
+| Read sample data                   | `SELECT ... LIMIT 5`                                 | Query permission on an existing table                                          |
+| Create views and connect more data | SchemaStore, file, REST and datasource commands      | Creation permission, your own object names and the source-specific setup below |
+| Build models and pipelines         | USL, DQ, pipeline and data-mart commands             | Accessible source data and the required namespaces or containers               |
+| Manage storage, access and cleanup | Export, cache, grant, revoke and drop commands       | Writable storage or management permission, with a confirmed scope              |
 
 Empty discovery lists are valid. Use `SHOW DATASOURCES` for external database connections and `SHOW LIGHTNING DATABASES` for file/REST sources.
 
@@ -58,17 +58,15 @@ This reference contains 144 Lightning commands.
 
 ### 2.1 Syntax notation
 
-
 | Notation           | Meaning                                                                   |
 | ------------------ | ------------------------------------------------------------------------- |
 | `KEYWORD`          | A keyword, entered as shown. Keywords are not case-sensitive.             |
 | `<name>`           | A value supplied by the user.                                             |
 | `'<text>'`         | A value supplied as a quoted string. Single or double quotes may be used. |
 | `[ … ]`            | An optional element.                                                      |
-| `{ A \| B }` | Choose one alternative. |
+| `{ A \| B }`       | Choose one alternative.                                                   |
 | `…`                | The preceding element may be repeated.                                    |
 | `(key 'value', …)` | An option list of key and quoted value pairs, separated by commas.        |
-
 
 ### 2.2 Entry format
 
@@ -77,7 +75,6 @@ Each entry gives syntax, a description, privileges, any limitations or notes, an
 ### 2.3 Example objects
 
 Examples use the objects below. Create the required objects and replace names with your team names. Hosts, credentials and incomplete JSON are placeholders. The starter guide uses already-registered `NY_TAXI` and `TPCDS_DB` samples.
-
 
 | Object                         | Description                                                                                    |
 | ------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -91,13 +88,12 @@ Examples use the objects below. Create the required objects and replace names wi
 | `sales_mart`                   | A virtual data mart                                                                            |
 | `alice@example.com`, `analyst` | A user and a role                                                                              |
 
-
 ## 3. General Rules
 
 1. **One statement per execution.** The SQL Workspace splits editor text on semicolons. Submit each command separately.
 2. **Qualified table names.** Commands that operate on a table require the form `<source>.<table>`.
 3. **Identifiers and values.** Object names are written without quotes; names containing special characters are enclosed in backquotes. Text values are enclosed in single or double quotes.
-4. **Privileges.** Commands marked *Administrators only* are refused for other users. Other commands require the permission stated in the entry, and return only the objects assigned to the user.
+4. **Privileges.** Commands marked _Administrators only_ are refused for other users. Other commands require the permission stated in the entry, and return only the objects assigned to the user.
 5. **Standard SQL.** Registered tables are queried with standard Spark SQL, for example `SELECT … FROM crm_pg.customers`, and may be joined across sources.
 
 ## 4. Data Sources

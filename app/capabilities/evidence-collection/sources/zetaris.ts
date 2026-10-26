@@ -128,7 +128,7 @@ export function zetarisAdapter(
             covered: 0,
             excluded: [],
             gaps: [
-              'Login works. No pinned haze queries are configured in server/config/zetaris-queries.json yet.',
+              'Login works. No pinned haze queries are configured in app/dashboard/config/zetaris-queries.json yet.',
             ],
           },
         };

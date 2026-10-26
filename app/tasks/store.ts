@@ -88,6 +88,14 @@ import {
   type WorldAcceptancePolicy,
 } from './world-policy.js';
 import type { CapabilityWorldModelAdapter } from '../orchestration/ports.js';
+import type { AdapterResult, WriteSummary } from '../world/types.js';
+import {
+  entityId,
+  findHazeRecord,
+  ingestAdapterResult,
+  ingestCollectionCapture,
+  validateAdapterResult,
+} from '../world/ingest.js';
 
 export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v2';
 export const STORAGE_MARKER = 'storage-format.json';
@@ -271,6 +279,8 @@ export class TaskStore {
   readonly worldAcceptancePolicy: WorldAcceptancePolicy;
   private definitions: StoreDefinitions | undefined;
   private transactionDepth = 0;
+  private readonly worldListeners = new Set<(event: WorldEvent) => void>();
+  private readonly pendingWorldEvents: WorldEvent[] = [];
   constructor(
     directory = '.state/general-v2',
     options: {
@@ -377,7 +387,10 @@ export class TaskStore {
       this.db,
       (operation) => this.atomic(operation),
       undefined,
-      (event) => this.publishWorldLifecycle(event),
+      (event) => {
+        this.publishWorldLifecycle(event);
+        this.pendingWorldEvents.push(event);
+      },
     );
     // A format-only migration preserves acceptance history; normal runtime opens
     // evaluate it against the configured server policy.
@@ -2103,18 +2116,44 @@ export class TaskStore {
   }
   private atomic<T>(operation: () => T): T {
     if (this.transactionDepth) return operation();
+    const eventOffset = this.pendingWorldEvents.length;
+    let committed = false;
     this.db.exec('BEGIN IMMEDIATE');
     this.transactionDepth++;
     try {
       const result = operation();
       this.db.exec('COMMIT');
+      committed = true;
       return result;
     } catch (error) {
       this.db.exec('ROLLBACK');
+      this.pendingWorldEvents.splice(eventOffset);
       throw error;
     } finally {
       this.transactionDepth--;
+      if (committed) {
+        const events = this.pendingWorldEvents.splice(eventOffset);
+        for (const event of events)
+          for (const listener of this.worldListeners) {
+            // Observer failure must never change an already committed write.
+            try {
+              listener(event);
+            } catch {
+              /* Reconnect reads authoritative state. */
+            }
+          }
+      }
     }
+  }
+
+  subscribeWorld(listener: (event: WorldEvent) => void): () => void {
+    this.worldListeners.add(listener);
+    return () => this.worldListeners.delete(listener);
+  }
+
+  /** Internal service/migration boundary; never exposed as arbitrary HTTP writes. */
+  withWorldTransaction<T>(operation: () => T): T {
+    return this.atomic(operation);
   }
   private core(id: string, identity?: TaskIdentity): TaskCore {
     const row = this.db.prepare('SELECT body FROM tasks WHERE id=?').get(id) as
@@ -3248,6 +3287,128 @@ export class TaskStore {
       return { artifact: result.value, reused: result.reused };
     });
   }
+  /** Trusted configured watcher input; shares task storage, scope and provenance. */
+  ingestHazeAdapterResult(
+    result: AdapterResult,
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    runId: string,
+  ): WriteSummary {
+    validateAdapterResult(result);
+    return this.atomic(() => {
+      const artifacts = new Map<string, Artifact>();
+      const scope = { ...identity, mode };
+      for (const { record, raw } of result.evidence) {
+        const retained = findHazeRecord(
+          this.world,
+          scope,
+          'evidence',
+          entityId('evidence', record.evidenceId),
+        );
+        const original = retained?.payload as unknown as
+          { attrs: Record<string, unknown> } | undefined;
+        if (original && original.attrs.rawSha256 !== record.rawSha256)
+          fail(
+            'evidence_identity_conflict',
+            'Pinned haze evidence identity was reused with different raw bytes.',
+          );
+        const evidence = original?.attrs ?? record;
+        const dependencies: ArtifactRef[] = [];
+        const chunkBytes = 262_144;
+        if (raw.length > chunkBytes * CONTRACT_LIMITS.references)
+          fail(
+            'evidence_too_large',
+            'A raw response exceeds the 64 MiB retained evidence bound.',
+            413,
+          );
+        for (
+          let offset = 0;
+          offset < raw.length || offset === 0;
+          offset += chunkBytes
+        ) {
+          const content = {
+            schema_version: 'haze.evidence.raw-chunk.v1',
+            raw_sha256: record.rawSha256,
+            index: offset / chunkBytes,
+            raw_base64: raw
+              .subarray(offset, offset + chunkBytes)
+              .toString('base64'),
+          };
+          const artifact = this.retainHazeServiceArtifact(
+            identity,
+            mode,
+            `raw:${record.rawSha256}:${offset}`,
+            'haze.evidence.raw.chunk',
+            content,
+            [],
+            record.retrievedAt,
+          );
+          dependencies.push({
+            id: artifact.id,
+            version: artifact.version,
+            sha256: artifact.sha256,
+          });
+        }
+        const content = {
+          schema_version: 'haze.evidence.retained.v1',
+          mode,
+          record: evidence,
+          raw_sha256: record.rawSha256,
+          raw_bytes: raw.length,
+          chunks: dependencies,
+        } as JsonValue;
+        const capture = this.retainHazeServiceArtifact(
+          identity,
+          mode,
+          `evidence:${contentHash(evidence)}`,
+          'haze.evidence.capture',
+          content,
+          dependencies,
+          record.retrievedAt,
+        );
+        artifacts.set(record.evidenceId, capture);
+      }
+      return ingestAdapterResult(this.world, scope, result, runId, artifacts);
+    });
+  }
+
+  private retainHazeServiceArtifact(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    key: string,
+    kind: string,
+    content: JsonValue,
+    dependencies: ArtifactRef[],
+    createdAt: string,
+  ): Artifact {
+    return this.operation(
+      identity,
+      `haze-service-artifact:${mode}`,
+      key,
+      { kind, content, dependencies },
+      () => {
+        const artifact: Artifact = {
+          schema_version: 'haze.artifact.v3',
+          id: randomUUID(),
+          version: 1,
+          identity: copy(identity),
+          sha256: contentHash(content),
+          kind,
+          producer: { kind: 'service', id: 'HazeOps' },
+          created_at: createdAt,
+          dependencies,
+          required_tools: [],
+          content,
+          evidence_origin:
+            mode === 'fixture' ? 'synthetic_fixture' : 'external_source',
+        };
+        this.insertArtifact(artifact);
+        this.projectArtifact(artifact, mode);
+        return artifact;
+      },
+    ).value;
+  }
+
   saveArtifact(
     taskId: string,
     identity: TaskIdentity,
@@ -3379,6 +3540,8 @@ export class TaskStore {
       this.projectArtifact(dependency, mode, nextAncestors, projectedKeys);
 
     const projected = this.world.projectArtifact(artifact, mode).value;
+    if (artifact.kind === 'evidence.collection.capture')
+      ingestCollectionCapture(this.world, artifact, mode);
     for (const dependency of dependencies) {
       const projectedDependency = this.world.projectArtifact(
         dependency,

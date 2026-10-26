@@ -33,9 +33,25 @@ Open-Meteo and Data.gov.my fetchers do not
 require keys.
 
 The examples provide configuration names and local development defaults, not
-hosted-service credentials. To run the local SmokeLedger PostgreSQL database,
-use `npm run db:init`; its development-only connection defaults are documented
-in the root environment example. Existing `app/adapters/zetaris/.env.local`
+hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
+Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
+have their own source folders alongside air quality. PostgreSQL is no longer
+required for these source-ingestion commands or the PM2.5 task. Preview a bounded
+setup from the repository root before applying it:
+
+```sh
+npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
+npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
+npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
+```
+
+After reviewing the plan, rerun the selected command without `--dry-run` to
+fetch and register the source snapshots. A task reads the published snapshot;
+it does not refresh it. Existing SmokeLedger PostgreSQL data and its optional
+USL remain under [legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md).
+No existing database rows or saved task captures are migrated automatically.
+
+Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris
 helpers. Process variables take precedence; root `.env` values win over the
 legacy adapter file, including empty values. Move any settings you still use
@@ -59,7 +75,12 @@ Open **World Model** in the main navigation, or `/world-model`, to browse retain
 
 The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
 
-When the dashboard keeps an older `STATE_DIR`, set `HAZE_TASK_STATE_DIR=.state/general-v2` for Vite's task API. This isolates task storage without changing or migrating the dashboard's archive directory.
+The dashboard, HazeOps watchers, general tasks and `/world-model` now use one
+application backend and the same SQLite World Model. Vite dev and preview serve
+all `/api` routes locally; a separate dashboard server is unnecessary.
+`HAZE_TASK_STATE_DIR` remains a Vite override for the whole application store.
+Use a compatible `.state/general-v2` directory; existing legacy directories remain
+archival until explicitly imported. See the [dashboard migration guide](app/dashboard/README.md).
 
 ## Verify general execution
 
@@ -87,6 +108,7 @@ Browse the [documentation index](docs/README.md) for guides grouped by topic.
 | [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                 |
 | `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                               |
 | `app/adapters/`                                                     | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
+| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                            |
 | [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                         |
 | [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                            |
 | `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                         |
@@ -115,6 +137,6 @@ Task records, assignments, charged attempts, actions, control receipts, question
 
 Restart fences old workers. Accepted completed work remains available, while calls interrupted without a receipt retain their charge and unknown outcome. Explicit resume requests a replacement attempt under the original deadline and remaining budget; expired work requires an explicitly linked continuation run with fresh reservations. No automatic retry occurs.
 
-The application retains a local single-user boundary, two active tasks and two shared specialist slots. It supports configurable bounded resources and one purpose-bound peer channel per run. Source attribution is not proof of authenticity. World Model accepted-state decisions, external effects, memory capture, publication, alerts and scheduled monitoring remain disabled. Fixture checks, model prose and engine conformance do not confer scientific or operational qualification.
+The application retains a local single-user boundary, two active tasks and two shared specialist slots. It supports configurable bounded resources and one purpose-bound peer channel per run. Source attribution is not proof of authenticity. World Model acceptance is disabled by default and requires an explicit supported policy. HazeOps can run bounded recurring evidence collection; `HAZEOPS_SCHEDULER=off` disables it. External effects, memory capture, publication, alerts and scheduled operational monitoring remain disabled. Fixture checks, model prose and engine conformance do not confer scientific or operational qualification.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and review conventions.
