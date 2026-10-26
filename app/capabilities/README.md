@@ -31,6 +31,11 @@ bind concrete work to a role and declare the services they need. Capabilities ca
 also define prerequisites, independent review requirements, peer channels and
 World Model adapters.
 
+The damage-account input bridge lives in
+[adapters/damage-input-adapter](../adapters/damage-input-adapter/README.md).
+Composition supplies the capability's request/scope and input reconstruction
+policy to that adapter; accounting methods and independent checks stay here.
+
 The current roles are Manager, HazeOps, WorkerShield, EvidenceCritic and
 DamageAccountant. Their instructions live in `app/agents/`; domain methods and
 checks live here. Shared execution interfaces belong to

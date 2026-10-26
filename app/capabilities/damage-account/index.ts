@@ -22,7 +22,7 @@ import {
   damageWorldQuerySchema,
   damageWorldResolutionSchema,
 } from '../../contracts/damage-world.js';
-import { readDamageWorldSelection } from './world-input-adapter.js';
+import { readDamageWorldSelection } from '../../adapters/damage-input-adapter/index.js';
 import { TaskError, type TaskRequest } from '../../contracts/tasks.js';
 import type {
   AssignmentDefinition,

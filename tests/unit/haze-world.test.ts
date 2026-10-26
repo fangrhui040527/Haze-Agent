@@ -7,6 +7,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TaskStore } from '../../app/tasks/store.js';
 import { HazeWorld, entityId } from '../../app/world/haze-world.js';
@@ -197,6 +198,27 @@ describe('one shared dashboard and task World Model', () => {
     ).toEqual([
       { id: artifact.id, version: artifact.version, sha256: artifact.sha256 },
     ]);
+    const location = store.world.lookup(
+      { ...identity, mode: 'fixture' },
+      { kind: 'haze_location', limit: 10 },
+    )[0]!;
+    const locationSupports = store.world.supportArtifacts(
+      { ...identity, mode: 'fixture' },
+      location.ref.id,
+    ).length;
+    store.saveArtifact(task.id, identity, {
+      kind: 'evidence.collection.capture',
+      content: capture as JsonValue,
+      producer: { kind: 'service', id: 'collection-test' },
+      generation: 1,
+      evidence_origin: 'synthetic_fixture',
+    });
+    expect(
+      store.world.supportArtifacts(
+        { ...identity, mode: 'fixture' },
+        location.ref.id,
+      ),
+    ).toHaveLength(locationSupports);
     const before = store.db
       .prepare('SELECT COUNT(*) AS count FROM artifacts')
       .get();
@@ -279,6 +301,38 @@ describe('one shared dashboard and task World Model', () => {
         )
         .get(),
     ).toEqual({ count: 5 });
+  });
+
+  it('does not project fixture watcher captures or raw chunks into a live task', async () => {
+    const { store, world } = setup();
+    const { result } = await collected();
+    await world.syncLocations(scope.locations, at);
+    await world.writeAdapterResult(result, 'fixture-only');
+    const evidence = store.world.lookup(
+      { ...identity, mode: 'fixture' },
+      { kind: 'haze_evidence', limit: 1 },
+    )[0]!;
+    const captureRef = store.world.context(
+      { ...identity, mode: 'fixture' },
+      evidence.ref.id,
+    )!.support_artifacts[0]!;
+    const capture = store.artifact(captureRef.id, identity, captureRef);
+    for (const ref of [captureRef, capture.dependencies[0]!]) {
+      const request = taskRequestSchema.parse({
+        schema_version: 'haze.task.request.v3',
+        objective: 'Read captured evidence.',
+        context_refs: [ref],
+      });
+      expect(() =>
+        store.admit(request, identity, 'consumer', { mode: 'live' }),
+      ).toThrow('execution mode mismatch');
+    }
+    expect(
+      store.world.lookup(
+        { ...identity, mode: 'live' },
+        { kind: 'artifact_reference', limit: 10 },
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -393,5 +447,34 @@ describe('explicit legacy dashboard migration', () => {
     expect(target.store.world.events({ ...identity, mode: 'fixture' })).toEqual(
       [],
     );
+  });
+
+  it('keeps existing target evidence untouched when legacy identity has different raw bytes', async () => {
+    const target = setup();
+    const legacy = await archive();
+    const conflicting = (await collected()).result;
+    const raw = Buffer.from('different retained target bytes');
+    conflicting.evidence[0] = {
+      record: {
+        ...conflicting.evidence[0]!.record,
+        rawSha256: createHash('sha256').update(raw).digest('hex'),
+        rawBytes: raw.length,
+      },
+      raw,
+    };
+    conflicting.facts = [];
+    conflicting.stations = [];
+    await target.world.writeAdapterResult(conflicting, 'target-first');
+    const before = target.store.world.events({ ...identity, mode: 'fixture' });
+    expect(() =>
+      migrateDashboardState(target.store, legacy.path, identity, 'fixture'),
+    ).toThrow('identity was reused with different raw bytes');
+    expect(target.store.world.events({ ...identity, mode: 'fixture' })).toEqual(
+      before,
+    );
+    expect(target.world.rawEvidence(legacy.evidence.record.evidenceId)).toEqual(
+      raw,
+    );
+    expect(target.world.entities('location')).toEqual([]);
   });
 });

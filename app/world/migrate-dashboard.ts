@@ -165,6 +165,34 @@ export function migrateDashboardState(
       );
 
   return store.withWorldTransaction(() => {
+    // Evidence IDs are immutable. Check the existing target before replaying
+    // any entity revision, since replay itself would otherwise mask a conflict.
+    const archiveHashes = new Map<string, string>();
+    for (const entity of entities) {
+      if (entity.type !== 'evidence') continue;
+      const rawSha256 = entity.attrs.rawSha256;
+      if (typeof rawSha256 !== 'string')
+        throw new Error('Legacy evidence has no pinned raw hash.');
+      const archived = archiveHashes.get(entity.id);
+      if (archived !== undefined && archived !== rawSha256)
+        throw new Error(
+          'Legacy evidence identity was reused with different raw bytes.',
+        );
+      archiveHashes.set(entity.id, rawSha256);
+      const existing = findHazeRecord(
+        store.world,
+        scope,
+        'evidence',
+        entity.id,
+      );
+      if (
+        existing &&
+        (existing.payload as unknown as WmEntity).attrs.rawSha256 !== rawSha256
+      )
+        throw new Error(
+          'Pinned haze evidence identity was reused with different raw bytes.',
+        );
+    }
     for (const entity of entities) putHazeEntity(store.world, scope, entity);
     for (const result of evidence)
       store.ingestHazeAdapterResult(

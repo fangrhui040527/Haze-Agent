@@ -44,8 +44,11 @@ grants determine whether a particular call is authorized.
 
 [Contracts](../contracts/README.md) holds shared data schemas. Agent behavior lives
 in `app/agents/`, domain methods in `app/capabilities/`, and provider integrations
-in `app/adapters/`. Add concrete implementations there and register them in
-`app/composition.ts`; shared execution interfaces and validation belong here.
+and service bridges in `app/adapters/`. The
+[World Model damage-input bridge](../adapters/damage-input-adapter/README.md)
+receives its domain policy through composition. Add concrete implementations
+there and register them in `app/composition.ts`; shared execution interfaces and
+validation belong here.
 
 See the [LangGraph runtime architecture](../../docs/architecture/langgraph-runtime.md)
 for graph topology, replay, waits and recovery.

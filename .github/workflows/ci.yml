@@ -37,8 +37,6 @@ jobs:
         run: npm ci
       - name: Install locked frontend dependencies
         run: npm ci --prefix frontend
-      - name: Install locked server dependencies
-        run: npm ci --prefix server
       - name: Verify engine and workflow pins
         run: npm run verify:pins
       - name: Check types
@@ -53,7 +51,7 @@ jobs:
         run: npm --prefix frontend run build
       - name: Test general frontend results, questions, controls and receipts
         run: npm --prefix frontend test
-      - name: Run focused unit, engine adapter and SQLite persistence tests
+      - name: Run unit, dashboard, HazeOps and SQLite persistence tests
         run: npm test
       - name: Run pinned upstream engine conformance
         run: npm run test:engines
@@ -61,11 +59,6 @@ jobs:
         run: npm run test:integration
         env:
           STATE_DIR: ${{ runner.temp }}/haze-general-verification
-      - name: Check Haze server types
-        run: npm run typecheck --prefix server
-      - name: Run Haze server tests (needs the build above)
-        run: npm test --prefix server
-
   postgres:
     name: PostgreSQL saver integration
     runs-on: ubuntu-latest

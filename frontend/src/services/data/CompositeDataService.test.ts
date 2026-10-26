@@ -45,6 +45,15 @@ const settle = async () => {
 afterEach(() => setShowDemoWithReal(false));
 
 describe('CompositeDataService live replacements', () => {
+  it('labels shared fixture observations as fictional', async () => {
+    const service = new CompositeDataService(
+      new FakeDataService(snapshot(['hz-fixture'], true)),
+      new FakeDataService(snapshot(['demo-one'], true)),
+    );
+    await service.loadSnapshot();
+    expect(service.label).toBe('Haze app (fictional fixture data)');
+  });
+
   it('reconciles reconnect snapshots, removes vanished real items and keeps demo rows in mixed mode', async () => {
     setShowDemoWithReal(true);
     const real = new FakeDataService(snapshot(['hz-old', 'hz-stay']));

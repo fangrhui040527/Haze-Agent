@@ -69,7 +69,7 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
 
-Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` retrieves compatible retained accounting captures and their exact original evidence. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
+Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
 
 Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/Testing/world-model-control-plane.md) for configuration and isolated checks.
 
@@ -101,21 +101,21 @@ The fixture verifier imports a source, completes a general explanation and a PM2
 
 Browse the [documentation index](docs/README.md) for guides grouped by topic.
 
-| Path                                                                | Purpose                                                                                    |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
-| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
-| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                 |
-| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                               |
-| `app/adapters/`                                                     | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
-| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                            |
-| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                         |
-| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                            |
-| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                         |
-| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                        |
-| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                              |
-| `third_party/`                                                      | Pinned engine sources                                                                      |
-| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records           |
+| Path                                                                | Purpose                                                                                                                     |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API                                          |
+| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries                                  |
+| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                                                  |
+| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                                                                |
+| `app/adapters/`                                                     | Provider integrations, World Model damage-input bridge, pinned Meterless facades and Zetaris deployment/data-source tooling |
+| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                                                             |
+| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                                                          |
+| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                                                             |
+| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                                                          |
+| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                                                         |
+| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                                                               |
+| `third_party/`                                                      | Pinned engine sources                                                                                                       |
+| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records                                            |
 
 ## Offline infrastructure and engine pins
 

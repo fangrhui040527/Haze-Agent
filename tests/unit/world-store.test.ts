@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TaskStore } from '../../app/tasks/store.js';
 import type {
@@ -187,6 +188,51 @@ describe('transactional World Model writes', () => {
         .relationships(scope, analysis.ref.id)
         .filter((relationship) => relationship.kind === 'supported_by'),
     ).toEqual([firstLink.value, secondLink.value]);
+  });
+
+  it('bounds current context while keeping all support refs and paginated lineage', () => {
+    const store = createStore();
+    const hub = store.world.putRecord(
+      put('hub', 'location', 'geo:hub', { name: 'Hub' }),
+    ).value;
+    for (let index = 0; index < 110; index++) {
+      const support = store.world.putRecord(
+        put(`support-${index}`, 'artifact_reference', `support:${index}`, {
+          artifact: {
+            id: randomUUID(),
+            version: 1,
+            sha256: 'a'.repeat(64),
+          },
+        }),
+      ).value;
+      store.world.relate(
+        relate(`link-${index}`, 'supported_by', hub.ref, support.ref),
+      );
+    }
+    const context = store.world.context(scope, hub.ref.id)!;
+    expect(context.relationships).toHaveLength(100);
+    expect(context.support_artifacts).toHaveLength(64);
+    const detail = store.worldRecordDetailForIdentity(
+      identity,
+      'fixture',
+      hub.ref.id,
+    );
+    expect(detail.relationships).toHaveLength(100);
+    expect(detail.support_artifacts).toHaveLength(64);
+    expect(store.world.supportArtifacts(scope, hub.ref.id)).toHaveLength(110);
+    const first = store.world.lineage(scope, {
+      record_id: hub.ref.id,
+      limit: 100,
+    })!;
+    expect(first.entries).toHaveLength(100);
+    expect(first.page.has_more).toBe(true);
+    const second = store.world.lineage(scope, {
+      record_id: hub.ref.id,
+      limit: 100,
+      cursor: first.page.next_cursor,
+    })!;
+    expect(second.entries).toHaveLength(11);
+    expect(second.page.has_more).toBe(false);
   });
 
   it('isolates live, fixture, and replay state and requires exact relationship endpoints', () => {
