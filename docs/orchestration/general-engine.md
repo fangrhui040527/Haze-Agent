@@ -23,8 +23,8 @@ All routes use the `/api` prefix and retain the local same-origin boundary. Ever
 | `POST /api/tasks`                   | Admit `haze.task.request.v3` with an objective and optional bounded JSON scope, context references, constraints and deliverables   |
 | `GET /api/tasks/:id`                | Current task, runs, assignments, corrections, questions, applicability and general result                                          |
 | `GET /api/tasks/:id/events?after=0` | Durable events with an exclusive numeric cursor                                                                                    |
-| `GET /api/tasks/:id/world`          | Related World Model records and their current acceptance status                                                                  |
-| `GET /api/world/records/:id`        | Authorized record detail or bounded history/lineage (`view`, `limit`, `cursor`)                                                 |
+| `GET /api/tasks/:id/world`          | Related World Model records and their current acceptance status                                                                    |
+| `GET /api/world/records/:id`        | Authorized record detail or bounded history/lineage (`view`, `limit`, `cursor`)                                                    |
 | `POST /api/tasks/:id/updates`       | `haze.task.update.v3` exact correction/clarification passage and optional revised scope, imported source references or question ID |
 | `POST /api/tasks/:id/control`       | `haze.task.control.v3` pause, cancel, resume, continue or revoke                                                                   |
 | `GET /api/capabilities`             | Registered capability and readiness metadata                                                                                       |
