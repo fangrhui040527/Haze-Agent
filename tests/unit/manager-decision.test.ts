@@ -484,6 +484,49 @@ describe('registered Manager decision layer', () => {
     );
     expect(context.context_status.truncated).toBe(true);
   });
+  it('passes text-only corrections to plan templates and keeps a scoped correction as the template objective', async () => {
+    const original =
+      'Investigate the haze over Batu Pahat on 6–7 October 2026.';
+    const { task, registry, store } = await setup(original);
+    const seen: string[] = [];
+    const capability = registry.capabilities.get('test.source')!;
+    registry.capabilities.set('test.source', {
+      ...capability,
+      assignments: (request) => {
+        seen.push(request.objective);
+        return [];
+      },
+    });
+    const correction = (passage: string, scope?: unknown) => ({
+      id: randomUUID(),
+      objective_revision: task.objective_revision,
+      kind: 'correction' as const,
+      passage,
+      affected_assignment_ids: [],
+      created_at: task.created_at,
+      ...(scope === undefined ? {} : { scope }),
+    });
+    const contextFor = (corrections: ReturnType<typeof correction>[]) => {
+      const supplied = structuredClone(store.read(task.id, identity));
+      supplied.corrections.push(...(corrections as never[]));
+      assembleManagerContext(
+        supplied,
+        registry,
+        store.managerState(task.id, identity)!,
+        { events: [], artifacts: [], maxBytes: 100000 },
+      );
+    };
+
+    contextFor([correction('Change the area to Klang.')]);
+    expect(seen.at(-1)).toBe(`${original}\nChange the area to Klang.`);
+
+    contextFor([
+      correction('Use the explicit scope.', { town: 'Klang' }),
+      correction('Change the area to Muar.'),
+    ]);
+    // Unchanged: the latest scoped correction's passage remains the template objective.
+    expect(seen.at(-1)).toBe('Use the explicit scope.');
+  });
   it('shortens optional lookup prose without displacing original constraints, source references, or advertised tool ids', async () => {
     const { task, registry, store } = await setup();
     const source = store.importArtifact(

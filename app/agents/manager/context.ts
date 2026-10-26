@@ -46,7 +46,12 @@ export function assembleManagerContext(
     .find((c) => c.scope !== undefined);
   const templateRequest = {
     ...request,
-    ...(scopedCorrection ? { objective: scopedCorrection.passage } : {}),
+    // Text-only corrections must reach the plan templates too, not only capability matching.
+    objective: scopedCorrection
+      ? scopedCorrection.passage
+      : [request.objective, ...task.corrections.map((c) => c.passage)].join(
+          '\n',
+        ),
   };
   const matchingRequest = {
     ...request,
