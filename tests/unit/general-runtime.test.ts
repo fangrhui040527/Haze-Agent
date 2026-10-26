@@ -334,6 +334,26 @@ describe('general runtime', () => {
     expect(
       task.assignments.some((item) => item.role === 'EvidenceCritic'),
     ).toBe(true);
+    const projected = (
+      instance.store.db
+        .prepare(
+          `SELECT body FROM world_entities
+           WHERE principal=? AND workspace=? AND mode=?`,
+        )
+        .all(
+          localTaskIdentity.principal,
+          localTaskIdentity.workspace,
+          task.mode,
+        ) as { body: string }[]
+    ).map((row) => worldRecordSchema.parse(JSON.parse(row.body)));
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining([
+        'synthesis_source_reference',
+        'synthesis_citation',
+        'evidence_synthesis_bundle',
+        'evidence_synthesis_review',
+      ]),
+    );
   });
   it('persists a source question and answers it with a newly imported source', async () => {
     const instance = await runtime();
