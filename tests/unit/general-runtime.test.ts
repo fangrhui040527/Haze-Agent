@@ -458,6 +458,61 @@ describe('general runtime', () => {
       ),
     ).toBe(true);
   });
+  it('keeps an explicitly scoped episode investigation partial when evidence branches are unconfigured', async () => {
+    const instance = await runtime();
+    const admitted = instance.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Investigate the October haze episode.',
+        scope: {
+          episode_id: 'episode-2026-10',
+          label: 'October haze episode',
+          geography: { id: 'klang', label: 'Klang' },
+          period: {
+            start: '2026-10-01T00:00:00Z',
+            end: '2026-10-02T00:00:00Z',
+          },
+        },
+      },
+      'episode-world-model',
+    );
+    const task = await until(instance, admitted.task_id, terminal);
+    expect(task.status, task.error?.message).toBe('completed');
+    expect(task.result?.completion).toBe('partial');
+    const records = instance.store.db
+      .prepare(
+        `SELECT body FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .all(
+        localTaskIdentity.principal,
+        localTaskIdentity.workspace,
+        task.mode,
+      ) as { body: string }[];
+    const projected = records.map((row) =>
+      worldRecordSchema.parse(JSON.parse(row.body)),
+    );
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining(['episode_context', 'episode_evidence_gap']),
+    );
+    const gap = projected.find(
+      (record) => record.kind === 'episode_evidence_gap',
+    )!;
+    expect(gap.payload).toMatchObject({
+      branches: [
+        {
+          id: 'observations',
+          status: 'unresolved',
+          source_availability: 'not_configured',
+        },
+        {
+          id: 'attribution',
+          status: 'unresolved',
+          source_availability: 'not_configured',
+        },
+      ],
+    });
+  });
   it('rejects old protocol and client authority, and deduplicates exact admission', async () => {
     const instance = await runtime();
     expect(() =>
