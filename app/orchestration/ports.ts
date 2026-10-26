@@ -6,13 +6,19 @@ import type {
 } from '../adapters/agent-model.js';
 import type { Artifact, ArtifactRef } from '../contracts/artifacts.js';
 import type { AgentRole, CapabilityCard } from '../contracts/capabilities.js';
-import type { TaskRequest, TaskRecord, TaskEvent } from '../contracts/tasks.js';
+import type {
+  Assignment,
+  TaskRequest,
+  TaskRecord,
+  TaskEvent,
+} from '../contracts/tasks.js';
 import type {
   ManagerDecision,
   ManagerState,
   ArtifactReviewCheck,
 } from '../contracts/manager.js';
 import type { ManagerContext } from '../contracts/manager.js';
+import type { WorldAssessment, WorldRecord } from '../contracts/world.js';
 import type { AgentAction } from './contracts.js';
 
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
@@ -22,6 +28,48 @@ export interface AssignmentPlan {
   brief: string;
   depends_on: string[];
   input?: unknown;
+}
+export interface WorldModelRecordDraft {
+  kind: string;
+  external_id: string;
+  payload: WorldRecord['payload'];
+  evidence: ArtifactRef[];
+  relationships?: {
+    kind: string;
+    external_id: string;
+    relationship: string;
+  }[];
+}
+export interface WorldModelAcceptanceCandidate {
+  subject: WorldRecord['ref'];
+  stated_use: string;
+  evidence: ArtifactRef[];
+}
+export interface WorldModelReviewRequirement {
+  id: string;
+  evidence: ArtifactRef[];
+  reviewer_roles: AgentRole[];
+}
+export interface CapabilityWorldModelAdapter {
+  extract(input: {
+    request: TaskRequest;
+    artifacts: readonly Artifact[];
+  }): WorldModelRecordDraft[];
+  buildAcceptanceCandidate(input: {
+    request: TaskRequest;
+    records: readonly WorldRecord[];
+    assessments: readonly WorldAssessment[];
+    artifacts: readonly Artifact[];
+    assignments: readonly Pick<
+      Assignment,
+      'id' | 'revision' | 'definition_id' | 'role' | 'status' | 'support'
+    >[];
+  }): WorldModelAcceptanceCandidate | undefined;
+  requiredReviewCoverage(input: {
+    request: TaskRequest;
+    assignments: readonly AssignmentPlan[];
+    artifacts: readonly Artifact[];
+  }): WorldModelReviewRequirement[];
 }
 export interface CapabilityDefinition {
   card: CapabilityCard;
@@ -45,6 +93,7 @@ export interface CapabilityDefinition {
         limitations: string[];
       }
     | undefined;
+  worldModel?: CapabilityWorldModelAdapter;
 }
 export interface ToolContext {
   taskId: string;

@@ -25,6 +25,11 @@ import {
   createPm25Capability,
   createPm25Tools,
 } from './capabilities/pm25/index.js';
+import {
+  createDamageAccountingAssignments,
+  createDamageAccountingCapability,
+} from './capabilities/damage-accounting/index.js';
+import { damageAccountScopeSchema } from './capabilities/damage-accounting/contracts.js';
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
@@ -40,13 +45,22 @@ export function createExecutionRegistry(options: {
     damageAccountantAgent,
   ])
     registry.registerAgent(agent);
-  registry.registerCapability(createDamageAccountCapability());
+  const calculatedDamage = createDamageAccountCapability();
+  registry.registerCapability({
+    ...calculatedDamage,
+    // Supplied manifest scopes belong to the separate account-intake workflow.
+    matches: (request) =>
+      !damageAccountScopeSchema.safeParse(request.scope).success &&
+      calculatedDamage.matches(request),
+  });
   registry.registerCapability(createPm25Capability());
+  registry.registerCapability(createDamageAccountingCapability());
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
     ...createDamageAccountAssignments(),
     ...createPm25Assignments(),
+    ...createDamageAccountingAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])

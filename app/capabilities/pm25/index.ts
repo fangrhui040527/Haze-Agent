@@ -21,9 +21,11 @@ import {
   independentlyCheckPm25,
   pm25AnalysisSchema,
 } from './methods.js';
+import { pm25WorldModelAdapter } from './world.js';
 
 export { framePm25Scope } from './contracts.js';
 export { analyzePm25, independentlyCheckPm25 } from './methods.js';
+export { pm25WorldModelAdapter } from './world.js';
 
 export function createPm25Capability(): CapabilityDefinition {
   return {
@@ -92,6 +94,7 @@ export function createPm25Capability(): CapabilityDefinition {
       !/^\s*(?:please\s+)?(?:explain|describe|interpret|what|why|how)\b.*\b(?:report|source|supplied|imported)\b/iu.test(
         request.objective,
       ),
+    worldModel: pm25WorldModelAdapter,
     assignments(request) {
       let input: unknown;
       try {
@@ -405,6 +408,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
         const artifact = services.save('review', {
           ...checked,
           verdict: checked.valid ? 'supported' : 'rejected',
+          reviewer_role: 'EvidenceCritic',
           reviewed_artifacts: [capture, analysis].map(
             ({ id, version, sha256 }) => ({ id, version, sha256 }),
           ),

@@ -3,8 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
-import { ExecutionRegistry } from '../../app/orchestration/ports.js';
 import { managerAgent } from '../../app/agents/manager/index.js';
+import {
+  ExecutionRegistry,
+  type CapabilityWorldModelAdapter,
+} from '../../app/orchestration/ports.js';
+import {
+  taskRequestSchema,
+  taskResultSchema,
+} from '../../app/contracts/tasks.js';
 
 const instances: { runtime: TaskRuntime; directory: string }[] = [];
 afterEach(async () => {
@@ -32,6 +39,63 @@ describe('task-family extensibility', () => {
               instructions: 'Use registered methods only.',
             },
       );
+    const request = taskRequestSchema.parse({
+      schema_version: 'haze.task.request.v3',
+      objective: 'Analyze this vocabulary.',
+      scope: { vocabulary: ['rain', 'wind', 'forest'] },
+    });
+    const worldModel: CapabilityWorldModelAdapter = {
+      extract: ({ artifacts }) =>
+        artifacts.map((artifact) => ({
+          kind: 'vocabulary_claim',
+          external_id: `vocabulary:${artifact.id}:${artifact.version}`,
+          payload: {
+            artifact: {
+              id: artifact.id,
+              version: artifact.version,
+              sha256: artifact.sha256,
+            },
+          },
+          evidence: [
+            {
+              id: artifact.id,
+              version: artifact.version,
+              sha256: artifact.sha256,
+            },
+          ],
+        })),
+      buildAcceptanceCandidate: ({ request, records, artifacts }) => {
+        const subject = records.find(
+          (record) => record.kind === 'vocabulary_claim',
+        );
+        if (!subject) return undefined;
+        return {
+          subject: subject.ref,
+          stated_use: request.objective,
+          evidence: artifacts.map(({ id, version, sha256 }) => ({
+            id,
+            version,
+            sha256,
+          })),
+        };
+      },
+      requiredReviewCoverage: ({ assignments, artifacts }) =>
+        assignments.some(
+          (assignment) => assignment.definition_id === 'vocabulary.review',
+        )
+          ? [
+              {
+                id: 'vocabulary-independent-review',
+                evidence: artifacts.map(({ id, version, sha256 }) => ({
+                  id,
+                  version,
+                  sha256,
+                })),
+                reviewer_roles: ['EvidenceCritic'],
+              },
+            ]
+          : [],
+    };
     registry.registerCapability({
       card: {
         id: 'vocabulary-test',
@@ -43,7 +107,7 @@ describe('task-family extensibility', () => {
         readiness: 'implemented',
         limitations: ['Test capability.'],
       },
-      matches: (request) => request.objective.includes('vocabulary'),
+      matches: (candidate) => candidate.objective.includes('vocabulary'),
       assignments: (request) =>
         Array.from({ length: 7 }, (_, index) => ({
           key: `part-${index}`,
@@ -52,6 +116,7 @@ describe('task-family extensibility', () => {
           depends_on: index ? [`part-${index - 1}`] : [],
           input: request.scope,
         })),
+      worldModel,
     });
     registry.registerAssignment({
       id: 'vocabulary.part',
@@ -118,6 +183,74 @@ describe('task-family extensibility', () => {
       localTaskIdentity,
     );
     expect(product.content).toMatchObject({ words: 3, characters: 14 });
+    const capability = registry.capabilities.get('vocabulary-test')!;
+    expect(capability.worldModel).toBe(worldModel);
+    const extracted = worldModel.extract({ request, artifacts: [product] });
+    const projected = runtime.store.world.putRecord({
+      scope: {
+        principal: localTaskIdentity.principal,
+        workspace: localTaskIdentity.workspace,
+        mode: 'fixture',
+      },
+      operation_key: 'extension-vocabulary-record',
+      kind: 'vocabulary_claim',
+      external_id: `vocabulary:${product.id}:${product.version}`,
+      payload: {
+        artifact: {
+          id: product.id,
+          version: product.version,
+          sha256: product.sha256,
+        },
+      },
+      producer: { kind: 'assignment', id: 'vocabulary.part' },
+    }).value;
+    expect(extracted).toHaveLength(1);
+    expect(
+      worldModel.buildAcceptanceCandidate({
+        request,
+        records: [projected],
+        assessments: [],
+        artifacts: [product],
+        assignments: [],
+      }),
+    ).toEqual({
+      subject: projected.ref,
+      stated_use: request.objective,
+      evidence: [
+        {
+          id: product.id,
+          version: product.version,
+          sha256: product.sha256,
+        },
+      ],
+    });
+    expect(
+      worldModel.requiredReviewCoverage({
+        request,
+        assignments: [
+          {
+            key: 'review',
+            definition_id: 'vocabulary.review',
+            brief: 'Independently review claims.',
+            depends_on: [],
+          },
+        ],
+        artifacts: [product],
+      }),
+    ).toEqual([
+      {
+        id: 'vocabulary-independent-review',
+        evidence: [
+          {
+            id: product.id,
+            version: product.version,
+            sha256: product.sha256,
+          },
+        ],
+        reviewer_roles: ['EvidenceCritic'],
+      },
+    ]);
+    expect(taskResultSchema.parse(task.result)).toEqual(task.result);
     expect(
       task.assignments.every(
         (assignment) =>

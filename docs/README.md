@@ -23,6 +23,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 - [General task engine](orchestration/general-engine.md) - current v3 protocol, ownership, controls and recovery.
 - [LangGraph implementation report](orchestration/langgraph-implementation-report.md) — baseline, runtime migration verification and remaining release gates.
 - [LangGraph cutover and rollback](orchestration/langgraph-cutover-runbook.md) — explicit state-copy migration and matching executable/snapshot recovery.
+- [World Model data model](05-world-model-data-model.md) — legacy HazeOps storage and the active v3 model, acceptance, and access boundaries.
 - [General engine verification](orchestration/general-engine-verification.md) - release checks and explicit fixture/live evidence.
 - [DamageAccountant implementation report](orchestration/damage-accountant-implementation-report.md) - imported accounting, independent checks, task integration and empirical release gates.
 

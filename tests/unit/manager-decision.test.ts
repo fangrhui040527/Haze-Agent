@@ -244,4 +244,94 @@ describe('registered Manager decision layer', () => {
       ),
     ).toThrow('not silently discarded');
   });
+  it('shortens optional lookup prose without displacing original constraints, source references, or advertised tool ids', async () => {
+    const { task, registry, store } = await setup();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'evidence.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('An exact retained source.').toString(
+          'base64',
+        ),
+      },
+      identity,
+      'lookup-budget-source',
+    ).artifact;
+    const ref = {
+      id: source.id,
+      version: source.version,
+      sha256: source.sha256,
+    };
+    store.recordApplicability(
+      task.id,
+      identity,
+      ref,
+      true,
+      'User source.',
+      'User',
+    );
+    const supplied = store.read(task.id, identity);
+    supplied.original_request.context_refs = [ref];
+    supplied.original_request.scope = { geography: 'Klang' };
+    supplied.corrections.push({
+      id: '00000000-0000-4000-8000-000000000071',
+      objective_revision: supplied.objective_revision,
+      kind: 'clarification',
+      passage:
+        'Keep modeled evidence distinct from observations and retain the supplied scope.',
+      affected_assignment_ids: [],
+      created_at: source.created_at,
+      context_refs: [ref],
+    });
+    const originalTool = [...registry.tools.values()].find(
+      (tool) => tool.manager_read_only,
+    )!;
+    const description = 'Read bounded authorized evidence. '.repeat(500);
+    const lookupIds = ['budget.lookup-first', 'budget.lookup-second'];
+    for (const id of lookupIds)
+      registry.registerTool({ ...originalTool, id, description });
+    supplied.permissions.tools = lookupIds;
+    const originalRequest = structuredClone(supplied.original_request);
+    const originalCorrections = structuredClone(supplied.corrections);
+    const state = store.managerState(task.id, identity)!;
+    const originalState = structuredClone(state);
+    const context = assembleManagerContext(supplied, registry, state, {
+      events: [],
+      artifacts: [source],
+      maxBytes: 6000,
+    });
+
+    expect(context.request).toEqual(originalRequest);
+    expect(context.corrections).toEqual(originalCorrections);
+    expect(context.artifacts).toContainEqual(
+      expect.objectContaining({ ref, current: true }),
+    );
+    expect(context.source_applicability).toContainEqual({
+      id: source.id,
+      current: true,
+    });
+    expect(context.lookups.map((lookup) => lookup.id)).toEqual(lookupIds);
+    expect(
+      context.lookups.every(
+        (lookup) => lookup.description.length < description.length,
+      ),
+    ).toBe(true);
+    expect(
+      context.context_status.missing.some(
+        (message) =>
+          message.includes('Optional catalog prose') &&
+          message.includes('omitted'),
+      ),
+    ).toBe(true);
+    expect(
+      context.capabilities.map((capability) => capability.card.id),
+    ).toEqual([...registry.capabilities.keys()]);
+    expect(context.context_status.truncated).toBe(true);
+    expect(Buffer.byteLength(JSON.stringify(context))).toBeLessThanOrEqual(
+      6000,
+    );
+    expect(registry.tools.get(lookupIds[0]!)?.description).toBe(description);
+    expect(state).toEqual(originalState);
+  });
 });

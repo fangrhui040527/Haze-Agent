@@ -495,6 +495,28 @@ export function assembleManagerContext(
           capability.card.purpose.slice(0, 64) + ' [Purpose truncated.]';
     status.truncated = true;
   }
+  // Optional prose and inspection excerpts must not displace exact
+  // instructions, evidence references, or review coverage as the registry grows.
+  if (bytes(context) > limit) {
+    status.missing.push(
+      'Optional catalog prose, completed briefs or inspection excerpts omitted; full details retained.',
+    );
+    status.truncated = true;
+    for (const lookup of context.lookups)
+      if (bytes(context) > limit) lookup.description = '';
+    for (const capability of context.capabilities)
+      if (
+        bytes(context) > limit &&
+        !relevantCapabilities.has(capability.card.id) &&
+        capability.card.purpose
+      )
+        capability.card.purpose = '';
+    for (const assignment of context.assignments)
+      if (bytes(context) > limit && assignment.status === 'completed')
+        assignment.brief = '';
+    for (const inspection of context.inspections)
+      if (bytes(context) > limit) inspection.excerpt = '';
+  }
   if (bytes(context) > limit)
     throw new TaskError(
       422,

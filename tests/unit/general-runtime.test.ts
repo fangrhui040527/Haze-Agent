@@ -75,13 +75,20 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
 async function runtime(
-  options: { model?: AgentModel; mode?: 'fixture' | 'live' } = {},
+  options: {
+    model?: AgentModel;
+    mode?: 'fixture' | 'live';
+    acceptancePolicy?: 'research-v1';
+  } = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'haze-general-runtime-'));
   const instance = new TaskRuntime({
     stateDirectory: directory,
     registry: createExecutionRegistry({ mode: options.mode ?? 'fixture' }),
     mode: options.mode ?? 'fixture',
+    ...(options.acceptancePolicy
+      ? { acceptancePolicy: options.acceptancePolicy }
+      : {}),
     ...(options.model ? { model: scriptedManager(options.model) } : {}),
   });
   cleanups.push(async () => {
@@ -121,6 +128,12 @@ function expectation(task: TaskRecord) {
     expected_generation: task.generation,
     expected_state_revision: task.state_revision,
   };
+}
+function projectedWorldRecords(instance: TaskRuntime, task: TaskRecord) {
+  return instance.store.world.lookup(
+    { ...localTaskIdentity, mode: task.mode },
+    { limit: 50 },
+  );
 }
 
 describe('general runtime', () => {
@@ -399,6 +412,150 @@ describe('general runtime', () => {
     expect(
       task.assignments.some((item) => item.role === 'EvidenceCritic'),
     ).toBe(true);
+    const projected = projectedWorldRecords(instance, task);
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining([
+        'synthesis_source_reference',
+        'synthesis_citation',
+        'evidence_synthesis_bundle',
+        'evidence_synthesis_review',
+      ]),
+    );
+    const bundle = projected.find(
+      (record) => record.kind === 'evidence_synthesis_bundle',
+    )!;
+    const acceptance = instance.store.world.acceptancesForRecord(
+      { ...localTaskIdentity, mode: task.mode },
+      bundle.ref.id,
+    )[0];
+    expect(acceptance?.status).toBe('not_eligible');
+    expect(acceptance?.policy).toMatchObject({ id: 'disabled', version: '0' });
+  });
+  it('accepts a reviewed synthesis only when the server enables its matching policy', async () => {
+    const instance = await runtime({ acceptancePolicy: 'research-v1' });
+    const source = instance.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'research-notes.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from(
+          'A model represents the relationships among observed entities.',
+        ).toString('base64'),
+      },
+      'policy-source',
+    );
+    const admitted = instance.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Summarize this source.',
+        context_refs: [
+          { id: source.id, version: source.version, sha256: source.sha256 },
+        ],
+      },
+      'policy-task',
+    );
+    const task = await until(instance, admitted.task_id, terminal);
+    expect(task.status, task.error?.message).toBe('completed');
+    const worldRecords = projectedWorldRecords(instance, task);
+    const bundle = worldRecords.find(
+      (record) => record.kind === 'evidence_synthesis_bundle',
+    );
+    expect(bundle).toBeDefined();
+    const acceptance = instance.store.world.acceptancesForRecord(
+      { ...localTaskIdentity, mode: task.mode },
+      bundle!.ref.id,
+    )[0];
+    expect(acceptance?.status).toBe('accepted');
+    expect(acceptance?.stated_use).toBe('evidence-synthesis');
+    expect(acceptance?.policy).toMatchObject({
+      id: 'research-v1',
+      version: '1',
+    });
+    expect(typeof acceptance?.expires_at).toBe('string');
+    const extractor = task.assignments.find(
+      (assignment) => assignment.definition_id === 'evidence-synthesis.extract',
+    )!;
+    instance.store.update(
+      task.id,
+      localTaskIdentity,
+      'correct-accepted-source',
+      {
+        schema_version: 'haze.task.update.v3',
+        ...expectation(task),
+        kind: 'correction',
+        passage: 'The cited material needs correction.',
+        affected_assignment_ids: [extractor.id],
+      },
+    );
+    expect(() =>
+      instance.store.saveResult(
+        task.id,
+        task.current_run_id,
+        task.generation,
+        task.result!,
+      ),
+    ).toThrow('fenced');
+    expect(
+      instance.store.world.currentAcceptance(
+        { ...localTaskIdentity, mode: task.mode },
+        instance.store.world.acceptancesForRecord(
+          { ...localTaskIdentity, mode: task.mode },
+          bundle!.ref.id,
+        )[0]!.id,
+        {
+          policyHash: instance.store.worldAcceptancePolicy.sha256,
+        },
+      )?.status,
+    ).toBe('held');
+  });
+  it('places a support hold when a required tool grant is revoked', async () => {
+    const instance = await runtime({ acceptancePolicy: 'research-v1' });
+    const source = instance.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'grant-source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from(
+          'A source connects observations to a named entity.',
+        ).toString('base64'),
+      },
+      'grant-source',
+    );
+    const admitted = instance.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Summarize this source.',
+        context_refs: [
+          { id: source.id, version: source.version, sha256: source.sha256 },
+        ],
+      },
+      'grant-task',
+    );
+    const task = await until(instance, admitted.task_id, terminal);
+    expect(task.status, task.error?.message).toBe('completed');
+    const records = projectedWorldRecords(instance, task);
+    const bundle = records.find(
+      (record) => record.kind === 'evidence_synthesis_bundle',
+    )!;
+    expect(
+      instance.store.world.acceptancesForRecord(
+        { ...localTaskIdentity, mode: task.mode },
+        bundle.ref.id,
+      )[0]?.status,
+    ).toBe('accepted');
+    instance.store.control(task.id, localTaskIdentity, 'revoke-context-grant', {
+      schema_version: 'haze.task.control.v3',
+      ...expectation(task),
+      action: 'revoke',
+      revoked_tools: ['world.context'],
+      reason: 'Context access was withdrawn.',
+    });
+    expect(
+      instance.store.world.acceptancesForRecord(
+        { ...localTaskIdentity, mode: task.mode },
+        bundle.ref.id,
+      )[0]?.status,
+    ).toBe('held');
   });
   it('persists a source question and answers it with a newly imported source', async () => {
     const instance = await runtime();
@@ -481,6 +638,26 @@ describe('general runtime', () => {
         .events.filter((event) => event.type === 'peer_message_sent'),
     ).toHaveLength(2);
     expect(task.usage.tool_calls).toBe(1);
+    const projected = projectedWorldRecords(instance, task);
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining([
+        'pm25_location',
+        'pm25_modeled_capture',
+        'pm25_analysis_reference',
+        'pm25_numerical_review_reference',
+      ]),
+    );
+    const relationshipCount = instance.store.db
+      .prepare(
+        `SELECT COUNT(*) AS count FROM world_relationships
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .get(
+        localTaskIdentity.principal,
+        localTaskIdentity.workspace,
+        task.mode,
+      ) as { count: number };
+    expect(relationshipCount.count).toBeGreaterThan(0);
     expect(
       task.result?.provenance.receipts.some(
         (receipt) =>
@@ -490,6 +667,49 @@ describe('general runtime', () => {
           receipt.kind === 'tool',
       ),
     ).toBe(true);
+  });
+  it('keeps an explicitly scoped episode investigation partial when evidence branches are unconfigured', async () => {
+    const instance = await runtime();
+    const admitted = instance.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Investigate the October haze episode.',
+        scope: {
+          episode_id: 'episode-2026-10',
+          label: 'October haze episode',
+          geography: { id: 'klang', label: 'Klang' },
+          period: {
+            start: '2026-10-01T00:00:00Z',
+            end: '2026-10-02T00:00:00Z',
+          },
+        },
+      },
+      'episode-world-model',
+    );
+    const task = await until(instance, admitted.task_id, terminal);
+    expect(task.status, task.error?.message).toBe('completed');
+    expect(task.result?.completion).toBe('partial');
+    const projected = projectedWorldRecords(instance, task);
+    expect(projected.map((record) => record.kind)).toEqual(
+      expect.arrayContaining(['episode_context', 'episode_evidence_gap']),
+    );
+    const gap = projected.find(
+      (record) => record.kind === 'episode_evidence_gap',
+    )!;
+    expect(gap.payload).toMatchObject({
+      branches: [
+        {
+          id: 'observations',
+          status: 'unresolved',
+          source_availability: 'not_configured',
+        },
+        {
+          id: 'attribution',
+          status: 'unresolved',
+          source_availability: 'not_configured',
+        },
+      ],
+    });
   });
   it('rejects old protocol and client authority, and deduplicates exact admission', async () => {
     const instance = await runtime();

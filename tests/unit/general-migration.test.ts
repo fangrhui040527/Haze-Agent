@@ -18,6 +18,7 @@ import {
 } from '../../app/contracts/tasks.js';
 import { TaskStore, STORAGE_MARKER } from '../../app/tasks/store.js';
 import { migrateGeneralState } from '../../app/tasks/migrate.js';
+import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.js';
 import {
   graphThreadId,
   type GraphAuthority,
@@ -67,7 +68,7 @@ function pause(store: TaskStore, id: string) {
   });
 }
 function legacy(source: string, store: TaskStore) {
-  // Construct a fixture with only the original application's tables and marker.
+  // Retire graph execution and restore the v1 marker, retaining its optional World Model tables.
   store.db.exec(
     'DELETE FROM run_execution; DELETE FROM graph_jobs; DELETE FROM graph_waits;',
   );
@@ -87,6 +88,122 @@ const authority = (task: TaskRecord): GraphAuthority => ({
 });
 
 describe('explicit v1 migration', () => {
+  it('preserves World Model history, acceptances, receipts and task pins without changing policy during migration', async () => {
+    const { source, target, store, task } = setup();
+    const scope = { ...identity, mode: task.mode };
+    const artifact = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'world-source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Preserved World Model evidence.').toString(
+          'base64',
+        ),
+      },
+      identity,
+      'world-source',
+    ).artifact;
+    const evidence = {
+      id: artifact.id,
+      version: artifact.version,
+      sha256: artifact.sha256,
+    };
+    const assignment = store.createAssignments(
+      task.id,
+      task.current_run_id,
+      task.objective_revision,
+      [
+        {
+          role: 'HazeOps',
+          definition_id: 'test.world-context',
+          capability: 'test',
+          definition_version: '1',
+          brief: 'Pin preserved World Model context.',
+        },
+      ],
+    )[0]!;
+    store.acquireAssignment(task.id, assignment.id);
+    const recordInput = {
+      scope,
+      operation_key: 'preserved-world-record',
+      kind: 'analysis',
+      external_id: 'migration:analysis',
+      payload: { result: 'Preserve the accepted analysis.' },
+      producer: { kind: 'service' as const, id: 'migration-test' },
+    };
+    const record = store.world.putRecord(recordInput);
+    store.pinWorldContext(
+      task.id,
+      identity,
+      assignment.id,
+      task.generation,
+      [evidence],
+      'Preserve historical research context.',
+      record.value.ref.id,
+    );
+    const projectedArtifact = store.world.projectArtifact(artifact, task.mode);
+    store.world.relate({
+      scope,
+      operation_key: 'preserved-world-evidence',
+      kind: 'supported_by',
+      from: record.value.ref,
+      to: projectedArtifact.value.ref,
+    });
+    const policy = resolveWorldAcceptancePolicy('research-v1');
+    const acceptance = store.world.evaluateAcceptance({
+      scope,
+      subject: record.value.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy: { id: policy.id, version: policy.version, sha256: policy.sha256 },
+      support_revisions: [
+        {
+          schema_version: 'haze.world.support-revision.v1',
+          id: `artifact:${artifact.id}:${artifact.version}`,
+          scope,
+          revision: artifact.version,
+          kind: 'artifact',
+          sha256: artifact.sha256,
+          artifact: evidence,
+          recorded_at: new Date().toISOString(),
+        },
+      ],
+      actor: { kind: 'service', id: 'migration-test' },
+    });
+    pause(store, task.id);
+    const worldTables = store.db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'world_%' ORDER BY name",
+      )
+      .all() as { name: string }[];
+    const preservedRows = new Map(
+      worldTables.map(({ name }) => [
+        name,
+        store.db.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all(),
+      ]),
+    );
+    legacy(source, store);
+    const before = digest(join(source, 'tasks.sqlite'));
+
+    await migrateGeneralState({
+      sourceDirectory: source,
+      targetDirectory: target,
+    });
+
+    expect(digest(join(source, 'tasks.sqlite'))).toBe(before);
+    const upgraded = new TaskStore(target, { acceptancePolicy: 'research-v1' });
+    stores.push(upgraded);
+    for (const [table, expectedRows] of preservedRows)
+      expect(
+        upgraded.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all(),
+        table,
+      ).toEqual(expectedRows);
+    expect(upgraded.world.acceptance(scope, acceptance.id)).toEqual(acceptance);
+    expect(upgraded.world.putRecord(recordInput)).toEqual({
+      ...record,
+      changed: false,
+    });
+  });
   it('preserves historical bytes, receipts and checkpoints, gates legacy execution, and admits exactly one explicit successor', async () => {
     const { source, target, store, task } = setup();
     const imported = store.importArtifact(

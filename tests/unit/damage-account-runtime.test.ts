@@ -197,6 +197,8 @@ describe('damage-account registration and task path', () => {
         restarted.store.artifact(accountArtifact.id, localTaskIdentity),
       ).toEqual(accountArtifact);
     },
+    // The 12-second task poll plus restart must fit inside the test budget.
+    20_000,
   );
 
   it('asks for typed inputs and withholds every invented estimate', async () => {

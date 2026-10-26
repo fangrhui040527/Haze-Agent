@@ -66,7 +66,12 @@ import {
   type ExecutionRegistry,
   type ToolContext,
 } from '../orchestration/ports.js';
-import { TaskStore } from './store.js';
+import {
+  TaskStore,
+  type WorldCapabilityAdapterInput,
+  type WorldProjectionRecordInput,
+} from './store.js';
+import { createWorldModelTools, WORLD_TOOL_IDS } from './world-tools.js';
 
 export const localTaskIdentity: TaskIdentity = {
   principal: 'local-user',
@@ -79,6 +84,7 @@ export interface TaskRuntimeOptions {
   model?: AgentModel;
   env?: NodeJS.ProcessEnv;
   limits?: Partial<ResourceLimits>;
+  acceptancePolicy?: 'research-v1';
 }
 const exact = ({ id, version, sha256 }: ArtifactRef): ArtifactRef => ({
   id,
@@ -157,11 +163,28 @@ export class TaskRuntime {
   constructor(private readonly options: TaskRuntimeOptions) {
     this.releaseOwner = acquireRuntimeOwner(options.stateDirectory);
     try {
-      this.store = new TaskStore(options.stateDirectory);
+      this.store = new TaskStore(options.stateDirectory, {
+        acceptancePolicy: options.acceptancePolicy,
+      });
     } catch (error) {
       this.releaseOwner();
       throw error;
     }
+    const [lookupTool, contextTool, lineageTool] = createWorldModelTools(
+      this.store,
+      options.mode ?? 'live',
+    );
+    if (!options.registry.tools.has(lookupTool.id))
+      options.registry.registerTool(lookupTool);
+    if (!options.registry.tools.has(contextTool.id))
+      options.registry.registerTool(contextTool);
+    if (!options.registry.tools.has(lineageTool.id))
+      options.registry.registerTool(lineageTool);
+    for (const definition of options.registry.definitions.values())
+      if (definition.capability !== 'core.manager')
+        definition.tools = [
+          ...new Set([...definition.tools, ...WORLD_TOOL_IDS]),
+        ];
     this.model = options.model;
     this.store.configureDefinitions({
       agents: Object.fromEntries(
@@ -220,6 +243,9 @@ export class TaskRuntime {
     );
     for (const task of this.store.listRecoverableTasks())
       queueMicrotask(() => this.schedule(task.id));
+  }
+  get executionMode() {
+    return this.options.mode ?? 'live';
   }
   get activeCount() {
     return this.dispatcher.activeCount;
@@ -1555,6 +1581,8 @@ export class TaskRuntime {
       task.current_run_id,
       task.generation,
       result,
+      this.worldModelProjections(task, result, closure),
+      this.worldModelAdapters(task),
     );
   }
   private readExact(task: TaskRecord, ref: ArtifactRef): Artifact {
@@ -2407,6 +2435,110 @@ export class TaskRuntime {
             }),
           ),
       },
+    });
+  }
+  private worldModelProjections(
+    task: TaskRecord,
+    result: TaskResult,
+    closure: Artifact[],
+  ): WorldProjectionRecordInput[] {
+    // Manager finalization can exclude completed work. Only its validated
+    // selection and the independent reviews supporting it may be projected.
+    const artifacts = [...closure];
+    const key = (ref: ArtifactRef) => `${ref.id}:${ref.version}:${ref.sha256}`;
+    const references = new Set(closure.map(key));
+    for (const check of result.review.checks ?? []) {
+      if (
+        check.verdict !== 'supported' ||
+        !check.review_artifact ||
+        !references.has(key(check.artifact)) ||
+        references.has(key(check.review_artifact))
+      )
+        continue;
+      const reviewer = task.assignments.find(
+        (assignment) =>
+          assignment.id === check.reviewer_assignment_id &&
+          assignment.revision === check.reviewer_revision &&
+          assignment.run_id === task.current_run_id &&
+          assignment.objective_revision === task.objective_revision &&
+          assignment.role === 'EvidenceCritic' &&
+          assignment.status === 'completed' &&
+          assignment.support === 'supported' &&
+          !['rejected', 'stale'].includes(assignment.usability),
+      );
+      if (!reviewer) continue;
+      const review = this.readExact(task, check.review_artifact);
+      if (
+        review.assignment_id !== reviewer.id ||
+        review.assignment_revision !== reviewer.revision ||
+        !task.artifacts.some(
+          (entry) =>
+            entry.objective_revision === task.objective_revision &&
+            entry.current &&
+            key(entry.artifact) === key(review),
+        )
+      )
+        continue;
+      artifacts.push(review);
+      references.add(key(review));
+    }
+    const projections: WorldProjectionRecordInput[] = [];
+    for (const capabilityId of new Set(
+      task.assignments
+        .filter(
+          (assignment) =>
+            assignment.run_id === task.current_run_id &&
+            assignment.objective_revision === task.objective_revision &&
+            assignment.capability !== 'core.manager' &&
+            !['cancelled', 'stale'].includes(assignment.status),
+        )
+        .map((assignment) => assignment.capability),
+    )) {
+      const adapter =
+        this.options.registry.capabilities.get(capabilityId)?.worldModel;
+      if (!adapter) continue;
+      for (const record of adapter.extract({
+        request: this.request(task),
+        artifacts,
+      })) {
+        for (const evidence of record.evidence)
+          if (!references.has(key(evidence)))
+            throw new TaskError(
+              422,
+              'invalid_world_projection',
+              'Capability projection references evidence outside the final artifact closure and its supporting reviews.',
+            );
+        projections.push({
+          capability_id: capabilityId,
+          kind: record.kind,
+          external_id: record.external_id,
+          payload: json(record.payload),
+          evidence: record.evidence.map(exact),
+          ...(record.relationships === undefined
+            ? {}
+            : { relationships: record.relationships }),
+        });
+      }
+    }
+    return projections;
+  }
+  private worldModelAdapters(task: TaskRecord): WorldCapabilityAdapterInput[] {
+    return [
+      ...new Set(
+        task.assignments
+          .filter(
+            (assignment) =>
+              assignment.run_id === task.current_run_id &&
+              assignment.objective_revision === task.objective_revision &&
+              assignment.capability !== 'core.manager' &&
+              !['cancelled', 'stale'].includes(assignment.status),
+          )
+          .map((assignment) => assignment.capability),
+      ),
+    ].flatMap((capability_id) => {
+      const adapter =
+        this.options.registry.capabilities.get(capability_id)?.worldModel;
+      return adapter ? [{ capability_id, adapter }] : [];
     });
   }
   async close() {
