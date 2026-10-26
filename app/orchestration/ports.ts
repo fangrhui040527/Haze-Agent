@@ -7,6 +7,7 @@ import type {
 import type { Artifact, ArtifactRef } from '../contracts/artifacts.js';
 import type { AgentRole, CapabilityCard } from '../contracts/capabilities.js';
 import type { TaskRequest } from '../contracts/tasks.js';
+import type { WorldAssessment, WorldRecord } from '../contracts/world.js';
 import type { AgentAction } from './contracts.js';
 
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
@@ -17,10 +18,44 @@ export interface AssignmentPlan {
   depends_on: string[];
   input?: unknown;
 }
+export interface WorldModelRecordDraft {
+  kind: string;
+  external_id: string;
+  payload: WorldRecord['payload'];
+  evidence: ArtifactRef[];
+}
+export interface WorldModelAcceptanceCandidate {
+  subject: WorldRecord['ref'];
+  stated_use: string;
+  evidence: ArtifactRef[];
+}
+export interface WorldModelReviewRequirement {
+  id: string;
+  evidence: ArtifactRef[];
+  reviewer_roles: AgentRole[];
+}
+export interface CapabilityWorldModelAdapter {
+  extract(input: {
+    request: TaskRequest;
+    artifacts: readonly Artifact[];
+  }): WorldModelRecordDraft[];
+  buildAcceptanceCandidate(input: {
+    request: TaskRequest;
+    records: readonly WorldRecord[];
+    assessments: readonly WorldAssessment[];
+    artifacts: readonly Artifact[];
+  }): WorldModelAcceptanceCandidate | undefined;
+  requiredReviewCoverage(input: {
+    request: TaskRequest;
+    assignments: readonly AssignmentPlan[];
+    artifacts: readonly Artifact[];
+  }): WorldModelReviewRequirement[];
+}
 export interface CapabilityDefinition {
   card: CapabilityCard;
   matches(request: TaskRequest): boolean;
   assignments(request: TaskRequest): AssignmentPlan[];
+  worldModel?: CapabilityWorldModelAdapter;
 }
 export interface ToolContext {
   taskId: string;
