@@ -135,7 +135,7 @@ const G = new StateGraph(State)
     "admit",
     node("admit", "manager", MANAGER_VERSION, async (s) => {
       const r = await admit(s.scope, s.run_id, s.decision_key);
-      return { snapshot: r.snapshot, memories: r.memories, queue: r.queue, decision_entity: r.decisionEntity, rounds: 0, narrow: false, disable_narrative: false };
+      return { snapshot: r.snapshot, memories: r.memories, queue: r.queue, decision_entity: r.decisionEntity, rounds: 0, narrow: false, disable_narrative: !s.scope.narrative };
     }),
   )
   .addNode(

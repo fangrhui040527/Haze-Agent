@@ -70,6 +70,7 @@ export async function validate(req: RunRequest, mode: Mode): Promise<{ scope: Sc
       crew_constraints: (i.crew_constraints ?? []).map(String).slice(0, 5),
       // Sample fixtures and very recent downloads are "latest model values"; older replays must not see the future.
       allowHindsight: mode === "offline_sample" || Math.abs(Date.now() - asOfMs) < 6 * HOUR,
+      narrative: req.options?.narrative !== false,
     },
   };
 }

@@ -170,7 +170,9 @@ export function createSmokeLedgerTools(
             time_window: scope.window,
             ...(as_of ? { as_of } : {}),
           },
-          options: { sample_mode: mode === 'fixture' },
+          // The task Manager writes the answer, so the sidecar's optional prose (two slow
+          // Nemotron calls) is skipped; its findings, critic and evidence are unchanged.
+          options: { sample_mode: mode === 'fixture', narrative: false },
         },
         context.signal,
       );

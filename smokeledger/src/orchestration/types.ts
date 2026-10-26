@@ -22,7 +22,8 @@ export interface RunRequest {
     tasks?: Task[]; // plan_outdoor_work
     crew_constraints?: string[]; // remembered via H-MEM, e.g. "no heavy work after 11:00"
   };
-  options?: { sample_mode?: boolean };
+  // narrative: false skips the optional Nemotron prose (and its judge) when an embedding app writes its own answer.
+  options?: { sample_mode?: boolean; narrative?: boolean };
 }
 
 /** Request after validation: everything resolved to UTC milliseconds. */
@@ -39,6 +40,7 @@ export interface Scope {
   query: string;
   crew_constraints: string[];
   allowHindsight: boolean;
+  narrative: boolean;
 }
 
 export type ClaimKind = "observation" | "calculation" | "forecast" | "inference" | "recommendation" | "unserved";

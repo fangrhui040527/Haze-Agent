@@ -266,7 +266,7 @@ describe('smokeledger tools', () => {
         town: 'Batu Pahat',
         timezone: 'Asia/Kuala_Lumpur',
       },
-      options: { sample_mode: true },
+      options: { sample_mode: true, narrative: false },
     });
   });
 
