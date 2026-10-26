@@ -3,6 +3,11 @@ import { TaskControls } from '../chat/TaskControls.tsx';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { TaskResult } from '../chat/TaskResult.tsx';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
+import { WorldModelStatus } from './WorldModelStatus.tsx';
+import {
+  useWorldModelStatus,
+  type WorldModelStatusState,
+} from './useWorldModelStatus.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
@@ -11,16 +16,36 @@ import styles from './TaskPage.module.css';
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
   const run = useAgentRun(taskId);
-  return <GeneralTaskReport taskId={taskId} run={run} />;
+  const record =
+    run.task?.id === taskId ? run.task.record : undefined;
+  const lifecycleCursor = run.events.reduce(
+    (cursor, event) =>
+      event.type === 'task_event' &&
+      event.receipt.type === 'world_lifecycle_changed'
+        ? Math.max(cursor, event.receipt.cursor)
+        : cursor,
+    0,
+  );
+  const worldModel = useWorldModelStatus(
+    taskId,
+    record?.state_revision,
+    lifecycleCursor,
+    record !== undefined,
+  );
+  return (
+    <GeneralTaskReport taskId={taskId} run={run} worldModel={worldModel} />
+  );
 }
 
 /** The report renders saved state and actual receipts without simulated steps. */
 export function GeneralTaskReport({
   taskId,
   run,
+  worldModel,
 }: {
   taskId: string;
   run: AgentRun;
+  worldModel?: WorldModelStatusState;
 }) {
   const task = run.task?.id === taskId ? run.task : null;
   const record = task?.record;
@@ -89,6 +114,7 @@ export function GeneralTaskReport({
             <TaskQuestions run={run} />
           </>
         )}
+        {record && worldModel && <WorldModelStatus state={worldModel} />}
       </div>
       <details open={!record?.result || observing}>
         <summary>Actual execution receipts ({receipts.length})</summary>

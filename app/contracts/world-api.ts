@@ -97,3 +97,7 @@ export type WorldApiPageQuery = z.infer<typeof worldApiPageQuerySchema>;
 export type WorldRecordDetailResponse = z.infer<
   typeof worldRecordDetailResponseSchema
 >;
+export type WorldTaskResponse = z.infer<typeof worldTaskResponseSchema>;
+export type WorldRecordReadResponse = z.infer<
+  typeof worldRecordReadResponseSchema
+>;
