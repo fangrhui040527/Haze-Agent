@@ -1,6 +1,22 @@
 # General engine verification
 
-Recorded 25 October 2026. `npm run check` passed with pinned Node 24.22.1: 202 backend tests, 70 frontend tests, 21 upstream engine conformance checks, and the fresh-process fixture verifier. This record describes the v3 engine; older orchestration verification files remain historical records.
+Recorded 25 October 2026. The `npm run check` result below is a historical general-engine run with pinned Node 24.22.1: 202 backend tests, 70 frontend tests, 21 upstream engine conformance checks, and the fresh-process fixture verifier. The latest World Model verification is recorded separately below; older orchestration verification files remain historical records.
+
+## Latest World Model verification
+
+The current World Model checks were run individually because `npm run check` stopped at formatting: a protected, untracked planning document is not formatted and was left untouched.
+
+| Command                    | Result                                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`        | Passed.                                                                                                                                                        |
+| `npm run build`            | Passed.                                                                                                                                                        |
+| `npm test`                 | Passed: 28 files and 249 tests.                                                                                                                                |
+| `npm run test:engines`     | Passed: 13 H-MEM and 8 World Model checks.                                                                                                                     |
+| `npm run frontend:check`   | Passed: production build and 103 tests across 18 files.                                                                                                        |
+| `npm run test:integration` | Passed with fixture-tested acceptance, correction holds, and restart readback.                                                                                 |
+| `npm run lint`             | Did not pass: 246 errors in the existing `server/src/api/app.ts`, `server/src/index.ts`, `server/test/api.test.ts` and `server/test/liveStream.test.ts` files. |
+
+The fixture integration run does not establish live source readiness. No live verification was performed for this World Model check.
 
 ## Release gates and evidence
 

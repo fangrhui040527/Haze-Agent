@@ -19,6 +19,10 @@ import {
   createPm25Capability,
   createPm25Tools,
 } from './capabilities/pm25/index.js';
+import {
+  createDamageAccountingAssignments,
+  createDamageAccountingCapability,
+} from './capabilities/damage-accounting/index.js';
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
@@ -34,10 +38,12 @@ export function createExecutionRegistry(options: {
   ])
     registry.registerAgent(agent);
   registry.registerCapability(createPm25Capability());
+  registry.registerCapability(createDamageAccountingCapability());
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
     ...createPm25Assignments(),
+    ...createDamageAccountingAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])

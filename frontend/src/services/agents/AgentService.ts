@@ -15,6 +15,10 @@ import type {
   TaskControl,
   TaskUpdate,
 } from '../../../../app/contracts/controls.ts';
+import type {
+  WorldRecordReadResponse,
+  WorldTaskResponse,
+} from '../../../../app/contracts/world-api.ts';
 
 export interface AgentService {
   readonly label: string;
@@ -49,6 +53,16 @@ export interface AgentService {
     signal?: AbortSignal,
   ): Promise<Artifact>;
   readArtifact?(artifactId: string, signal?: AbortSignal): Promise<Artifact>;
+  readWorldTask?(
+    taskId: string,
+    signal?: AbortSignal,
+  ): Promise<WorldTaskResponse>;
+  readWorldRecord?(
+    recordId: string,
+    view: 'detail' | 'history' | 'lineage',
+    options?: { limit?: number; cursor?: string },
+    signal?: AbortSignal,
+  ): Promise<WorldRecordReadResponse>;
   capabilities?(signal?: AbortSignal): Promise<CapabilityCard[]>;
 }
 export class AgentTaskCancelledError extends Error {

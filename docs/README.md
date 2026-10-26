@@ -18,6 +18,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 ## Orchestration
 
 - [General task engine](orchestration/general-engine.md) - current v3 protocol, ownership, controls and recovery.
+- [World Model data model](05-world-model-data-model.md) — legacy HazeOps storage and the active v3 model, acceptance, and access boundaries.
 - [General engine verification](orchestration/general-engine-verification.md) - release checks and explicit fixture/live evidence.
 
 The v1/v2 guides below are retained historical records.

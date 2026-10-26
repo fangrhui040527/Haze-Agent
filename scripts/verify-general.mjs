@@ -25,7 +25,12 @@ async function boot() {
     new URL('./serve-tasks.mjs', import.meta.url),
     fixture ? ['--fixture'] : [],
     {
-      env: { ...process.env, STATE_DIR: root, HAZE_TASK_PORT: '0' },
+      env: {
+        ...process.env,
+        STATE_DIR: root,
+        HAZE_TASK_PORT: '0',
+        HAZE_WORLD_ACCEPTANCE_POLICY: 'research-v1',
+      },
       stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
     },
   );
@@ -151,18 +156,82 @@ try {
     origin,
     await settle(origin, investigationAdmission.task_id),
   );
-  await stop();
-  origin = await boot();
-  const afterGeneral = await capture(
+  const requiredCapabilities = [
+    'pm25-evidence-summary',
+    'damage-accounting',
+    'episode-investigation',
+    'evidence-synthesis',
+  ];
+  const capabilities = await read(origin, '/api/capabilities');
+  if (
+    !requiredCapabilities.every((id) =>
+      capabilities.some((capability) => capability.id === id),
+    )
+  )
+    throw new Error('A required World Model capability is not registered.');
+  const generalWorld = await read(
+    origin,
+    `/api/tasks/${general.task.id}/world`,
+  );
+  const accepted = generalWorld.current_acceptances.find(
+    ({ acceptance }) => acceptance.status === 'accepted',
+  );
+  if (!accepted)
+    throw new Error('The fixture synthesis did not produce an acceptance.');
+  const recordPath = `/api/world/records/${encodeURIComponent(accepted.subject)}`;
+  const acceptedDetail = await read(origin, recordPath);
+  const acceptedLineage = await read(
+    origin,
+    `${recordPath}?view=lineage&limit=50`,
+  );
+  if (
+    acceptedDetail.view !== 'detail' ||
+    acceptedLineage.view !== 'lineage' ||
+    !acceptedLineage.lineage.entries.some(
+      (entry) => entry.event_kind === 'acceptance_evaluated',
+    )
+  )
+    throw new Error('Authorized World Model detail or lineage read failed.');
+  const currentGeneral = await read(origin, `/api/tasks/${general.task.id}`);
+  await read(origin, `/api/tasks/${general.task.id}/updates`, {
+    schema_version: 'haze.task.update.v3',
+    expected_objective_revision: currentGeneral.objective_revision,
+    expected_run_id: currentGeneral.current_run_id,
+    expected_generation: currentGeneral.generation,
+    expected_state_revision: currentGeneral.state_revision,
+    kind: 'correction',
+    passage:
+      'Fixture correction: the previously cited source needs renewed review.',
+  });
+  const heldDetail = await read(origin, recordPath);
+  if (
+    !heldDetail.detail.status.acceptances.some(
+      (acceptance) => acceptance.status === 'held',
+    )
+  )
+    throw new Error('A correction did not hold the accepted fixture record.');
+  const heldLineage = await read(origin, `${recordPath}?view=lineage&limit=50`);
+  const authorizedRecordDetail = await read(origin, recordPath);
+  if (authorizedRecordDetail.detail.record.ref.id !== accepted.subject)
+    throw new Error('Scoped World Model record read failed.');
+  const heldGeneral = await capture(
     origin,
     await read(origin, `/api/tasks/${general.task.id}`),
   );
+  await stop();
+  origin = await boot();
   const afterInvestigation = await capture(
     origin,
     await read(origin, `/api/tasks/${investigation.task.id}`),
   );
+  const afterHeldDetail = await read(origin, recordPath);
+  const afterHeldLineage = await read(
+    origin,
+    `${recordPath}?view=lineage&limit=50`,
+  );
   const restart =
-    JSON.stringify(general) === JSON.stringify(afterGeneral) &&
+    JSON.stringify(heldDetail) === JSON.stringify(afterHeldDetail) &&
+    JSON.stringify(heldLineage) === JSON.stringify(afterHeldLineage) &&
     JSON.stringify(investigation) === JSON.stringify(afterInvestigation);
   const liveReceipts = [general, investigation].every(
     ({ task }) =>
@@ -204,7 +273,16 @@ try {
     capabilities: await read(origin, '/api/capabilities'),
     attempts,
     general,
+    held_general: heldGeneral,
     investigation,
+    world_model: {
+      accepted: acceptedDetail,
+      lineage: acceptedLineage,
+      held: heldDetail,
+      held_lineage: heldLineage,
+      authorized_record_read: authorizedRecordDetail,
+      capabilities: requiredCapabilities,
+    },
   };
   const path = resolve(root, 'report.json');
   await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
@@ -216,6 +294,12 @@ try {
         passed,
         readiness: report.readiness,
         restart,
+        accepted: acceptedDetail.detail.status.acceptances.some(
+          (acceptance) => acceptance.status === 'accepted',
+        ),
+        held: heldDetail.detail.status.acceptances.some(
+          (acceptance) => acceptance.status === 'held',
+        ),
         general: general.task.status,
         investigation: investigation.task.status,
         error: investigation.task.error ?? null,
