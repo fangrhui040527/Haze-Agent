@@ -7,7 +7,7 @@ const baseUrl = (Deno.env.get("ZETARIS_BASE_URL") ?? "http://localhost:3000")
 const orgId = Deno.env.get("ZETARIS_ORG_ID");
 
 if (!orgId || !/^\d+$/.test(orgId)) {
-  throw new Error("Set ZETARIS_ORG_ID to the numeric organization ID in .env.local.");
+  throw new Error("Set ZETARIS_ORG_ID to the numeric organization ID in .env.");
 }
 if (!/^https?:\/\/[^/]+$/.test(baseUrl)) {
   throw new Error("ZETARIS_BASE_URL must be an HTTP(S) origin without a path.");

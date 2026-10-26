@@ -32,12 +32,12 @@ const gap = {
 
 function servicesFor(inputs: Artifact[], input?: unknown) {
   const source = createSyntheticDamageArtifact();
-  const question = vi.fn();
   const tool = vi.fn((id: string) =>
     Promise.resolve(
       id === DAMAGE_WORLD_TOOL_ID ? gap : normalizeDamageInputs([source]),
     ),
   );
+  const question = vi.fn();
   const save = vi.fn((kind: string, content: unknown): Artifact => ({
     ...source,
     id: randomUUID(),

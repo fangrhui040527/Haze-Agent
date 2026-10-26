@@ -17,9 +17,8 @@ npm run build
 npm --prefix frontend run dev
 ```
 
-Copy [.env.example](.env.example) to root `.env` and
-[app/adapters/zetaris/.env.example](app/adapters/zetaris/.env.example) to
-`app/adapters/zetaris/.env.local`. These local files are gitignored. For live
+Copy [.env.example](.env.example) to root `.env`. This gitignored file holds
+the server-side Haze, PostgreSQL, Zetaris and ingestion settings. For live
 agent requests, set your own `NVIDIA_API_KEY` (or use
 `HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
 `HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
@@ -29,14 +28,20 @@ defaults. Keep credentials out of browser `VITE_*` variables. API keys are
 personal and must never be added to a committed example file.
 
 The optional data-ingestion scripts need their own keys: `FIRMS_MAP_KEY` for
-NASA FIRMS and `WINDY_API_KEY` for Windy. They belong in
-`app/adapters/zetaris/.env.local`; Open-Meteo and Data.gov.my fetchers do not
+NASA FIRMS and `WINDY_API_KEY` for Windy. They belong in root `.env`;
+Open-Meteo and Data.gov.my fetchers do not
 require keys.
 
 The examples provide configuration names and local development defaults, not
 hosted-service credentials. To run the local SmokeLedger PostgreSQL database,
 use `npm run db:init`; its development-only connection defaults are documented
-in the Zetaris environment example. External API keys are not needed for the
+in the root environment example. Existing `app/adapters/zetaris/.env.local`
+files remain a fallback for task commands, the frontend task server and Zetaris
+helpers. Process variables take precedence; root `.env` values win over the
+legacy adapter file, including empty values. Move any settings you still use
+into root `.env` without overwriting existing values. The Zetaris helpers also
+look in the main checkout when run from a Git worktree.
+External API keys are not needed for the
 fixture checks (`npm run tasks:verify -- --fixture`), but are needed for live
 model or Zetaris requests.
 
@@ -80,7 +85,7 @@ Browse the [documentation index](docs/README.md) for guides grouped by topic.
 | [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
 | [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
 | [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                 |
-| `app/agents/`, `app/capabilities/`                                  | Versioned agents and independently registered domain methods                               |
+| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                               |
 | `app/adapters/`                                                     | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
 | [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                         |
 | [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                            |

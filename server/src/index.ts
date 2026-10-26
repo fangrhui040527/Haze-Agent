@@ -9,17 +9,23 @@ import type { LiveUpdate } from '../../frontend/src/services/data/DataService.ts
 import { createApp } from './api/app.ts';
 import { loadConfig, REPOSITORY_ROOT } from './config.ts';
 import { openEngines } from './engines.ts';
-import { firmsAdapter, firmsSpec } from './hazeops/adapters/firms.ts';
-import { openAqAdapter, openAqSpec } from './hazeops/adapters/openAq.ts';
+import {
+  firmsAdapter,
+  firmsSpec,
+} from '../../dist/capabilities/evidence-collection/sources/firms.js';
+import {
+  openAqAdapter,
+  openAqSpec,
+} from '../../dist/capabilities/evidence-collection/sources/openAq.js';
 import {
   openMeteoAdapter,
   openMeteoSpec,
-} from './hazeops/adapters/openMeteo.ts';
+} from '../../dist/capabilities/evidence-collection/sources/openMeteo.js';
 import {
   loadPinnedQueries,
   zetarisAdapter,
   zetarisSpec,
-} from './hazeops/adapters/zetaris.ts';
+} from '../../dist/capabilities/evidence-collection/sources/zetaris.js';
 import { HazeOps } from './hazeops/hazeops.ts';
 import { distanceKm, locationsFor } from './locations.ts';
 import { Manager } from './manager/manager.ts';

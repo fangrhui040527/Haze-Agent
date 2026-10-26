@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadEnv, type Plugin } from 'vite';
 import { createTaskHandler } from '../../app/tasks/http.ts';
 import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.ts';
+import { envFileCandidates } from '../../app/adapters/zetaris/scripts/env-files.ts';
 
 /** Local evidence task API. Static hosting needs a backend. */
 export function generalApiPlugin(): Plugin {
@@ -103,15 +104,15 @@ export function generalApiPlugin(): Plugin {
     apply: (_config, { mode }) => mode !== 'test',
     configResolved(config) {
       // Server-only root configuration. Vite still exposes only VITE_* to the browser.
-      const sourceEnvPath = resolve(
-        import.meta.dirname,
-        '../../app/adapters/zetaris/.env.local',
-      );
+      const sourceEnv: Record<string, string> = {};
+      // Read lower-priority files first; the root .env and Vite mode settings win.
+      for (const path of envFileCandidates().reverse()) {
+        if (existsSync(path))
+          Object.assign(sourceEnv, parseEnv(readFileSync(path, 'utf8')));
+      }
       env = {
+        ...sourceEnv,
         ...loadEnv(config.mode, resolve(import.meta.dirname, '../..'), ''),
-        ...(existsSync(sourceEnvPath)
-          ? parseEnv(readFileSync(sourceEnvPath, 'utf8'))
-          : {}),
         ...process.env,
       };
     },

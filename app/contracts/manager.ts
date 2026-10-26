@@ -177,18 +177,19 @@ export interface ManagerContext {
   source_applicability: { id: string; current: boolean }[];
   request: TaskRequest;
   corrections: Correction[];
-  interpretation?: ManagerInterpretation;
+  interpretation?: Partial<ManagerInterpretation>;
   capabilities: {
-    card: Pick<CapabilityCard, 'id' | 'version' | 'purpose' | 'readiness'>;
+    card: Pick<CapabilityCard, 'id'> &
+      Partial<Pick<CapabilityCard, 'version' | 'purpose' | 'readiness'>>;
     available: boolean;
-    reasons: string[];
-    templates: AssignmentPlan[];
-    peer_requirements: { definitions: [string, string]; purpose: string }[];
-    prerequisites: {
+    reasons?: string[];
+    templates?: AssignmentPlan[];
+    peer_requirements?: { definitions: [string, string]; purpose: string }[];
+    prerequisites?: {
       definition_id: string;
       depends_on_definitions: string[];
     }[];
-    review_requirements: {
+    review_requirements?: {
       artifact_kind: string;
       review_definition_id: string;
       producer_definition_ids?: string[];
@@ -201,37 +202,46 @@ export interface ManagerContext {
     tools: string[];
   }[];
   lookups: { id: string; description: string }[];
-  assignments: Pick<
+  assignments: (Pick<
     Assignment,
-    | 'id'
-    | 'definition_id'
-    | 'capability'
-    | 'role'
-    | 'revision'
-    | 'objective_revision'
-    | 'status'
-    | 'brief'
-    | 'dependencies'
-    | 'support'
-    | 'usability'
-    | 'gaps'
-    | 'error'
-  >[];
+    'id' | 'role' | 'revision' | 'status' | 'support' | 'usability' | 'error'
+  > &
+    Partial<
+      Pick<
+        Assignment,
+        | 'definition_id'
+        | 'capability'
+        | 'objective_revision'
+        | 'brief'
+        | 'dependencies'
+        | 'gaps'
+      >
+    >)[];
   artifacts: {
     ref: ArtifactRef;
     kind: string;
     assignment_id?: string;
+    /** Compact context-only producer link into the zero-based assignments array. */
+    assignment_index?: number;
     assignment_revision?: number;
     current: boolean;
     excerpt?: string;
-    truncated: boolean;
+    truncated?: boolean;
   }[];
   inspections: ManagerInspection[];
   peer_grants: {
     participants: { assignment_id: string; revision: number }[];
     purpose: string;
   }[];
-  reviews: ArtifactReviewCheck[];
+  /** Compact checks may point to an exact artifact catalog entry by ID. */
+  reviews: (Omit<
+    ArtifactReviewCheck,
+    'artifact' | 'producer_assignment_id' | 'producer_revision'
+  > & {
+    artifact: ArtifactRef | Pick<ArtifactRef, 'id'>;
+    producer_assignment_id?: string;
+    producer_revision?: number;
+  })[];
   resources: {
     limits: TaskRecord['limits'];
     usage: TaskRecord['usage'];

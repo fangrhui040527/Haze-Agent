@@ -1,5 +1,7 @@
 # Architecture v0.14 schema catalog and implementation audit
 
+For the complete current named-validator inventory, see [Implemented schema inventory](schema-implementation-status-v014.md). Partially implemented and missing contracts are listed separately in [Remaining schema work](schema-remaining-work-v014.md). This catalog preserves the older audit snapshot described below; newer World Model and domain contracts supersede some of its status findings.
+
 Audited: 26 October 2026. Target: [Haze Agent Architecture v0.14](Haze_Agent_Architecture_v0.14.pdf), 26 pages. Repository baseline: `ce5bf33`, **including the modified and untracked working-tree files present during this audit**. This is a documentation audit; no application schemas or behavior were changed.
 
 The general task platform has implemented request, task/run, assignment, Manager, artifact, correction, control, event, result and agent-action schemas. PM2.5 and imported damage accounting have concrete domain schemas. The full architecture remains incomplete: accepted/current World Model decisions, external effects, reviewed reusable H-MEM lessons, general monitoring and several scientific work-product families are not implemented in the general task engine.

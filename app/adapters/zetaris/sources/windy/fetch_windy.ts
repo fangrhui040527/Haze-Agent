@@ -3,12 +3,12 @@
  * Test the Windy Point Forecast API.
  *
  * Windy issues one API key per product (Map Forecast, Point Forecast, Webcams,
- * ...). The key in .env.local is a Point Forecast key: it is called against
+ * ...). The key in .env is a Point Forecast key: it is called against
  *   POST https://api.windy.com/api/point-forecast/v2
  * and never against the Map Forecast endpoints, which serve a JS map widget
  * rather than raw data.
  *
- * The key is read from WINDY_API_KEY in .env.local and is never printed,
+ * The key is read from WINDY_API_KEY in .env and is never printed,
  * logged or written to disk.
  *
  * Usage:
@@ -25,6 +25,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { fileURLToPath } from "node:url";
+import { envFileCandidates } from "../../scripts/env-files.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,18 +101,14 @@ function resolveLocation(
   );
 }
 
-// .env.local is the only supported env file. Look in the repo root first, then
-// the enclosing checkouts (a gitignored file does not exist in a git worktree).
+// Root .env first; process variables win and legacy files fill missing values.
 function loadEnvLocal(): string | null {
-  const candidates = [
-    path.join(REPO_ROOT, ".env.local"),
-    path.resolve(REPO_ROOT, "..", ".env.local"),
-    path.resolve(REPO_ROOT, "..", "..", ".env.local"),
-    path.resolve(REPO_ROOT, "..", "..", "..", ".env.local"),
-  ];
+  const candidates = envFileCandidates();
+  let loaded: string | null = null;
 
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
+    loaded ??= file;
     for (const raw of fs.readFileSync(file, "utf-8").split(/\r?\n/)) {
       const line = raw.trim();
       if (!line || line.startsWith("#") || !line.includes("=")) continue;
@@ -126,9 +123,8 @@ function loadEnvLocal(): string | null {
       }
       if (process.env[key] === undefined) process.env[key] = value;
     }
-    return file;
   }
-  return null;
+  return loaded;
 }
 
 function parseCliArgs(locations: LocationItem[]): CliOptions {
@@ -396,7 +392,7 @@ async function main(): Promise<void> {
 
   if (!key) {
     throw new Error(
-      `WINDY_API_KEY is not set${envFile ? ` (loaded ${envFile})` : " (.env.local not found)"}.`,
+      `WINDY_API_KEY is not set${envFile ? ` (loaded ${envFile})` : " (.env not found)"}.`,
     );
   }
 

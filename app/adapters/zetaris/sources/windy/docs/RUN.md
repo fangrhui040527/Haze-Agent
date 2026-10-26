@@ -1,7 +1,7 @@
 # Windy Ingestion & Test
 
 Test the Windy Point Forecast API for a coordinate. The script reads
-`WINDY_API_KEY` from `.env.local` and never prints it.
+`WINDY_API_KEY` from `.env` and never prints it.
 
 ## Test a single model (default: GFS weather at Kuala Lumpur)
 

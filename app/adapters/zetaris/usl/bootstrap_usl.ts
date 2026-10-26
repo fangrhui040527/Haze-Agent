@@ -33,6 +33,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import { fileURLToPath } from "node:url";
+import { envFileCandidates } from "../scripts/env-files.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,7 +48,7 @@ const FIRMS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/firms_flat";
 const LAW_CONTAINER_PATH = "/home/zetaris/customer-data/shared/law";
 
 // Windy register SQL carries a `${WINDY_API_KEY}` placeholder that must be
-// filled from .env.local before it is sent. The key is never printed or logged.
+// filled from .env before it is sent. The key is never printed or logged.
 const WINDY_SQL_DIR = path.join(SRC_ROOT, "windy", "sql");
 const WINDY_API_KEY_PLACEHOLDER = "${WINDY_API_KEY}";
 
@@ -138,16 +139,13 @@ async function runSqlFile(
 }
 
 /**
- * Read one value from the first .env.local found (repo root, then the enclosing
- * checkout). Returns undefined when the file or key is missing. Never logs the
+ * Read one value from root .env, with legacy files supplying missing settings.
+ * Returns undefined when the file or key is missing. Never logs the
  * value, so it is safe for secrets such as WINDY_API_KEY.
  */
 function loadEnvLocalValue(name: string): string | undefined {
-  if (process.env[name]) return process.env[name];
-  const candidates = [
-    path.join(ZETARIS_ROOT, ".env.local"),
-    path.join(ZETARIS_ROOT, "..", ".env.local"),
-  ];
+  if (process.env[name] !== undefined) return process.env[name];
+  const candidates = envFileCandidates();
   for (const file of candidates) {
     if (!fs.existsSync(file)) continue;
     for (const raw of fs.readFileSync(file, "utf-8").split(/\r?\n/)) {
@@ -171,7 +169,7 @@ function loadEnvLocalValue(name: string): string | undefined {
 
 /**
  * Run the Windy register SQL, substituting the `${WINDY_API_KEY}` placeholder
- * with the value from .env.local. The filled SQL is written to a temp file, run
+ * with the value from .env. The filled SQL is written to a temp file, run
  * through scripts/run_sql.py, then deleted. The key is never printed or logged.
  */
 async function runWindyRegister(dryRun: boolean): Promise<void> {
@@ -186,14 +184,14 @@ async function runWindyRegister(dryRun: boolean): Promise<void> {
 
   if (dryRun) {
     console.log(
-      `[DRY-RUN] Would run windy_register.sql with ${WINDY_API_KEY_PLACEHOLDER} filled from .env.local`,
+      `[DRY-RUN] Would run windy_register.sql with ${WINDY_API_KEY_PLACEHOLDER} filled from .env`,
     );
     return;
   }
 
   const key = loadEnvLocalValue("WINDY_API_KEY");
   if (!key) {
-    console.error("  ✗ WINDY_API_KEY is not set (.env.local or environment) — skipping Windy registration.");
+    console.error("  ✗ WINDY_API_KEY is not set (.env or environment) — skipping Windy registration.");
     return;
   }
 

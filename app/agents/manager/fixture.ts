@@ -70,18 +70,22 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
     }
   }
   const templates = context.capabilities.find(
-    (c) => c.available && c.templates.length,
+    (c) => c.available && c.templates?.length,
   );
   if (
     !work.length ||
     context.plan_objective_revision !== context.objective_revision ||
-    work.some((a) => a.objective_revision !== context.objective_revision)
+    work.some(
+      (a) =>
+        (a.objective_revision ?? context.objective_revision) !==
+        context.objective_revision,
+    )
   ) {
     if (templates)
       return decision(
         {
           type: 'apply_plan',
-          assignments: templates.templates.map((p) => ({
+          assignments: (templates.templates ?? []).map((p) => ({
             ...p,
             input: p.input as never,
           })),
@@ -95,7 +99,7 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
       );
   }
   for (const capability of context.capabilities)
-    for (const requirement of capability.peer_requirements) {
+    for (const requirement of capability.peer_requirements ?? []) {
       const pair = requirement.definitions.map((id) =>
         work.find((a) => a.definition_id === id),
       );
@@ -192,21 +196,24 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
       .filter((c) => c.verdict !== 'supported')
       .map((c) => c.artifact.id),
   );
-  const products = context.artifacts.filter(
-    (a) =>
+  const products = context.artifacts.filter((a) => {
+    const producerId =
+      a.assignment_id ?? context.assignments[a.assignment_index ?? -1]?.id;
+    return (
       a.current &&
-      a.assignment_id &&
+      producerId !== undefined &&
       !a.kind.includes('review') &&
       a.kind !== 'assignment.summary' &&
       !rejected.has(a.ref.id) &&
       work.some(
         (w) =>
-          w.id === a.assignment_id &&
-          w.revision === a.assignment_revision &&
+          w.id === producerId &&
+          w.revision === (a.assignment_revision ?? w.revision) &&
           w.status === 'completed' &&
           w.usability === 'usable',
-      ),
-  );
+      )
+    );
+  });
   const sources = context.artifacts.filter(
     (a) =>
       a.current &&
@@ -225,15 +232,20 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
     });
   const uncertainty = [
     ...new Set([
-      ...work.flatMap((a) => a.gaps),
+      ...work.flatMap((a) => a.gaps ?? []),
       ...context.reviews.flatMap((c) => c.limitations),
     ]),
   ].slice(0, 64);
   const unfinished = [
     ...work
       .filter((a) => a.status !== 'completed' || a.support === 'gap')
-      // Completed briefs may be compacted to '' under the context budget.
-      .map((a) => a.error?.message || a.brief || a.definition_id),
+      .map((a) =>
+        (
+          a.error?.message.trim() ||
+          a.brief?.trim() ||
+          `Unfinished ${a.definition_id ?? a.role} assignment ${a.id}: ${a.status}, ${a.support}.`
+        ).slice(0, 4096),
+      ),
     ...context.reviews
       .filter((c) => c.verdict !== 'supported')
       .map((c) => `Independent review unresolved for ${c.artifact.id}.`),

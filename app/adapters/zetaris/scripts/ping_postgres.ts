@@ -7,7 +7,7 @@ async function main(): Promise<void> {
   const username = Deno.env.get("PGUSER");
   const password = Deno.env.get("PGPASSWORD");
   if (!host || !database || !username || !password) {
-    throw new Error("Set PGHOST, PGDATABASE, PGUSER, and PGPASSWORD in .env.local.");
+    throw new Error("Set PGHOST, PGDATABASE, PGUSER, and PGPASSWORD in .env.");
   }
 
   const port = Number(Deno.env.get("PGPORT") ?? "5432");
