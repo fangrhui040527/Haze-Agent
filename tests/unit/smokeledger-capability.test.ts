@@ -283,6 +283,41 @@ describe('smokeledger tools', () => {
     expect(sidecar.calls.map((call) => call.path)).toEqual(['GET /health']);
   });
 
+  it('decides a live outlook for an unfinished window now, but leaves past windows and traces to the sidecar default', async () => {
+    const liveSidecar = () =>
+      fakeSidecar({
+        'GET /health': health('live'),
+        'POST /run': (body) => [
+          200,
+          runResponse((body as { run_id: string }).run_id, { mode: 'live' }),
+        ],
+      });
+    const day = 86_400_000;
+    const window = (fromNow: number) => ({
+      start: new Date(Date.now() + fromNow).toISOString(),
+      end: new Date(Date.now() + fromNow + day).toISOString(),
+    });
+    const current = liveSidecar();
+    await tools(current.fetcher, 'live')
+      .get('haze.air_outlook')!
+      .execute({ town: 'Batu Pahat', window: window(-day / 2) }, context());
+    const asOf = (current.calls[1]!.body as { input: { as_of?: string } }).input
+      .as_of;
+    expect(Date.parse(asOf!)).toBeLessThanOrEqual(Date.now());
+    expect(Date.now() - Date.parse(asOf!)).toBeLessThan(3_600_000);
+
+    const past = liveSidecar();
+    await tools(past.fetcher, 'live')
+      .get('haze.air_outlook')!
+      .execute({ town: 'Batu Pahat', window: window(-3 * day) }, context());
+    const trace = liveSidecar();
+    await tools(trace.fetcher, 'live')
+      .get('haze.trace_sources')!
+      .execute({ town: 'Batu Pahat', window: window(-day / 2) }, context());
+    for (const sidecar of [past, trace])
+      expect(sidecar.calls[1]!.body).not.toHaveProperty('input.as_of');
+  });
+
   it('refuses replay mode without any request', async () => {
     const sidecar = fakeSidecar({});
     const tool = tools(sidecar.fetcher, 'replay').get('haze.air_outlook')!;
@@ -472,15 +507,22 @@ describe('smokeledger assignments', () => {
     });
 
   it('approves only when every re-run matches and every claim is cited', async () => {
-    const { value, saved } = services(reviewWith(true, []).fetcher, scope, [
-      produced(),
-    ]);
+    const sidecar = reviewWith(true, []);
+    const { value, saved } = services(sidecar.fetcher, scope, [produced()]);
     const output = await definition('smokeledger.review').execute!(value);
     expect(output.support).toBe('supported');
     expect(saved[0]).toMatchObject({
       kind: 'review',
       content: { valid: true, verdict: 'supported' },
     });
+    // All claims: deterministic lane only; the synthesis sentences: model lane allowed.
+    const checks = sidecar.calls
+      .filter((call) => call.path === 'POST /api/claims/check')
+      .map((call) => call.body as { use_model?: boolean; text: string });
+    expect(checks.map((check) => check.use_model)).toEqual([false, undefined]);
+    expect(checks[1]!.text).toBe(
+      'Fires on peat: 92% of the smoke signal [E-c2b0c3cd57].',
+    );
   });
 
   it.each([

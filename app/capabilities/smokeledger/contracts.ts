@@ -114,6 +114,8 @@ export type VerifyOutput = z.infer<typeof verifyOutputSchema>;
 export const claimCheckInputSchema = z.strictObject({
   text: z.string().trim().min(1).max(20_000),
   evidence_ids: z.array(evidenceIdSchema).max(200),
+  /** false limits the check to the deterministic lane; omitted means the model lane runs when available. */
+  use_model: z.boolean().optional(),
 });
 export const claimCheckOutputSchema = z.strictObject({
   ok: z.boolean(),

@@ -151,6 +151,15 @@ export function createSmokeLedgerTools(
       const sidecar = client();
       await ready(sidecar, mode, context.signal);
       const run_id = runIdFor(context, operation);
+      // A live outlook for a window that has not ended is decided now (not rounded: the sidecar
+      // uses only forecasts issued at or before as_of); past windows keep its earlier default.
+      const now = Date.now();
+      const as_of =
+        mode === 'live' &&
+        operation === 'assess_haze' &&
+        Date.parse(scope.window.end) > now
+          ? new Date(now).toISOString()
+          : undefined;
       const { status, body } = await sidecar.run(
         {
           run_id,
@@ -159,6 +168,7 @@ export function createSmokeLedgerTools(
             town: scope.town,
             timezone: 'Asia/Kuala_Lumpur',
             time_window: scope.window,
+            ...(as_of ? { as_of } : {}),
           },
           options: { sample_mode: mode === 'fixture' },
         },
@@ -549,10 +559,25 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
           }),
         )
       : { results: [] };
+    // Every claim gets the deterministic lane; the sentences that reach the synthesis (each
+    // run's summary) also get the model judge, which is too slow for dozens of hourly claims.
     const claimCheck = claims.length
       ? claimCheckOutputSchema.parse(
           await services.tool(SMOKELEDGER_TOOLS.claimCheck, {
             text: claims.map((claim) => claim.text).join('\n'),
+            evidence_ids: cited.slice(0, 200),
+            use_model: false,
+          }),
+        )
+      : null;
+    const synthesisText = runs
+      .map((run) => run.response.output?.summary)
+      .filter((summary): summary is string => Boolean(summary?.trim()))
+      .join('\n');
+    const synthesisCheck = synthesisText
+      ? claimCheckOutputSchema.parse(
+          await services.tool(SMOKELEDGER_TOOLS.claimCheck, {
+            text: synthesisText,
             evidence_ids: cited.slice(0, 200),
           }),
         )
@@ -564,7 +589,10 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
       status: run.response.status,
       decision: criticDecision(run.response),
     }));
-    const valid = unverified.length === 0 && (claimCheck?.ok ?? true);
+    const valid =
+      unverified.length === 0 &&
+      (claimCheck?.ok ?? true) &&
+      (synthesisCheck?.ok ?? true);
     const complete =
       cited.length <= 40 &&
       decisions.every((d) => d.status === 'success' && d.decision === 'approve');
@@ -573,6 +601,7 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
         (result) => `${result.evidence_id}: ${result.reason ?? 'not verified'}`,
       ),
       ...(claimCheck?.problems ?? []),
+      ...(synthesisCheck?.problems ?? []),
       ...(cited.length > 40
         ? [`Only 40 of ${cited.length} cited evidence ids were re-run.`]
         : []),
@@ -582,6 +611,7 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
       verdict: valid ? (complete ? 'supported' : 'partial') : 'rejected',
       verification: verification.results,
       claim_check: claimCheck,
+      synthesis_check: synthesisCheck,
       sidecar_critic: decisions,
       findings,
       reviewed_artifacts: reviewed.map(({ id, version, sha256 }) => ({

@@ -136,7 +136,9 @@ const routes: [string, RegExp, Handler][] = [
       if (typeof b.text !== "string" || !b.text.trim() || b.text.length > 20_000) throw new InputError("text is required (at most 20000 characters)");
       const ids = b.evidence_ids;
       if (!Array.isArray(ids) || ids.length > 200 || !ids.every((id) => typeof id === "string")) throw new InputError("evidence_ids must be an array of at most 200 strings");
-      const useModel = !CONFIG.sampleMode && hostedAvailable();
+      if (b.use_model !== undefined && typeof b.use_model !== "boolean") throw new InputError("use_model must be a boolean");
+      // Callers may limit the slower model lane to the sentences that matter; it is never forced on offline.
+      const useModel = b.use_model !== false && !CONFIG.sampleMode && hostedAvailable();
       return [
         200,
         await counted("claim-check", async () => {
