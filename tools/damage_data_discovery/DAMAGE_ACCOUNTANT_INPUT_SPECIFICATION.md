@@ -103,6 +103,14 @@ substitutes for outcome-specific baseline rates or risk functions.
 | Sensitivity analysis | Required before decision-grade conclusions | Sensitivity to material inputs (emissions, exposure, population, baseline rates, risk functions, valuation, adoption/effectiveness, and costs); show which assumptions drive results. |
 | Independent review | Required before decision use | Domain review for atmospheric attribution, epidemiology, and economic valuation as applicable; separate numerical reconstruction/check of the account. |
 
+The prototype helper `one_way_sensitivity` in `provenance.py` varies each
+caller-supplied input between explicitly justified lower and upper bounds,
+holding all other inputs at their declared central values. This is a
+deterministic sensitivity screen—not a probability model, confidence interval,
+or joint uncertainty analysis. Record the source and rationale for every range
+before using the output. If evidence provides no defensible range, record
+uncertainty as unquantified and do not fabricate one.
+
 ## Supporting context — do not substitute for required inputs
 
 The following can inform quality checks or interpretation, but are not by
@@ -139,6 +147,24 @@ Raw rasters, station series, fire detections, meteorological fields, risk
 functions, and source-specific metadata need upstream storage and processing;
 do not force them into an accounting `effects` row without a documented,
 reproducible transformation.
+
+## Prototype calculation definitions
+
+The separate `pilot_methods.py` prototypes implement only transparent
+arithmetic after the corresponding scientific inputs have been produced and
+reviewed:
+
+| Method ID | Calculation | Required inputs and interpretation | Not performed |
+|---|---|---|---|
+| `fire.paired-source-removal.v1` | `C_with_target_source - C_with_target_source_removed` for paired grid-cell/period rows. | Concentration outputs from the same reviewed transport/model setup; model name, version, and configuration reference; matching cells, dates, stratum, and unit. Signed differences are retained. | Fire detection/emissions processing, transport simulation, chemistry, source-share inference, or attribution validation. |
+| `exposure.population-weighted-mean.v1` | `sum(population_i * concentration_i) / sum(population_i)` independently for historical and counterfactual values, then subtract the means. | Complete supplied grid rows with matching population, period, stratum, and concentration unit. | Grid alignment, missing-cell imputation, population validation, monitor comparison, or causal inference. |
+| `health.baseline-rate-relative-risk.v1` | `baseline expected = rate per 100,000 person-years * population * days / (100,000 * 365.2425)`; `excess = baseline expected * (RR_event_vs_counterfactual - 1)`. | Baseline rate under the stated counterfactual, population, duration, and externally reviewed relative risk applicable to the same outcome/stratum/exposure period. | Selecting or estimating a risk function, lag/competing-risk/standardization corrections, uncertainty propagation, or applicability review. |
+| `economics.declared-unit-value.v1` | `valued amount = physical quantity * declared unit value`. | Same compatible physical unit and explicitly declared currency and price year, with a source reference for the unit value. | Currency conversion, inflation adjustment, discounting, incidence accounting, overlap resolution, or validation of the unit value. |
+
+The method IDs and versions make prototype formulas explicit and testable; they
+do not imply scientific approval or integration with the production
+DamageAccountant capability. All method outputs must remain separate from
+accounting imports until the required expert review and evidence gates pass.
 
 ## Seed triage input labels
 

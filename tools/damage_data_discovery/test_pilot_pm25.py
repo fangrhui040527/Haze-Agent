@@ -84,12 +84,53 @@ class Pm25SourcePilotTests(unittest.TestCase):
             self.assertNotEqual(raw_path, normalized_path)
             normalized = json.loads(normalized_path.read_text(encoding="utf-8"))
             saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+            manifest_path = (
+                Path(directory)
+                / "provenance"
+                / "pm25_20261027T000000Z.json"
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(len(normalized["records"]), 3)
             self.assertEqual(
                 saved_report["raw_response_sha256"],
                 hashlib.sha256(body).hexdigest(),
             )
             self.assertFalse(report["pilot_ready_for_exposure_modeling"])
+            self.assertEqual(len(manifest["artifacts"]), 2)
+            self.assertEqual(
+                manifest["artifacts"][0]["sha256"],
+                hashlib.sha256(body).hexdigest(),
+            )
+            self.assertEqual(manifest["uncertainty"]["status"], "not_quantified")
+            self.assertEqual(
+                saved_report["provenance_manifest"],
+                "provenance/pm25_20261027T000000Z.json",
+            )
+
+    def test_invalid_source_rows_are_listed_as_exclusions_in_manifest(self):
+        rows = sample_rows()
+        rows[1]["pollutant"] = "PM10"
+        body = json.dumps(rows).encode("utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(pilot_pm25, "OUTPUT_DIR", Path(directory)):
+                pilot_pm25.write_artifacts(
+                    body, "2026-10-27T00:00:00+00:00"
+                )
+            manifest_path = (
+                Path(directory)
+                / "provenance"
+                / "pm25_20261027T000000Z.json"
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            manifest["exclusions"],
+            [
+                {
+                    "item": "source row 1",
+                    "reason": "pollutant is not PM 2.5",
+                }
+            ],
+        )
 
 
 if __name__ == "__main__":

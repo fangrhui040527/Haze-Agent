@@ -5,6 +5,13 @@ This isolated tool uses the Crawl4AI checkout/environment supplied at
 official dataset and documentation pages related to the six DamageAccountant
 modules in the workflow screenshot.
 
+The remaining data and method readiness work is tracked in
+[PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md); its implementation
+sequence and task status are summarized in
+[CRAWLER_CAPABILITIES_AND_DATA_GAPS.md](./CRAWLER_CAPABILITIES_AND_DATA_GAPS.md).
+The matrix is currently blocked on approval of a specific pilot scope and
+does not imply that the prototype has met the screenshot requirements.
+
 It is a research/discovery prototype, not a production source adapter. It does
 not create Zetaris registrations, call discovered links, download bulk
 datasets, use credentials, or change the existing DamageAccountant workflow.
@@ -50,16 +57,65 @@ use the LLM, follow links, or write into Zetaris. Run:
 ```
 
 The script preserves the exact response under `run-output\pilot\raw\`, writes
-a separate normalized sample under `run-output\pilot\normalized\`, and writes
-validation results under `run-output\pilot\reports\`. Reports include a
-SHA-256 reference to the raw response and checks for row shape/count, required
-fields, dates/order, missing values, duplicates, and numeric PM2.5 values.
+a separate normalized sample under `run-output\pilot\normalized\`, validation
+results under `run-output\pilot\reports\`, and a provenance manifest under
+`run-output\pilot\provenance\`. The manifest records the source URL, retrieval
+time, explicit unknown dataset-version/license status, raw and normalized
+SHA-256 hashes, normalization steps, quality-check results, exclusions, and
+uncertainty status. Hashes let a reviewer detect changes to the retained
+artifacts; they do not prove source authenticity.
+
+Validation checks response row shape/count, required fields, dates/order,
+missing values, duplicates, and numeric PM2.5 values.
 The sample response does not provide a verified unit or row-level geography,
 and this smoke test performs no independent monitor comparison. These are
 reported as unresolved; the pilot will not claim readiness for exposure
 modeling or a DamageAccountant estimate. A passing process exit means the
 bounded sample passed its available structural/value checks, not that the
 source is scientifically validated.
+
+## Versioned pilot method primitives
+
+`pilot_methods.py` contains small, pure calculation functions for a future
+reviewed pilot. It does not retrieve data or select scientific parameters.
+Run its tests with:
+
+```powershell
+& 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' tools\damage_data_discovery\test_pilot_methods.py
+```
+
+The versioned methods are:
+
+- `fire.paired-source-removal.v1`: subtracts paired concentrations from an
+  externally generated target-source-removed run and retains signed
+  differences. It does not run a transport model or validate source attribution.
+- `exposure.population-weighted-mean.v1`: calculates paired scenario means
+  over supplied grid cells with a shared period, population stratum, and unit.
+  It requires complete supplied rows and does not impute or validate grids.
+- `health.baseline-rate-relative-risk.v1`: computes expected baseline counts
+  from a supplied rate, population, and duration, then excess counts from a
+  supplied event-vs-counterfactual relative risk. It does not estimate or
+  endorse the baseline rate or risk function.
+- `economics.declared-unit-value.v1`: multiplies a supplied quantity by a
+  compatible declared unit value. It does not convert currencies, adjust
+  prices, discount, or assess valuation applicability.
+
+All outputs carry method IDs/versions, input references or configuration
+identifiers where applicable, formulas, and explicit limits. These are
+engineering prototypes for tests and method review—not approved methods,
+DamageAccountant imports, or empirical estimates. Do not use them for
+decision-grade analysis until appropriate atmospheric, epidemiological, and
+economic reviewers approve the methods and inputs.
+
+`provenance.py` validates pilot provenance manifests and provides a
+deterministic one-way sensitivity helper. It varies one explicitly bounded
+input at a time while holding the other declared central inputs fixed. Callers
+must supply justified central values, lower/upper bounds, units in their own
+input record, and an evaluator for the selected method. It does not infer
+ranges or probability distributions; the resulting endpoints are sensitivity
+scenarios, not confidence intervals or joint uncertainty bounds. The current
+PM2.5 sample has no defensible measurement-uncertainty range, so no empirical
+sensitivity result is reported for it.
 
 ## Optional AI API credentials
 

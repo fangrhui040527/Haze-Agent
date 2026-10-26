@@ -31,6 +31,22 @@ separately, and records unresolved unit, geography, and independent-comparison
 gaps. It is an acquisition smoke test, not an event-level exposure or damage
 pilot.
 
+Task four has a separate, versioned method prototype in
+[pilot_methods.py](./pilot_methods.py): paired source-removal concentration
+differences, population-weighted exposure, supplied-baseline/supplied-relative-
+risk outcome arithmetic, and declared-unit-value multiplication. The code does
+not run transport, select or validate a risk function, or establish valuation
+applicability. Its outputs are not decision-grade estimates or DamageAccountant
+inputs; domain review and empirical inputs are still required.
+
+Task five adds [provenance.py](./provenance.py) to record source/retrieval
+metadata, transformation steps, quality checks, exclusions, uncertainty
+status, and SHA-256 checksums for retained raw/normalized pilot artifacts. It
+also provides deterministic one-way sensitivity analysis over caller-supplied
+ranges. No uncertainty ranges are invented for the three-row PM2.5 sample, so
+the code correctly reports uncertainty as unquantified and does not create an
+empirical sensitivity result.
+
 ## What the current tool can do
 
 The current implementation can:
@@ -85,7 +101,72 @@ Relevant implementation and source inventory:
 | **Prevention evaluator:** effectiveness, implementation cost, exposure reduction | The current source inventory may help find general background information, but it does not establish a complete intervention evidence base. | Intervention-specific cost, effectiveness, adoption, maintenance, and resulting exposure changes are not supplied by the current crawl workflow. | Choose a specific intervention and counterfactual. Obtain implementation and lifecycle costs, empirical or reviewed effectiveness evidence, adoption assumptions, and modeled exposure changes. Estimate avoided outcomes and costs for each scenario, with sensitivity ranges. |
 | **Evidence and uncertainty layer:** sources, versions, parameter ranges, limitations | The discovery report records seed/page metadata, crawl status, selected excerpts, and candidate same-host links. Nemotron can help describe fetched page evidence. | The reports do not constitute full source provenance, data-quality validation, model versioning, uncertainty propagation, or confidence limits for a damage estimate. Model output is not source verification. | Preserve source URLs, access/retrieval time, downloaded-file checksums, licenses, dataset versions, schemas, transformations, assumptions, and model versions. Build data-quality checks and an input-to-output lineage. Run sensitivity or probabilistic analyses and clearly report limitations and exclusions. |
 
-## Recommended implementation sequence
+## Implementation plan
+
+Tasks one through five below establish the prototype and initial provenance
+capabilities. They do not mean the screenshot's data requirements have been
+met. The next work is a gated progression from scope approval through evidence
+acquisition, method review, and any later accounting import.
+
+### Completed prototype tasks
+
+1. **Translate the screenshots into an input specification.** Completed in
+   [DAMAGE_ACCOUNTANT_INPUT_SPECIFICATION.md](./DAMAGE_ACCOUNTANT_INPUT_SPECIFICATION.md);
+   proposed minimum-coverage criteria still require approval for a specific
+   analysis.
+2. **Triage candidate sources.** Completed as curated source-role,
+   potential-input, and limitation annotations; annotations remain candidates,
+   not verification.
+3. **Acquire a bounded sample.** Completed as a three-row monthly PM2.5
+   smoke test. It does not meet event-level exposure requirements.
+4. **Prototype calculation methods.** Completed as isolated arithmetic
+   primitives, not validated scientific models.
+5. **Add provenance and uncertainty utilities.** Completed for the bounded
+   pilot artifacts and explicit-range one-way sensitivity helper. The sample's
+   uncertainty is still unquantified.
+
+### Remaining readiness tasks
+
+1. **Approve pilot scope and readiness criteria.** Fill the scope and approval
+   record in [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md): event,
+   source boundary, Malaysian study area, population/outcomes, periods,
+   counterfactual, economic perspective, and acceptable coverage/exclusions.
+   Name the project and domain reviewers. This is the current task; values
+   requiring project or scientific judgment are intentionally left pending.
+2. **Verify sources and acquisition paths.** For every required input, confirm
+   dataset identity/version, fields/units, terms, spatial/temporal coverage,
+   and repeatable access with the provider's official documentation. Mark
+   conditional inputs not in scope only with an approved rationale.
+3. **Acquire and quality-check the scoped data.** Build source-specific,
+   bounded acquisition for the selected pilot. Preserve raw evidence, validate
+   schema/units/coverage/missingness, quantify exclusions, compare appropriate
+   measurements independently, and update the readiness matrix.
+4. **Implement reproducible transformations.** Align time and geography,
+   population and exposure, and any selected derived quantities. Record
+   method/code versions and verify outputs independently. Do not treat
+   missing population-area/time coverage as zero impact.
+5. **Review scientific and valuation methods.** Obtain appropriate
+   atmospheric, epidemiological, and health-economics decisions on attribution,
+   counterfactuals, risk functions, baselines, valuation, and double counting.
+   If a required input or method cannot be supported, record the endpoint as
+   not estimated rather than manufacture a proxy.
+6. **Characterize uncertainty and independently check results.** Use only
+   evidence-supported ranges/distributions, test material assumptions, explain
+   unquantified uncertainties, and retain an independent numerical and
+   methodological review.
+7. **Pass the accounting-import gate.** Map only reviewed outputs, compatible
+   values, scope, coverage, incidence, and provenance into the
+   DamageAccountant contract. Keep raw rasters, monitor data, fire data, and
+   intermediate models in their appropriate upstream stores.
+8. **Expand coverage only after pilot review.** Add events, regions, outcomes,
+   or interventions incrementally; repeat the source, coverage, method, and
+   uncertainty gates for each expansion.
+
+The readiness matrix defines explicit gates and the current evidence state.
+No downstream stage is considered ready simply because prototype code or its
+tests pass.
+
+## Original implementation sequence
 
 ### 1. Turn the screenshot into an input specification
 

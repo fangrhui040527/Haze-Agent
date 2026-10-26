@@ -12,6 +12,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from provenance import build_file_manifest
+
 ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = ROOT / "run-output" / "pilot"
 SOURCE_ID = "data_gov_my_air_pollution_pm25_api"
@@ -276,13 +278,105 @@ def write_artifacts(
     except ValueError:
         raw_reference = raw_path.relative_to(OUTPUT_DIR)
         normalized_reference = normalized_path.relative_to(OUTPUT_DIR)
-    normalized["raw_file"] = str(raw_reference)
-    report["raw_file"] = str(raw_reference)
-    report["normalized_file"] = str(normalized_reference)
+    normalized["raw_file"] = raw_reference.as_posix()
+    report["raw_file"] = raw_reference.as_posix()
+    report["normalized_file"] = normalized_reference.as_posix()
     normalized_path.write_text(
         json.dumps(normalized, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    manifest_path = OUTPUT_DIR / "provenance" / f"pm25_{timestamp}.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    invalid_rows = report["checks"]["required_fields"]["invalid"]
+    missing_rows = report["checks"]["required_fields"]["missing"]
+    exclusions = [
+        {
+            "item": f"source row {entry['row']}",
+            "reason": entry["reason"],
+        }
+        for entry in invalid_rows
+    ]
+    exclusions.extend(
+        {
+            "item": f"source row {entry['row']}",
+            "reason": f"Missing required fields: {', '.join(entry['fields'])}.",
+        }
+        for entry in missing_rows
+    )
+    manifest = build_file_manifest(
+        manifest_id=f"{SOURCE_ID}-{timestamp}",
+        created_at_utc=retrieved_at,
+        source_id=SOURCE_ID,
+        source_url=SOURCE_URL,
+        retrieved_at_utc=retrieved_at,
+        dataset_version="not provided in sampled API response",
+        license_status="not individually verified for this sample",
+        artifacts=[
+            {
+                "artifact_id": f"{SOURCE_ID}-raw-{timestamp}",
+                "path": raw_path,
+                "display_path": raw_reference.as_posix(),
+                "media_type": "application/json",
+                "role": "unaltered source response",
+            },
+            {
+                "artifact_id": f"{SOURCE_ID}-normalized-{timestamp}",
+                "path": normalized_path,
+                "display_path": normalized_reference.as_posix(),
+                "media_type": "application/json",
+                "role": "normalized sample",
+            },
+        ],
+        transformations=[
+            {
+                "step_id": "decode-json",
+                "description": "Decode the complete HTTP response as UTF-8 JSON.",
+                "implementation": "tools/damage_data_discovery/pilot_pm25.py",
+                "version": "1",
+            },
+            {
+                "step_id": "validate-bounded-rows",
+                "description": (
+                    "Check the three-row response shape, required fields, "
+                    "date order, duplicates, pollutant label, and numeric "
+                    "finite nonnegative concentration."
+                ),
+                "implementation": "validate_records",
+                "version": "1",
+            },
+            {
+                "step_id": "normalize-record-fields",
+                "description": (
+                    "Map date to observed_month and concentration to "
+                    "concentration_value; preserve source row index. Unknown "
+                    "unit and geography remain null."
+                ),
+                "implementation": "validate_records",
+                "version": "1",
+            },
+        ],
+        quality_checks=[
+            {"check": name, **details}
+            for name, details in report["checks"].items()
+        ],
+        exclusions=exclusions,
+        uncertainty={
+            "status": "not_quantified",
+            "method": "No measurement or sampling uncertainty supplied or estimated.",
+            "limitations": [
+                "The sample is capped at three records.",
+                "The response contains no row-level geography or verified unit.",
+                "No uncertainty estimate or independent comparison is available.",
+            ],
+        },
+    )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    report["provenance_manifest"] = manifest_path.relative_to(
+        OUTPUT_DIR
+    ).as_posix()
     report_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -317,6 +411,7 @@ def main() -> int:
         print(f"Raw response: {raw_path}")
         print(f"Normalized sample: {normalized_path}")
         print(f"Validation report: {report_path}")
+        print(f"Provenance manifest: {report['provenance_manifest']}")
         for name, check in report["checks"].items():
             print(f"  {name}: {check['status']}")
         print(
