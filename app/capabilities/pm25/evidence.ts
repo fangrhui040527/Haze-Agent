@@ -132,14 +132,23 @@ function requestInstant(value: string): string {
 
 function coordinate(value: unknown, maximum: number): number | null {
   if (value === null) return null;
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    Math.abs(value) > maximum
-  ) {
+  const parsed = parseFiniteNumber(value);
+  if (parsed === undefined || Math.abs(parsed) > maximum) {
     return invalid('Zetaris returned invalid town coordinates.');
   }
-  return value;
+  return parsed;
+}
+
+export function parseFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : undefined;
+  if (
+    typeof value !== 'string' ||
+    !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u.test(value.trim())
+  )
+    return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
@@ -179,15 +188,14 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   if (start < scope.period.start || start >= scope.period.end) {
     return invalid('Zetaris returned a sample outside the requested period.');
   }
-  const concentration = row['pm25'];
+  const rawConcentration = row['pm25'];
+  const concentration =
+    rawConcentration === null ? null : parseFiniteNumber(rawConcentration);
   if (
-    concentration !== null &&
-    (typeof concentration !== 'number' ||
-      !Number.isFinite(concentration) ||
-      concentration < 0)
-  ) {
+    concentration === undefined ||
+    (concentration !== null && concentration < 0)
+  )
     return invalid('Zetaris returned an invalid PM2.5 concentration.');
-  }
   // Historical ingestion wrote collection time into issued_utc. It is retained
   // in raw evidence, but cannot establish provider issuance for this source.
   return {

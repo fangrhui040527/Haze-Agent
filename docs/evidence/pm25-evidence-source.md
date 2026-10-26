@@ -73,3 +73,24 @@ them to the server process. Required runtime access is `ZETARIS_API_KEY`;
 organization. The existing documented local defaults are used if those last two
 settings are absent. The runtime does not log in with username/password or
 create credentials. `SAMPLE_MODE=true` explicitly disables retrieval.
+
+## Live source check on 26 October 2026
+
+After starting the local `smokeledger-db` Compose service, the read-only
+preflight passed: Zetaris REST was reachable, `SELECT 1` succeeded, and the
+`sl_pg` datasource was listed. The production PM2.5 adapter then retrieved
+Kuala Lumpur samples for 2026-10-23 UTC and the analysis reported 24 usable
+modeled rows, from 00:00 through 23:00 UTC, without truncation.
+
+The live response serialized numeric SQL values as strings. The adapter now
+accepts only strictly formatted finite numeric strings and normalizes them
+before analysis; malformed values remain rejected. Focused tests, type checks,
+the production build, and the live adapter/analysis check passed.
+
+The full live task and World Model acceptance flow did not complete. The
+isolated task server lacked `HAZE_PROVIDER` and its server-side model API key,
+so the initial planning assignment failed before the PM2.5 workflow ran.
+Consequently this check verifies Zetaris access and the production PM2.5
+retrieval/analysis boundary, but does not verify a live task, independent
+review, World Model projection, or live acceptance. No World Model task
+records were created by the direct adapter check.

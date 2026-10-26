@@ -8,6 +8,7 @@ export { framePm25Scope } from './contracts.js';
 import {
   EvidenceSourceError,
   PM25_SOURCE_ID,
+  parseFiniteNumber,
   type EvidenceCapture,
   type EvidenceRow,
   type EvidenceScope,
@@ -125,15 +126,19 @@ function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
       'The raw evidence does not match the authorized source selection.',
     );
   const start = rawInstant(row['valid_utc']) as string;
+  const normalizedValue =
+    row['pm25'] === null ? null : parseFiniteNumber(row['pm25']);
+  const latitude = row['lat'] === null ? null : parseFiniteNumber(row['lat']);
+  const longitude = row['lon'] === null ? null : parseFiniteNumber(row['lon']);
   const parsed = captureSchema.shape.rows.element.safeParse({
     start,
     end: start,
-    value: row['pm25'],
+    value: normalizedValue,
     issued_at: null,
     location: row['town'],
     ingested_at: rawInstant(row['ingested_utc'], true),
-    latitude: row['lat'],
-    longitude: row['lon'],
+    latitude,
+    longitude,
   });
   if (
     !parsed.success ||
