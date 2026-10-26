@@ -6,6 +6,7 @@ import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { DamageWorkProducts } from './DamageWorkProducts.tsx';
 import styles from './DamageAccountPage.module.css';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 const REQUEST_PREFIX = 'Build a damage account using World Model evidence. ';
 
@@ -76,7 +77,7 @@ export function DamageAccountView({
   return (
     <article className={styles.page}>
       <header className={styles.header}>
-        <Link to="/">Back to the dashboard</Link>
+        <BackLink>Back to the dashboard</BackLink>
         <h1>Damage accounting</h1>
         <p>
           Build and inspect accounts using evidence retained in World Model.

@@ -12,6 +12,7 @@ import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
@@ -68,9 +69,7 @@ export function GeneralTaskReport({
       className={styles.page}
       aria-busy={loading || run.status === 'running'}
     >
-      <p className={styles.back}>
-        <Link to="/">Back to the dashboard</Link>
-      </p>
+      <BackLink>Back to the dashboard</BackLink>
       <div className={styles.doc}>
         <h1 className={styles.title}>Task report</h1>
         {record && (

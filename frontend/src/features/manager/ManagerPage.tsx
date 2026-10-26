@@ -8,6 +8,7 @@ import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './ManagerPage.module.css';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 function savedTaskId(): string | undefined {
   try {
@@ -55,7 +56,7 @@ function PageHeader({ taskId }: { taskId?: string }) {
   return (
     <header className={styles.header}>
       <nav className={styles.actions} aria-label="Manager navigation">
-        <Link to="/">Back to the dashboard</Link>
+        <BackLink>Back to the dashboard</BackLink>
         {taskId && (
           <Link
             to={`/task/${encodeURIComponent(taskId)}`}

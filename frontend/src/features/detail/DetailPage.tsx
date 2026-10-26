@@ -38,6 +38,7 @@ import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
 import { RankBreakdown } from '../live-table/LiveTable.tsx';
 import { rankItems } from '../live-table/ranking.ts';
 import styles from './DetailPage.module.css';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 type LoadState =
   | { status: 'loading' }
@@ -102,11 +103,7 @@ export function DetailPage() {
     };
   }, [state]);
 
-  const back = (
-    <Link to="/" className={styles.back}>
-      ← Back to dashboard
-    </Link>
-  );
+  const back = <BackLink>Back to the dashboard</BackLink>;
 
   if (state.status === 'loading') {
     return (
