@@ -1,17 +1,21 @@
-# Damage accounting component intake
+# Damage account intake
 
 This capability organizes an existing damage account from supplied manifests,
 component artifacts and evidence references. It checks which required components
 are present and preserves their exact revisions for review and World Model
 lineage.
 
-The registered capability is `damage-accounting` (`damage-accounting.v1`). Its
+The registered capability is `damage-account-intake` (`damage-account-intake.v1`). Its
 single executable assignment, `damage-accounting.intake`, runs as `WorkerShield`
 without external tools. `EvidenceCritic` is the declared independent reviewer
 role; this module does not register executable component-review assignments.
 
+The capability's former ID was `damage-accounting`. Its assignment, review and
+artifact identifiers retain the `damage-accounting.*` names for existing records;
+the capability is advertised to the Manager as `damage-account-intake`.
+
 For numerical accounting from supplied effects and valuation inputs, use the
-separate [damage-account capability](../damage-account/README.md). The
+separate [damage-appraisal capability](../damage-appraisal/README.md). The
 [composition root](../../composition.ts) distinguishes the two starting plans:
 a valid component-intake scope selects this workflow when their objective
 matches overlap.

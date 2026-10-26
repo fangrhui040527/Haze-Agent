@@ -10,6 +10,8 @@ Implemented on 25 October 2026 against the existing Manager v4 working tree. Exi
 
 `app/agents/damage-accountant/` defines `damage-accountant.v1`, bounded instructions and the existing validated specialist loop. `app/composition.ts` registers the agent, `damage-account.v1`, deterministic assignments and four typed tools. No extra specialist slots, task concurrency or aggregate resource budgets were added. The generic task envelope and persistence format remain v3.
 
+The calculation capability is now named [`damage-appraisal`](../../app/capabilities/damage-appraisal/README.md), version `damage-appraisal.v2`. The earlier capability/version references in this report describe the original implementation. Supplied manifest validation belongs to the separate [`damage-account-intake`](../../app/capabilities/damage-account-intake/README.md) capability.
+
 The optional starting plan contains five assignments:
 
 | Assignment        | Role             | Result                                                                                                                                                        |
@@ -26,7 +28,7 @@ The typed `damage.read-input`, `damage.calculate`, `damage.reconcile` and `damag
 
 ## Contracts and calculations
 
-`app/contracts/damage-account.ts` contains browser-safe versioned schemas. Domain implementation is under `app/capabilities/damage-account/`: `inputs.ts` normalizes imports, `scope.ts` checks compatibility, `methods.ts` produces component records, `checker.ts` reconstructs independently, `publication.ts` implements explicit account revision decomposition, and `fixtures.ts` freezes invented reference cases.
+`app/contracts/damage-account.ts` contains browser-safe versioned schemas. Domain implementation is under `app/capabilities/damage-appraisal/`: `inputs.ts` normalizes imports, `scope.ts` checks compatibility, `methods.ts` produces component records, `checker.ts` reconstructs independently, `publication.ts` implements explicit account revision decomposition, and `fixtures.ts` freezes invented reference cases.
 
 Inputs retain event and source boundaries, countries, population support, separate emissions and effect periods, valuation date, endpoint, scenario and baseline IDs, native units, causal methods, applicability limits, uncertainty interpretation, accounting lens, overlap selection and exact source references. Import manifests retain table types and selected row indexes. The importer enforces existing artifact bounds; larger tables require bounded partitions rather than a new unbounded transport.
 

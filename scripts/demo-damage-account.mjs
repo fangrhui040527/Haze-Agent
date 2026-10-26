@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createSyntheticDamageImport,
   SYNTHETIC_DAMAGE_EXPECTATIONS,
-} from '../dist/capabilities/damage-account/fixtures.js';
+} from '../dist/capabilities/damage-appraisal/fixtures.js';
 import { damageAccountSchema } from '../dist/contracts/damage-account.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));

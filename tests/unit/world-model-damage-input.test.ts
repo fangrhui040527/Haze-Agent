@@ -11,7 +11,7 @@ import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
 import {
   createSyntheticDamageImport,
   SYNTHETIC_DAMAGE_EXPECTATIONS,
-} from '../../app/capabilities/damage-account/fixtures.js';
+} from '../../app/capabilities/damage-appraisal/fixtures.js';
 
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {

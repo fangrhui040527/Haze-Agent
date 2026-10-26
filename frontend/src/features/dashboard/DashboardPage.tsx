@@ -49,7 +49,7 @@ export function DashboardPage() {
           to="/damage-account"
           className={buttonClass('secondary', 'small')}
         >
-          Damage accounting
+          Damage appraisal
         </Link>
       </div>
       <Panel className={styles.table}>

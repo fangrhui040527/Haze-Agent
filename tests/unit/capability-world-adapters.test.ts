@@ -7,7 +7,7 @@ import { contractHash } from '../../app/contracts/json.js';
 import { taskRequestSchema } from '../../app/contracts/tasks.js';
 import { createExecutionRegistry } from '../../app/composition.js';
 import { pm25WorldModelAdapter } from '../../app/capabilities/pm25/world.js';
-import { damageAccountingWorldModelAdapter } from '../../app/capabilities/damage-accounting/world.js';
+import { damageAccountIntakeWorldModelAdapter } from '../../app/capabilities/damage-account-intake/world.js';
 import { episodeInvestigationWorldModelAdapter } from '../../app/capabilities/episode-investigation/world.js';
 import { evidenceSynthesisWorldModelAdapter } from '../../app/capabilities/evidence-synthesis/world.js';
 import type { CapabilityWorldModelAdapter } from '../../app/orchestration/ports.js';
@@ -43,8 +43,8 @@ const adapters: {
 }[] = [
   { capability: 'pm25-evidence-summary', adapter: pm25WorldModelAdapter },
   {
-    capability: 'damage-accounting',
-    adapter: damageAccountingWorldModelAdapter,
+    capability: 'damage-account-intake',
+    adapter: damageAccountIntakeWorldModelAdapter,
   },
   {
     capability: 'episode-investigation',

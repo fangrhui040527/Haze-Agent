@@ -281,186 +281,199 @@ function extractDamageRecords(
   return records;
 }
 
-export const damageAccountingWorldModelAdapter: CapabilityWorldModelAdapter = {
-  extract: ({ artifacts }) => extractDamageRecords(artifacts),
-  buildAcceptanceCandidate: ({ request, records, artifacts, assignments }) => {
-    const scope = damageAccountScopeSchema.safeParse(request.scope);
-    if (!scope.success) return undefined;
-    const byRef = new Map(
-      artifacts.map((artifact) => [artifactKey(artifact), artifact]),
-    );
-    const manifests = artifacts.flatMap((artifact) => {
-      if (!hasContentHash(artifact)) return [];
-      const parsed = damageAccountManifestSchema.safeParse(content(artifact));
-      return parsed.success ? [{ artifact, value: parsed.data }] : [];
-    });
+export const damageAccountIntakeWorldModelAdapter: CapabilityWorldModelAdapter =
+  {
+    extract: ({ artifacts }) => extractDamageRecords(artifacts),
+    buildAcceptanceCandidate: ({
+      request,
+      records,
+      artifacts,
+      assignments,
+    }) => {
+      const scope = damageAccountScopeSchema.safeParse(request.scope);
+      if (!scope.success) return undefined;
+      const byRef = new Map(
+        artifacts.map((artifact) => [artifactKey(artifact), artifact]),
+      );
+      const manifests = artifacts.flatMap((artifact) => {
+        if (!hasContentHash(artifact)) return [];
+        const parsed = damageAccountManifestSchema.safeParse(content(artifact));
+        return parsed.success ? [{ artifact, value: parsed.data }] : [];
+      });
 
-    for (const { artifact: manifestArtifact, value: manifest } of manifests) {
-      if (
-        contractHash(manifest.scope) !== contractHash(scope.data) ||
-        new Set(manifest.required_component_ids).size !==
-          manifest.required_component_ids.length ||
-        new Set(manifest.components.map((component) => component.component_id))
-          .size !== manifest.components.length ||
-        !manifest.required_component_ids.every((id) =>
+      for (const { artifact: manifestArtifact, value: manifest } of manifests) {
+        if (
+          contractHash(manifest.scope) !== contractHash(scope.data) ||
+          new Set(manifest.required_component_ids).size !==
+            manifest.required_component_ids.length ||
+          new Set(
+            manifest.components.map((component) => component.component_id),
+          ).size !== manifest.components.length ||
+          !manifest.required_component_ids.every((id) =>
+            manifest.components.some(
+              (component) => component.component_id === id,
+            ),
+          )
+        )
+          continue;
+        if (
           manifest.components.some(
-            (component) => component.component_id === id,
-          ),
+            (component) => !byRef.has(artifactKey(component.artifact)),
+          )
         )
-      )
-        continue;
-      if (
-        manifest.components.some(
-          (component) => !byRef.has(artifactKey(component.artifact)),
+          continue;
+        const resolved = exactComponents(manifest, artifacts);
+        if (resolved.length !== manifest.components.length) continue;
+        const componentIds = new Set(
+          resolved.map(({ ref }) => ref.component_id),
+        );
+        if (
+          !manifest.required_component_ids.every((id) => componentIds.has(id))
         )
-      )
-        continue;
-      const resolved = exactComponents(manifest, artifacts);
-      if (resolved.length !== manifest.components.length) continue;
-      const componentIds = new Set(resolved.map(({ ref }) => ref.component_id));
-      if (!manifest.required_component_ids.every((id) => componentIds.has(id)))
-        continue;
-      if (
-        ['financial_incidence', 'social_welfare'].includes(
-          manifest.scope.account_type,
-        ) &&
-        resolved.some(
-          ({ value }) =>
-            ['financial_entry', 'welfare_valuation'].includes(value.category) &&
-            value.measure.currency !== manifest.scope.currency,
+          continue;
+        if (
+          ['financial_incidence', 'social_welfare'].includes(
+            manifest.scope.account_type,
+          ) &&
+          resolved.some(
+            ({ value }) =>
+              ['financial_entry', 'welfare_valuation'].includes(
+                value.category,
+              ) && value.measure.currency !== manifest.scope.currency,
+          )
         )
-      )
-        continue;
+          continue;
 
-      const manifestRef = reference(manifestArtifact);
-      if (manifest.revision > 1) {
-        const hasLineage = artifacts.some((lineageArtifact) => {
-          if (!hasContentHash(lineageArtifact)) return false;
-          const lineage = damageAccountLineageSchema.safeParse(
-            content(lineageArtifact),
-          );
-          const previousManifest = lineage.success
-            ? byRef.get(artifactKey(lineage.data.from_manifest))
-            : undefined;
-          const parsedPrevious = previousManifest
-            ? damageAccountManifestSchema.safeParse(content(previousManifest))
-            : undefined;
+        const manifestRef = reference(manifestArtifact);
+        if (manifest.revision > 1) {
+          const hasLineage = artifacts.some((lineageArtifact) => {
+            if (!hasContentHash(lineageArtifact)) return false;
+            const lineage = damageAccountLineageSchema.safeParse(
+              content(lineageArtifact),
+            );
+            const previousManifest = lineage.success
+              ? byRef.get(artifactKey(lineage.data.from_manifest))
+              : undefined;
+            const parsedPrevious = previousManifest
+              ? damageAccountManifestSchema.safeParse(content(previousManifest))
+              : undefined;
+            return (
+              lineage.success &&
+              lineage.data.account_id === manifest.scope.account_id &&
+              lineage.data.from_revision === manifest.revision - 1 &&
+              lineage.data.to_revision === manifest.revision &&
+              exactReference(lineage.data.to_manifest, manifestRef) &&
+              previousManifest !== undefined &&
+              hasContentHash(previousManifest) &&
+              parsedPrevious?.success === true &&
+              parsedPrevious.data.scope.account_id ===
+                manifest.scope.account_id &&
+              parsedPrevious.data.revision === lineage.data.from_revision
+            );
+          });
+          if (!hasLineage) continue;
+        }
+
+        const requiredEvidence: ArtifactRef[] = [manifestRef];
+        let reviewsComplete = true;
+        for (const { ref, artifact, value } of resolved) {
+          requiredEvidence.push(reference(artifact), ...value.evidence);
+          for (const reviewType of componentTypes(value.category)) {
+            const assignmentId = `damage-accounting.review.${reviewType}`;
+            const review = artifacts.find((reviewArtifact) => {
+              if (
+                !hasContentHash(reviewArtifact) ||
+                reviewArtifact.assignment_id === undefined ||
+                reviewArtifact.producer.kind !== 'assignment' ||
+                reviewArtifact.producer.id !== reviewArtifact.assignment_id
+              )
+                return false;
+              const parsed = damageAccountReviewSchema.safeParse(
+                content(reviewArtifact),
+              );
+              if (
+                !parsed.success ||
+                parsed.data.account_id !== manifest.scope.account_id ||
+                parsed.data.review_type !== reviewType ||
+                parsed.data.status !== 'supported' ||
+                parsed.data.component.component_id !== ref.component_id ||
+                parsed.data.component.revision !== ref.revision ||
+                !exactReference(parsed.data.component.artifact, ref.artifact) ||
+                ![reference(artifact), ...value.evidence].every((required) =>
+                  parsed.data.checked_artifacts.some((checked) =>
+                    exactReference(checked, required),
+                  ),
+                )
+              )
+                return false;
+              const reviewer = assignments.find(
+                (candidate) =>
+                  candidate.id === reviewArtifact.assignment_id &&
+                  candidate.revision === reviewArtifact.assignment_revision &&
+                  candidate.definition_id === assignmentId &&
+                  candidate.role === 'EvidenceCritic' &&
+                  candidate.status === 'completed' &&
+                  candidate.support === 'supported',
+              );
+              return (
+                reviewer !== undefined && reviewer.id !== artifact.assignment_id
+              );
+            });
+            if (!review) {
+              reviewsComplete = false;
+              break;
+            }
+            requiredEvidence.push(reference(review));
+          }
+          if (!reviewsComplete) break;
+        }
+        if (!reviewsComplete) continue;
+        const accountRecord = records.find((record) => {
+          if (
+            record.kind !== 'damage_account_reference' ||
+            record.external_id !==
+              accountExternalId(manifest.scope.account_id, manifest.revision)
+          )
+            return false;
+          const payload = z
+            .object({ manifest: artifactRefSchema })
+            .safeParse(record.payload);
           return (
-            lineage.success &&
-            lineage.data.account_id === manifest.scope.account_id &&
-            lineage.data.from_revision === manifest.revision - 1 &&
-            lineage.data.to_revision === manifest.revision &&
-            exactReference(lineage.data.to_manifest, manifestRef) &&
-            previousManifest !== undefined &&
-            hasContentHash(previousManifest) &&
-            parsedPrevious?.success === true &&
-            parsedPrevious.data.scope.account_id ===
-              manifest.scope.account_id &&
-            parsedPrevious.data.revision === lineage.data.from_revision
+            payload.success &&
+            exactReference(payload.data.manifest, manifestRef)
           );
         });
-        if (!hasLineage) continue;
+        if (!accountRecord) continue;
+        return {
+          subject: accountRecord.ref,
+          stated_use: `damage-account:${manifest.scope.account_type}`,
+          evidence: [
+            ...new Map(
+              requiredEvidence.map((ref) => [artifactKey(ref), ref]),
+            ).values(),
+          ],
+        };
       }
-
-      const requiredEvidence: ArtifactRef[] = [manifestRef];
-      let reviewsComplete = true;
-      for (const { ref, artifact, value } of resolved) {
-        requiredEvidence.push(reference(artifact), ...value.evidence);
-        for (const reviewType of componentTypes(value.category)) {
-          const assignmentId = `damage-accounting.review.${reviewType}`;
-          const review = artifacts.find((reviewArtifact) => {
-            if (
-              !hasContentHash(reviewArtifact) ||
-              reviewArtifact.assignment_id === undefined ||
-              reviewArtifact.producer.kind !== 'assignment' ||
-              reviewArtifact.producer.id !== reviewArtifact.assignment_id
-            )
-              return false;
-            const parsed = damageAccountReviewSchema.safeParse(
-              content(reviewArtifact),
-            );
-            if (
-              !parsed.success ||
-              parsed.data.account_id !== manifest.scope.account_id ||
-              parsed.data.review_type !== reviewType ||
-              parsed.data.status !== 'supported' ||
-              parsed.data.component.component_id !== ref.component_id ||
-              parsed.data.component.revision !== ref.revision ||
-              !exactReference(parsed.data.component.artifact, ref.artifact) ||
-              ![reference(artifact), ...value.evidence].every((required) =>
-                parsed.data.checked_artifacts.some((checked) =>
-                  exactReference(checked, required),
-                ),
-              )
-            )
-              return false;
-            const reviewer = assignments.find(
-              (candidate) =>
-                candidate.id === reviewArtifact.assignment_id &&
-                candidate.revision === reviewArtifact.assignment_revision &&
-                candidate.definition_id === assignmentId &&
-                candidate.role === 'EvidenceCritic' &&
-                candidate.status === 'completed' &&
-                candidate.support === 'supported',
-            );
-            return (
-              reviewer !== undefined && reviewer.id !== artifact.assignment_id
-            );
-          });
-          if (!review) {
-            reviewsComplete = false;
-            break;
-          }
-          requiredEvidence.push(reference(review));
-        }
-        if (!reviewsComplete) break;
+      return undefined;
+    },
+    requiredReviewCoverage: ({ request, artifacts }) => {
+      const scope = damageAccountScopeSchema.safeParse(request.scope);
+      if (!scope.success) return [];
+      const coverage = [];
+      for (const { value: manifest } of artifacts.flatMap((artifact) => {
+        if (!hasContentHash(artifact)) return [];
+        const parsed = damageAccountManifestSchema.safeParse(content(artifact));
+        return parsed.success ? [{ value: parsed.data }] : [];
+      })) {
+        if (contractHash(manifest.scope) !== contractHash(scope.data)) continue;
+        for (const { ref, value } of exactComponents(manifest, artifacts))
+          for (const reviewType of componentTypes(value.category))
+            coverage.push({
+              id: `${reviewType}:${ref.component_id}:${ref.revision}`,
+              evidence: [ref.artifact],
+              reviewer_roles: ['EvidenceCritic' as const],
+            });
       }
-      if (!reviewsComplete) continue;
-      const accountRecord = records.find((record) => {
-        if (
-          record.kind !== 'damage_account_reference' ||
-          record.external_id !==
-            accountExternalId(manifest.scope.account_id, manifest.revision)
-        )
-          return false;
-        const payload = z
-          .object({ manifest: artifactRefSchema })
-          .safeParse(record.payload);
-        return (
-          payload.success && exactReference(payload.data.manifest, manifestRef)
-        );
-      });
-      if (!accountRecord) continue;
-      return {
-        subject: accountRecord.ref,
-        stated_use: `damage-account:${manifest.scope.account_type}`,
-        evidence: [
-          ...new Map(
-            requiredEvidence.map((ref) => [artifactKey(ref), ref]),
-          ).values(),
-        ],
-      };
-    }
-    return undefined;
-  },
-  requiredReviewCoverage: ({ request, artifacts }) => {
-    const scope = damageAccountScopeSchema.safeParse(request.scope);
-    if (!scope.success) return [];
-    const coverage = [];
-    for (const { value: manifest } of artifacts.flatMap((artifact) => {
-      if (!hasContentHash(artifact)) return [];
-      const parsed = damageAccountManifestSchema.safeParse(content(artifact));
-      return parsed.success ? [{ value: parsed.data }] : [];
-    })) {
-      if (contractHash(manifest.scope) !== contractHash(scope.data)) continue;
-      for (const { ref, value } of exactComponents(manifest, artifacts))
-        for (const reviewType of componentTypes(value.category))
-          coverage.push({
-            id: `${reviewType}:${ref.component_id}:${ref.revision}`,
-            evidence: [ref.artifact],
-            reviewer_roles: ['EvidenceCritic' as const],
-          });
-    }
-    return coverage;
-  },
-};
+      return coverage;
+    },
+  };

@@ -28,7 +28,7 @@ describe('server-owned World Model acceptance policy', () => {
       policyAllows(policy, 'pm25-evidence-summary', 'pm25-evidence-summary'),
     ).toBe(true);
     expect(
-      policyAllows(policy, 'damage-accounting', 'damage-account:social'),
+      policyAllows(policy, 'damage-account-intake', 'damage-account:social'),
     ).toBe(true);
     expect(
       policyAllows(policy, 'episode-investigation', 'pm25-evidence-summary'),

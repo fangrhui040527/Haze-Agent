@@ -78,7 +78,7 @@ export function DamageAccountView({
     <article className={styles.page}>
       <header className={styles.header}>
         <BackLink>Back to the dashboard</BackLink>
-        <h1>Damage accounting</h1>
+        <h1>Damage appraisal</h1>
         <p>
           Build and inspect accounts using evidence retained in World Model.
           Physical harm, financing and social welfare remain separate views.

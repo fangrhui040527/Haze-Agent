@@ -73,9 +73,7 @@ export const router = createBrowserRouter([
       {
         path: 'damage-account/:taskId?',
         element: (
-          <Suspense
-            fallback={<p role="status">Opening damage accounting...</p>}
-          >
+          <Suspense fallback={<p role="status">Opening damage appraisal...</p>}>
             <DamageAccountPage />
           </Suspense>
         ),

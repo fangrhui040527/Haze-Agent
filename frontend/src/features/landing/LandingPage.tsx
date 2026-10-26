@@ -24,7 +24,7 @@ const CAPABILITIES = [
   },
   {
     icon: Scale,
-    title: 'Damage accounting',
+    title: 'Damage appraisal',
     body: 'Physical, financial incidence and social welfare views built from retained World Model evidence, never invented values.',
   },
   {
@@ -68,7 +68,7 @@ export function LandingPage() {
         </span>
         <nav className={styles.topnav} aria-label="Primary">
           <Link to="/world-model">World Model</Link>
-          <Link to="/damage-account">Damage account</Link>
+          <Link to="/damage-account">Damage appraisal</Link>
           <Link to="/dashboard" className={buttonClass('primary')}>
             Open app
           </Link>

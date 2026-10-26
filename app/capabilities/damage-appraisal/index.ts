@@ -79,7 +79,7 @@ const damageCollectionInputSchema = z
   .passthrough();
 
 /** Construction/appraisal intent takes precedence over broader PM2.5 and synthesis matches. */
-export function matchesDamageAccount(request: TaskRequest): boolean {
+export function matchesDamageAppraisal(request: TaskRequest): boolean {
   const objective = request.objective;
   if (
     /^\s*(?:please\s+)?(?:explain|summari[sz]e|what|why|how|describe|interpret)\b/i.test(
@@ -97,11 +97,11 @@ export function matchesDamageAccount(request: TaskRequest): boolean {
   );
 }
 
-export function createDamageAccountCapability(): CapabilityDefinition {
+export function createDamageAppraisalCapability(): CapabilityDefinition {
   return {
     card: {
-      id: 'damage-account',
-      version: 'damage-account.v2',
+      id: 'damage-appraisal',
+      version: 'damage-appraisal.v2',
       purpose:
         'Build damage accounts from scoped World Model evidence with exact provenance and explicit gaps.',
       work_products: [
@@ -127,7 +127,7 @@ export function createDamageAccountCapability(): CapabilityDefinition {
         'Source-fire categories remain explicitly unestimated; no invented default quantities or values.',
       ],
     },
-    matches: matchesDamageAccount,
+    matches: matchesDamageAppraisal,
     // Missing inputs are an executable acquisition/gap path, not a reason to route into PM2.5.
     availability: () => ({
       available: true,
@@ -385,7 +385,7 @@ function retainedAcquisitionGap(
   };
 }
 
-export function createDamageAccountTools(options: {
+export function createDamageAppraisalTools(options: {
   mode: ExecutionMode;
 }): ToolDefinition[] {
   return [
@@ -517,12 +517,12 @@ const origin = (inputs: DamageInputs) =>
     ? ('synthetic_fixture' as const)
     : ('derived' as const);
 
-export function createDamageAccountAssignments(): AssignmentDefinition[] {
+export function createDamageAppraisalAssignments(): AssignmentDefinition[] {
   return [
     {
       id: 'damage.revision-bridge',
       version: '1',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'DamageAccountant',
       tools: [],
       instructions:
@@ -543,7 +543,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.revision-check',
       version: '1',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'EvidenceCritic',
       tools: [],
       instructions:
@@ -593,7 +593,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.collect',
       version: '2',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'HazeOps',
       tools: [DAMAGE_WORLD_TOOL_ID, 'damage.read-input'],
       instructions:
@@ -693,7 +693,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.scope',
       version: '2',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'DamageAccountant',
       tools: [DAMAGE_WORLD_TOOL_ID],
       instructions:
@@ -721,7 +721,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.compile',
       version: '2',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'DamageAccountant',
       tools: [DAMAGE_WORLD_TOOL_ID, 'damage.calculate'],
       instructions:
@@ -752,7 +752,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.assemble',
       version: '2',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'DamageAccountant',
       tools: [DAMAGE_WORLD_TOOL_ID, 'damage.reconcile'],
       instructions:
@@ -779,7 +779,7 @@ export function createDamageAccountAssignments(): AssignmentDefinition[] {
     {
       id: 'damage.check',
       version: '2',
-      capability: 'damage-account',
+      capability: 'damage-appraisal',
       agent: 'EvidenceCritic',
       tools: [DAMAGE_WORLD_TOOL_ID, 'damage.check'],
       instructions:

@@ -159,8 +159,9 @@ try {
     await settle(origin, investigationAdmission.task_id),
   );
   const requiredCapabilities = [
+    'damage-appraisal',
     'pm25-evidence-summary',
-    'damage-accounting',
+    'damage-account-intake',
     'episode-investigation',
     'evidence-synthesis',
   ];

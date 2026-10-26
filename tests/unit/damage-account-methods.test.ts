@@ -10,22 +10,22 @@ import {
   type Artifact,
   type ArtifactRef,
 } from '../../app/contracts/artifacts.js';
-import { normalizeDamageInputs } from '../../app/capabilities/damage-account/inputs.js';
+import { normalizeDamageInputs } from '../../app/capabilities/damage-appraisal/inputs.js';
 import {
   compileDamageAccount,
   assembleDamageAccount,
   DAMAGE_COMPONENT_KINDS,
-} from '../../app/capabilities/damage-account/methods.js';
+} from '../../app/capabilities/damage-appraisal/methods.js';
 import {
   independentlyCheckDamageAccount,
   independentlyCheckDamageRevisionBridge,
-} from '../../app/capabilities/damage-account/checker.js';
-import { createDamageRevisionBridge } from '../../app/capabilities/damage-account/publication.js';
+} from '../../app/capabilities/damage-appraisal/checker.js';
+import { createDamageRevisionBridge } from '../../app/capabilities/damage-appraisal/publication.js';
 import {
   createSyntheticDamageArtifact,
   createSyntheticDamageImport,
   SYNTHETIC_DAMAGE_EXPECTATIONS,
-} from '../../app/capabilities/damage-account/fixtures.js';
+} from '../../app/capabilities/damage-appraisal/fixtures.js';
 
 const inputs = () => normalizeDamageInputs([createSyntheticDamageArtifact()]);
 function refsFor(components: DamageComponents) {

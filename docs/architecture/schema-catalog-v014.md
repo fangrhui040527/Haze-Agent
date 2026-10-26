@@ -235,19 +235,19 @@ There are **89 named `*Schema` validator declarations** in this snapshot: 81 exp
 | ---------------------------------------------------------- | ------------------------ | -------- |
 | [`synthesisSchema`](../../app/agents/manager/index.ts#L12) | answer, uncertainty      | Private  |
 
-### app/capabilities/damage-account/index.ts
+### app/capabilities/damage-appraisal/index.ts
 
-| Validator                                                                       | Top-level fields / shape | Exposure |
-| ------------------------------------------------------------------------------- | ------------------------ | -------- |
-| [`toolSelectionSchema`](../../app/capabilities/damage-account/index.ts#L53)     | source_refs, method_ids  | Private  |
-| [`revisionSideSchema`](../../app/capabilities/damage-account/index.ts#L60)      | input_refs, account_ref  | Private  |
-| [`revisionSelectionSchema`](../../app/capabilities/damage-account/index.ts#L64) | previous, current        | Private  |
+| Validator                                                                         | Top-level fields / shape | Exposure |
+| --------------------------------------------------------------------------------- | ------------------------ | -------- |
+| [`toolSelectionSchema`](../../app/capabilities/damage-appraisal/index.ts#L53)     | source_refs, method_ids  | Private  |
+| [`revisionSideSchema`](../../app/capabilities/damage-appraisal/index.ts#L60)      | input_refs, account_ref  | Private  |
+| [`revisionSelectionSchema`](../../app/capabilities/damage-appraisal/index.ts#L64) | previous, current        | Private  |
 
-### app/capabilities/damage-account/inputs.ts
+### app/capabilities/damage-appraisal/inputs.ts
 
-| Validator                                                                           | Top-level fields / shape                                                            | Exposure |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------- |
-| [`damageComponentRefsSchema`](../../app/capabilities/damage-account/inputs.ts#L227) | Record of string keys to artifactRefSchema; defined only, no current consumer found | Exported |
+| Validator                                                                             | Top-level fields / shape                                                            | Exposure |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------- |
+| [`damageComponentRefsSchema`](../../app/capabilities/damage-appraisal/inputs.ts#L227) | Record of string keys to artifactRefSchema; defined only, no current consumer found | Exported |
 
 ### app/capabilities/pm25/contracts.ts
 

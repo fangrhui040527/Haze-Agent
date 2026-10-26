@@ -14,7 +14,7 @@ import {
 import {
   createSyntheticDamageImport,
   SYNTHETIC_DAMAGE_EXPECTATIONS,
-} from '../../app/capabilities/damage-account/fixtures.js';
+} from '../../app/capabilities/damage-appraisal/fixtures.js';
 import { TaskRuntime, localTaskIdentity } from '../../app/tasks/runtime.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -86,16 +86,21 @@ const fence = (t: TaskRecord) => ({
   expected_state_revision: t.state_revision,
 });
 
-describe('damage-account registration and task path', () => {
+describe('damage-appraisal registration and task path', () => {
   it.each([
-    ['Build a haze damage account from imported outcomes.', 'damage-account'],
+    ['Build a haze damage account from imported outcomes.', 'damage-appraisal'],
+    ['Build a damage appraisal from imported outcomes.', 'damage-appraisal'],
+    [
+      'Use damage-account-intake to check supplied components.',
+      'damage-account-intake',
+    ],
     [
       'Calculate a PM2.5 damage account from imported outcomes.',
-      'damage-account',
+      'damage-appraisal',
     ],
     [
       'Appraise avoided haze damage using imported project scenarios.',
-      'damage-account',
+      'damage-appraisal',
     ],
     ['Summarize ordinary PM2.5 evidence.', 'pm25-evidence-summary'],
     ['Explain the supplied damage report valuation.', 'evidence-synthesis'],
@@ -107,7 +112,7 @@ describe('damage-account registration and task path', () => {
       'Explain the supplied PM2.5 damage report valuation.',
       'evidence-synthesis',
     ],
-    ['Create a damage account, but inputs are missing.', 'damage-account'],
+    ['Create a damage account, but inputs are missing.', 'damage-appraisal'],
   ])(
     'routes %s to %s without a fixture-specific branch',
     (objective, expected) => {
@@ -125,7 +130,7 @@ describe('damage-account registration and task path', () => {
 
   it.each([
     'Build a damage account from the imported synthetic physical outcomes and unit values.',
-    'Build a damage account from the exact imported quantities and declared unit values using the registered damage-account capability. Produce physical outcomes, financial incidence, selected social welfare, omissions and scenarios, with an independent exact-component accounting review. Keep imported applicability and synthetic evidence limits visible.',
+    'Build a damage account from the exact imported quantities and declared unit values using the registered damage-appraisal capability. Produce physical outcomes, financial incidence, selected social welfare, omissions and scenarios, with an independent exact-component accounting review. Keep imported applicability and synthetic evidence limits visible.',
   ])(
     'reconstructs, reviews and persists the imported account for %s',
     async (objective) => {
@@ -227,7 +232,7 @@ describe('damage-account registration and task path', () => {
     expect(
       task.assignments
         .filter((a) => a.role !== 'Manager')
-        .every((a) => a.capability === 'damage-account'),
+        .every((a) => a.capability === 'damage-appraisal'),
     ).toBe(true);
   });
 
