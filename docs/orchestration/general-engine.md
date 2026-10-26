@@ -23,6 +23,8 @@ All routes use the `/api` prefix and retain the local same-origin boundary. Ever
 | `POST /api/tasks`                   | Admit `haze.task.request.v3` with an objective and optional bounded JSON scope, context references, constraints and deliverables   |
 | `GET /api/tasks/:id`                | Current task, runs, assignments, corrections, questions, applicability and general result                                          |
 | `GET /api/tasks/:id/events?after=0` | Durable events with an exclusive numeric cursor                                                                                    |
+| `GET /api/tasks/:id/world`          | Related World Model records and their current acceptance status                                                                  |
+| `GET /api/world/records/:id`        | Authorized record detail or bounded history/lineage (`view`, `limit`, `cursor`)                                                 |
 | `POST /api/tasks/:id/updates`       | `haze.task.update.v3` exact correction/clarification passage and optional revised scope, imported source references or question ID |
 | `POST /api/tasks/:id/control`       | `haze.task.control.v3` pause, cancel, resume, continue or revoke                                                                   |
 | `GET /api/capabilities`             | Registered capability and readiness metadata                                                                                       |
@@ -64,12 +66,54 @@ Execution completion, evidence support and output usability are separate. An ass
 
 ## Persistence and restart
 
-Use `.state/general-v1` or an explicitly configured fresh `STATE_DIR`. `storage-format.json` is validated before SQLite is opened. A nonempty unmarked or incompatible directory fails without modification. Existing databases/checkpoints are never migrated, deleted or reinterpreted by this engine.
+Use `.state/general-v1` or an explicitly configured fresh `STATE_DIR`.
+`storage-format.json` is validated before SQLite is opened. A nonempty unmarked
+or incompatible directory fails without modification. Existing task tables
+and checkpoints are not migrated, deleted, or reinterpreted. World Model
+initialization applies only its own additive, versioned SQLite migrations and
+does not import legacy HazeOps JSON.
 
 SQLite transactions own reservations and state transitions; assignment updates do not rewrite a whole-task execution snapshot. LangGraph checkpoints contain authoritative record references. On restart, old leases are fenced, completed accepted material is retained and unstarted work can resume. A dispatched remote attempt without a receipt is recorded as unknown and its branch pauses until explicit resume admits replacement work. Late receipts remain historical and cannot become current output. Resume never replenishes a budget or extends a deadline.
+
+World Model records, events, relationships, acceptance outcomes, dependencies,
+holds, and operation receipts use this same SQLite database and transaction
+boundary. Their additive schema versions are tracked separately in
+`world_schema_migrations`; the existing task rows and historical results are
+not rewritten, and legacy HazeOps JSON is not imported. Event-derived
+projections can be rebuilt and are not acceptance authority.
+
+## World Model and acceptance
+
+The PM2.5, damage-accounting, episode-investigation, and evidence-synthesis
+capabilities have registered World Model adapters. They project references to
+exact immutable artifacts and their review/provenance, not duplicate task
+artifact contents. Final narrative results are not themselves accepted domain
+records.
+
+Acceptance is off by default. Set `HAZE_WORLD_ACCEPTANCE_POLICY=research-v1`
+in server configuration to opt into the fixed, versioned policy; unknown
+values fail startup. The policy limits each registered capability to its
+declared stated uses and sets a 30-day maximum age. At finalization, the task
+engine checks exact artifact hashes, review coverage, dependency closure,
+permissions, mode, holds, and expiry in the same transaction as the saved task
+result. Ordinary ineligibility is recorded with reasons and can coexist with a
+completed informational task.
+
+Current acceptance is fetched separately from historical task results.
+Current reads revalidate support and expiry. Corrections, grant revocations,
+source supersession, and method or policy changes can hold affected records
+and dependent branches; lifecycle changes are durable task events. These
+states are not general scientific, legal, or regulatory certification.
+
+Agents use bounded `world.lookup`, `world.context`, and `world.lineage` tools.
+Tool inputs and outputs are schema-checked, calls require task grants, and
+records are scoped by principal, workspace, and execution mode. Context reads
+recheck source access and save an immutable snapshot with exact support
+references. The separate legacy HazeOps file-backed model remains outside this
+v3 authority; no legacy import or external effects are performed.
 
 ## Verification
 
 Use pinned Node 24.22.1 and npm 11.8.0. `npm run check` runs the repository checks, frontend verification and explicit fixture process/restart verification. `npm run tasks:verify -- --fixture` captures a durable synthetic report; `--live LOCATION UTC_START UTC_END` exercises configured model/source adapters without fallback. Only a captured genuine model/tool trace can establish live readiness. See [general-engine-verification.md](general-engine-verification.md).
 
-The legacy source and orchestration documents remain historical references. Public v1/v2 protocol tags and frontend routing flags are retired. Accepted World Model decisions, effects, memory capture, monitoring and additional scientific domain families are outside this release.
+The legacy source and orchestration documents remain historical references. Public v1/v2 protocol tags and frontend routing flags are retired. External effects, memory capture, monitoring, and additional scientific domain families are outside this release.
