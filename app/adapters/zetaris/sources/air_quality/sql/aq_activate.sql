@@ -5,7 +5,7 @@
 -- Namespace: lightning.metastore.malaysia_env
 -- Target Table: air_quality_obs
 --
--- Source: air_quality.hourly_observations (Open-Meteo REST API)
+-- Source: air_quality.hourly_observations (stored Open-Meteo FileStore snapshot)
 -- Joins with USL location_dim on location_name to attach canonical location_index FK.
 -- =============================================================================
 

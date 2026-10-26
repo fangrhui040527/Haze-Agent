@@ -1,38 +1,41 @@
-# SmokeLedger USL
+# Legacy SmokeLedger USL
 
-`smokeledger_usl` is the Zetaris semantic model for the 15 SmokeLedger
-PostgreSQL tables. The fetchers write to PostgreSQL; Zetaris's `sl_pg`
-datasource exposes the raw tables; this USL gives them a separate namespace
-with declared types and relationships.
+This optional model mirrors the 15 tables in the retained SmokeLedger
+PostgreSQL schema. Its source is the `sl_pg` datasource, and its namespace is
+`lightning.metastore.smokeledger.smokeledger_usl`. The retained schema and
+fetchers live in [legacy/smokeledger](../../legacy/smokeledger/README.md).
 
-## Bootstrap
+Current source ingestion publishes PM2.5, wind and FIRMS through their provider
+folders under `sources/`. The current PM2.5 task reads the published
+`air_quality.hourly_observations` snapshot directly; it does not use this model
+or require a PostgreSQL service. Preview the current source setup from the
+repository root with:
 
-From the repository root, make sure Zetaris is running and
-The Haze root `.env` has the Zetaris connection settings. Preview
-the ordered setup without changing anything:
+```powershell
+npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
+```
+
+## Optional legacy setup
+
+Use this only when deliberately working with the old PostgreSQL-backed store.
+With the existing Zetaris connection configured in root `.env`, preview:
 
 ```powershell
 npm run zetaris:bootstrap:smokeledger -- --dry-run
 ```
 
-Then initialize PostgreSQL, register datasource `sl_pg`, compile the USL,
-activate the tables, and run the sample verification queries:
+After reviewing the plan, running without `--dry-run` starts the optional local
+PostgreSQL service, registers `sl_pg`, compiles this model, activates its tables
+and runs sample verification queries. `--skip-db-init` leaves the database
+service alone; `--skip-activation` registers and compiles without copying table
+contents into the USL.
 
-```powershell
-npm run zetaris:bootstrap:smokeledger
-```
+The schema includes domain tables that may remain empty until separate source
+or application workflows populate them. Their presence does not establish an
+implemented attribution, case-management or other task capability. Repeated
+`ACTIVATE USL TABLE` refresh behaviour is unverified; do not assume rerunning the
+bootstrap refreshes previously activated copies.
 
-The script stops at the first failed command. Use `--skip-db-init` if
-PostgreSQL is already running, or `--skip-activation` to register and compile
-without loading the USL tables.
-
-The USL definitions cover all 15 schema tables, including tables that remain
-empty until later data sources or agent workflows populate them. The
-bootstrap is intended for first-time setup. Repeated `ACTIVATE USL TABLE`
-behavior is not established, so don't assume rerunning activation refreshes
-existing USL tables after new data arrives.
-
-The USL definitions cover all 15 schema tables, including tables that remain
-empty until later data sources or agent workflows populate them. Compiling
-and activating the USL in a live Zetaris instance is a separate step from
-creating these SQL files.
+Moving the ingestion code does not remove existing PostgreSQL data, registered
+datasources, USL objects or saved task captures. Existing PostgreSQL rows are not
+automatically copied into the new FileStore sources.

@@ -6,7 +6,7 @@
  *
  * Lifecycle behavior:
  * -------------------
- *   1. Open-Meteo Air Quality : (Live REST — no local update needed)
+ *   1. Open-Meteo Air Quality : refresh stored FileStore snapshots
  *   2. Data.gov.my Weather    : (Live REST — no local update needed)
  *   3. NASA FIRMS             : DAILY REFRESH (new fire detections, spatial tag)
  *   4. NASA POWER             : DAILY REFRESH (rolling date window, 345 locations)
@@ -19,6 +19,7 @@
  * ------
  *   --firms          Refresh NASA FIRMS only
  *   --power          Refresh NASA POWER only
+ *   --air-quality    Refresh Open-Meteo air-quality snapshots only
  *   --test           Test mode: limit NASA POWER ingestion to "kuala-lumpur" only
  *   --skip-usl-sync  Skip re-activating the USL tables after the refresh
  *   --dry-run        Print actions without downloading or changing Zetaris
@@ -145,6 +146,7 @@ async function runSqlFile(sqlFile: string, dryRun: boolean): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 interface CliOptions {
+  updateAirQuality: boolean;
   updateFirms: boolean;
   updatePower: boolean;
   skipUslSync: boolean;
@@ -156,9 +158,11 @@ function parseArgs(): CliOptions {
   const argv = process.argv.slice(2);
   const firms = argv.includes("--firms");
   const power = argv.includes("--power");
-  const runAll = !(firms || power);
+  const airQuality = argv.includes("--air-quality");
+  const runAll = !(firms || power || airQuality);
 
   return {
+    updateAirQuality: runAll || airQuality,
     updateFirms: runAll || firms,
     updatePower: runAll || power,
     skipUslSync: argv.includes("--skip-usl-sync"),
@@ -172,17 +176,17 @@ function parseArgs(): CliOptions {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { updateFirms, updatePower, skipUslSync, testMode, dryRun } = parseArgs();
+  const { updateFirms, updatePower, updateAirQuality, skipUslSync, testMode, dryRun } = parseArgs();
   const t0 = Date.now();
 
   console.log("=".repeat(65));
   console.log(" MALAYSIA ENVIRONMENTAL USL - DAILY DATA UPDATE PIPELINE ");
   console.log("=".repeat(65));
   if (testMode) {
-    console.log(`Execution Mode: TEST (--test) — NASA POWER limited to "${TEST_LOCATION_ID}"`);
+    console.log(`Execution Mode: TEST (--test) — air quality and NASA POWER limited to "${TEST_LOCATION_ID}"`);
   }
   console.log("Data Source Behavior:");
-  console.log(" • Open-Meteo Air Quality : [LIVE] Zero sync needed (queries fetch today's data directly)");
+  console.log(" • Open-Meteo Air Quality : stored FileStore snapshots; refresh explicitly");
   console.log(" • Data.gov.my Weather    : [LIVE] Zero sync needed (queries fetch today's forecast directly)");
   if (updateFirms) {
     console.log(" • NASA FIRMS             : [UPDATE] Fetching newest satellite passes & spatial joins...");
@@ -194,8 +198,18 @@ async function main(): Promise<void> {
 
   let success = true;
 
+  if (updateAirQuality) {
+    console.log("\nRefreshing Open-Meteo air-quality snapshots...");
+    const ok = await runTsScript(
+      path.join(SRC_ROOT, "air_quality", "fetch_air_quality.ts"),
+      testMode ? ["--location", TEST_LOCATION_ID] : [],
+      dryRun,
+    );
+    if (!ok) throw new Error("Air-quality snapshot refresh failed; USL activation was not attempted.");
+  }
+
   // 1. Update NASA FIRMS
-  // (fetch_nasa_firms.ts clears the container dir and publishes the CSVs itself.)
+  // The source stages and publishes its own FileStore snapshot.
   if (updateFirms) {
     console.log("\n[1] Refreshing NASA FIRMS Active Fires (Past 5 Days)...");
     const ok = await runTsScript(
@@ -223,6 +237,13 @@ async function main(): Promise<void> {
   // 3. Re-activate the updated USL tables
   if (!skipUslSync) {
     console.log("\n[3] Re-activating updated USL tables...");
+    if (updateAirQuality) {
+      const ok = await runSqlFile(
+        path.join(SRC_ROOT, "air_quality", "sql", "aq_activate.sql"),
+        dryRun,
+      );
+      if (!ok && !dryRun) success = false;
+    }
     if (updateFirms) {
       const ok = await runSqlFile(
         path.join(SRC_ROOT, "nasa_firms", "sql", "firms_activate.sql"),

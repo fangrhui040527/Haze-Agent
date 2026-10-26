@@ -2,8 +2,8 @@
 
 This capability performs one bounded collection from a selected haze source. It
 shares the same `collectOnce` implementation and provider adapters as the dashboard
-watchers. Timers, recurring jobs, watcher status and dashboard persistence remain
-in `server/`.
+watchers. Timers, recurring jobs and watcher status live in the HazeOps service
+under `app/agents/hazeops/`. Dashboard and task evidence use one SQLite World Model.
 
 The registered ID is `evidence-collection`, version `evidence-collection.v1`.
 HazeOps executes the `evidence-collection.collect` assignment through the granted
@@ -49,10 +49,12 @@ The raw byte count and SHA-256 must match each evidence record. The complete
 capture must fit the task engine's 1 MiB artifact limit; oversized results fail
 explicitly rather than silently truncating evidence.
 
-Collection does not write to either World Model, grant acceptance or supply an
-independent scientific review. The dashboard writes through its own storage
-adapter; task execution saves immutable artifacts through task services. Existing
-PM2.5 summary behavior continues to read stored modeled data separately.
+`collectOnce` returns data without writing storage or granting acceptance.
+Application services retain exact bytes and normalize station/fact drafts through
+common `app/world/` ingestion. Saving a task collection capture applies that
+ingestion in the same transaction. The dashboard reads those same scoped records.
+Collection does not supply an independent scientific review. Existing PM2.5
+summary behavior continues to read published modeled snapshots separately.
 
 Fixture mode uses explicitly synthetic deterministic material and makes no network
 requests. Replay requires an explicitly injected source resolver. Live failures

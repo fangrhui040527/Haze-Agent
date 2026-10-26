@@ -1,6 +1,6 @@
 # World Model control plane
 
-Open **World Model** in the main navigation, or visit `/world-model`, to inspect Haze's active SQLite World Model. The page has **Inspect**, **Rebuild**, and **Reference sandbox** panels.
+Open **World Model** in the main navigation, or visit `/world-model`, to inspect Haze's active SQLite World Model. Dashboard views, HazeOps collection and general tasks now share this store and the same application API. The page has **Inspect**, **Rebuild**, and **Reference sandbox** panels. See the [dashboard migration guide](../../app/dashboard/README.md) for importing an old dashboard JSON archive.
 
 ## Run locally
 
@@ -15,13 +15,13 @@ Open `/world-model` on the local Vite address printed in the terminal. Vite's de
 
 The runtime uses server configuration:
 
-- Vite chooses `HAZE_TASK_STATE_DIR`, then `STATE_DIR`, then `.state/general-v2` for task storage. The control plane reads the same database as tasks served by that runtime.
+- The application chooses `HAZE_TASK_STATE_DIR`, then `STATE_DIR`, then `.state/general-v2` for shared storage. Dashboard, task and control-plane APIs read the same database served by that runtime.
 - `HAZE_EXECUTION_MODE=fixture` explicitly selects fixture records in Vite; otherwise Vite selects live mode. Records remain scoped to the server's local identity, workspace, and execution mode. The browser cannot choose another identity or mode.
 - The plugin passes `HAZE_WORLD_ACCEPTANCE_POLICY` to the runtime. An unset policy keeps acceptance disabled; `research-v1` is the supported explicit policy. Opening the page does not enable acceptance or change policy.
 
 An empty store displays **No records yet**. Run an evidence task to retain Haze records, or open the reference sandbox to explore disposable examples. If another server owns the configured task directory, use that server or select a separate directory before starting another runtime.
 
-The built frontend served as standalone static files needs a backend and a same-origin proxy for `/api/world` and the task API. A static file host alone cannot inspect SQLite or rebuild projections. The standalone task server is started with `npm run tasks:serve` and reads `STATE_DIR`; its fixture mode is selected explicitly with `node scripts/serve-tasks.mjs --fixture` after building. Its configuration is separate from Vite's task-directory override.
+The built frontend served as standalone static files needs a backend and a same-origin proxy for all `/api` routes. A static file host alone cannot inspect SQLite or rebuild projections. The standalone application server is started with `npm run tasks:serve` and uses the same storage selection as Vite; its fixture mode is selected explicitly with `node scripts/serve-tasks.mjs --fixture` after building.
 
 ## Inspect retained records
 

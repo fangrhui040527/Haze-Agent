@@ -12,7 +12,10 @@ import {
   worldProjectionRebuildRequestSchema,
 } from '../contracts/world-api.js';
 import { worldLineageInputSchema } from '../contracts/world-services.js';
-import { createExecutionRegistry } from '../composition.js';
+import {
+  createDashboardServices,
+  createExecutionRegistry,
+} from '../composition.js';
 import {
   TaskRuntime,
   localTaskIdentity,
@@ -125,6 +128,9 @@ export function createTaskHandler(
         ...(options.env ? { env: options.env } : {}),
       }),
   });
+  let dashboard: ReturnType<typeof createDashboardServices> | undefined;
+  let closed = false;
+  let closing: Promise<void> | undefined;
   const handler = (request: IncomingMessage, response: ServerResponse) => {
     const send = (status: number, data: unknown) => {
       response.writeHead(status, {
@@ -135,7 +141,64 @@ export function createTaskHandler(
       response.end(JSON.stringify(data));
     };
     const handle = async () => {
+      if (closed)
+        throw new TaskError(
+          503,
+          'runtime_closed',
+          'The application is closing.',
+        );
       const { url, identity } = authorize(request);
+      if (
+        /^\/api\/(?:health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:\/|$)/.test(
+          url.pathname,
+        )
+      ) {
+        if (
+          url.pathname === '/api/heartbeat/tick' &&
+          request.method === 'POST'
+        ) {
+          idempotencyKey(request);
+          const body = await readBody(request, 1024);
+          if (
+            body === null ||
+            typeof body !== 'object' ||
+            Array.isArray(body) ||
+            Object.keys(body).length !== 0
+          )
+            throw new TaskError(
+              400,
+              'invalid_heartbeat',
+              'Heartbeat expects an empty JSON object.',
+            );
+        }
+        if (closed)
+          throw new TaskError(
+            503,
+            'runtime_closed',
+            'The application is closing.',
+          );
+        dashboard ??= createDashboardServices({
+          store: runtime.store,
+          identity,
+          mode: runtime.executionMode,
+          env: options.env ?? {},
+        });
+        await dashboard.hazeops.ready;
+        if (closed)
+          throw new TaskError(
+            503,
+            'runtime_closed',
+            'The application is closing.',
+          );
+        dashboard.view.start();
+        dashboard.hazeops.start();
+        if (await dashboard.view.handle(request, response, url)) return;
+        throw new TaskError(
+          404,
+          'route_not_found',
+          'Application API route not found.',
+        );
+      }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') {
         send(200, runtime.capabilities(identity));
         return;
@@ -383,5 +446,20 @@ export function createTaskHandler(
         });
     });
   };
-  return Object.assign(handler, { runtime, close: () => runtime.close() });
+  return Object.assign(handler, {
+    runtime,
+    close: () => {
+      if (closing) return closing;
+      closed = true;
+      closing = (async () => {
+        dashboard?.view.close();
+        try {
+          await dashboard?.hazeops.close();
+        } finally {
+          await runtime.close();
+        }
+      })();
+      return closing;
+    },
+  });
 }

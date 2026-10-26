@@ -2,7 +2,7 @@
 
 This capability retrieves stored modeled PM2.5 samples for one town and a bounded
 period, calculates coverage and concentration range, and independently checks the
-result. It is registered as `pm25-evidence-summary`, version `3`, through
+result. It is registered as `pm25-evidence-summary`, version `4`, through
 `createPm25Capability()` in [index.ts](index.ts).
 
 ## Inputs and source
@@ -28,15 +28,26 @@ The capability can also infer scope from an objective such as:
 Date-only values in this phrase mean midnight UTC. Conflicting explicit and
 inferred scopes require clarification.
 
-The read-only tool `zetaris-smokeledger-pm25` queries existing `sl_pg.pm25` and
-`sl_pg.towns` data through Zetaris. It selects only model rows from
-`open-meteo-air-quality` (Open-Meteo/CAMS), retains the exact response, SQL and raw
-row indices, and selects the latest locally ingested row for each sample time.
-The raw selection is bounded to 1,500 rows; truncation is recorded.
+The read-only tool `zetaris-open-meteo-pm25` queries the published
+`air_quality.hourly_observations` snapshot through Zetaris. The source ingester
+in `app/adapters/zetaris/sources/air_quality/` writes Open-Meteo/CAMS modeled
+PM2.5 and PM10 to CSV and registers the files in Zetaris FileStore. The tool
+selects the requested town and UTC interval, retains the exact response, SQL and
+raw row indices, and selects the latest locally ingested row for each sample
+time. The raw selection is bounded to 1,500 rows; truncation is recorded.
+
+Preview publication with `npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run`
+from the repository root. Run without `--dry-run` only after reviewing the plan.
+The available dates are the dates present in the published snapshot, even when
+the requested interval is within the 31-day request limit. The source is not a
+complete historical or provider model-run archive.
 
 Live execution requires the existing Zetaris service and credentials described
 in the [project setup guide](../../../README.md). This capability reads stored
-data; the ingestion scripts are separate operator tooling. Fixture execution
+data; the ingestion scripts are separate operator tooling. No PostgreSQL
+connection or `sl_pg` registration is used by this task. Existing SmokeLedger
+rows and older task captures remain available through their legacy tools; they
+are not rewritten or migrated automatically. Fixture execution
 explicitly uses synthetic captures. Replay requires an explicitly supplied
 source, and a failed live request never silently substitutes fixture data.
 

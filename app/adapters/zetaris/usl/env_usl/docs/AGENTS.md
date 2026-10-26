@@ -6,7 +6,7 @@ This document is the authoritative guide for AI coding agents, autonomous LLM pi
 
 ## 1. Executive Summary for Agents
 
-The `app/zetaris/usl` directory contains the complete source code, dimensional data, and SQL DDL definitions for a **federated environmental intelligence layer**.
+The `app/adapters/zetaris/usl` directory contains the complete source code, dimensional data, and SQL DDL definitions for a **federated environmental intelligence layer**.
 
 * **Namespace in Zetaris:** `lightning.metastore.malaysia_env.malaysia_env_usl`
 * **Coverage:** 345 canonical Malaysian locations (state capitals, districts, towns, rural centers) across Peninsular and East Malaysia.
@@ -14,12 +14,12 @@ The `app/zetaris/usl` directory contains the complete source code, dimensional d
 
 ---
 
-## 2. Source Directory Architecture (`app/zetaris/`)
+## 2. Source Directory Architecture (`app/adapters/zetaris/`)
 
 When inspecting or extending this repository, agents should understand the specific role of each folder:
 
 ```
-app/zetaris/
+app/adapters/zetaris/
 ├── sources/
 │   ├── location/              # 📍 Canonical Dimension Data & Bridge
 │   │   ├── location.csv       # Canonical centroids (location_dim) - 345 locations
@@ -31,7 +31,7 @@ app/zetaris/
 │   │   ├── fetch_weather.ts   # Ingestion script & REST registration
 │   │   └── sql/               # weather_register.sql, weather_activate.sql
 │   ├── air_quality/           # 🌫️ Open-Meteo Hourly Air Quality
-│   │   ├── fetch_air_quality.ts # Generates 345 REST table DDLs & union view
+│   │   ├── fetch_air_quality.ts # Publishes normalized CSV snapshots and a stable view
 │   │   └── sql/               # aq_register.sql, aq_activate.sql
 │   ├── nasa_firms/            # 🔥 NASA VIIRS Active Fire Hotspots
 │   │   ├── fetch_nasa_firms.ts# Downloads satellite CSV, computes spatial join
@@ -102,9 +102,9 @@ The semantic layer exposes **8 unified entities**. Agents querying or generating
   *(Note: Forecast descriptions are provided in official Bahasa Malaysia).*
 
 ### D. `air_quality_obs` (Open-Meteo Hourly Particulates)
-* **Role:** 120 hourly readings (past today + 4-day forecast) of fine particulate matter.
+* **Role:** Stored Open-Meteo modeled particulate concentrations at hourly output timestamps, published from the source's CSV snapshot.
 * **Foreign Key:** `location_index` → `location_dim(location_index)`.
-* **Tense:** Past 24h + 4-day hourly forecast.
+* **Tense:** The collection request uses one past day and three forecast days in UTC; older collected hours may remain in the merged snapshot. Queries do not refresh the source.
 * **Sample Record:**
   ```json
   {
@@ -214,8 +214,8 @@ The semantic layer exposes **8 unified entities**. Agents querying or generating
 ### Method 1: Using the Repository's Python CLI (`run_sql.py`)
 From your backend terminal, worker, or subprocess:
 ```bash
-python app/zetaris/scripts/run_sql.py --limit 100 -e "
-SELECT 
+python app/adapters/zetaris/scripts/run_sql.py --limit 100 -e "
+SELECT
     loc.location_name,
     aq.observation_time,
     aq.pm2_5_ug_m3,
@@ -254,7 +254,7 @@ External web services (FastAPI, Express, Next.js) can query Zetaris directly via
 If you are deploying an AI Agent (e.g. LangChain, LlamaIndex, OpenAI Assistant, or Anthropic Tool-Use Agent) that interacts with users or answers environmental questions, **inject this exact system prompt**:
 
 ````markdown
-You are the Malaysian Environmental Intelligence Assistant. You have real-time access to the Zetaris Unified Semantic Layer (`lightning.metastore.malaysia_env.malaysia_env_usl`), which unifies live environmental and meteorological data across 345 canonical locations in Malaysia.
+You are the Malaysian Environmental Intelligence Assistant. You have access to configured REST sources and published snapshots through the Zetaris Unified Semantic Layer (`lightning.metastore.malaysia_env.malaysia_env_usl`), which unifies live environmental and meteorological data across 345 canonical locations in Malaysia.
 
 ### Available Tables & Keys:
 1. `location_dim` (PK: location_index)
@@ -267,7 +267,7 @@ You are the Malaysian Environmental Intelligence Assistant. You have real-time a
    - Coverage: Today through +6 days. Note: Forecast descriptions are in Bahasa Malaysia.
 4. `air_quality_obs` (FK: location_index -> location_dim)
    - Columns: location_index, observation_time, pm2_5_ug_m3, pm10_ug_m3
-   - Coverage: 120 hourly points (past 24h + 4-day forecast). WHO PM2.5 threshold is > 15 µg/m³ (unhealthy > 35 µg/m³, hazardous > 50 µg/m³).
+   - Coverage: Published snapshot rows. Collection requests one past day and three forecast days in UTC; query execution does not collect newer data. WHO PM2.5 threshold is > 15 µg/m³ (unhealthy > 35 µg/m³, hazardous > 50 µg/m³).
 5. `active_fires` (FK: location_index -> location_dim)
    - Columns: location_index, acq_utc, acq_myt, fire_latitude, fire_longitude, bright_ti4, frp, confidence, satellite, instrument, fire_source, daynight
    - Coverage: NASA VIIRS satellite thermal hotspots from the past 5 days. `frp` is Fire Radiative Power in MW. If no fires are present, 0 rows return.
@@ -285,7 +285,7 @@ You are the Malaysian Environmental Intelligence Assistant. You have real-time a
 - Always use fully qualified names: `lightning.metastore.malaysia_env.malaysia_env_usl.<table_name>`.
 - To query weather for a city, join through `location_code`:
   `FROM location_dim loc JOIN location_code lc ON loc.location_index = lc.location_index JOIN weather_forecast w ON lc.location_code = w.location_code`
-- For performance, always filter by `loc.location_name` to enable Zetaris predicate pushdown.
+- For performance, filter by `loc.location_name` and the requested time range. Air-quality data is a published FileStore snapshot; its filters do not trigger upstream API calls.
 - Provide user responses with clear contextual explanations (e.g. translate Bahasa Malaysia weather forecasts when conversing in English).
 ````
 

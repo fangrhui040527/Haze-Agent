@@ -3,7 +3,7 @@
 -- Unified semantic model for the durable SmokeLedger evidence store.
 --
 -- Source: PostgreSQL datasource sl_pg, registered by
--- sources/smokeledger/sql/02_zetaris_register.sql.
+-- legacy/smokeledger/sql/02_zetaris_register.sql.
 -- All 15 semantic tables mirror the SmokeLedger PostgreSQL schema.
 -- =============================================================================
 

@@ -4,7 +4,7 @@ A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World
 EvidenceCritic, WorkerShield) shown as a pixel-art office.
 
 > **Status: read-only evidence chat plus a live dashboard with fictional fallback.** General chat uses the
-> durable task API and a single configured Zetaris SmokeLedger PM2.5 source. Missing access
+> durable task API and a configured Zetaris Open-Meteo PM2.5 snapshot source. Missing access
 > or provider failures are explicit errors; no mock answer is substituted. Operational actions
 > and publication remain outside this milestone. See [implementation and verification](../docs/evidence/milestone-v014.md).
 
@@ -36,8 +36,15 @@ the shared root `.env` configuration server-side, with process environment takin
 precedence and `app/adapters/zetaris/.env.local` supplying missing legacy settings.
 Vite mode files retain their normal override behavior. Keep `VITE_API_BASE_URL` empty for the
 same-origin local API; never put credentials in `VITE_*` variables. Restart Vite after changing
-configuration. Dev and preview must not simultaneously own the same general state directory (`.state/general-v1` by default).
+configuration. Dev and preview must not simultaneously own the same application state directory (`.state/general-v2` by default).
 Static hosting needs an authenticated backend adapter.
+
+The PM2.5 task reads `air_quality.hourly_observations` from local Zetaris. Publish
+the source with `npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run`
+from the repository root, review the plan, then rerun without `--dry-run`.
+Collection is separate from task execution; asking a question does not refresh
+the snapshot. Existing SmokeLedger PostgreSQL rows are retained by legacy tooling
+and are not imported automatically into the new source.
 
 Try: “Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24,
 distinguish modeled values from observations, and identify coverage gaps.” Edit the location and
@@ -76,7 +83,7 @@ archived history; new questions always use the evidence task API.
 | Dashboard        | `/`           | Live table (top), chat (bottom left), agent office (bottom right)                                          |
 | Detail           | `/item/:id`   | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline |
 | Task report      | `/task/:id`   | Saved general task, live receipts, clarification, controls and results                                     |
-| Dashboard report | `/report/:id` | Template report from the separate dashboard server                                                         |
+| Dashboard report | `/report/:id` | Archived report link with guidance to the durable general task workflow                                    |
 | Demo Data        | `/demo-data`  | Developer tool: view, regenerate, import/export data and simulate dashboard updates                        |
 
 Things worth trying on the Demo Data page:
@@ -160,9 +167,10 @@ Imports use explicit `.ts` / `.tsx` extensions (needed so Node can run the data 
 The dashboard reads data through `DataService` (`src/services/data/DataService.ts`):
 `loadSnapshot()`, `getItem(id)`, `subscribe(onUpdate, onStatus)`.
 
-- `HttpDataService` reads the Haze server (`../server`): `/api/snapshot`, `/api/items/:id` and the
-  `/api/stream` SSE feed. In development Vite proxies `/api` to `http://127.0.0.1:8000` (override with
-  `HAZE_API`); in a build, set `VITE_API_BASE_URL`.
+- `HttpDataService` reads the shared application API: `/api/snapshot`, `/api/items/:id`
+  and the `/api/stream` SSE feed. Vite dev and preview handle these routes through
+  the same runtime as tasks and `/api/world`; no port-8000 proxy is required.
+  Standalone static hosting needs a same-origin backend proxy.
 - `CompositeDataService` (used in `src/services/data/index.ts`) shows **real data when the server has it** and
   falls back to the fictional demo data when the server is unreachable or empty. The Demo Data page has a
   toggle to show demo data next to real data (off by default).
@@ -171,10 +179,13 @@ The dashboard reads data through `DataService` (`src/services/data/DataService.t
 
 **Important:** the browser must **never** call Zetaris directly or hold Zetaris credentials. Anything in
 `VITE_*` variables ships to every visitor. The adapter calls _our_ backend API, and the backend talks to Zetaris.
-The dashboard server and the general evidence task runtime remain separate services.
-Run `npm ci --prefix server` and `npm start --prefix server` from the repository root for real dashboard data.
-Its report pages use `/api/reports/:id/events`; the general evidence protocol owns `/api/tasks`.
-Vite dev and preview proxy dashboard routes to `http://127.0.0.1:8000` (override with `HAZE_API`).
+The dashboard and general evidence tasks share the backend and SQLite World Model.
+Starting Vite is sufficient; `npm run tasks:serve` starts the standalone application API.
+HazeOps background watchers use server-side configuration and write through common
+evidence ingestion. Task collection captures enter the same World Model while retaining
+their exact immutable originals. Collection alone never grants acceptance.
+Old process-memory template reports are retired with explicit guidance; saved general
+tasks continue to use `/api/tasks` and `/task/:id`.
 
 ---
 

@@ -30,12 +30,44 @@ import {
   createDamageAccountingCapability,
 } from './capabilities/damage-accounting/index.js';
 import { damageAccountScopeSchema } from './capabilities/damage-accounting/contracts.js';
+import { HazeWorld } from './world/haze-world.js';
+import { HazeOpsService } from './agents/hazeops/service.js';
+import { loadDashboardConfig } from './dashboard/config.js';
+import { DashboardService } from './dashboard/http.js';
+import type { TaskStore } from './tasks/store.js';
+import type { TaskIdentity } from './contracts/tasks.js';
 import { createWorldModelDamageInputTool } from './capabilities/damage-account/world-input-adapter.js';
 import {
   createEvidenceCollectionAssignments,
   createEvidenceCollectionCapability,
   createEvidenceCollectionTools,
 } from './capabilities/evidence-collection/index.js';
+
+/** Both application surfaces use the task runtime's single SQLite owner. */
+export function createDashboardServices(options: {
+  store: TaskStore;
+  identity: TaskIdentity;
+  mode: ExecutionMode;
+  env: NodeJS.ProcessEnv;
+}) {
+  const config = loadDashboardConfig(options.env);
+  const world = new HazeWorld(options.store, options.identity, options.mode);
+  const hazeops = new HazeOpsService({ ...options, config, world });
+  // Preserve the readiness rejection for the request while construction remains sync.
+  void hazeops.ready.catch(() => undefined);
+  try {
+    const view = new DashboardService({
+      world,
+      hazeops,
+      config,
+      mode: options.mode,
+    });
+    return { view, hazeops };
+  } catch (error) {
+    void hazeops.close();
+    throw error;
+  }
+}
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {

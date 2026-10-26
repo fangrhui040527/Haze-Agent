@@ -11,7 +11,7 @@ const PROJECT_ROOT = path.resolve(ZETARIS_ROOT, '..', '..', '..');
 const RUN_SQL = path.join(ZETARIS_ROOT, 'scripts', 'run_sql.py');
 const REGISTER_SQL = path.join(
   ZETARIS_ROOT,
-  'sources',
+  'legacy',
   'smokeledger',
   'sql',
   '02_zetaris_register.sql',
@@ -114,7 +114,7 @@ async function runSql(
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
 
-  console.log('SmokeLedger Zetaris bootstrap');
+  console.log('Legacy PostgreSQL SmokeLedger bootstrap. Current ingestion uses zetaris:bootstrap:sources.');
   if (!options.skipDatabaseInit) {
     if (options.dryRun) {
       console.log(

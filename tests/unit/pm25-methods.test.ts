@@ -8,6 +8,7 @@ import {
 } from '../../app/capabilities/pm25/methods.js';
 import {
   PM25_SOURCE_ID,
+  LEGACY_PM25_SOURCE_ID,
   type EvidenceCapture,
   type EvidenceScope,
 } from '../../app/capabilities/pm25/evidence.js';
@@ -78,6 +79,20 @@ function capture(
 }
 
 describe('PM2.5 capability boundary and independent analysis', () => {
+  it('can still reconstruct retained SmokeLedger captures after the source migration', () => {
+    const evidence = capture();
+    evidence.source = LEGACY_PM25_SOURCE_ID;
+    const raw = evidence.raw;
+    const analysis = analyzePm25(evidence, scope);
+    expect(independentlyCheckPm25(evidence, analysis, scope).valid).toBe(true);
+    expect(evidence.source).toBe(LEGACY_PM25_SOURCE_ID);
+    expect(evidence.raw).toBe(raw);
+    evidence.source = 'unrelated-source';
+    expect(() => validateCapture(evidence, scope)).toThrow(
+      'authorized selection',
+    );
+  });
+
   it('frames explicit requests without defaulting ambiguous places or times', () => {
     expect(
       framePm25Scope({

@@ -5,7 +5,9 @@ import {
 } from '../../adapters/zetaris.js';
 
 /** Registered deterministic PM2.5 retrieval tool identity. */
-export const PM25_SOURCE_ID = 'zetaris-smokeledger-pm25';
+export const PM25_SOURCE_ID = 'zetaris-open-meteo-pm25';
+/** Retained captures keep their original identity and exact raw evidence. */
+export const LEGACY_PM25_SOURCE_ID = 'zetaris-smokeledger-pm25';
 const SOURCE_FILTER = 'open-meteo-air-quality';
 const UNIT_REFERENCE = 'https://open-meteo.com/en/docs/air-quality-api';
 const ROW_LIMIT = 1_500;
@@ -99,7 +101,7 @@ function instant(value: unknown, nullable = false): string | null {
   if (typeof value !== 'string' || value.length > 80) {
     return invalid('Zetaris returned an invalid UTC timestamp.');
   }
-  // The _utc fields have a UTC schema contract. Zetaris may serialize SQL
+  // Source snapshots normalize timestamps to UTC. Zetaris may serialize SQL
   // TIMESTAMP without an offset; this interpretation is disclosed below.
   const iso = value.replace(' ', 'T');
   const normalized = /(?:Z|[+-]\d\d:?\d\d)$/iu.test(iso) ? iso : `${iso}Z`;
@@ -130,16 +132,26 @@ function requestInstant(value: string): string {
   return normalized;
 }
 
-function coordinate(value: unknown, maximum: number): number | null {
+/** The direct REST API may encode SQL numeric cells as decimal strings. */
+function numericCell(value: unknown): number | null {
   if (value === null) return null;
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    Math.abs(value) > maximum
-  ) {
+  const number =
+    typeof value === 'string' &&
+    /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu.test(value.trim())
+      ? Number(value)
+      : value;
+  if (typeof number !== 'number' || !Number.isFinite(number))
+    return invalid('Zetaris returned an invalid numeric cell.');
+  return number;
+}
+
+function coordinate(value: unknown, maximum: number): number | null {
+  const number = numericCell(value);
+  if (number === null) return null;
+  if (Math.abs(number) > maximum) {
     return invalid('Zetaris returned invalid town coordinates.');
   }
-  return value;
+  return number;
 }
 
 function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
@@ -179,7 +191,7 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   if (start < scope.period.start || start >= scope.period.end) {
     return invalid('Zetaris returned a sample outside the requested period.');
   }
-  const concentration = row['pm25'];
+  const concentration = numericCell(row['pm25']);
   if (
     concentration !== null &&
     (typeof concentration !== 'number' ||
@@ -188,8 +200,7 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   ) {
     return invalid('Zetaris returned an invalid PM2.5 concentration.');
   }
-  // Historical ingestion wrote collection time into issued_utc. It is retained
-  // in raw evidence, but cannot establish provider issuance for this source.
+  // Snapshot receipt time never establishes provider model issuance.
   return {
     start,
     end: start,
@@ -230,13 +241,16 @@ export function resolveEvidenceSource(
       }
       const town = locationLiteral(scope.location);
       const query = [
-        'SELECT p.town, p.valid_utc, p.kind, p.issued_utc, p.pm25, p.`source`, p.ingested_utc, t.lat, t.lon',
-        'FROM sl_pg.pm25 p LEFT JOIN sl_pg.towns t ON p.town = t.town',
-        `WHERE LOWER(p.town) = LOWER(${town})`,
-        `AND p.valid_utc >= TIMESTAMP '${scope.period.start.replace('T', ' ').replace('Z', '')}'`,
-        `AND p.valid_utc < TIMESTAMP '${scope.period.end.replace('T', ' ').replace('Z', '')}'`,
-        `AND p.kind = 'model' AND p.\`source\` = '${SOURCE_FILTER}'`,
-        'ORDER BY p.valid_utc ASC, p.ingested_utc DESC, p.pm25 ASC',
+        'SELECT q.location_name AS town, q.observation_time AS valid_utc,',
+        `  'model' AS kind, q.issued_utc, q.pm2_5_ug_m3 AS pm25, '${SOURCE_FILTER}' AS source,`,
+        '  q.ingested_utc, q.requested_latitude AS lat, q.requested_longitude AS lon',
+        'FROM air_quality.hourly_observations q',
+        `WHERE LOWER(q.location_name) = LOWER(${town})`,
+        // FileStore snapshots preserve normalized ISO UTC strings. Comparing
+        // them directly avoids the query engine's session-timezone conversion.
+        `AND q.observation_time >= '${scope.period.start}'`,
+        `AND q.observation_time < '${scope.period.end}'`,
+        'ORDER BY q.observation_time ASC, q.ingested_utc DESC, q.pm2_5_ug_m3 ASC',
         `LIMIT ${ROW_LIMIT + 1}`,
       ].join('\n');
       const requestId = randomUUID();
@@ -319,12 +333,12 @@ export function resolveEvidenceSource(
         sample_interval_minutes: 60,
         units_reference: UNIT_REFERENCE,
         limitations: [
-          'Only stored Open-Meteo/CAMS modeled PM2.5 was queried through Zetaris sl_pg. Ground-station observations and other sources were not searched.',
+          'Only stored Open-Meteo/CAMS modeled PM2.5 snapshots in Zetaris air_quality.hourly_observations were queried. Ground-station observations and other sources were not searched.',
           'Samples are instantaneous concentrations at stored hourly timestamps, not measured observations or hourly averages. Hourly output does not establish native model resolution.',
-          'Units follow the Open-Meteo pm2_5 source definition; the legacy SmokeLedger table does not retain provider unit metadata.',
-          'Town coordinates are requested target coordinates. The legacy ingestion does not retain returned model grid-cell coordinates or native spatial support; town-wide representativeness is unverified.',
-          'Provider issuance time is unknown. Legacy issued_utc values may be local collection times and are retained only in the raw capture; ingested_utc is local receipt time.',
-          'Timestamp fields without an explicit offset are interpreted as UTC under the SmokeLedger _utc schema contract.',
+          'Units follow the Open-Meteo pm2_5 source definition; each ingestion validates the provider unit before publishing its snapshot.',
+          'Town coordinates are requested target coordinates. They do not establish returned model grid-cell support or town-wide representativeness.',
+          'Provider issuance time is unknown. ingested_utc records local snapshot receipt, not provider issuance.',
+          'Timestamp fields without an explicit offset are interpreted as UTC under the source snapshot contract.',
           'For duplicate sample times the most recently ingested stored row is selected; this is not a provider-issued model version. Exact raw rows and selection indices are retained.',
           ...(truncated
             ? [

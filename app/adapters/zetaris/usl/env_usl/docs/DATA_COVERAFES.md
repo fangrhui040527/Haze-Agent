@@ -1,64 +1,49 @@
-# Malaysia Environmental USL: Data Coverage & Temporal Range
+# Malaysia Environmental USL: Data Coverage and Refresh
 
-> **Reference Date:** `2026-10-22` (MYT).  
-> All date ranges shift dynamically relative to the pipeline execution date.
+Current coverage comes from the rows actually published or returned by each
+configured source. A request limit is not a guarantee of data availability.
 
----
+## Source coverage
 
-## 1. Temporal Coverage Summary
+| Source | Collection window or access path | Refresh boundary |
+| --- | --- | --- |
+| Open-Meteo air quality | Collection requests `past_days=1`, `forecast_days=3`, UTC; the merged snapshot may contain older retained hours | `npm run zetaris:fetch:pm25` or the daily updater's `--air-quality` step |
+| Open-Meteo wind | The same requested window at 10 m and 850 hPa, UTC; merged by location/time/level | `npm run zetaris:fetch:wind` |
+| Data.gov.my weather | Current forecast returned through its REST registration | Queried through Zetaris |
+| NASA FIRMS | Configured regional/day-range satellite detections | Rerun the FIRMS ingester to publish newer CSV data |
+| NASA POWER | Date-keyed climate view | Rerun its registration/view generation for a newer target date |
+| Windy GFS and CAMS | Forecast for the configured point, frozen in CSV snapshots | Rerun the Windy ingester on demand |
 
-| Source | Code Config | Output Date Range (run: 2026-10-22) | Rows / Location | Tense | Needs Daily Update? |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| 🌤️ **Weather** | No date → API default | `2026-10-22` → `2026-10-28` | ~7 daily | Today + Forecast | ❌ Live on query |
-| 🌫️ **Air Quality** | No date → API default | `2026-10-22T00:00` → `2026-10-26T23:00` | 120 hourly | Today + Forecast | ❌ Live on query |
-| 🔥 **FIRMS** | `--day-range 5` via `bootstrap_usl.ts` | `2026-10-17` → `2026-10-21` | Varies (fires only) | Historical | ✅ Daily |
-| 🛰️ **NASA POWER** | `today − 4 days`, single day | `2026-10-18` only | 1 daily | Historical | ✅ Daily |
-| 💨 **Windy GFS** | Default KL point, on demand | `2026-10-23T03:00Z` → 80 hourly steps | ~80 (KL only) | Forecast (point) | ✅ On demand |
-| 💨 **Windy CAMS** | Default KL point, on demand | `2026-10-23T00:00Z` → 33 hourly steps | ~33 (KL only) | Forecast (point) | ✅ On demand |
+Air-quality and wind snapshot publication preserves previously collected hours
+and other locations while replacing matching rows. This is current-value
+retention, not a complete archive of provider model runs. Check `ingested_utc`
+for local receipt time; it does not establish provider issuance. `issued_utc`
+stays unknown when the upstream response does not identify its issue time.
 
----
+## Publication and task queries
 
-## 2. Visual Calendar Timeline
+A `SELECT` over `air_quality.hourly_observations` or `wind.hourly_observations`
+reads the published FileStore snapshot. It does not call Open-Meteo or move the
+window forward. Use repeated `--location` IDs to collect selected places,
+`--dry-run` to preview without API or database changes, and `--skip-api` to
+republish the cached snapshot without claiming fresh collection.
 
-```
-        Oct 17  Oct 18  Oct 19  Oct 20  Oct 21  Oct 22  Oct 23  Oct 24  Oct 25  Oct 26  Oct 27  Oct 28
-           |       |       |       |       |       |       |       |       |       |       |       |
-FIRMS    [===========================================]
-          <- last 5 days ----------------------->|
-NASA PWR         [=]
-                  ^ today-4 only (1 row, pub. lag)
-Air Qual                                         [================================================]
-                                                  ^ today T00:00                          ^ +5 days
-Weather                                          [==============================================]
-                                                  ^ today                                 ^ today+6
-Windy                                            [==============================================]
-                                                  ^ refresh time (single KL point, frozen)
-         PAST <----------------------------------------- TODAY ------------------------------> FUTURE
-```
+The PM2.5 task reads the air-quality base view directly for an increasing UTC
+interval of at most 31 days. That is an input bound; missing stored dates remain
+coverage gaps. Activated environmental USL tables have a separate lifecycle;
+a source publication alone does not establish that an existing USL copy was
+refreshed.
 
----
+## Historical examples
 
-## 3. Daily Updates vs. Live Virtualization
+The examples below are dated illustrative outputs from the earlier source
+setup around 22–23 October 2026. They do not establish current coverage or
+validate the new snapshot publication path. Air-quality timestamps and values
+are preserved here as examples; current publication uses UTC.
 
-### Why Weather & Air Quality Need NO Daily Updates
-Both sources use live **REST tables** in Zetaris. Every `SELECT` query triggers an HTTP call to the external upstream API at runtime:
-* **Open-Meteo**: Returns a rolling window from today midnight forward 5 days.
-* **Data.gov.my**: Updated twice daily by MET Malaysia; always serves the current 7-day outlook.
-* No data synchronization or cron job is needed for these two sources.
+## Historical illustrative outputs
 
-### Why FIRMS & NASA POWER DO Need Daily Updates
-* **NASA FIRMS (FileStore CSV):** Satellites output raw unmapped coordinates. Python must run nearest-neighbor spatial matching against all 345 centroids to assign `location_index` and copy the resulting CSV into `/home/zetaris/customer-data/shared/firms_flat/`.
-* **NASA POWER (Date-Keyed JSON):** Upstream NASA returns parameter objects where the keys are literal date strings (e.g. `properties.parameter.T2M."20261018"`). As the calendar advances, the view definition must be recompiled to target the new date key (`today − 4 days`).
-
-### Why Windy Needs an On-Demand Refresh
-Windy is neither a live REST table nor a daily pipeline job. `sources/windy/fetch_windy.ts` fetches the current point forecast once, writes one CSV per model (`windy_gfs.csv`, `windy_cams.csv`), copies them into the Zetaris driver container and registers them as **FileStore** tables:
-* **Windy (FileStore CSV):** the snapshot is frozen until the next run, so queries keep returning the same rows. The Point Forecast key is on the free **Testing** tier (500 requests/day), so `daily_update.ts` intentionally excludes Windy and it is refreshed by hand, on demand.
-
----
-
-## 4. Example Outputs per Source
-
-### 🌫️ Air Quality (Kuala Lumpur — Live Open-Meteo API)
+### 🌫️ Air Quality (Kuala Lumpur — earlier Open-Meteo response)
 ```
 observation_time          | pm2_5_ug_m3 | pm10_ug_m3 | note
 --------------------------+-------------+------------+-------------------
