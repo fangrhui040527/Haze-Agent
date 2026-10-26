@@ -6,6 +6,7 @@ import path from "node:path";
 import { CONFIG, HOUR, PARAMS } from "./config.ts";
 import type { BackwardResult } from "./engine.ts";
 import { chat } from "./llm.ts";
+import { recordFailure } from "./tracing/context.ts";
 import { judge, type Verdict } from "./judge.ts";
 import { epoch, evidence, fmtUtc, safeId, safeText, type Evidence } from "./query.ts";
 
@@ -219,21 +220,28 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   let narrativeVerdict: Verdict | null = null;
   if (opts.useLlm) {
     let feedback = "";
-    for (let attempt = 0; attempt < 2 && !narrative; attempt++) {
-      const { message } = await chat([
-        {
-          role: "system",
-          content:
-            "Write a 120-word plain-language summary of this haze dossier for a Malaysian journalist. " +
-            "Use ONLY facts from the dossier. End every sentence that contains a number with the evidence id it came from, " +
-            "e.g. [E-0123456789]. Never say or imply a company is guilty or deliberately burned land: say the fires were on its concession.",
-        },
-        { role: "user", content: text + feedback },
-      ]);
-      const draft = (message.content ?? "").trim();
-      narrativeVerdict = await judge(draft, all);
-      if (narrativeVerdict.ok) narrative = draft;
-      else feedback = `\n\nYour previous draft was rejected for: ${narrativeVerdict.problems.join("; ")}. Fix these.`;
+    // Optional prose: a slow or failed model call drops the narrative, never the cited findings.
+    try {
+      for (let attempt = 0; attempt < 2 && !narrative; attempt++) {
+        const { message } = await chat([
+          {
+            role: "system",
+            content:
+              "Write a 120-word plain-language summary of this haze dossier for a Malaysian journalist. " +
+              "Use ONLY facts from the dossier. End every sentence that contains a number with the evidence id it came from, " +
+              "e.g. [E-0123456789]. Never say or imply a company is guilty or deliberately burned land: say the fires were on its concession.",
+          },
+          { role: "user", content: text + feedback },
+        ]);
+        const draft = (message.content ?? "").trim();
+        narrativeVerdict = await judge(draft, all);
+        if (narrativeVerdict.ok) narrative = draft;
+        else feedback = `\n\nYour previous draft was rejected for: ${narrativeVerdict.problems.join("; ")}. Fix these.`;
+      }
+    } catch (e) {
+      narrative = null;
+      narrativeVerdict = { ok: false, problems: [`Narrative skipped: ${(e as Error).message.slice(0, 200)}`] };
+      recordFailure("nightshift", `dossier narrative: ${(e as Error).message}`);
     }
   }
 
