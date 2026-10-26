@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   managerAgent,
   assembleManagerContext,
@@ -11,12 +12,67 @@ import {
   managerDecisionSchema,
   type ManagerContext,
 } from '../../app/contracts/manager.js';
-import { createExecutionRegistry } from '../../app/composition.js';
+import { ExecutionRegistry } from '../../app/orchestration/ports.js';
 import { TaskStore } from '../../app/tasks/store.js';
 import { taskRequestSchema } from '../../app/contracts/tasks.js';
 
 const identity = { principal: 'local-user', workspace: 'local-workspace' };
 const stores: { store: TaskStore; directory: string }[] = [];
+function decisionRegistry() {
+  const registry = new ExecutionRegistry()
+    .registerAgent(managerAgent)
+    .registerTool({
+      id: 'test.source.lookup',
+      version: '1',
+      description: 'Read a bounded synthetic source.',
+      mode: 'fixture',
+      manager_read_only: true,
+      inputSchema: z.strictObject({}),
+      outputSchema: z.strictObject({ value: z.string() }),
+      execute: () =>
+        Promise.reject(
+          new Error('Decision context tests must not execute lookup tools.'),
+        ),
+    });
+  for (const [id, relevant] of [
+    ['test.source', true],
+    ['test.inactive', false],
+  ] as const)
+    registry.registerCapability({
+      card: {
+        id,
+        version: '1',
+        purpose: 'Synthetic catalog metadata for Manager context tests.',
+        work_products: ['test.finding'],
+        required_tools: [],
+        roles: ['HazeOps'],
+        readiness: 'implemented',
+        limitations: ['Metadata only; no specialist implementation is loaded.'],
+      },
+      matches: () => relevant,
+      assignments: () => [],
+    });
+  registry.registerAssignment({
+    id: 'test.source.inspect',
+    version: '1',
+    capability: 'test.source',
+    agent: 'HazeOps',
+    tools: ['test.source.lookup'],
+    instructions: 'Metadata only; this definition has no execution handler.',
+  });
+  // A populated inactive catalog exercises real budget pressure without
+  // importing a production capability or registering a specialist agent.
+  for (let index = 0; index < 40; index++)
+    registry.registerAssignment({
+      id: `test.inactive.method-${index}`,
+      version: '1',
+      capability: 'test.inactive',
+      agent: 'HazeOps',
+      tools: ['test.source.lookup'],
+      instructions: 'Metadata only; this definition has no execution handler.',
+    });
+  return registry;
+}
 afterEach(async () => {
   for (const entry of stores.splice(0)) {
     entry.store.close();
@@ -37,7 +93,7 @@ async function setup(objective = 'Explain the supplied source.') {
     'admit',
     { mode: 'fixture' },
   );
-  const registry = createExecutionRegistry({ mode: 'fixture' });
+  const registry = decisionRegistry();
   const context = assembleManagerContext(
     task,
     registry,
@@ -65,7 +121,16 @@ function response(context: ManagerContext) {
 }
 describe('registered Manager decision layer', () => {
   it('registers a controlled decide entry with no storage or unrestricted adapters', async () => {
-    const { context } = await setup();
+    const { context, registry } = await setup();
+    expect(context.decision_id).toBe(
+      `${context.run_id}:${context.generation}:${context.plan_revision}:${context.event_cursor}`,
+    );
+    expect([...registry.agents.keys()]).toEqual(['Manager']);
+    expect(
+      [...registry.definitions.values()].every(
+        (definition) => definition.execute === undefined,
+      ),
+    ).toBe(true);
     const result = await managerAgent.decide!({
       context,
       model: () =>
@@ -113,6 +178,25 @@ describe('registered Manager decision layer', () => {
           }),
       }),
     ).rejects.toThrow('admitted checkpoint');
+  });
+  it('advertises model actions without runtime-only recovery metadata while retaining persisted recovery links', async () => {
+    const { context } = await setup();
+    const decision = response(context);
+    const modelSchema = managerAgent.schemas!.decision!;
+    expect(modelSchema.safeParse(decision).success).toBe(true);
+    expect(
+      modelSchema.safeParse({ ...decision, recovery_of: 'persisted-decision' })
+        .success,
+    ).toBe(false);
+    expect(
+      managerDecisionSchema.parse({
+        ...decision,
+        recovery_of: 'persisted-decision',
+      }).recovery_of,
+    ).toBe('persisted-decision');
+    expect(z.toJSONSchema(modelSchema).properties).not.toHaveProperty(
+      'recovery_of',
+    );
   });
   it('does not substitute fixture synthesis when the configured model fails', async () => {
     const { context } = await setup();

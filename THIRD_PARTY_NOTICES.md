@@ -8,6 +8,13 @@ text is retained beside each component in `third_party/meterless/`, and copied
 into the generated vendor output. No upstream NOTICE file is present at this
 revision. Preserve any applicable notices when updating the pin.
 
+The original World Model browser control plane is separately retained in
+frontend/public/meterless-world-model/ at the same pinned commit, with its
+Apache-2.0 license and source/hash record. The HTML remains unmodified. Haze's
+React control-plane page adapts the upstream dark palette and panel layout to
+its existing local World Model API; the original reference engine runs only in
+the separately labeled, script-only sandbox.
+
 `engine_sources.json` records the source selections, original Git tree IDs,
 per-file SHA-256 checksums, and aggregate checksums. Upstream sources and all
 three upstream package-lock.json files are retained byte for byte. The upstream

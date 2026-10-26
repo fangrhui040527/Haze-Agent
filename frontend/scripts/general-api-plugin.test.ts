@@ -3,13 +3,18 @@ import { resolve } from 'node:path';
 import type { PreviewServer, ViteDevServer } from 'vite';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { taskRequests, taskDirectories } = vi.hoisted(() => ({
+const { taskRequests, taskDirectories, taskPolicies } = vi.hoisted(() => ({
   taskRequests: [] as string[],
   taskDirectories: [] as string[],
+  taskPolicies: [] as unknown[],
 }));
 vi.mock('../../app/tasks/http.ts', () => ({
-  createTaskHandler: (options: { stateDirectory: string }) => {
+  createTaskHandler: (options: {
+    stateDirectory: string;
+    acceptancePolicy?: unknown;
+  }) => {
     taskDirectories.push(options.stateDirectory);
+    taskPolicies.push(options.acceptancePolicy);
     return Object.assign(
       (request: IncomingMessage, response: ServerResponse) => {
         taskRequests.push(request.url ?? '');
@@ -58,10 +63,23 @@ async function requestTo(mode: 'dev' | 'preview', url: string) {
 beforeEach(() => {
   taskRequests.length = 0;
   taskDirectories.length = 0;
+  taskPolicies.length = 0;
   vi.unstubAllEnvs();
 });
 
 describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
+  it('uses the configured World Model acceptance policy for current-status reads', async () => {
+    vi.stubEnv('HAZE_WORLD_ACCEPTANCE_POLICY', 'research-v1');
+    await requestTo(mode, '/api/world/records');
+    expect(taskPolicies).toEqual(['research-v1']);
+  });
+  it('rejects unknown World Model policies before starting the task runtime', async () => {
+    vi.stubEnv('HAZE_WORLD_ACCEPTANCE_POLICY', 'unknown-policy');
+    const response = await requestTo(mode, '/api/world/records');
+    expect(response.writeHead).toHaveBeenCalledWith(503, expect.any(Object));
+    expect(taskDirectories).toEqual([]);
+    expect(taskRequests).toEqual([]);
+  });
   it('keeps task storage separate from the configured legacy dashboard directory', async () => {
     vi.stubEnv('STATE_DIR', '.state/legacy-dashboard');
     vi.stubEnv('HAZE_TASK_STATE_DIR', '.state/separate-general-tasks');
@@ -99,6 +117,9 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
       '/api/artifacts',
       '/api/artifacts/current',
       '/api/capabilities',
+      '/api/world/records',
+      '/api/world/records/example?view=detail',
+      '/api/world/projections/rebuild',
     ]) {
       const response = await requestTo(mode, path);
       expect(response.writeHead).toHaveBeenCalledWith(200, {
@@ -116,6 +137,9 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
       '/api/artifacts',
       '/api/artifacts/current',
       '/api/capabilities',
+      '/api/world/records',
+      '/api/world/records/example?view=detail',
+      '/api/world/projections/rebuild',
     ]);
   });
 
@@ -124,6 +148,8 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
       '/',
       '/item/example',
       '/demo-data',
+      '/world-model?record=example',
+      '/meterless-world-model/live.html',
       '/assets/current.js',
       '/apiculture',
     ]) {

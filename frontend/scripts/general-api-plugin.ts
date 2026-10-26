@@ -4,6 +4,7 @@ import { parseEnv } from 'node:util';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadEnv, type Plugin } from 'vite';
 import { createTaskHandler } from '../../app/tasks/http.ts';
+import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.ts';
 
 /** Local evidence task API. Static hosting needs a backend. */
 export function generalApiPlugin(): Plugin {
@@ -23,7 +24,7 @@ export function generalApiPlugin(): Plugin {
     next: () => void,
   ) => {
     if (
-      !/^\/api\/(?:tasks|artifacts|capabilities)(?:[/?]|$)/.test(
+      !/^\/api\/(?:tasks|artifacts|capabilities|world)(?:[/?]|$)/.test(
         request.url ?? '',
       )
     ) {
@@ -34,9 +35,14 @@ export function generalApiPlugin(): Plugin {
       // Vite creates the next server before closing the previous one. Acquire
       // durable state only when a task request reaches the listening server.
       if (!tasks) {
+        const policy = resolveWorldAcceptancePolicy(
+          env.HAZE_WORLD_ACCEPTANCE_POLICY,
+        );
         tasks = createTaskHandler({
           env,
           mode: env.HAZE_EXECUTION_MODE === 'fixture' ? 'fixture' : 'live',
+          acceptancePolicy:
+            policy.id === 'research-v1' ? 'research-v1' : undefined,
           stateDirectory: resolve(
             import.meta.dirname,
             '../..',

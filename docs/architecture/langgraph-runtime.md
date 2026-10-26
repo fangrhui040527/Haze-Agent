@@ -6,6 +6,8 @@ This change preserves the model selection, agent instructions and roles, tool re
 
 ## Execution boundaries
 
+The Manager graph lives in `app/agents/manager/graph.ts` alongside its instructions, context assembly and decision logic. The Manager definition registers its graph factory through the shared contract in `app/orchestration/manager-workflow.ts`, keeping the core runtime independent of agent implementations. Shared specialist execution remains in `app/orchestration/specialist-graph.ts`; the dispatcher, checkpointing and operation ledger provide infrastructure across agents.
+
 The Manager workflow hydrates current records, assembles bounded context, obtains a decision, validates it, applies the authorized action, dispatches eligible assignments and either waits or finalizes. Existing inspect, lookup, apply-plan, steer, coordinate, applicability, question, wait and finalize contracts retain their application validation. Artifact closure and independent-review checks remain finalization requirements.
 
 Assignments have separate graph threads. Specialist model actions pass through context, model, validation and controlled effect nodes. Registered deterministic assignment implementations run as controlled graph nodes and receive the same restricted services. Saving an artifact, sending a message, raising a question or escalation, and calling a model or tool use the durable operation ledger.

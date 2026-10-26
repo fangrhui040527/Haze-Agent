@@ -6,6 +6,7 @@ import { decide } from './decision.js';
 import { managerInstructions } from './instructions.js';
 import { assembleManagerContext } from './context.js';
 import { fixtureDecision } from './fixture.js';
+import { createManagerGraph } from './graph.js';
 export { decide } from './decision.js';
 export { assembleManagerContext } from './context.js';
 export type { ManagerContext } from './context.js';
@@ -19,9 +20,11 @@ export const managerAgent: AgentDefinition = {
   schemas: {
     plan: managerPlanSchema,
     synthesis: synthesisSchema,
-    decision: managerDecisionSchema,
+    // Recovery links belong to persisted runtime decisions, never model output.
+    decision: managerDecisionSchema.omit({ recovery_of: true }),
   },
   instructions: managerInstructions,
+  createManagerGraph,
   decide,
   assembleContext: assembleManagerContext,
   fixtureDecision,

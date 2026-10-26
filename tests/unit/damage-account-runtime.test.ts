@@ -201,7 +201,7 @@ describe('damage-account registration and task path', () => {
     20_000,
   );
 
-  it('asks for typed inputs and withholds every invented estimate', async () => {
+  it('reports missing World Model evidence without requiring uploads or inventing estimates', async () => {
     const { runtime } = await setup();
     const admission = runtime.admit(
       {
@@ -211,10 +211,12 @@ describe('damage-account registration and task path', () => {
       'missing-inputs',
     );
     const task = await until(runtime, admission.task_id);
-    expect(task.status).toBe('waiting');
-    expect(
-      task.questions.some((q) => q.question.includes('haze.damage.import.v1')),
-    ).toBe(true);
+    expect(task.status, task.error?.message).toBe('completed');
+    expect(task.questions).toHaveLength(0);
+    expect(task.result?.uncertainty.join(' ')).toContain('World Model');
+    expect(task.assignments.flatMap((a) => a.gaps).join(' ')).toContain(
+      'Backend acquisition',
+    );
     expect(
       task.artifacts.some(
         (a) =>
@@ -311,6 +313,8 @@ describe('damage-account registration and task path', () => {
       {
         schema_version: 'haze.task.request.v3',
         objective: 'Build a damage account.',
+        context_refs: [imported(activeRuntime)],
+        scope: { countries: ['Different Country'] },
       },
       'cancel-waiting-account',
     );

@@ -166,6 +166,8 @@ import type {
 type AssignmentPlan = z.infer<typeof managerAssignmentPlanSchema>;
 export interface ManagerContext {
   purpose: 'decision';
+  /** Runtime-provided identifier for this exact decision checkpoint. */
+  decision_id?: string;
   run_id: string;
   generation: number;
   objective_revision: number;
@@ -204,6 +206,7 @@ export interface ManagerContext {
     | 'id'
     | 'definition_id'
     | 'capability'
+    | 'role'
     | 'revision'
     | 'objective_revision'
     | 'status'

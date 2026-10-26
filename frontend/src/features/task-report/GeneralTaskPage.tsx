@@ -9,9 +9,8 @@ import {
   type WorldModelStatusState,
 } from './useWorldModelStatus.ts';
 import { Badge } from '../../shared/ui/Badge.tsx';
-import { Button } from '../../shared/ui/Button.tsx';
+import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
-import { ManagerWorkspace } from './ManagerWorkspace.tsx';
 import styles from './TaskPage.module.css';
 
 /** Restore this report's identity rather than whichever task was last open. */
@@ -116,7 +115,16 @@ export function GeneralTaskReport({
         )}
         {record && worldModel && <WorldModelStatus state={worldModel} />}
       </div>
-      {record && <ManagerWorkspace record={record} />}
+      {record && (
+        <p className={styles.back}>
+          <Link
+            to={`/manager/${encodeURIComponent(record.id)}`}
+            className={buttonClass('secondary', 'small')}
+          >
+            Open Manager workspace
+          </Link>
+        </p>
+      )}
       <details open={!record?.result || observing}>
         <summary>Actual execution receipts ({receipts.length})</summary>
         {receipts.length > 0 ? (

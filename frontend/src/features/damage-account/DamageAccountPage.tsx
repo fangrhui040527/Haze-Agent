@@ -1,16 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import type { Artifact } from '../../../../app/contracts/artifacts.ts';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
-import { SourceImport, sourceReferences } from '../chat/SourceImport.tsx';
 import { TaskControls } from '../chat/TaskControls.tsx';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
-import { ManagerWorkspace } from '../task-report/ManagerWorkspace.tsx';
-import { Button } from '../../shared/ui/Button.tsx';
+import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { DamageWorkProducts } from './DamageWorkProducts.tsx';
 import styles from './DamageAccountPage.module.css';
 
-const INPUT_FORMATS = ['json', 'csv'] as const;
+const REQUEST_PREFIX = 'Build a damage account using World Model evidence. ';
 
 /** This page owns its task selection; the dashboard keeps its existing session. */
 export function DamageAccountPage() {
@@ -31,14 +28,22 @@ export function DamageAccountView({
   run: AgentRun;
 }) {
   const navigate = useNavigate();
-  const [sources, setSources] = useState<Artifact[]>([]);
-  const [objective, setObjective] = useState(
-    'Build a damage account from the imported physical outcomes and declared unit values. Include physical outcomes, financial incidence, selected social welfare, coverage and independent review.',
-  );
+  const [objective, setObjective] = useState('');
   const [savedId, setSavedId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const record = run.task?.record;
   const result = record?.result;
+  const acquisitionGaps = [
+    ...new Set(
+      record?.assignments
+        .filter(
+          (assignment) =>
+            assignment.definition_id === 'damage.collect' &&
+            assignment.support === 'gap',
+        )
+        .flatMap((assignment) => assignment.gaps) ?? [],
+    ),
+  ];
   const active =
     !!record &&
     ['queued', 'running', 'waiting', 'paused'].includes(record.status);
@@ -49,9 +54,8 @@ export function DamageAccountView({
     setError(null);
     try {
       await run.ask({
-        question: objective.trim(),
+        question: REQUEST_PREFIX + objective.trim(),
         focusItemId: null,
-        contextRefs: sourceReferences(sources),
       });
     } catch (cause) {
       setError(
@@ -75,9 +79,8 @@ export function DamageAccountView({
         <Link to="/">Back to the dashboard</Link>
         <h1>Damage accounting</h1>
         <p>
-          Build and inspect accounts from imported physical outcomes and
-          declared unit values. Physical harm, financing and social welfare
-          remain separate views.
+          Build and inspect accounts using evidence retained in World Model.
+          Physical harm, financing and social welfare remain separate views.
         </p>
       </header>
 
@@ -90,40 +93,19 @@ export function DamageAccountView({
               onSubmit={(event) => void submit(event)}
             >
               <p>
-                Import typed accounting JSON or CSV with a declared scope,
-                quantities and compatible unit values. No estimates are created
-                from missing inputs.
+                Describe the location, episode and dates. The backend selects
+                compatible World Model evidence and retains its exact sources.
+                Missing evidence remains unestimated. No upload is required.
               </p>
-              <SourceImport
-                idPrefix="damage"
-                formats={INPUT_FORMATS}
-                defaultFilename="damage-inputs.json"
-                attachmentPurpose="Attached sources accompany your next account."
-                required
-                sources={sources}
-                onChange={setSources}
-                disabled={active || observing || run.operationPending}
-                importSource={(source, key) => {
-                  if (
-                    source.media_type !== 'application/json' &&
-                    source.media_type !== 'text/csv'
-                  )
-                    return Promise.reject(
-                      new Error(
-                        'Damage accounts require typed JSON or CSV inputs.',
-                      ),
-                    );
-                  return run.importSource(source, key);
-                }}
-              />
               <label htmlFor="damage-objective">
                 What should the account cover?
               </label>
               <textarea
                 id="damage-objective"
                 value={objective}
+                placeholder="Build a damage account for Klang for 2025-09-01 to 2025-09-30."
                 rows={4}
-                maxLength={16000}
+                maxLength={16000 - REQUEST_PREFIX.length}
                 required
                 disabled={active || observing}
                 onChange={(event) => setObjective(event.target.value)}
@@ -133,7 +115,6 @@ export function DamageAccountView({
                   type="submit"
                   variant="primary"
                   disabled={
-                    !sources.length ||
                     !objective.trim() ||
                     active ||
                     observing ||
@@ -142,11 +123,6 @@ export function DamageAccountView({
                 >
                   Build account
                 </Button>
-                {!sources.length && (
-                  <span className={styles.note}>
-                    Attach JSON or CSV to begin.
-                  </span>
-                )}
               </div>
             </form>
           </section>
@@ -175,7 +151,7 @@ export function DamageAccountView({
             </div>
           </form>
           <p className={styles.note}>
-            Imported study claims retain their original applicability limits. An
+            Retained evidence keeps its original applicability limits. An
             arithmetic review does not establish scientific attribution.
           </p>
         </section>
@@ -219,8 +195,33 @@ export function DamageAccountView({
             <>
               <TaskControls run={run} />
               <TaskQuestions run={run} />
+              <div className={styles.actions}>
+                <Link
+                  to={`/manager/${encodeURIComponent(record.id)}`}
+                  className={buttonClass('secondary', 'small')}
+                >
+                  Open Manager workspace
+                </Link>
+              </div>
             </>
           )}
+        </section>
+      )}
+      {acquisitionGaps.length > 0 && (
+        <section
+          className={styles.section}
+          aria-labelledby="damage-evidence-gap-heading"
+        >
+          <h2 id="damage-evidence-gap-heading">Evidence needed</h2>
+          <p>
+            Account totals remain unestimated. Backend acquisition or scope
+            clarification is required.
+          </p>
+          <ul>
+            {acquisitionGaps.map((gap) => (
+              <li key={gap}>{gap}</li>
+            ))}
+          </ul>
         </section>
       )}
       {result && (
@@ -314,7 +315,6 @@ export function DamageAccountView({
           <summary>
             Task coordination and execution receipts ({receipts.length})
           </summary>
-          <ManagerWorkspace record={record} />
           <ol>
             {receipts.map((receipt) => (
               <li key={receipt.cursor}>

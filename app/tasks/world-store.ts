@@ -474,6 +474,12 @@ export class WorldModelStore {
       clauses.push("json_extract(body,'$.external_id')=?");
       params.push(input.external_id);
     }
+    if (input.artifact_kind !== undefined) {
+      clauses.push(
+        "kind='artifact_reference' AND json_extract(body,'$.payload.kind')=?",
+      );
+      params.push(input.artifact_kind);
+    }
     params.push(input.limit);
     const rows = this.db
       .prepare(
@@ -562,23 +568,34 @@ export class WorldModelStore {
     const record = this.record(scope, recordId);
     if (!record) return undefined;
     const relationships = this.relationships(scope, recordId);
-    const support_artifacts = relationships.flatMap((relationship) => {
-      if (
-        relationship.kind !== 'supported_by' ||
-        relationship.from.id !== recordId
-      )
-        return [];
-      const support = this.record(scope, relationship.to.id);
-      if (!support || support.kind !== 'artifact_reference') return [];
-      if (
-        typeof support.payload !== 'object' ||
-        support.payload === null ||
-        Array.isArray(support.payload)
-      )
-        return [];
-      const parsed = artifactRefSchema.safeParse(support.payload.artifact);
-      return parsed.success ? [parsed.data] : [];
-    });
+    // Artifact-reference records must enforce access to their own payload too.
+    const ownArtifact =
+      record.kind === 'artifact_reference' &&
+      typeof record.payload === 'object' &&
+      record.payload !== null &&
+      !Array.isArray(record.payload)
+        ? artifactRefSchema.safeParse(record.payload.artifact)
+        : undefined;
+    const support_artifacts = [
+      ...(ownArtifact?.success ? [ownArtifact.data] : []),
+      ...relationships.flatMap((relationship) => {
+        if (
+          relationship.kind !== 'supported_by' ||
+          relationship.from.id !== recordId
+        )
+          return [];
+        const support = this.record(scope, relationship.to.id);
+        if (!support || support.kind !== 'artifact_reference') return [];
+        if (
+          typeof support.payload !== 'object' ||
+          support.payload === null ||
+          Array.isArray(support.payload)
+        )
+          return [];
+        const parsed = artifactRefSchema.safeParse(support.payload.artifact);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    ];
     return {
       schema_version: 'haze.world.context.v1',
       record,

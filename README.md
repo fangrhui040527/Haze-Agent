@@ -1,6 +1,6 @@
 # Haze Agent
 
-Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The registered capabilities cover source-backed explanations, episode investigations, modeled PM2.5 methods and imported-input damage accounting.
+Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The registered capabilities cover source-backed explanations, episode investigations, modeled PM2.5 methods and damage accounting from retained World Model evidence.
 
 The reusable engine separates browser-safe contracts, authoritative SQLite state, bounded agent execution, typed tools and domain capabilities. Corrections, questions, imported sources, controls, immutable work products and independent numerical review are visible in the application. See the [general engine guide](docs/orchestration/general-engine.md) and [Architecture v0.14](docs/architecture/Haze_Agent_Architecture_v0.14.pdf).
 
@@ -48,13 +48,17 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
 
-Open `/damage-account` for the separate damage-accounting workspace. Import typed `haze.damage.import.v1` JSON or CSV with a declared scope, physical quantities and compatible unit values, then request an account. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence is withheld, and imported assertions retain their scientific applicability limits. See the [DamageAccountant implementation report](docs/orchestration/damage-accountant-implementation-report.md) for input requirements and release scope.
+Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` retrieves compatible retained accounting captures and their exact original evidence. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
+
+Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/Testing/world-model-control-plane.md) for configuration and isolated checks.
 
 The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
 
 When the dashboard keeps an older `STATE_DIR`, set `HAZE_TASK_STATE_DIR=.state/general-v2` for Vite's task API. This isolates task storage without changing or migrating the dashboard's archive directory.
 
 ## Verify general execution
+
+To test the Manager independently, run `npm run manager:test`. It uses a fresh isolated build and task state with deterministic specialist stubs. Use `npm run manager:test:live` to test only the Manager's configured model against the same stubs. To talk to that model with your own prompts and follow-ups, run `npm run manager:chat`. See [isolated Manager testing](docs/Testing/manager-testing.md) for focused cases, interactive chat, traces and the limits of a passing result.
 
 ```sh
 npm run check
@@ -71,20 +75,20 @@ The fixture verifier imports a source, completes a general explanation and a PM2
 
 Browse the [documentation index](docs/README.md) for guides grouped by topic.
 
-| Path                                  | Purpose                                                                                    |
-| ------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `app/tasks/`                          | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
-| `app/orchestration/`                  | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
-| `app/contracts/`                      | Browser-safe v3 contracts and separate server-only canonical serialization                 |
-| `app/agents/`, `app/capabilities/`    | Versioned agents and independently registered domain methods                               |
-| `app/adapters/`                       | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
-| `app/checkpoints/`                    | Checkpoint helpers                                                                         |
-| `app/compatibility/`, `app/graph.ts`  | Engine/restart proof and offline metadata graph                                            |
-| `frontend/`                           | Chat, evidence results, source samples and agent execution display                         |
-| `scripts/`, `tests/`                  | Build, verification, examples and regression checks                                        |
-| `input_examples/`, `output_examples/` | Offline metadata examples and explicit orchestration fixtures                              |
-| `third_party/`                        | Pinned engine sources                                                                      |
-| `docs/`                               | Current architecture, implementation notes and labeled historical design records           |
+| Path                                                                | Purpose                                                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
+| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
+| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                 |
+| `app/agents/`, `app/capabilities/`                                  | Versioned agents and independently registered domain methods                               |
+| `app/adapters/`                                                     | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
+| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                         |
+| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                            |
+| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                         |
+| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                        |
+| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                              |
+| `third_party/`                                                      | Pinned engine sources                                                                      |
+| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records           |
 
 ## Offline infrastructure and engine pins
 

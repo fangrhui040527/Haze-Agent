@@ -11,6 +11,7 @@ import type {
   TaskRequest,
   TaskRecord,
   TaskEvent,
+  TaskIdentity,
 } from '../contracts/tasks.js';
 import type {
   ManagerDecision,
@@ -18,8 +19,82 @@ import type {
   ArtifactReviewCheck,
 } from '../contracts/manager.js';
 import type { ManagerContext } from '../contracts/manager.js';
-import type { WorldAssessment, WorldRecord } from '../contracts/world.js';
+import type {
+  WorldAssessment,
+  WorldRecord,
+  WorldHold,
+  WorldAcceptanceOutcome,
+} from '../contracts/world.js';
+import type {
+  WorldLookupInput,
+  WorldContextOutput,
+} from '../contracts/world-services.js';
 import type { AgentAction } from './contracts.js';
+import type { ManagerGraphFactory } from './manager-workflow.js';
+
+/** Narrow host port for governed, store-backed tools; domain factories stay in composition. */
+export interface StatefulToolStore {
+  world: {
+    lookup(scope: WorldRecord['scope'], input: WorldLookupInput): WorldRecord[];
+    activeHolds(scope: WorldRecord['scope'], subjectId: string): WorldHold[];
+  };
+  read(id: string, identity: TaskIdentity): TaskRecord;
+  artifact(id: string, identity: TaskIdentity, ref?: ArtifactRef): Artifact;
+  worldLookup(
+    taskId: string,
+    identity: TaskIdentity,
+    mode: ExecutionMode,
+    input: WorldLookupInput,
+  ): {
+    schema_version: 'haze.world.lookup.v1';
+    records: WorldRecord[];
+    current_acceptances: {
+      subject: string;
+      acceptance: WorldAcceptanceOutcome;
+    }[];
+  };
+  worldContext(
+    taskId: string,
+    identity: TaskIdentity,
+    mode: ExecutionMode,
+    recordId: string,
+  ): WorldContextOutput;
+  pinWorldContext(
+    taskId: string,
+    identity: TaskIdentity,
+    assignmentId: string,
+    generation: number,
+    refs: ArtifactRef[],
+    statedUse: string,
+    recordId: string,
+  ): void;
+  pinAssignmentInput(
+    taskId: string,
+    assignmentId: string,
+    generation: number,
+    ref: ArtifactRef,
+  ): void;
+  clearWorldContextPins(
+    taskId: string,
+    identity: TaskIdentity,
+    assignmentId: string,
+    generation: number,
+  ): void;
+  saveArtifact(
+    taskId: string,
+    identity: TaskIdentity,
+    options: {
+      kind: string;
+      content: Artifact['content'];
+      producer: Artifact['producer'];
+      dependencies?: ArtifactRef[];
+      required_tools?: string[];
+      generation?: number;
+      assignment_revision?: number;
+      evidence_origin?: Artifact['evidence_origin'];
+    },
+  ): Artifact;
+}
 
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
 export interface AssignmentPlan {
@@ -169,6 +244,8 @@ export interface AgentDefinition {
     Record<'plan' | 'synthesis' | 'specialist' | 'decision', z.ZodType>
   >;
   execute?(services: AgentExecutionServices): Promise<AssignmentOutput>;
+  /** The registered Manager provides its executable workflow topology. */
+  createManagerGraph?: ManagerGraphFactory;
   decide?(services: ManagerServices): Promise<ManagerDecision>;
   assembleContext?(
     task: TaskRecord,
@@ -201,6 +278,19 @@ export interface AgentExecutionServices extends AssignmentServices {
 
 /** Registration describes implementations. Task grants are checked separately at every boundary. */
 export class ExecutionRegistry {
+  readonly storeToolFactories: ((
+    store: StatefulToolStore,
+    mode: ExecutionMode,
+  ) => ToolDefinition[])[] = [];
+  registerStoreTools(
+    factory: (
+      store: StatefulToolStore,
+      mode: ExecutionMode,
+    ) => ToolDefinition[],
+  ): this {
+    this.storeToolFactories.push(factory);
+    return this;
+  }
   readonly capabilities = new Map<string, CapabilityDefinition>();
   readonly definitions = new Map<string, AssignmentDefinition>();
   readonly tools = new Map<string, ToolDefinition>();

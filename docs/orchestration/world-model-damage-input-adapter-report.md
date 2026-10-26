@@ -1,0 +1,35 @@
+# World Model damage input adapter
+
+`WorldModelDamageInputAdapter`, implemented in `app/capabilities/damage-account/world-input-adapter.ts`, connects the active v3 World Model to DamageAccountant. Composition registers its store-backed tool through a narrow host port, keeping generic infrastructure independent of domain implementations. The dedicated accounting page accepts a request without a file attachment. Legacy JSON/CSV input remains available to existing API clients and fixtures.
+
+## Retrieval and calculation
+
+The server-owned `damage.world-inputs` tool searches World Model artifact references for `damage.inputs` captures. It selects by declared scope or a conservative location/date match, rejects ambiguous evidence sets and supports explicit World Model record selection. Different evidence versions are never resolved by silently choosing the newest. Full requested scopes are bound by a hash instead of repeated in every assignment brief. Model-proposed selectors constrain retrieval without overriding the user's requested scope. Partial queries do not insert default precision constraints.
+
+For a selected capture, the adapter checks the principal, workspace, execution mode, current source access, producer revision/status, originating-task applicability and World Model holds. Live accounts reject synthetic effects and coverage. Exact artifact hashes are checked by the existing store. The adapter reconstructs the input tables from the capture's original source artifacts and compares the result with the stored capture; copied or inconsistent normalized quantities are rejected. Existing compatibility checks enforce units, currency, price year, valuation horizon, approved methods and overlap rules.
+
+A service-owned `damage.world-selection` receipt records the World Model record revision/hash, capture, original source references, scope hash and limitations. A generic `world.context.snapshot` retains that record and evidence closure. Subsequent accounting stages reuse and recheck the same selection. Final dependency validation rejects revised or held snapshots and rechecks source access and active holds across every pinned dependency, including original tables. Foreign producer revisions and their required independent reviews are resolved from the originating task only for exact governed World Model pins; ordinary cross-task references gain no bypass. Runtime tool completion refreshes durably pinned assignment inputs before subsequent reads and saves, including replay.
+
+`damage.collect` returns the canonical inputs and a selection link. Scope, compilation, assembly and the independent checker consume the original pinned evidence. Missing data produces an acquisition-gap result with no numerical account. Ambiguous scope or evidence produces a focused clarification with candidate record references. The adapter does not ask for uploads.
+
+Legacy intake requires explicit source references in the collection plan. Retained World Model pins do not accidentally trigger that compatibility path on retries or corrections. Fresh collection removes the previous retrieved selection from the affected assignment branch while preserving explicit user context and historical pin records. Correction handling follows dependency closure through service receipts, so a receipt cannot create a dependency on the collector's own superseded snapshot.
+
+## Data contract and boundaries
+
+This adapter consumes accounting-ready captures using `haze.damage.inputs.v1`, with exact `source_refs`, original source dependencies and table manifests. Original supporting tables use the existing `haze.damage.import.v1` JSON/CSV contract. Backend ingestion or scientific calculation jobs must publish those artifacts through the existing task store. World Model already catalogs saved artifacts; historical captures remain readable without a new storage migration.
+
+Raw PM2.5 series, population rasters, baseline health statistics and papers are not automatically transformed into attributable physical outcomes by this reader. External-source acquisition and scientifically approved exposure/health models remain separate capabilities. An empty World Model therefore produces a genuine gap. Legacy HazeOps JSON is not imported automatically.
+
+The bounded discovery window is 50 accounting captures; a full window requires an explicit record selection rather than a potentially incomplete scan. Each selection permits at most 63 original supporting artifacts plus its capture, and the full transitive evidence closure is bounded at 64 artifacts. Existing artifact/response bounds remain in force. Natural-language matching requires an exact country set and complete ISO-date, named-calendar-month or calendar-year window. A full-year request cannot reuse an episode, a full-month request cannot reuse a partial month, and a multi-country request cannot reuse one country's figures. Unsupported or incomplete prose needs clarification; the adapter does not perform geographic relabeling, currency conversion or temporal rescaling. World Model storage and arithmetic review do not establish scientific approval.
+
+The original office/dashboard presentation is preserved. The accounting page removes the file uploader and explains retained evidence and missing-data behavior. Existing Manager workspace navigation is preserved.
+
+## Jev assessment
+
+TypeSafe Jev is a plausible optional semantic classifier for endpoint labels, document categories and candidate relevance after deterministic filtering. Its [Choice interface](https://docs.typesafe.ai/primitives/choice) selects among predefined options; its [confidence value](https://docs.typesafe.ai/confidence) describes the output distribution and should not be treated as scientific validation. Evaluate a pinned model version on labelled Haze examples before adopting thresholds, retain an unknown/abstain outcome and record the model/prompt version.
+
+Permissions, exact identifiers and hashes, dates, geographic boundaries, units, currency/horizon compatibility, arithmetic, causal attribution and acceptance authority remain deterministic or independently reviewed. TypeSafe's [published Jev 1.13 limitations](https://docs.typesafe.ai/model-jaggedness/jev-1.13) specifically recommend keeping arithmetic and date comparison in code. Jev is not added as a dependency or called by this implementation; the reader does not need another provider or API key.
+
+## Validation
+
+Runtime integration tests cover a consumer account with no uploaded sources or structured scope, independent reconstruction of its known synthetic answer, exact source pins through all stages, corrected collection, empty/mismatched evidence, ambiguous evidence and active holds. Scope regressions cover narrowing, model-proposed selector authority and incomplete corrections. Lifecycle tests cover a late hold on an original source and removal of superseded retrieved selections. Tool-boundary tests reject forged selection receipts. Existing task, World Model and frontend checks are rerun for this change. Synthetic verification does not establish live scientific-data or model readiness.
