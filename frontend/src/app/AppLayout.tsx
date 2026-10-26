@@ -75,6 +75,14 @@ function Header() {
             World Model
           </NavLink>
           <NavLink
+            to="/memory"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Memory
+          </NavLink>
+          <NavLink
             to="/demo-data"
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`

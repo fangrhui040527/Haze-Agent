@@ -3363,16 +3363,20 @@ export class TaskStore {
     artifact: Artifact,
     mode: TaskRecord['mode'],
     ancestors = new Set<string>(),
+    // Shared dependencies are projected once; without this, layered
+    // dependency graphs are re-walked once per path (exponential).
+    projectedKeys = new Set<string>(),
   ): void {
     const key = `${artifact.id}/${artifact.version}`;
     if (ancestors.has(key))
       fail('artifact_dependency_cycle', 'Artifact dependency cycle detected.');
+    if (projectedKeys.has(key)) return;
     const nextAncestors = new Set(ancestors).add(key);
     const dependencies = artifact.dependencies.map((ref) =>
       this.artifact(ref.id, artifact.identity, ref),
     );
     for (const dependency of dependencies)
-      this.projectArtifact(dependency, mode, nextAncestors);
+      this.projectArtifact(dependency, mode, nextAncestors, projectedKeys);
 
     const projected = this.world.projectArtifact(artifact, mode).value;
     for (const dependency of dependencies) {
@@ -3389,6 +3393,7 @@ export class TaskStore {
         recorded_at: artifact.created_at,
       });
     }
+    projectedKeys.add(key);
   }
   private applicability(
     taskId: string,
