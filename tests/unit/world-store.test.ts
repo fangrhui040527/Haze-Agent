@@ -488,4 +488,104 @@ describe('transactional World Model writes', () => {
         .get(`project-artifact:${source.id}:${source.version}`),
     ).toEqual({ count: 0 });
   });
+
+  it('persists accepted status with policy history, expires it, and holds it when support changes', () => {
+    const store = createStore();
+    const record = store.world.putRecord(
+      put('accepted-record', 'evidence_synthesis_bundle', 'bundle:one', {
+        summary: 'Reviewed evidence bundle.',
+      }),
+    ).value;
+    const unrelated = store.world.putRecord(
+      put('unrelated-accepted-record', 'research_note', 'note:unrelated', {
+        summary: 'Independent support branch.',
+      }),
+    ).value;
+    const policy = {
+      id: 'research-v1',
+      version: '1',
+      sha256: 'a'.repeat(64),
+    };
+    const accepted = store.world.evaluateAcceptance({
+      scope,
+      subject: record.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy,
+      support_revisions: [],
+      actor: { kind: 'service', id: 'test-policy' },
+      evaluated_at: at,
+      expires_at: '2026-10-27T00:00:00Z',
+    });
+    const unrelatedAcceptance = store.world.evaluateAcceptance({
+      scope,
+      subject: unrelated.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy,
+      support_revisions: [],
+      actor: { kind: 'service', id: 'test-policy' },
+      evaluated_at: at,
+      expires_at: '2026-10-27T00:00:00Z',
+    });
+    expect(accepted.status).toBe('accepted');
+    expect(
+      store.world.currentAcceptance(scope, accepted.id, {
+        now: '2026-10-26T12:00:00Z',
+        policyHash: policy.sha256,
+      })?.status,
+    ).toBe('accepted');
+    expect(
+      store.world.currentAcceptance(scope, accepted.id, {
+        now: '2026-10-28T00:00:00Z',
+        policyHash: policy.sha256,
+      }),
+    ).toMatchObject({
+      status: 'not_eligible',
+      reasons: ['Acceptance has expired and requires reevaluation.'],
+    });
+
+    const hold = store.world.hold(
+      scope,
+      record.ref,
+      'Source support changed.',
+      'correction',
+    );
+    expect(
+      store.world.currentAcceptance(scope, accepted.id, {
+        now: '2026-10-26T12:00:00Z',
+        policyHash: policy.sha256,
+      }),
+    ).toMatchObject({ status: 'held', hold_ids: [hold.id] });
+    expect(
+      store.world.currentAcceptance(scope, unrelatedAcceptance.id, {
+        now: '2026-10-26T12:00:00Z',
+        policyHash: policy.sha256,
+      })?.status,
+    ).toBe('accepted');
+    store.world.clearHold(
+      scope,
+      hold.id,
+      'An explicit applicability review passed.',
+    );
+    const rechecked = store.world.evaluateAcceptance({
+      scope,
+      subject: record.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy,
+      support_revisions: [],
+      actor: { kind: 'service', id: 'test-policy' },
+      evaluated_at: '2026-10-26T13:00:00Z',
+      expires_at: '2026-11-26T13:00:00Z',
+    });
+    expect(rechecked.status).toBe('accepted');
+    expect(store.world.events(scope).map((event) => event.event_kind)).toEqual(
+      expect.arrayContaining([
+        'acceptance_evaluated',
+        'hold_created',
+        'hold_cleared',
+      ]),
+    );
+  });
 });

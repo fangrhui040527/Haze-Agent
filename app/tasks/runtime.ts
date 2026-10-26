@@ -43,7 +43,12 @@ import {
   type ExecutionRegistry,
   type ToolContext,
 } from '../orchestration/ports.js';
-import { TaskStore, type WorldProjectionRecordInput } from './store.js';
+import {
+  TaskStore,
+  type WorldCapabilityAdapterInput,
+  type WorldProjectionRecordInput,
+} from './store.js';
+import { createWorldModelTools, WORLD_TOOL_IDS } from './world-tools.js';
 
 export const localTaskIdentity: TaskIdentity = {
   principal: 'local-user',
@@ -56,6 +61,7 @@ export interface TaskRuntimeOptions {
   model?: AgentModel;
   env?: NodeJS.ProcessEnv;
   limits?: Partial<ResourceLimits>;
+  acceptancePolicy?: 'research-v1';
 }
 const exact = ({ id, version, sha256 }: ArtifactRef): ArtifactRef => ({
   id,
@@ -88,7 +94,24 @@ export class TaskRuntime {
   private model: AgentModel | undefined;
   private closed = false;
   constructor(private readonly options: TaskRuntimeOptions) {
-    this.store = new TaskStore(options.stateDirectory);
+    this.store = new TaskStore(options.stateDirectory, {
+      acceptancePolicy: options.acceptancePolicy,
+    });
+    const [lookupTool, contextTool, lineageTool] = createWorldModelTools(
+      this.store,
+      options.mode ?? 'live',
+    );
+    if (!options.registry.tools.has(lookupTool.id))
+      options.registry.registerTool(lookupTool);
+    if (!options.registry.tools.has(contextTool.id))
+      options.registry.registerTool(contextTool);
+    if (!options.registry.tools.has(lineageTool.id))
+      options.registry.registerTool(lineageTool);
+    for (const definition of options.registry.definitions.values())
+      if (definition.capability !== 'core.manager')
+        definition.tools = [
+          ...new Set([...definition.tools, ...WORLD_TOOL_IDS]),
+        ];
     this.model = options.model;
     this.store.configureDefinitions({
       agents: Object.fromEntries(
@@ -677,6 +700,7 @@ export class TaskRuntime {
           generation,
           result,
           this.worldModelProjections(directTask, result),
+          this.worldModelAdapters(directTask),
         );
         return;
       }
@@ -957,6 +981,7 @@ export class TaskRuntime {
       generation,
       result,
       this.worldModelProjections(fresh, result),
+      this.worldModelAdapters(fresh),
     );
     await this.boundary(this.store.read(id, localTaskIdentity));
   }
@@ -1687,6 +1712,24 @@ export class TaskRuntime {
       }
     }
     return projections;
+  }
+  private worldModelAdapters(task: TaskRecord): WorldCapabilityAdapterInput[] {
+    return [
+      ...new Set(
+        task.assignments
+          .filter(
+            (assignment) =>
+              assignment.run_id === task.current_run_id &&
+              assignment.objective_revision === task.objective_revision &&
+              assignment.capability !== 'core.manager',
+          )
+          .map((assignment) => assignment.capability),
+      ),
+    ].flatMap((capability_id) => {
+      const adapter =
+        this.options.registry.capabilities.get(capability_id)?.worldModel;
+      return adapter ? [{ capability_id, adapter }] : [];
+    });
   }
   async close() {
     if (this.closed) return;

@@ -46,6 +46,26 @@ export const worldEventSchema = z.discriminatedUnion('event_kind', [
     actor: actorSchema,
     recorded_at: timestampSchema,
   }),
+  z.strictObject({
+    schema_version: z.literal('haze.world.event.v1'),
+    event_id: identifierSchema,
+    scope: worldScopeSchema,
+    sequence: revision,
+    event_kind: z.literal('acceptance_evaluated'),
+    value: z.lazy(() => worldAcceptanceOutcomeSchema),
+    actor: actorSchema,
+    recorded_at: timestampSchema,
+  }),
+  z.strictObject({
+    schema_version: z.literal('haze.world.event.v1'),
+    event_id: identifierSchema,
+    scope: worldScopeSchema,
+    sequence: revision,
+    event_kind: z.enum(['hold_created', 'hold_cleared']),
+    value: z.lazy(() => worldHoldSchema),
+    actor: actorSchema,
+    recorded_at: timestampSchema,
+  }),
 ]);
 
 export const worldRecordSchema = z.strictObject({
@@ -81,6 +101,22 @@ export const worldSupportRevisionSchema = z.strictObject({
   sha256: digest,
   artifact: artifactRefSchema.optional(),
   record: worldRecordRefSchema.optional(),
+  assignment: z
+    .strictObject({
+      id: identifierSchema,
+      definition_id: identifierSchema,
+      revision,
+      version: identifierSchema,
+      role: identifierSchema,
+      support: z.enum(['unknown', 'supported', 'partial', 'gap']),
+    })
+    .optional(),
+  grant: z
+    .strictObject({
+      task_id: z.uuid(),
+      tools: z.array(identifierSchema).max(128),
+    })
+    .optional(),
   recorded_at: timestampSchema,
 });
 
@@ -108,7 +144,7 @@ const acceptanceBase = {
   id: identifierSchema,
   scope: worldScopeSchema,
   subject: worldRecordRefSchema,
-  stated_use: identifierSchema,
+  stated_use: boundedText,
   policy: z.strictObject({
     id: identifierSchema,
     version: identifierSchema,
@@ -118,6 +154,7 @@ const acceptanceBase = {
     .array(worldSupportRevisionSchema)
     .max(CONTRACT_LIMITS.references),
   evaluated_at: timestampSchema,
+  expires_at: timestampSchema.optional(),
 };
 export const worldAcceptanceOutcomeSchema = z.discriminatedUnion('status', [
   z.strictObject({

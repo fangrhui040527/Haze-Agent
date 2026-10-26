@@ -13,6 +13,7 @@ import {
   contractHash,
   parseContractJson,
 } from '../contracts/json.js';
+import { CONTRACT_LIMITS } from '../contracts/common.js';
 import {
   artifactImportSchema,
   artifactSchema,
@@ -45,8 +46,29 @@ import {
   type TaskRequest,
   type TaskResult,
 } from '../contracts/tasks.js';
+import {
+  worldAcceptanceOutcomeSchema,
+  type WorldAcceptanceOutcome,
+  type WorldRecord,
+} from '../contracts/world.js';
+import {
+  worldContextOutputSchema,
+  worldContextSnapshotSchema,
+  worldLookupOutputSchema,
+  type WorldContextOutput,
+  type WorldLineageInput,
+  type WorldLookupInput,
+} from '../contracts/world-services.js';
 import { migrateWorldSchema } from './world-schema.js';
 import { WorldModelStore } from './world-store.js';
+import {
+  acceptanceExpiry,
+  isWorldAcceptanceEnabled,
+  policyAllows,
+  resolveWorldAcceptancePolicy,
+  type WorldAcceptancePolicy,
+} from './world-policy.js';
+import type { CapabilityWorldModelAdapter } from '../orchestration/ports.js';
 
 export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v1';
 export const STORAGE_MARKER = 'storage-format.json';
@@ -173,6 +195,10 @@ export interface WorldProjectionRecordInput {
     relationship: string;
   }[];
 }
+export interface WorldCapabilityAdapterInput {
+  capability_id: string;
+  adapter: CapabilityWorldModelAdapter;
+}
 export interface StoreDefinitions {
   agents: Record<string, string>;
   capabilities: Record<string, string>;
@@ -188,13 +214,17 @@ export class TaskStore {
   readonly db: DatabaseSync;
   readonly directory: string;
   readonly world: WorldModelStore;
+  readonly worldAcceptancePolicy: WorldAcceptancePolicy;
   private definitions: StoreDefinitions | undefined;
   private transactionDepth = 0;
   constructor(
     directory = '.state/general-v1',
-    options: { recover?: boolean } = {},
+    options: { recover?: boolean; acceptancePolicy?: unknown } = {},
   ) {
     this.directory = resolve(directory);
+    this.worldAcceptancePolicy = resolveWorldAcceptancePolicy(
+      options.acceptancePolicy,
+    );
     const marker = join(this.directory, STORAGE_MARKER);
     if (existsSync(this.directory)) {
       if (!existsSync(marker) && readdirSync(this.directory).length)
@@ -260,10 +290,343 @@ export class TaskStore {
     this.world = new WorldModelStore(this.db, (operation) =>
       this.atomic(operation),
     );
+    this.world.holdPolicyChanges(this.worldAcceptancePolicy.sha256);
     if (options.recover !== false) this.recover();
   }
   configureDefinitions(definitions: StoreDefinitions) {
     this.definitions = copy(definitions);
+    const rows = this.db
+      .prepare(
+        `SELECT principal,workspace,mode,body FROM world_acceptances
+         WHERE status='accepted'
+         AND revision=(SELECT MAX(current.revision) FROM world_acceptances current
+           WHERE current.principal=world_acceptances.principal
+           AND current.workspace=world_acceptances.workspace
+           AND current.mode=world_acceptances.mode
+           AND current.acceptance_id=world_acceptances.acceptance_id)`,
+      )
+      .all() as (Row & {
+      principal: string;
+      workspace: string;
+      mode: TaskRecord['mode'];
+    })[];
+    for (const row of rows) {
+      const acceptance = worldAcceptanceOutcomeSchema.parse(
+        JSON.parse(row.body),
+      );
+      const changed = acceptance.support_revisions.some((support) => {
+        const admitted = support.assignment;
+        if (!admitted) return false;
+        const current = definitions.assignments?.[admitted.definition_id];
+        return (
+          current === undefined ||
+          current.version !== admitted.version ||
+          current.role !== admitted.role
+        );
+      });
+      if (changed)
+        this.world.hold(
+          {
+            principal: row.principal,
+            workspace: row.workspace,
+            mode: row.mode,
+          },
+          acceptance.subject,
+          'A supporting assignment or method version changed.',
+          'method_change',
+        );
+    }
+  }
+  worldLookup(
+    taskId: string,
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    input: WorldLookupInput,
+  ) {
+    const task = this.core(taskId, identity);
+    if (task.mode !== mode)
+      fail('world_mode_mismatch', 'World Model execution mode mismatch.', 403);
+    const scope = { ...identity, mode };
+    const records = this.world.lookup(scope, input);
+    const current_acceptances = records.flatMap((record) => {
+      const context = this.world.context(scope, record.ref.id);
+      if (!context) return [];
+      this.requireWorldSupportAccess(task, context.support_artifacts);
+      return context.acceptances.flatMap((acceptance) => {
+        const current = this.world.currentAcceptance(scope, acceptance.id, {
+          policyHash: this.worldAcceptancePolicy.sha256,
+          supportIsCurrent: (outcome) =>
+            this.worldSupportIsCurrent(identity, mode, outcome),
+        });
+        return current ? [{ subject: record.ref.id, acceptance: current }] : [];
+      });
+    });
+    return worldLookupOutputSchema.parse({
+      schema_version: 'haze.world.lookup.v1',
+      records,
+      current_acceptances,
+    });
+  }
+  worldContext(
+    taskId: string,
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    recordId: string,
+  ): WorldContextOutput {
+    const requester = this.core(taskId, identity);
+    if (requester.mode !== mode)
+      fail('world_mode_mismatch', 'World Model execution mode mismatch.', 403);
+    const scope = { ...identity, mode };
+    const context = this.world.context(scope, recordId);
+    if (!context)
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    const current = context.acceptances.map((acceptance) =>
+      this.world.currentAcceptance(scope, acceptance.id, {
+        policyHash: this.worldAcceptancePolicy.sha256,
+        supportIsCurrent: (outcome) =>
+          this.worldSupportIsCurrent(identity, mode, outcome),
+      }),
+    );
+    this.requireWorldSupportAccess(requester, context.support_artifacts);
+    return worldContextOutputSchema.parse({
+      ...context,
+      acceptances: current.filter(
+        (value): value is WorldAcceptanceOutcome => value !== undefined,
+      ),
+    });
+  }
+  worldLineage(
+    taskId: string,
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    input: WorldLineageInput,
+  ) {
+    this.worldContext(taskId, identity, mode, input.record_id);
+    const page = this.world.lineage({ ...identity, mode }, input);
+    if (!page)
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    return page;
+  }
+  pinWorldContext(
+    taskId: string,
+    identity: TaskIdentity,
+    assignmentId: string,
+    generation: number,
+    refs: ArtifactRef[],
+    statedUse: string,
+  ): void {
+    if (!statedUse.trim())
+      fail(
+        'world_use_required',
+        'An explicit intended use is required before reusing context.',
+        422,
+      );
+    this.atomic(() => {
+      const task = this.core(taskId, identity);
+      const run = this.run(task.current_run_id);
+      const assignment = this.assignment(assignmentId, taskId);
+      this.assertCurrent(task, run, assignment, generation);
+      for (const ref of refs) {
+        const artifact = this.artifact(ref.id, identity, ref);
+        const sourceTask = artifact.task_id
+          ? this.core(artifact.task_id, identity)
+          : undefined;
+        this.requireWorldSupportAccess(task, [ref]);
+        if (
+          (sourceTask && sourceTask.mode !== task.mode) ||
+          artifact.required_tools.some(
+            (tool) =>
+              (sourceTask && !sourceTask.permissions.tools.includes(tool)) ||
+              !task.permissions.tools.includes(tool),
+          )
+        )
+          fail(
+            'world_support_unavailable',
+            'World Model context is outside current source or task grants.',
+            403,
+          );
+        if (
+          !assignment.inputs.some(
+            (item) =>
+              item.id === ref.id &&
+              item.version === ref.version &&
+              item.sha256 === ref.sha256,
+          )
+        )
+          assignment.inputs.push(ref);
+        this.recordApplicability(
+          taskId,
+          identity,
+          artifact,
+          true,
+          'World Model context was pinned with exact source access checks.',
+          'Runtime',
+        );
+      }
+      this.putAssignment(assignment);
+      this.appendEvent(
+        taskId,
+        'world_context_retrieved',
+        assignment.role,
+        `Retrieved World Model context for the stated use: ${statedUse}`,
+        { record_refs: refs },
+        assignment.id,
+      );
+    });
+  }
+  private requireWorldSupportAccess(
+    requester: TaskCore,
+    refs: ArtifactRef[],
+  ): void {
+    for (const ref of refs) {
+      const row = this.db
+        .prepare(
+          `SELECT body FROM artifacts
+           WHERE id=? AND principal=? AND workspace=?`,
+        )
+        .get(
+          ref.id,
+          requester.identity.principal,
+          requester.identity.workspace,
+        ) as Row | undefined;
+      if (!row)
+        return fail(
+          'world_support_unavailable',
+          'Current source access prevents World Model context disclosure.',
+          403,
+        );
+      const artifact = artifactSchema.parse(decode(row.body));
+      if (artifact.version !== ref.version || artifact.sha256 !== ref.sha256)
+        fail(
+          'world_support_unavailable',
+          'Current source access prevents World Model context disclosure.',
+          403,
+        );
+      const source = artifact.task_id
+        ? this.core(artifact.task_id, requester.identity)
+        : undefined;
+      if (
+        (source && source.mode !== requester.mode) ||
+        artifact.required_tools.some(
+          (tool) =>
+            (source && !source.permissions.tools.includes(tool)) ||
+            !requester.permissions.tools.includes(tool),
+        )
+      )
+        fail(
+          'world_support_unavailable',
+          'Current source access prevents World Model context disclosure.',
+          403,
+        );
+    }
+  }
+  private worldSupportIsCurrent(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    outcome: WorldAcceptanceOutcome,
+  ): boolean {
+    for (const support of outcome.support_revisions) {
+      if (support.grant) {
+        const taskRow = this.db
+          .prepare(
+            'SELECT body FROM tasks WHERE id=? AND principal=? AND workspace=?',
+          )
+          .get(
+            support.grant.task_id,
+            identity.principal,
+            identity.workspace,
+          ) as Row | undefined;
+        if (!taskRow) return false;
+        const task = decode<TaskCore>(taskRow.body);
+        if (
+          task.mode !== mode ||
+          support.grant.tools.some(
+            (tool) => !task.permissions.tools.includes(tool),
+          )
+        )
+          return false;
+      }
+      if (support.assignment) {
+        const registeredMethod =
+          this.definitions?.assignments?.[support.assignment.definition_id];
+        if (
+          !registeredMethod ||
+          registeredMethod.version !== support.assignment.version ||
+          registeredMethod.role !== support.assignment.role
+        )
+          return false;
+        const assignmentRow = this.db
+          .prepare('SELECT body FROM assignments WHERE id=?')
+          .get(support.assignment.id) as Row | undefined;
+        if (!assignmentRow) return false;
+        const assignment = assignmentSchema.parse(decode(assignmentRow.body));
+        const taskRow = this.db
+          .prepare(
+            'SELECT body FROM tasks WHERE id=? AND principal=? AND workspace=?',
+          )
+          .get(assignment.task_id, identity.principal, identity.workspace) as
+          Row | undefined;
+        if (!taskRow) return false;
+        const task = decode<TaskCore>(taskRow.body);
+        if (
+          task.mode !== mode ||
+          assignment.revision !== support.assignment.revision ||
+          assignment.definition_version !== support.assignment.version ||
+          assignment.role !== support.assignment.role ||
+          assignment.support !== support.assignment.support ||
+          assignment.status !== 'completed'
+        )
+          return false;
+      }
+      if (support.artifact) {
+        const row = this.db
+          .prepare(
+            `SELECT body FROM artifacts
+             WHERE id=? AND principal=? AND workspace=?`,
+          )
+          .get(support.artifact.id, identity.principal, identity.workspace) as
+          Row | undefined;
+        if (!row) return false;
+        const artifact = artifactSchema.parse(decode(row.body));
+        if (
+          artifact.version !== support.artifact.version ||
+          artifact.sha256 !== support.artifact.sha256
+        )
+          return false;
+        if (artifact.task_id) {
+          const taskRow = this.db
+            .prepare(
+              'SELECT body FROM tasks WHERE id=? AND principal=? AND workspace=?',
+            )
+            .get(artifact.task_id, identity.principal, identity.workspace) as
+            Row | undefined;
+          if (!taskRow) return false;
+          const task = decode<TaskCore>(taskRow.body);
+          if (
+            task.mode !== mode ||
+            artifact.required_tools.some(
+              (tool) => !task.permissions.tools.includes(tool),
+            )
+          )
+            return false;
+          const applicability = this.applicability(
+            task.id,
+            artifact.id,
+            task.objective_revision,
+          );
+          if (applicability && !applicability.current) return false;
+        } else if (artifact.required_tools.length) return false;
+      }
+    }
+    return true;
   }
   private atomic<T>(operation: () => T): T {
     if (this.transactionDepth) return operation();
@@ -1557,6 +1920,7 @@ export class TaskStore {
     generation: number,
     input: TaskResult,
     worldProjections: WorldProjectionRecordInput[] = [],
+    worldAdapters: WorldCapabilityAdapterInput[] = [],
   ): TaskRecord {
     return this.atomic(() => {
       const task = this.core(taskId),
@@ -1653,6 +2017,10 @@ export class TaskStore {
         string,
         ReturnType<WorldModelStore['putRecord']>['value']
       >();
+      const projectedByCapability = new Map<
+        string,
+        ReturnType<WorldModelStore['putRecord']>['value'][]
+      >();
       for (const projection of worldProjections) {
         const record = this.world.putRecord({
           scope: worldScope,
@@ -1671,6 +2039,10 @@ export class TaskStore {
           `${projection.kind}:${projection.external_id}`,
           record,
         );
+        const capabilityRecords =
+          projectedByCapability.get(projection.capability_id) ?? [];
+        capabilityRecords.push(record);
+        projectedByCapability.set(projection.capability_id, capabilityRecords);
         for (const evidenceRef of projection.evidence) {
           const evidenceArtifact = this.artifact(
             evidenceRef.id,
@@ -1722,6 +2094,13 @@ export class TaskStore {
           });
         }
       }
+      this.evaluateWorldCandidates({
+        task,
+        run,
+        result,
+        adapters: worldAdapters,
+        records: projectedByCapability,
+      });
       task.result = result;
       delete task.error;
       this.putCore(task);
@@ -1736,6 +2115,453 @@ export class TaskStore {
       );
       return this.read(taskId, task.identity);
     });
+  }
+  private evaluateWorldCandidates(input: {
+    task: TaskCore;
+    run: RunRecord;
+    result: TaskResult;
+    adapters: WorldCapabilityAdapterInput[];
+    records: Map<string, WorldRecord[]>;
+  }): void {
+    const { task, run } = input;
+    const assignments = this.allAssignments(run.id).filter(
+      (assignment) => assignment.objective_revision === task.objective_revision,
+    );
+    const capabilities = new Set(
+      assignments
+        .filter((assignment) => assignment.capability !== 'core.manager')
+        .map((assignment) => assignment.capability),
+    );
+    const references = new Map<string, ArtifactRef>();
+    const add = (ref: ArtifactRef) =>
+      references.set(`${ref.id}:${ref.version}:${ref.sha256}`, ref);
+    for (const ref of task.original_request.context_refs) add(ref);
+    for (const assignment of assignments)
+      for (const ref of [...assignment.inputs, ...assignment.outputs]) add(ref);
+    for (const ref of [
+      ...input.result.work_products,
+      ...input.result.sources.map((source) => source.artifact),
+      ...(input.result.review.artifact ? [input.result.review.artifact] : []),
+    ])
+      add(ref);
+    const artifacts = [...references.values()].map((ref) =>
+      this.artifact(ref.id, task.identity, ref),
+    );
+    const scope = { ...task.identity, mode: task.mode };
+    const evaluatedAt = now();
+
+    for (const { capability_id: capability, adapter } of input.adapters) {
+      if (!capabilities.has(capability)) continue;
+      const records = input.records.get(capability) ?? [];
+      if (!records.length) continue;
+      const recordsForCapability = records;
+      const reviewRequirements = adapter.requiredReviewCoverage({
+        request: task.original_request,
+        assignments: assignments.map((assignment) => ({
+          key: assignment.id,
+          definition_id: assignment.definition_id,
+          brief: assignment.brief,
+          depends_on: assignment.dependencies,
+        })),
+        artifacts,
+      });
+      const assessments = [] as const;
+      const candidate = adapter.buildAcceptanceCandidate({
+        request: task.original_request,
+        records: recordsForCapability,
+        assessments,
+        artifacts,
+        assignments: assignments.map((assignment) => ({
+          id: assignment.id,
+          revision: assignment.revision,
+          definition_id: assignment.definition_id,
+          role: assignment.role,
+          status: assignment.status,
+          support: assignment.support,
+        })),
+      });
+      const subject = candidate
+        ? recordsForCapability.find(
+            (record) =>
+              record.ref.id === candidate.subject.id &&
+              record.ref.revision === candidate.subject.revision &&
+              record.ref.sha256 === candidate.subject.sha256,
+          )
+        : recordsForCapability.at(-1);
+      if (!subject) continue;
+      const statedUse =
+        candidate?.stated_use ??
+        (capability === 'damage-accounting'
+          ? 'damage-account:partial'
+          : capability);
+      const reasons: string[] = [];
+      let pendingReview = false;
+      if (!isWorldAcceptanceEnabled(this.worldAcceptancePolicy))
+        reasons.push('Server acceptance policy is disabled.');
+      else if (!policyAllows(this.worldAcceptancePolicy, capability, statedUse))
+        reasons.push('Capability or stated use is not authorized by policy.');
+
+      const candidateEvidence = candidate?.evidence ?? [];
+      const evidenceById = new Map<string, Artifact>();
+      for (const ref of candidateEvidence) {
+        if (
+          !artifacts.some(
+            (item) =>
+              item.id === ref.id &&
+              item.version === ref.version &&
+              item.sha256 === ref.sha256,
+          )
+        ) {
+          reasons.push(`Evidence ${ref.id} is outside the current task scope.`);
+          continue;
+        }
+        this.collectWorldEvidenceClosure(
+          ref,
+          task,
+          evidenceById,
+          reasons,
+          new Set(),
+        );
+      }
+      for (const requirement of reviewRequirements) {
+        let supportingReview: Artifact | undefined;
+        const covered = assignments.some((reviewer) => {
+          if (
+            !requirement.reviewer_roles.includes(reviewer.role) ||
+            reviewer.status !== 'completed' ||
+            reviewer.support !== 'supported'
+          )
+            return false;
+          supportingReview = reviewer.outputs
+            .map((output) => {
+              const reviewArtifact = artifacts.find(
+                (artifact) =>
+                  artifact.id === output.id &&
+                  artifact.version === output.version &&
+                  artifact.sha256 === output.sha256,
+              );
+              return reviewArtifact?.dependencies &&
+                requirement.evidence.every((required) =>
+                  reviewArtifact.dependencies.some(
+                    (dependency) =>
+                      dependency.id === required.id &&
+                      dependency.version === required.version &&
+                      dependency.sha256 === required.sha256,
+                  ),
+                )
+                ? reviewArtifact
+                : undefined;
+            })
+            .find((reviewArtifact) => reviewArtifact !== undefined);
+          return supportingReview !== undefined;
+        });
+        if (!covered) {
+          pendingReview = true;
+          reasons.push(
+            `Required review coverage is incomplete: ${requirement.id}.`,
+          );
+        } else if (supportingReview) {
+          this.collectWorldEvidenceClosure(
+            supportingReview,
+            task,
+            evidenceById,
+            reasons,
+            new Set(),
+          );
+        }
+      }
+      if (!candidate && !pendingReview)
+        reasons.push(
+          'Capability adapter did not produce an eligible candidate.',
+        );
+      const support_revisions: WorldAcceptanceOutcome['support_revisions'] = [
+        {
+          schema_version: 'haze.world.support-revision.v1',
+          id: `policy:${this.worldAcceptancePolicy.id}`,
+          scope,
+          revision: 1,
+          kind: 'policy',
+          sha256: this.worldAcceptancePolicy.sha256,
+          recorded_at: evaluatedAt,
+        },
+        ...[...evidenceById.values()].map((artifact) => ({
+          schema_version: 'haze.world.support-revision.v1' as const,
+          id: `artifact:${artifact.id}:${artifact.version}`,
+          scope,
+          revision: artifact.version,
+          kind: 'artifact' as const,
+          sha256: artifact.sha256,
+          artifact: {
+            id: artifact.id,
+            version: artifact.version,
+            sha256: artifact.sha256,
+          },
+          recorded_at: evaluatedAt,
+        })),
+        ...new Map(
+          [...evidenceById.values()].flatMap((artifact) => {
+            if (
+              artifact.producer.kind !== 'assignment' ||
+              !artifact.assignment_id ||
+              !artifact.task_id
+            )
+              return [];
+            const ownerTaskId = artifact.task_id;
+            const producer = this.assignment(
+              artifact.assignment_id,
+              ownerTaskId,
+            );
+            const assignment = {
+              id: producer.id,
+              definition_id: producer.definition_id,
+              revision: producer.revision,
+              version: producer.definition_version,
+              role: producer.role,
+              support: producer.support,
+            };
+            return [
+              [
+                producer.id,
+                {
+                  schema_version: 'haze.world.support-revision.v1' as const,
+                  id: `assignment:${producer.id}:${producer.revision}`,
+                  scope,
+                  revision: producer.revision,
+                  kind: 'method' as const,
+                  sha256: contractHash(assignment),
+                  assignment,
+                  recorded_at: evaluatedAt,
+                },
+              ] as const,
+            ];
+          }),
+        ).values(),
+        ...new Map(
+          [...evidenceById.values()].flatMap((artifact) => {
+            if (!artifact.task_id || !artifact.required_tools.length) return [];
+            const owner = this.core(artifact.task_id, task.identity);
+            const tools = [...new Set(artifact.required_tools)].sort();
+            const grant = { task_id: owner.id, tools };
+            return [
+              [
+                owner.id,
+                {
+                  schema_version: 'haze.world.support-revision.v1' as const,
+                  id: `grant:${owner.id}:${contractHash(grant)}`,
+                  scope,
+                  revision: Math.max(1, owner.objective_revision),
+                  kind: 'grant' as const,
+                  sha256: contractHash(grant),
+                  grant,
+                  recorded_at: evaluatedAt,
+                },
+              ] as const,
+            ];
+          }),
+        ).values(),
+      ];
+      if (support_revisions.length > CONTRACT_LIMITS.references)
+        reasons.push(
+          'Exact support closure exceeds the policy evidence bound.',
+        );
+      const boundedSupportRevisions = support_revisions.slice(
+        0,
+        CONTRACT_LIMITS.references,
+      );
+      const status = reasons.length
+        ? pendingReview &&
+          reasons.every((reason) =>
+            reason.startsWith('Required review coverage'),
+          )
+          ? 'pending_review'
+          : 'not_eligible'
+        : 'accepted';
+      const expiresAt =
+        status === 'accepted'
+          ? acceptanceExpiry(this.worldAcceptancePolicy, evaluatedAt)
+          : undefined;
+      this.world.evaluateAcceptance({
+        scope,
+        subject: subject.ref,
+        stated_use: statedUse,
+        status,
+        policy: {
+          id: this.worldAcceptancePolicy.id,
+          version: this.worldAcceptancePolicy.version,
+          sha256: this.worldAcceptancePolicy.sha256,
+        },
+        support_revisions: boundedSupportRevisions,
+        ...(status === 'accepted' ? {} : { reasons }),
+        actor: { kind: 'service', id: capability },
+        evaluated_at: evaluatedAt,
+        ...(expiresAt ? { expires_at: expiresAt } : {}),
+      });
+    }
+  }
+  private collectWorldEvidenceClosure(
+    ref: ArtifactRef,
+    requester: TaskCore,
+    collected: Map<string, Artifact>,
+    reasons: string[],
+    visiting: Set<string>,
+  ): void {
+    const key = `${ref.id}:${ref.version}:${ref.sha256}`;
+    if (collected.has(key)) return;
+    if (visiting.has(key)) {
+      reasons.push(`Evidence dependency cycle includes ${ref.id}.`);
+      return;
+    }
+    const artifactRow = this.db
+      .prepare(
+        `SELECT body FROM artifacts
+         WHERE id=? AND principal=? AND workspace=?`,
+      )
+      .get(
+        ref.id,
+        requester.identity.principal,
+        requester.identity.workspace,
+      ) as Row | undefined;
+    if (!artifactRow) {
+      reasons.push(`Evidence dependency ${ref.id} is unavailable.`);
+      return;
+    }
+    const artifact = artifactSchema.parse(decode(artifactRow.body));
+    if (artifact.version !== ref.version || artifact.sha256 !== ref.sha256) {
+      reasons.push(`Evidence dependency ${ref.id} has a changed hash.`);
+      return;
+    }
+    let owner: TaskCore | undefined;
+    if (artifact.task_id) {
+      const taskRow = this.db
+        .prepare(
+          'SELECT body FROM tasks WHERE id=? AND principal=? AND workspace=?',
+        )
+        .get(
+          artifact.task_id,
+          requester.identity.principal,
+          requester.identity.workspace,
+        ) as Row | undefined;
+      if (!taskRow) {
+        reasons.push(`Evidence ${ref.id} belongs to an unavailable task.`);
+        return;
+      }
+      owner = decode<TaskCore>(taskRow.body);
+      const sourcePermissions = owner.permissions.tools;
+      if (
+        owner.mode !== requester.mode ||
+        artifact.required_tools.some(
+          (tool) =>
+            !sourcePermissions.includes(tool) ||
+            !requester.permissions.tools.includes(tool),
+        )
+      ) {
+        reasons.push(
+          `Evidence ${ref.id} is outside current tool grants or mode.`,
+        );
+        return;
+      }
+      const applicability = this.applicability(
+        owner.id,
+        artifact.id,
+        owner.objective_revision,
+      );
+      if (applicability && !applicability.current) {
+        reasons.push(`Evidence ${ref.id} is no longer applicable.`);
+        return;
+      }
+    } else if (
+      artifact.required_tools.some(
+        (tool) => !requester.permissions.tools.includes(tool),
+      )
+    ) {
+      reasons.push(`Evidence ${ref.id} is outside current task grants.`);
+      return;
+    }
+    if (artifact.producer.kind === 'assignment') {
+      if (!artifact.assignment_id || !owner) {
+        reasons.push(`Evidence ${ref.id} has no verifiable producer revision.`);
+        return;
+      }
+      const producerRow = this.db
+        .prepare('SELECT body FROM assignments WHERE id=? AND task_id=?')
+        .get(artifact.assignment_id, owner.id) as Row | undefined;
+      if (!producerRow) {
+        reasons.push(`Evidence ${ref.id} has no verifiable producer revision.`);
+        return;
+      }
+      const producer = assignmentSchema.parse(decode(producerRow.body));
+      if (
+        producer.revision !== artifact.assignment_revision ||
+        producer.status !== 'completed' ||
+        producer.support === 'gap' ||
+        producer.support === 'unknown'
+      ) {
+        reasons.push(
+          `Evidence ${ref.id} has a stale or unsupported producer revision.`,
+        );
+        return;
+      }
+    }
+    if (artifact.kind === 'world.context.snapshot') {
+      const snapshot = worldContextSnapshotSchema.safeParse(artifact.content);
+      if (!snapshot.success) {
+        reasons.push(
+          `Retrieved context ${ref.id} has an invalid snapshot schema.`,
+        );
+        return;
+      }
+      const directDependencies = new Set(
+        artifact.dependencies.map(
+          (dependency) =>
+            `${dependency.id}:${dependency.version}:${dependency.sha256}`,
+        ),
+      );
+      if (
+        snapshot.data.support_artifacts.some(
+          (support) =>
+            !directDependencies.has(
+              `${support.id}:${support.version}:${support.sha256}`,
+            ),
+        )
+      ) {
+        reasons.push(
+          `Retrieved context ${ref.id} has an incomplete support closure.`,
+        );
+        return;
+      }
+      for (const prior of snapshot.data.acceptances.filter(
+        (acceptance) => acceptance.status === 'accepted',
+      )) {
+        const current = this.world.currentAcceptance(
+          { ...requester.identity, mode: requester.mode },
+          prior.id,
+          {
+            policyHash: this.worldAcceptancePolicy.sha256,
+            supportIsCurrent: (acceptance) =>
+              this.worldSupportIsCurrent(
+                requester.identity,
+                requester.mode,
+                acceptance,
+              ),
+          },
+        );
+        if (current?.status !== 'accepted')
+          reasons.push(
+            `Retrieved acceptance ${prior.id} is no longer current.`,
+          );
+      }
+    }
+    visiting.add(key);
+    collected.set(key, artifact);
+    for (const dependency of artifact.dependencies)
+      this.collectWorldEvidenceClosure(
+        dependency,
+        requester,
+        collected,
+        reasons,
+        visiting,
+      );
+    visiting.delete(key);
   }
   askQuestion(
     taskId: string,
@@ -1805,7 +2631,9 @@ export class TaskStore {
               this.artifact(ref.id, identity, ref);
             const assignments = this.allAssignments(run.id),
               affected = new Set(
-                update.affected_assignment_ids ??
+                (update.affected_assignment_ids?.length
+                  ? update.affected_assignment_ids
+                  : undefined) ??
                   assignments.map((assignment) => assignment.id),
               );
             for (const id of affected)
@@ -1826,6 +2654,31 @@ export class TaskStore {
                   changed = true;
                 }
             }
+            const worldScope = { ...task.identity, mode: task.mode };
+            const changedSupport = assignments
+              .filter((assignment) => affected.has(assignment.id))
+              .flatMap((assignment) => assignment.outputs);
+            if (!update.affected_assignment_ids?.length && task.result)
+              changedSupport.push(
+                ...task.result.work_products,
+                ...task.result.sources.map((source) => source.artifact),
+                ...(task.result.review.artifact
+                  ? [task.result.review.artifact]
+                  : []),
+              );
+            for (const ref of new Map(
+              changedSupport.map((ref) => [
+                `${ref.id}:${ref.version}:${ref.sha256}`,
+                ref,
+              ]),
+            ).values())
+              this.world.holdForSupportArtifact(
+                worldScope,
+                ref.id,
+                'A correction changed the supporting assignment branch.',
+                'correction',
+                { kind: 'user', id: identity.principal },
+              );
             if (update.question_id) {
               const row = this.db
                 .prepare('SELECT body FROM questions WHERE id=? AND task_id=?')
@@ -2162,13 +3015,21 @@ export class TaskStore {
                   : terminal(previousStatus)
                     ? previousStatus
                     : 'paused';
-              if (control.action === 'revoke')
+              if (control.action === 'revoke') {
+                this.world.holdForTaskGrant(
+                  { ...task.identity, mode: task.mode },
+                  task.id,
+                  control.revoked_tools ?? task.permissions.tools,
+                  'A required tool grant was revoked.',
+                  { kind: 'user', id: task.identity.principal },
+                );
                 task.permissions.tools = task.permissions.tools.filter(
                   (tool) =>
                     !(control.revoked_tools ?? task.permissions.tools).includes(
                       tool,
                     ),
                 );
+              }
               if (task.result && control.action === 'revoke')
                 task.result.currency = 'stale';
               for (const assignment of this.allAssignments(run.id))
