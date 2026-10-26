@@ -8,8 +8,8 @@
     "node": ">=24.12"
   },
   "scripts": {
-    "start": "node --env-file-if-exists=../.env src/index.ts",
-    "dev": "node --watch --env-file-if-exists=../.env src/index.ts",
+    "start": "node --env-file-if-exists=../.env --env-file-if-exists=../third_party/zetaris/.env.local src/index.ts",
+    "dev": "node --watch --env-file-if-exists=../.env --env-file-if-exists=../third_party/zetaris/.env.local src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
