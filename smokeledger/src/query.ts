@@ -65,7 +65,7 @@ async function runZetarisOnce(sql: string, limit: number): Promise<Row[]> {
   return (body?.data as Row[] | undefined) ?? [];
 }
 
-/** Zetaris with bounded retries (at most two) for transient failures. */
+/** Zetaris with bounded retries (at most two) for HTTP 5xx/429; a timeout is not retried. */
 async function runZetaris(sql: string, limit: number): Promise<Row[]> {
   if (!CONFIG.zetaris.apiKey) throw new Error("ZETARIS_API_KEY is missing from .env");
   let last: unknown;
@@ -74,7 +74,8 @@ async function runZetaris(sql: string, limit: number): Promise<Row[]> {
       return await runZetarisOnce(sql, limit);
     } catch (e) {
       last = e;
-      const retryable = (e as { retryable?: boolean }).retryable || (e as Error).name === "TimeoutError";
+      // A timed-out query is usually still running in Zetaris; resending it only adds load.
+      const retryable = (e as { retryable?: boolean }).retryable === true;
       if (!retryable || attempt === 2) break;
       await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     }

@@ -51,7 +51,7 @@ export const CONFIG = {
   limits: {
     runSeconds: 300, // whole-run hard deadline
     taskSeconds: 120, // one specialist task
-    sourceSeconds: 20, // one source request (Zetaris)
+    sourceSeconds: 60, // one source request (Zetaris); a local Spark-backed engine can be slow under load
     modelSeconds: 60, // one hosted model request
     feedbackRounds: 2, // critic revision rounds
   },
