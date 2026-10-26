@@ -170,6 +170,30 @@
 .sidebarNote a:hover {
   color: var(--wm-accent);
 }
+.sidebarNote .backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 9px 12px;
+  border: 1px solid #18e29929;
+  border-radius: 9999px;
+  background: #18e2990d;
+  color: var(--wm-accent);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background 150ms,
+    border-color 150ms,
+    transform 150ms;
+}
+.sidebarNote .backLink:hover {
+  background: #18e29926;
+  border-color: var(--wm-accent);
+  color: var(--wm-accent);
+  transform: translateX(-2px);
+}
 .content {
   min-width: 0;
   padding: 24px;

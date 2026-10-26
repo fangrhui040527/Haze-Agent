@@ -11,6 +11,7 @@ import { Badge } from '../../shared/ui/Badge.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
 import { GeneralTaskPage } from './GeneralTaskPage.tsx';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 /**
  * A task report (Architecture v0.14 §17), written in front of the user: the steps
@@ -94,9 +95,7 @@ export function DashboardReportPage() {
 
   return (
     <article className={styles.page} aria-busy={writing}>
-      <p className={styles.back}>
-        <Link to="/">← Back to the dashboard</Link>
-      </p>
+      <BackLink>Back to the dashboard</BackLink>
 
       <ol className={styles.steps} aria-label="What the agents are doing">
         {steps.map((s) => (

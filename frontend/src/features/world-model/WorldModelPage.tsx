@@ -233,7 +233,9 @@ export function WorldModelPage() {
             >
               Source &amp; license ↗
             </a>
-            <Link to="/">Back to dashboard</Link>
+            <Link to="/" className={styles.backLink}>
+              ← Back to dashboard
+            </Link>
           </div>
         </aside>
         <div className={styles.content}>
