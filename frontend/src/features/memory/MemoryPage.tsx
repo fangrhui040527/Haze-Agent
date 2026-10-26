@@ -164,8 +164,17 @@ export function MemoryPage() {
             feedback={feedback}
             onOpen={openMemory}
             onFeedback={(recallId, memoryId, value) => {
-              setFeedback((f) => ({ ...f, [`${recallId}:${memoryId}`]: value }));
-              log(auditEvent('feedback', memoryId, `Marked ${value} on ${recallId}`));
+              setFeedback((f) => ({
+                ...f,
+                [`${recallId}:${memoryId}`]: value,
+              }));
+              log(
+                auditEvent(
+                  'feedback',
+                  memoryId,
+                  `Marked ${value} on ${recallId}`,
+                ),
+              );
             }}
           />
         )}
@@ -217,7 +226,13 @@ export function MemoryPage() {
                 restored: false,
               };
               setReports((r) => [report, ...r]);
-              log(auditEvent('synthesize', null, `Sleep cycle executed (backup ${report.backupId})`));
+              log(
+                auditEvent(
+                  'synthesize',
+                  null,
+                  `Sleep cycle executed (backup ${report.backupId})`,
+                ),
+              );
             }}
             onRestore={(r) => {
               setReports((rs) =>
@@ -250,10 +265,21 @@ function proposalToMemory(p: Proposal): MemoryRecord {
     tags: [p.kind],
     reviewStatus: 'approved',
     expiresAt: null,
-    provenance: { origin: 'dreaming', learnedAt: now, label: `Approved proposal ${p.id}` },
+    provenance: {
+      origin: 'dreaming',
+      learnedAt: now,
+      label: `Approved proposal ${p.id}`,
+    },
     evidence: [],
     relatedTo: p.supportingIds,
-    revisions: [{ at: now, action: 'create', actor: 'you', note: 'Approved from review queue' }],
+    revisions: [
+      {
+        at: now,
+        action: 'create',
+        actor: 'you',
+        note: 'Approved from review queue',
+      },
+    ],
   };
 }
 
@@ -282,7 +308,12 @@ function resolveConflict(
         evidence: [...a.evidence, ...b.evidence],
         revisions: [
           ...b.revisions,
-          { at: now, action: 'supersede', actor: 'you', note: `Merged ${a.id} + ${b.id}` },
+          {
+            at: now,
+            action: 'supersede',
+            actor: 'you',
+            note: `Merged ${a.id} + ${b.id}`,
+          },
         ],
       };
       return [merged, ...ms.filter((m) => m.id !== a.id && m.id !== b.id)];
@@ -320,11 +351,19 @@ function Overview({
             <span className={styles.tileValue}>{n}</span>
           </div>
         ))}
-        <button type="button" className={styles.tile} onClick={() => go('review')}>
+        <button
+          type="button"
+          className={styles.tile}
+          onClick={() => go('review')}
+        >
           <span className={styles.tileLabel}>Pending reviews</span>
           <span className={styles.tileValue}>{proposals.length}</span>
         </button>
-        <button type="button" className={styles.tile} onClick={() => go('conflicts')}>
+        <button
+          type="button"
+          className={styles.tile}
+          onClick={() => go('conflicts')}
+        >
           <span className={styles.tileLabel}>Unresolved conflicts</span>
           <span className={styles.tileValue}>{conflicts.length}</span>
         </button>
@@ -337,13 +376,17 @@ function Overview({
         <div>
           <dt>Capture</dt>
           <dd>
-            <Badge tone={STATUS.capture === 'on' ? 'ok' : 'stale'}>{STATUS.capture}</Badge>
+            <Badge tone={STATUS.capture === 'on' ? 'ok' : 'stale'}>
+              {STATUS.capture}
+            </Badge>
           </dd>
         </div>
         <div>
           <dt>Recall</dt>
           <dd>
-            <Badge tone={STATUS.recall === 'on' ? 'ok' : 'stale'}>{STATUS.recall}</Badge>
+            <Badge tone={STATUS.recall === 'on' ? 'ok' : 'stale'}>
+              {STATUS.recall}
+            </Badge>
           </dd>
         </div>
         <div>
@@ -390,7 +433,10 @@ function Browser({
 
   const filtered = memories.filter(
     (m) =>
-      (!q || `${m.content} ${m.tags.join(' ')} ${m.id}`.toLowerCase().includes(q.toLowerCase())) &&
+      (!q ||
+        `${m.content} ${m.tags.join(' ')} ${m.id}`
+          .toLowerCase()
+          .includes(q.toLowerCase())) &&
       (!location || m.location === location) &&
       (!topic || m.topic === topic) &&
       (!tier || m.layer === tier) &&
@@ -410,16 +456,43 @@ function Browser({
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <Select label="Location" value={location} onChange={setLocation} options={uniq(memories.map((m) => m.location))} />
-          <Select label="Topic" value={topic} onChange={setTopic} options={uniq(memories.map((m) => m.topic))} />
-          <Select label="Tier" value={tier} onChange={setTier} options={Object.keys(TIER_LABEL)} format={(t) => TIER_LABEL[t as MemoryTier]} />
-          <Select label="Source" value={source} onChange={setSource} options={uniq(memories.map((m) => m.source))} />
+          <Select
+            label="Location"
+            value={location}
+            onChange={setLocation}
+            options={uniq(memories.map((m) => m.location))}
+          />
+          <Select
+            label="Topic"
+            value={topic}
+            onChange={setTopic}
+            options={uniq(memories.map((m) => m.topic))}
+          />
+          <Select
+            label="Tier"
+            value={tier}
+            onChange={setTier}
+            options={Object.keys(TIER_LABEL)}
+            format={(t) => TIER_LABEL[t as MemoryTier]}
+          />
+          <Select
+            label="Source"
+            value={source}
+            onChange={setSource}
+            options={uniq(memories.map((m) => m.source))}
+          />
           <label className={styles.field}>
             <span>Since</span>
-            <input type="date" value={since} onChange={(e) => setSince(e.target.value)} />
+            <input
+              type="date"
+              value={since}
+              onChange={(e) => setSince(e.target.value)}
+            />
           </label>
         </div>
-        <p className={styles.muted}>{filtered.length} of {memories.length} memories</p>
+        <p className={styles.muted}>
+          {filtered.length} of {memories.length} memories
+        </p>
         <ul className={styles.list}>
           {filtered.map((m) => (
             <li key={m.id}>
@@ -431,8 +504,11 @@ function Browser({
                 <span className={styles.rowContent}>{m.content}</span>
                 <span className={styles.meta}>
                   <Badge>{TIER_LABEL[m.layer]}</Badge>
-                  <Badge tone={REVIEW_TONE[m.reviewStatus]}>{m.reviewStatus}</Badge>
-                  <span>{m.location}</span>·<span>{m.topic}</span>·<span>{pct(m.confidence)}</span>
+                  <Badge tone={REVIEW_TONE[m.reviewStatus]}>
+                    {m.reviewStatus}
+                  </Badge>
+                  <span>{m.location}</span>·<span>{m.topic}</span>·
+                  <span>{pct(m.confidence)}</span>
                 </span>
               </button>
             </li>
@@ -446,7 +522,9 @@ function Browser({
         {selected ? (
           <MemoryDetail m={selected} byId={byId} onSelect={onSelect} />
         ) : (
-          <p className={styles.muted}>Select a memory to see its content, provenance and history.</p>
+          <p className={styles.muted}>
+            Select a memory to see its content, provenance and history.
+          </p>
         )}
       </aside>
     </div>
@@ -472,7 +550,9 @@ function Select({
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">All</option>
         {options.map((o) => (
-          <option key={o} value={o}>{format(o)}</option>
+          <option key={o} value={o}>
+            {format(o)}
+          </option>
         ))}
       </select>
     </label>
@@ -499,34 +579,65 @@ function MemoryDetail({
       <p className={styles.content}>{m.content}</p>
       <div>
         <span className={styles.tileLabel}>Confidence {pct(m.confidence)}</span>
-        <div className={styles.bar}><span style={{ width: pct(m.confidence) }} /></div>
+        <div className={styles.bar}>
+          <span style={{ width: pct(m.confidence) }} />
+        </div>
       </div>
       <dl className={styles.kv}>
-        <dt>Applies to</dt><dd>{m.location} · {m.timeScope.label} ({m.timeScope.from} → {m.timeScope.to ?? 'open'})</dd>
-        <dt>Expiry</dt><dd>{m.expiresAt ? fmtDate(m.expiresAt) : 'No expiry'}</dd>
-        <dt>Provenance</dt><dd>{m.provenance.label} · {m.provenance.origin} · {fmt(m.provenance.learnedAt)}</dd>
-        <dt>Source</dt><dd>{m.source}</dd>
-        <dt>Usage</dt><dd>Recalled {m.accessCount}× · last {fmt(m.lastAccessed)}</dd>
-        {m.tags.length > 0 && (<><dt>Tags</dt><dd>{m.tags.join(', ')}</dd></>)}
+        <dt>Applies to</dt>
+        <dd>
+          {m.location} · {m.timeScope.label} ({m.timeScope.from} →{' '}
+          {m.timeScope.to ?? 'open'})
+        </dd>
+        <dt>Expiry</dt>
+        <dd>{m.expiresAt ? fmtDate(m.expiresAt) : 'No expiry'}</dd>
+        <dt>Provenance</dt>
+        <dd>
+          {m.provenance.label} · {m.provenance.origin} ·{' '}
+          {fmt(m.provenance.learnedAt)}
+        </dd>
+        <dt>Source</dt>
+        <dd>{m.source}</dd>
+        <dt>Usage</dt>
+        <dd>
+          Recalled {m.accessCount}× · last {fmt(m.lastAccessed)}
+        </dd>
+        {m.tags.length > 0 && (
+          <>
+            <dt>Tags</dt>
+            <dd>{m.tags.join(', ')}</dd>
+          </>
+        )}
       </dl>
       <h3>Original evidence</h3>
       {m.evidence.length ? (
         <ul className={styles.plain}>
           {m.evidence.map((e) => (
-            <li key={e.label}><Badge>{e.kind.replace('_', ' ')}</Badge> <a href={e.href}>{e.label}</a></li>
+            <li key={e.label}>
+              <Badge>{e.kind.replace('_', ' ')}</Badge>{' '}
+              <a href={e.href}>{e.label}</a>
+            </li>
           ))}
         </ul>
-      ) : <p className={styles.muted}>No linked evidence.</p>}
+      ) : (
+        <p className={styles.muted}>No linked evidence.</p>
+      )}
       {m.relatedTo.length > 0 && (
         <>
           <h3>Linked memories</h3>
           <ul className={styles.plain}>
             {m.relatedTo.map((id) => (
               <li key={id}>
-                <button type="button" className={styles.link} onClick={() => onSelect(id)}>
+                <button
+                  type="button"
+                  className={styles.link}
+                  onClick={() => onSelect(id)}
+                >
                   {id}
                 </button>{' '}
-                <span className={styles.muted}>{byId.get(id)?.content ?? '(removed)'}</span>
+                <span className={styles.muted}>
+                  {byId.get(id)?.content ?? '(removed)'}
+                </span>
               </li>
             ))}
           </ul>
@@ -536,7 +647,8 @@ function MemoryDetail({
       <ol className={styles.timeline}>
         {m.revisions.map((r) => (
           <li key={r.at + r.action}>
-            <span className={styles.muted}>{fmt(r.at)}</span> <strong>{r.action}</strong> by {r.actor} — {r.note}
+            <span className={styles.muted}>{fmt(r.at)}</span>{' '}
+            <strong>{r.action}</strong> by {r.actor} — {r.note}
           </li>
         ))}
       </ol>
@@ -563,14 +675,26 @@ function Recall({
         <li key={r.id} className={styles.card}>
           <div className={styles.cardHead}>
             <strong>{r.question}</strong>
-            <Badge tone={AVAILABILITY_TONE[r.availability]}>Memory {r.availability}</Badge>
+            <Badge tone={AVAILABILITY_TONE[r.availability]}>
+              Memory {r.availability}
+            </Badge>
           </div>
-          <p className={styles.muted}>{fmt(r.askedAt)} · {r.answerSummary}</p>
-          {r.availabilityNote && <p className={styles.note}>{r.availabilityNote}</p>}
+          <p className={styles.muted}>
+            {fmt(r.askedAt)} · {r.answerSummary}
+          </p>
+          {r.availabilityNote && (
+            <p className={styles.note}>{r.availabilityNote}</p>
+          )}
           {r.items.length > 0 && (
             <table className={styles.table}>
               <thead>
-                <tr><th>Memory</th><th>Score</th><th>Why retrieved</th><th>Sources</th><th>Feedback</th></tr>
+                <tr>
+                  <th>Memory</th>
+                  <th>Score</th>
+                  <th>Why retrieved</th>
+                  <th>Sources</th>
+                  <th>Feedback</th>
+                </tr>
               </thead>
               <tbody>
                 {r.items.map((it) => {
@@ -579,34 +703,56 @@ function Recall({
                   return (
                     <tr key={it.memoryId}>
                       <td>
-                        <button type="button" className={styles.link} onClick={() => onOpen(it.memoryId)}>
+                        <button
+                          type="button"
+                          className={styles.link}
+                          onClick={() => onOpen(it.memoryId)}
+                        >
                           {it.memoryId}
                         </button>
-                        <div className={styles.muted}>{m?.content ?? '(removed)'}</div>
+                        <div className={styles.muted}>
+                          {m?.content ?? '(removed)'}
+                        </div>
                       </td>
                       <td>
                         {it.score.toFixed(2)}
-                        <div className={styles.bar}><span style={{ width: pct(it.score) }} /></div>
+                        <div className={styles.bar}>
+                          <span style={{ width: pct(it.score) }} />
+                        </div>
                       </td>
                       <td>{it.reason}</td>
                       <td>
                         {m?.evidence.map((e) => (
-                          <div key={e.label}><a href={e.href}>{e.label}</a></div>
+                          <div key={e.label}>
+                            <a href={e.href}>{e.label}</a>
+                          </div>
                         ))}
                       </td>
                       <td>
                         <div className={styles.actions}>
-                          {(['helpful', 'not_helpful', 'wrong'] as const).map((v) => (
-                            <Button
-                              key={v}
-                              size="small"
-                              variant={given === v ? (v === 'wrong' ? 'danger' : 'primary') : 'secondary'}
-                              aria-pressed={given === v}
-                              onClick={() => onFeedback(r.id, it.memoryId, v)}
-                            >
-                              {v === 'helpful' ? 'Helpful' : v === 'not_helpful' ? 'Not helpful' : 'Wrong'}
-                            </Button>
-                          ))}
+                          {(['helpful', 'not_helpful', 'wrong'] as const).map(
+                            (v) => (
+                              <Button
+                                key={v}
+                                size="small"
+                                variant={
+                                  given === v
+                                    ? v === 'wrong'
+                                      ? 'danger'
+                                      : 'primary'
+                                    : 'secondary'
+                                }
+                                aria-pressed={given === v}
+                                onClick={() => onFeedback(r.id, it.memoryId, v)}
+                              >
+                                {v === 'helpful'
+                                  ? 'Helpful'
+                                  : v === 'not_helpful'
+                                    ? 'Not helpful'
+                                    : 'Wrong'}
+                              </Button>
+                            ),
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -636,7 +782,9 @@ function Review({
 }) {
   const [reasons, setReasons] = useState<Record<string, string>>({});
   if (proposals.length === 0) {
-    return <StateMessage kind="empty" title="No proposals waiting for review." />;
+    return (
+      <StateMessage kind="empty" title="No proposals waiting for review." />
+    );
   }
   return (
     <div className={styles.stack}>
@@ -648,7 +796,9 @@ function Review({
           <li key={p.id} className={styles.card}>
             <div className={styles.cardHead}>
               <Badge tone="info">Proposed {p.kind}</Badge>
-              <span className={styles.muted}>{p.location} · {fmt(p.proposedAt)}</span>
+              <span className={styles.muted}>
+                {p.location} · {fmt(p.proposedAt)}
+              </span>
             </div>
             <p className={styles.content}>{p.content}</p>
             <p className={styles.muted}>{p.rationale}</p>
@@ -656,8 +806,16 @@ function Review({
             <ul className={styles.plain}>
               {p.supportingIds.map((id) => (
                 <li key={id}>
-                  <button type="button" className={styles.link} onClick={() => onOpen(id)}>{id}</button>{' '}
-                  <span className={styles.muted}>{byId.get(id)?.content ?? '(removed)'}</span>
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={() => onOpen(id)}
+                  >
+                    {id}
+                  </button>{' '}
+                  <span className={styles.muted}>
+                    {byId.get(id)?.content ?? '(removed)'}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -666,10 +824,19 @@ function Review({
                 aria-label="Rejection reason"
                 placeholder="Reason (optional, for reject)"
                 value={reasons[p.id] ?? ''}
-                onChange={(e) => setReasons((r) => ({ ...r, [p.id]: e.target.value }))}
+                onChange={(e) =>
+                  setReasons((r) => ({ ...r, [p.id]: e.target.value }))
+                }
               />
-              <Button variant="primary" onClick={() => onDecide(p, true)}>Approve</Button>
-              <Button variant="danger" onClick={() => onDecide(p, false, reasons[p.id])}>Reject</Button>
+              <Button variant="primary" onClick={() => onDecide(p, true)}>
+                Approve
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => onDecide(p, false, reasons[p.id])}
+              >
+                Reject
+              </Button>
             </div>
           </li>
         ))}
@@ -709,32 +876,53 @@ function Conflicts({
             <span className={styles.muted}>Detected {fmt(c.detectedAt)}</span>
           </div>
           <div className={styles.sideBySide}>
-            {[['A', c.aId], ['B', c.bId]].map(([label, id]) => {
+            {[
+              ['A', c.aId],
+              ['B', c.bId],
+            ].map(([label, id]) => {
               const m = byId.get(id);
               return (
                 <div key={id} className={styles.side}>
-                  <span className={styles.tileLabel}>Memory {label} · <code>{id}</code></span>
+                  <span className={styles.tileLabel}>
+                    Memory {label} · <code>{id}</code>
+                  </span>
                   {m ? (
                     <>
                       <p className={styles.content}>{m.content}</p>
                       <dl className={styles.kv}>
-                        <dt>Learned</dt><dd>{fmt(m.timestamp)}</dd>
-                        <dt>Source</dt><dd>{m.provenance.label}</dd>
-                        <dt>Confidence</dt><dd>{pct(m.confidence)}</dd>
-                        <dt>Applies</dt><dd>{m.timeScope.label}</dd>
+                        <dt>Learned</dt>
+                        <dd>{fmt(m.timestamp)}</dd>
+                        <dt>Source</dt>
+                        <dd>{m.provenance.label}</dd>
+                        <dt>Confidence</dt>
+                        <dd>{pct(m.confidence)}</dd>
+                        <dt>Applies</dt>
+                        <dd>{m.timeScope.label}</dd>
                       </dl>
                       <ul className={styles.plain}>
-                        {m.evidence.map((e) => <li key={e.label}><a href={e.href}>{e.label}</a></li>)}
+                        {m.evidence.map((e) => (
+                          <li key={e.label}>
+                            <a href={e.href}>{e.label}</a>
+                          </li>
+                        ))}
                       </ul>
                     </>
-                  ) : <p className={styles.muted}>(removed)</p>}
+                  ) : (
+                    <p className={styles.muted}>(removed)</p>
+                  )}
                 </div>
               );
             })}
           </div>
           <div className={styles.actions}>
             {RESOLUTIONS.map(([how, label, variant]) => (
-              <Button key={how} variant={variant} onClick={() => onResolve(c, how)}>{label}</Button>
+              <Button
+                key={how}
+                variant={variant}
+                onClick={() => onResolve(c, how)}
+              >
+                {label}
+              </Button>
             ))}
           </div>
         </li>
@@ -768,7 +956,10 @@ function Maintenance({
 
   const events = audit.filter(
     (e) =>
-      (!q || `${e.memoryId ?? ''} ${e.detail}`.toLowerCase().includes(q.toLowerCase())) &&
+      (!q ||
+        `${e.memoryId ?? ''} ${e.detail}`
+          .toLowerCase()
+          .includes(q.toLowerCase())) &&
       (!action || e.action === action) &&
       (!actor || e.actor === actor) &&
       (!since || e.at >= since),
@@ -790,7 +981,10 @@ function Maintenance({
               variant="primary"
               disabled={!previewed}
               title={previewed ? undefined : 'Preview first'}
-              onClick={() => { onExecute(); setPreviewed(false); }}
+              onClick={() => {
+                onExecute();
+                setPreviewed(false);
+              }}
             >
               Execute
             </Button>
@@ -800,12 +994,22 @@ function Maintenance({
           <div className={styles.sideBySide}>
             {groups.map(([label, ids]) => (
               <div key={label} className={styles.side}>
-                <span className={styles.tileLabel}>{label} ({ids.length})</span>
+                <span className={styles.tileLabel}>
+                  {label} ({ids.length})
+                </span>
                 <ul className={styles.plain}>
                   {ids.map((id) => (
                     <li key={id}>
-                      <button type="button" className={styles.link} onClick={() => onOpen(id)}>{id}</button>{' '}
-                      <span className={styles.muted}>{byId.get(id)?.content ?? '(removed)'}</span>
+                      <button
+                        type="button"
+                        className={styles.link}
+                        onClick={() => onOpen(id)}
+                      >
+                        {id}
+                      </button>{' '}
+                      <span className={styles.muted}>
+                        {byId.get(id)?.content ?? '(removed)'}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -813,14 +1017,24 @@ function Maintenance({
             ))}
           </div>
         ) : (
-          <p className={styles.muted}>Preview to see which memories would be consolidated, archived or synthesized. A backup is taken before execution.</p>
+          <p className={styles.muted}>
+            Preview to see which memories would be consolidated, archived or
+            synthesized. A backup is taken before execution.
+          </p>
         )}
       </div>
 
       <h2>Reports & backups</h2>
       <table className={styles.table}>
         <thead>
-          <tr><th>Ran</th><th>Consolidated</th><th>Archived</th><th>Synthesized</th><th>Backup</th><th /></tr>
+          <tr>
+            <th>Ran</th>
+            <th>Consolidated</th>
+            <th>Archived</th>
+            <th>Synthesized</th>
+            <th>Backup</th>
+            <th />
+          </tr>
         </thead>
         <tbody>
           {reports.map((r) => (
@@ -829,10 +1043,16 @@ function Maintenance({
               <td>{r.consolidated}</td>
               <td>{r.archived}</td>
               <td>{r.synthesized}</td>
-              <td><code>{r.backupId}</code></td>
               <td>
-                {r.restored ? <Badge tone="stale">Restored</Badge> : (
-                  <Button size="small" onClick={() => onRestore(r)}>Restore</Button>
+                <code>{r.backupId}</code>
+              </td>
+              <td>
+                {r.restored ? (
+                  <Badge tone="stale">Restored</Badge>
+                ) : (
+                  <Button size="small" onClick={() => onRestore(r)}>
+                    Restore
+                  </Button>
                 )}
               </td>
             </tr>
@@ -842,26 +1062,59 @@ function Maintenance({
 
       <h2>Audit timeline</h2>
       <div className={styles.filters}>
-        <input type="search" placeholder="Memory ID or text…" aria-label="Search audit" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select label="Action" value={action} onChange={setAction} options={uniq(audit.map((e) => e.action))} />
-        <Select label="Actor" value={actor} onChange={setActor} options={uniq(audit.map((e) => e.actor))} />
+        <input
+          type="search"
+          placeholder="Memory ID or text…"
+          aria-label="Search audit"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <Select
+          label="Action"
+          value={action}
+          onChange={setAction}
+          options={uniq(audit.map((e) => e.action))}
+        />
+        <Select
+          label="Actor"
+          value={actor}
+          onChange={setActor}
+          options={uniq(audit.map((e) => e.actor))}
+        />
         <label className={styles.field}>
           <span>Since</span>
-          <input type="date" value={since} onChange={(e) => setSince(e.target.value)} />
+          <input
+            type="date"
+            value={since}
+            onChange={(e) => setSince(e.target.value)}
+          />
         </label>
       </div>
       <ol className={styles.timeline}>
         {events.map((e) => (
           <li key={e.id}>
-            <span className={styles.muted}>{fmt(e.at)}</span> <Badge>{e.action}</Badge> {e.actor}
+            <span className={styles.muted}>{fmt(e.at)}</span>{' '}
+            <Badge>{e.action}</Badge> {e.actor}
             {e.memoryId && (
-              <> · <button type="button" className={styles.link} onClick={() => onOpen(e.memoryId!)}>{e.memoryId}</button></>
+              <>
+                {' '}
+                ·{' '}
+                <button
+                  type="button"
+                  className={styles.link}
+                  onClick={() => onOpen(e.memoryId!)}
+                >
+                  {e.memoryId}
+                </button>
+              </>
             )}{' '}
             — {e.detail}
           </li>
         ))}
       </ol>
-      {events.length === 0 && <p className={styles.muted}>No audit events match.</p>}
+      {events.length === 0 && (
+        <p className={styles.muted}>No audit events match.</p>
+      )}
     </div>
   );
 }

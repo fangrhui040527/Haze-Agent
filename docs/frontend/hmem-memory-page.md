@@ -10,29 +10,32 @@ remembers, where each memory came from, and how it affected an answer.
 > "Sample data · not connected" badge. API integration is not done.
 
 References:
+
 - https://github.com/Meterless/Meterless/tree/main/engines/hmem
 - https://github.com/Meterless/Meterless/blob/main/engines/hmem/HOW_TO_USE_H-MEM.md
 
 ## Files
 
-| File | Purpose |
-| --- | --- |
-| `frontend/src/features/memory/MemoryPage.tsx` | Page and the six area components |
+| File                                                 | Purpose                                 |
+| ---------------------------------------------------- | --------------------------------------- |
+| `frontend/src/features/memory/MemoryPage.tsx`        | Page and the six area components        |
 | `frontend/src/features/memory/MemoryPage.module.css` | Styles (uses shared tokens, light/dark) |
-| `frontend/src/features/memory/memoryFixtures.ts` | Types and sample data |
-| `frontend/src/features/memory/MemoryPage.test.tsx` | Render test |
-| `frontend/src/app/router.tsx`, `AppLayout.tsx` | Route and nav link |
+| `frontend/src/features/memory/memoryFixtures.ts`     | Types and sample data                   |
+| `frontend/src/features/memory/MemoryPage.test.tsx`   | Render test                             |
+| `frontend/src/app/router.tsx`, `AppLayout.tsx`       | Route and nav link                      |
 
 ## What it can do
 
 The page has six tabs.
 
 ### 1. Overview
+
 - Memory counts per tier: short-term, working, long-term
 - Pending reviews and unresolved conflicts (click to jump to that tab)
 - Last maintenance run, capture/recall on/off, memories expiring within 30 days
 
 ### 2. Memory browser
+
 - Free-text search, plus filters for location, topic, tier, source and "since" date
 - Selecting a memory opens a detail panel with:
   - content, type, tier, review status and a confidence bar
@@ -42,20 +45,24 @@ The page has six tabs.
   - linked memories (clickable) and revision history
 
 ### 3. Recall explanations
+
 - One card per answer, showing **memory availability**: recalled, skipped, disabled or failed, with a reason
 - For each memory used: relevance score, why it was retrieved, and source links
 - Feedback buttons: **Helpful / Not helpful / Wrong** (each is written to the audit log)
 
 ### 4. Review queue
+
 - Proposed insights, invariants and domains (H-MEM "dreaming" output), each with its rationale and supporting memories
 - **Approve** adds the proposal to memory; **Reject** takes an optional reason
 - Proposals stay separate from approved memories until approved
 
 ### 5. Conflicts
+
 - Contradictory memories side by side: content, learned date, source, confidence, scope, evidence
 - Actions: **Keep A, Keep B, Keep both, Merge, Delete both**
 
 ### 6. Maintenance & history
+
 - Sleep cycle: **Preview** lists the memories to consolidate, archive or synthesize; **Execute** is enabled only after a preview
 - Reports table with backup IDs and a **Restore** button
 - Audit timeline, searchable by memory ID/text, action, actor and date
