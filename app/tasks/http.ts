@@ -1,6 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseContractJson } from '../contracts/json.js';
 import { TaskError, type TaskIdentity } from '../contracts/tasks.js';
+import {
+  worldApiRecordParamsSchema,
+  worldApiRecordReadQuerySchema,
+  worldRecordHistoryResponseSchema,
+  worldRecordLineageResponseSchema,
+  worldRecordReadResponseSchema,
+  worldTaskResponseSchema,
+} from '../contracts/world-api.js';
+import { worldLineageInputSchema } from '../contracts/world-services.js';
 import { createExecutionRegistry } from '../composition.js';
 import {
   TaskRuntime,
@@ -155,8 +164,93 @@ export function createTaskHandler(
         send(200, runtime.store.artifact(artifact[1]!, identity));
         return;
       }
+      const worldRecord = /^\/api\/world\/records\/([^/]+)$/.exec(url.pathname);
+      if (worldRecord && request.method === 'GET') {
+        let recordId: string;
+        try {
+          recordId = decodeURIComponent(worldRecord[1]!);
+        } catch {
+          throw new TaskError(400, 'invalid_record_id', 'Invalid record ID.');
+        }
+        const paramsResult = worldApiRecordParamsSchema.safeParse({
+          record_id: recordId,
+        });
+        if (!paramsResult.success)
+          throw new TaskError(400, 'invalid_record_id', 'Invalid record ID.');
+        const params = paramsResult.data;
+        const allowedQueryKeys = new Set(['limit', 'cursor', 'view']);
+        for (const key of url.searchParams.keys())
+          if (!allowedQueryKeys.has(key))
+            throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        for (const key of allowedQueryKeys)
+          if (url.searchParams.getAll(key).length > 1)
+            throw new TaskError(400, 'invalid_query', 'Duplicate query key.');
+        const queryResult = worldApiRecordReadQuerySchema.safeParse({
+          limit: url.searchParams.get('limit') ?? undefined,
+          cursor: url.searchParams.get('cursor') ?? undefined,
+          view: url.searchParams.get('view') ?? undefined,
+        });
+        if (!queryResult.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        const query = queryResult.data;
+        if (query.view === 'detail') {
+          send(
+            200,
+            worldRecordReadResponseSchema.parse({
+              view: 'detail',
+              detail: runtime.store.worldRecordDetailForIdentity(
+                identity,
+                runtime.executionMode,
+                params.record_id,
+              ),
+            }),
+          );
+          return;
+        }
+        const lineageInput = worldLineageInputSchema.safeParse({
+          record_id: params.record_id,
+          limit: query.limit,
+          ...(query.cursor ? { cursor: query.cursor } : {}),
+        });
+        if (!lineageInput.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        const page = runtime.store.worldLineageForIdentity(
+          identity,
+          runtime.executionMode,
+          lineageInput.data,
+        );
+        if (query.view === 'history') {
+          send(
+            200,
+            worldRecordReadResponseSchema.parse({
+              view: 'history',
+              history: worldRecordHistoryResponseSchema.parse({
+                ...page,
+                schema_version: 'haze.world.history-page.v1',
+              }),
+            }),
+          );
+          return;
+        }
+        send(
+          200,
+          worldRecordReadResponseSchema.parse({
+            view: 'lineage',
+            lineage: worldRecordLineageResponseSchema.parse(page),
+          }),
+        );
+        return;
+      }
       const match =
-        /^\/api\/tasks\/([A-Za-z0-9-]+)(?:\/(events|updates|control))?$/.exec(
+        /^\/api\/tasks\/([A-Za-z0-9-]+)(?:\/(events|updates|control|world))?$/.exec(
           url.pathname,
         );
       if (!match)
@@ -174,6 +268,15 @@ export function createTaskHandler(
             await readBody(request, 65536),
             idempotencyKey(request),
             identity,
+          ),
+        );
+        return;
+      }
+      if (match[2] === 'world' && request.method === 'GET') {
+        send(
+          200,
+          worldTaskResponseSchema.parse(
+            runtime.store.worldTaskView(id, identity),
           ),
         );
         return;

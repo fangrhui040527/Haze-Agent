@@ -59,7 +59,10 @@ import {
   type WorldLineageInput,
   type WorldLookupInput,
 } from '../contracts/world-services.js';
-import { worldRecordDetailResponseSchema } from '../contracts/world-api.js';
+import {
+  worldRecordDetailResponseSchema,
+  worldTaskResponseSchema,
+} from '../contracts/world-api.js';
 import { migrateWorldSchema } from './world-schema.js';
 import { WorldModelStore } from './world-store.js';
 import {
@@ -368,6 +371,42 @@ export class TaskStore {
       current_acceptances,
     });
   }
+  worldTaskView(taskId: string, identity: TaskIdentity) {
+    const task = this.core(taskId, identity);
+    const refs = new Map<string, ArtifactRef>();
+    const add = (ref: ArtifactRef) =>
+      refs.set(`${ref.id}:${ref.version}:${ref.sha256}`, ref);
+    for (const ref of task.original_request.context_refs) add(ref);
+    for (const assignment of this.allAssignments(task.current_run_id))
+      for (const ref of [...assignment.inputs, ...assignment.outputs]) add(ref);
+    if (task.result) {
+      for (const ref of task.result.work_products) add(ref);
+      for (const source of task.result.sources) add(source.artifact);
+      if (task.result.review.artifact) add(task.result.review.artifact);
+    }
+    const scope = { ...identity, mode: task.mode };
+    const related = this.world.recordsForArtifacts(scope, [...refs.values()]);
+    const current_acceptances = related.records.flatMap((record) => {
+      const context = this.worldContext(
+        taskId,
+        identity,
+        task.mode,
+        record.ref.id,
+      );
+      return context.acceptances.map((acceptance) => ({
+        subject: record.ref.id,
+        acceptance,
+      }));
+    });
+    return worldTaskResponseSchema.parse({
+      schema_version: 'haze.world.task-view.v1',
+      task_id: task.id,
+      mode: task.mode,
+      records: related.records,
+      current_acceptances: current_acceptances.slice(0, 250),
+      truncated: related.truncated || current_acceptances.length > 250,
+    });
+  }
   worldContext(
     taskId: string,
     identity: TaskIdentity,
@@ -415,6 +454,61 @@ export class TaskStore {
         acceptances: context.acceptances,
       },
     });
+  }
+  worldRecordDetailForIdentity(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    recordId: string,
+  ) {
+    const scope = { ...identity, mode };
+    const context = this.world.context(scope, recordId);
+    if (!context)
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    const acceptances = context.acceptances.flatMap((acceptance) => {
+      const current = this.world.currentAcceptance(scope, acceptance.id, {
+        policyHash: this.worldAcceptancePolicy.sha256,
+        supportIsCurrent: (outcome) =>
+          this.worldSupportIsCurrent(identity, mode, outcome),
+      });
+      return current ? [current] : [];
+    });
+    return worldRecordDetailResponseSchema.parse({
+      schema_version: 'haze.world.record-detail.v1',
+      record: context.record,
+      relationships: context.relationships,
+      support_artifacts: context.support_artifacts,
+      payload: context.payload,
+      status: {
+        schema_version: 'haze.world.current-status.v1',
+        record_id: recordId,
+        acceptances,
+      },
+    });
+  }
+  worldLineageForIdentity(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    input: WorldLineageInput,
+  ) {
+    const scope = { ...identity, mode };
+    if (!this.world.record(scope, input.record_id))
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    const page = this.world.lineage(scope, input);
+    if (!page)
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    return page;
   }
   worldLineage(
     taskId: string,

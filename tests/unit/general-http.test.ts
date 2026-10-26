@@ -41,7 +41,7 @@ async function api() {
       },
       body: JSON.stringify(value),
     });
-  return { origin, post };
+  return { origin, post, handler };
 }
 it('serves one general API and immutable source imports with idempotency', async () => {
   const { origin, post } = await api();
@@ -83,6 +83,69 @@ it('serves one general API and immutable source imports with idempotency', async
   expect((await fetch(`${origin}/api/artifacts/${source.id}`)).status).toBe(
     200,
   );
+  const worldResponse = await fetch(
+    `${origin}/api/tasks/${admission.task_id}/world`,
+  );
+  expect(worldResponse.status).toBe(200);
+  const world = (await worldResponse.json()) as {
+    records: { ref: { id: string } }[];
+  };
+  expect(world.records.length).toBeGreaterThan(0);
+  const recordId = world.records[0]!.ref.id;
+  const detailResponse = await fetch(
+    `${origin}/api/world/records/${encodeURIComponent(recordId)}`,
+  );
+  expect(detailResponse.status).toBe(200);
+  expect(await detailResponse.json()).toMatchObject({
+    view: 'detail',
+    detail: { record: { ref: { id: recordId } } },
+  });
+  expect(
+    await fetch(
+      `${origin}/api/world/records/${encodeURIComponent(recordId)}?view=lineage&limit=5`,
+    ).then((result) => result.status),
+  ).toBe(200);
+  const historyResponse = await fetch(
+    `${origin}/api/world/records/${encodeURIComponent(recordId)}?view=history`,
+  );
+  expect(historyResponse.status).toBe(200);
+  expect(await historyResponse.json()).toMatchObject({
+    view: 'history',
+    history: { schema_version: 'haze.world.history-page.v1' },
+  });
+  expect(
+    (
+      await fetch(
+        `${origin}/api/world/records/${encodeURIComponent(recordId)}?limit=101`,
+      )
+    ).status,
+  ).toBe(400);
+});
+
+it('does not disclose World Model records outside the authorized identity', async () => {
+  const { origin, handler } = await api();
+  const foreign = handler.runtime.store.world.putRecord({
+    scope: {
+      principal: 'another-user',
+      workspace: 'private-workspace',
+      mode: 'fixture',
+    },
+    operation_key: 'private-record',
+    kind: 'private_note',
+    external_id: 'private:one',
+    payload: { private: 'not visible' },
+    producer: { kind: 'service', id: 'test' },
+  }).value;
+  const response = await fetch(
+    `${origin}/api/world/records/${encodeURIComponent(foreign.ref.id)}`,
+  );
+  expect(response.status).toBe(404);
+  expect(await response.json()).toEqual({
+    error: {
+      code: 'world_record_not_found',
+      message: 'World Model record not found.',
+    },
+  });
 });
 it('rejects foreign origins, missing keys and legacy protocol explicitly', async () => {
   const { origin, post } = await api();

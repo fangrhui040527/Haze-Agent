@@ -5,6 +5,7 @@ import {
   worldLineagePageSchema,
   worldRecordSchema,
 } from './world.js';
+import { executionModeSchema } from './tasks.js';
 import { worldContextOutputSchema } from './world-services.js';
 
 const recordIdSchema = z.string().min(1).max(256);
@@ -40,8 +41,43 @@ export const worldRecordDetailResponseSchema = z.strictObject({
   status: worldCurrentStatusSchema,
 });
 
+export const worldTaskResponseSchema = z.strictObject({
+  schema_version: z.literal('haze.world.task-view.v1'),
+  task_id: z.uuid(),
+  mode: executionModeSchema,
+  records: z.array(worldRecordSchema).max(50),
+  current_acceptances: z
+    .array(
+      z.strictObject({
+        subject: recordIdSchema,
+        acceptance: worldAcceptanceOutcomeSchema,
+      }),
+    )
+    .max(250),
+  truncated: z.boolean(),
+});
+
 export const worldRecordHistoryResponseSchema = worldHistoryPageSchema;
 export const worldRecordLineageResponseSchema = worldLineagePageSchema;
+
+export const worldApiRecordReadQuerySchema = worldApiPageQuerySchema.extend({
+  view: z.enum(['detail', 'history', 'lineage']).default('detail'),
+});
+
+export const worldRecordReadResponseSchema = z.discriminatedUnion('view', [
+  z.strictObject({
+    view: z.literal('detail'),
+    detail: worldRecordDetailResponseSchema,
+  }),
+  z.strictObject({
+    view: z.literal('history'),
+    history: worldRecordHistoryResponseSchema,
+  }),
+  z.strictObject({
+    view: z.literal('lineage'),
+    lineage: worldRecordLineageResponseSchema,
+  }),
+]);
 
 export const worldApiErrorSchema = z.strictObject({
   error: z.strictObject({

@@ -157,6 +157,9 @@ export class TaskRuntime {
     for (const task of this.store.listRecoverableTasks())
       queueMicrotask(() => this.schedule(task.id));
   }
+  get executionMode() {
+    return this.options.mode ?? 'live';
+  }
   get activeCount() {
     return this.active.size;
   }

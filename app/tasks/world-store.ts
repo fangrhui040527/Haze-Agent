@@ -4,6 +4,7 @@ import {
   artifactRefSchema,
   artifactSchema,
   type Artifact,
+  type ArtifactRef,
 } from '../contracts/artifacts.js';
 import {
   worldEventSchema,
@@ -481,6 +482,79 @@ export class WorldModelStore {
       )
       .all(...params) as Row[];
     return rows.map((row) => worldRecordSchema.parse(JSON.parse(row.body)));
+  }
+
+  recordsForArtifacts(
+    scope: WorldScope,
+    refs: ArtifactRef[],
+    limit = 50,
+  ): { records: WorldRecord[]; truncated: boolean } {
+    if (refs.length === 0) return { records: [], truncated: false };
+    const refsByIdentity = new Set(
+      refs.map((ref) => `${ref.id}:${ref.version}:${ref.sha256}`),
+    );
+    const ids = [...new Set(refs.map((ref) => ref.id))];
+    const artifactRows = this.db
+      .prepare(
+        `SELECT record_id,body FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=?
+         AND kind='artifact_reference'
+         AND revision=(SELECT MAX(current.revision) FROM world_entities current
+           WHERE current.principal=world_entities.principal
+           AND current.workspace=world_entities.workspace
+           AND current.mode=world_entities.mode
+           AND current.record_id=world_entities.record_id)
+         AND json_extract(body,'$.payload.artifact.id') IN (${ids.map(() => '?').join(',')})`,
+      )
+      .all(scope.principal, scope.workspace, scope.mode, ...ids) as (Row & {
+      record_id: string;
+    })[];
+    const pending = artifactRows.flatMap((row) => {
+      const artifact = worldRecordSchema.parse(JSON.parse(row.body));
+      if (
+        typeof artifact.payload !== 'object' ||
+        artifact.payload === null ||
+        Array.isArray(artifact.payload)
+      )
+        return [];
+      const ref = artifactRefSchema.safeParse(artifact.payload.artifact);
+      return ref.success &&
+        refsByIdentity.has(
+          `${ref.data.id}:${ref.data.version}:${ref.data.sha256}`,
+        )
+        ? [row.record_id]
+        : [];
+    });
+    const visited = new Set<string>();
+    let truncated = false;
+    while (pending.length > 0) {
+      const supportRecordId = pending.shift()!;
+      if (visited.has(supportRecordId)) continue;
+      if (visited.size >= limit) {
+        truncated = true;
+        break;
+      }
+      visited.add(supportRecordId);
+      const dependents = this.db
+        .prepare(
+          `SELECT record_id FROM world_dependencies
+           WHERE principal=? AND workspace=? AND mode=? AND support_record_id=?
+           ORDER BY record_id LIMIT ?`,
+        )
+        .all(
+          scope.principal,
+          scope.workspace,
+          scope.mode,
+          supportRecordId,
+          limit + 1,
+        ) as { record_id: string }[];
+      pending.push(...dependents.map(({ record_id }) => record_id));
+    }
+    const records = [...visited]
+      .map((recordId) => this.record(scope, recordId))
+      .filter((record): record is WorldRecord => record !== undefined)
+      .sort((left, right) => left.ref.id.localeCompare(right.ref.id));
+    return { records, truncated };
   }
 
   context(scope: WorldScope, recordId: string): WorldContextOutput | undefined {
