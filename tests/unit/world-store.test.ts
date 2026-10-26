@@ -588,4 +588,89 @@ describe('transactional World Model writes', () => {
       ]),
     );
   });
+
+  it('deduplicates identical acceptance and rolls back a failed acceptance event', () => {
+    const store = createStore();
+    const policy = {
+      id: 'research-v1',
+      version: '1',
+      sha256: 'b'.repeat(64),
+    };
+    const acceptedRecord = store.world.putRecord(
+      put('accepted-once', 'evidence_synthesis_bundle', 'bundle:once', {
+        summary: 'Reviewed bundle.',
+      }),
+    ).value;
+    const acceptanceInput = {
+      scope,
+      subject: acceptedRecord.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted' as const,
+      policy,
+      support_revisions: [],
+      actor: { kind: 'service' as const, id: 'test-policy' },
+      evaluated_at: at,
+      expires_at: '2026-11-25T00:00:00Z',
+    };
+    const first = store.world.evaluateAcceptance(acceptanceInput);
+    const retry = store.world.evaluateAcceptance({
+      ...acceptanceInput,
+      evaluated_at: '2026-10-26T01:00:00Z',
+    });
+
+    expect(retry).toEqual(first);
+    expect(
+      store.world.acceptancesForRecord(scope, acceptedRecord.ref.id),
+    ).toEqual([first]);
+    expect(
+      store.world
+        .events(scope)
+        .filter((event) => event.event_kind === 'acceptance_evaluated'),
+    ).toHaveLength(1);
+    expect(
+      store.db
+        .prepare(
+          `SELECT COUNT(*) AS count FROM world_operation_receipts
+           WHERE operation_key LIKE 'acceptance:%'`,
+        )
+        .get(),
+    ).toEqual({ count: 1 });
+
+    const rollbackRecord = store.world.putRecord(
+      put(
+        'acceptance-rollback',
+        'evidence_synthesis_bundle',
+        'bundle:rollback',
+        {
+          summary: 'Must not be accepted.',
+        },
+      ),
+    ).value;
+    store.db.exec(`CREATE TRIGGER reject_acceptance_events
+      BEFORE INSERT ON world_events
+      WHEN NEW.event_kind='acceptance_evaluated'
+      BEGIN SELECT RAISE(ABORT, 'injected acceptance event failure'); END;`);
+    expect(() =>
+      store.world.evaluateAcceptance({
+        ...acceptanceInput,
+        subject: rollbackRecord.ref,
+      }),
+    ).toThrow('injected acceptance event failure');
+    expect(
+      store.world.acceptancesForRecord(scope, rollbackRecord.ref.id),
+    ).toEqual([]);
+    expect(
+      store.db
+        .prepare(
+          `SELECT COUNT(*) AS count FROM world_operation_receipts
+           WHERE operation_key LIKE 'acceptance:%'`,
+        )
+        .get(),
+    ).toEqual({ count: 1 });
+    expect(
+      store.world
+        .events(scope)
+        .filter((event) => event.event_kind === 'acceptance_evaluated'),
+    ).toHaveLength(1);
+  });
 });
