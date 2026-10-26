@@ -3,10 +3,7 @@ import { lazy, Suspense } from 'react';
 import { DashboardPage } from '../features/dashboard/DashboardPage.tsx';
 import { DemoDataPage } from '../features/demo-data/DemoDataPage.tsx';
 import { DetailPage } from '../features/detail/DetailPage.tsx';
-import {
-  DashboardReportPage,
-  TaskPage,
-} from '../features/task-report/TaskPage.tsx';
+import { TaskPage } from '../features/task-report/TaskPage.tsx';
 import { AppLayout, NotFoundPage, RouteErrorPage } from './AppLayout.tsx';
 
 const DamageAccountPage = lazy(() =>
@@ -24,6 +21,12 @@ const ManagerPage = lazy(() =>
 const WorldModelPage = lazy(() =>
   import('../features/world-model/WorldModelPage.tsx').then((module) => ({
     default: module.WorldModelPage,
+  })),
+);
+
+const MemoryPage = lazy(() =>
+  import('../features/memory/MemoryPage.tsx').then((module) => ({
+    default: module.MemoryPage,
   })),
 );
 
@@ -48,6 +51,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'memory',
+        element: (
+          <Suspense fallback={<p role="status">Opening Memory...</p>}>
+            <MemoryPage />
+          </Suspense>
+        ),
+      },
+      {
         path: 'manager/:taskId?',
         element: (
           <Suspense
@@ -68,7 +79,6 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'task/:id', element: <TaskPage /> },
-      { path: 'report/:id', element: <DashboardReportPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
