@@ -31,7 +31,7 @@ node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --dry-run
 node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
 ```
 
-> **Windy in the bootstrap:** `bootstrap_usl.ts` builds Windy at `[Env Step 6/7]`. It runs `windy_register.sql` (filling the `${WINDY_API_KEY}` placeholder from `.env.local`), then `windy_view.sql`, and activates the two Windy USL tables during step 7. If `WINDY_API_KEY` is not set, Windy registration is skipped with a warning and the rest of the bootstrap continues.
+> **Windy in the bootstrap:** `bootstrap_usl.ts` builds Windy at `[Env Step 6/7]`. It runs `windy_register.sql` (filling the `${WINDY_API_KEY}` placeholder from `.env`), then `windy_view.sql`, and activates the two Windy USL tables during step 7. If `WINDY_API_KEY` is not set, Windy registration is skipped with a warning and the rest of the bootstrap continues.
 
 ---
 

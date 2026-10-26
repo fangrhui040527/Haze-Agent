@@ -6,7 +6,7 @@ Windy issues **one API key per product**, and the keys are not
 interchangeable. A key created for Map Forecast or Webcams will be rejected by
 the Point Forecast API with `{"message":"Invalid API key"}`.
 
-The key in `.env.local` (`WINDY_API_KEY`) is a **Point Forecast** key. It was
+The key in `.env` (`WINDY_API_KEY`) is a **Point Forecast** key. It was
 verified against `POST https://api.windy.com/api/point-forecast/v2` and returns
 `HTTP 200`, so this is the only Windy product it drives.
 

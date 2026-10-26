@@ -10,6 +10,22 @@ frontend ──HTTP + SSE──► server ──► World Model (facts, evidence
                                                                         NASA FIRMS, Zetaris
 ```
 
+## Shared collection code
+
+Source clients live in `app/adapters/haze-sources/`. Source selection, parsing,
+evidence checks and the storage-independent `collectOnce` operation live in
+`app/capabilities/evidence-collection/`. The task engine exposes that operation as
+the `evidence-collection` capability; the dashboard watchers call the same code.
+
+This server owns recurring schedules, watcher status, dashboard APIs and writes
+to its dashboard World Model. Task collection saves its own exact capture through
+task services. The stores are separate; extraction does not migrate their data
+or grant acceptance to collected evidence.
+
+The server imports the built shared modules from `dist/`. Run `npm run build` at
+the repository root after changing shared collection code and before restarting
+the server. See the [collection capability guide](../app/capabilities/evidence-collection/README.md).
+
 ## Run
 
 ```sh

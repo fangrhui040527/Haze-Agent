@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { Location } from '../../frontend/src/shared/types/domain.ts';
+import type { Location } from '../../app/contracts/haze-evidence.ts';
 import { LOCATION_SEEDS } from '../../frontend/src/mock/generator/locations.ts';
 import type { Coverage } from './config.ts';
 
@@ -46,28 +46,7 @@ export function locationsFor(coverage: Coverage): Location[] {
   ];
 }
 
-/** Great-circle distance in kilometres. */
-export function distanceKm(
-  a: { lat: number; lon: number },
-  b: { lat: number; lon: number },
-): number {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLon = (b.lon - a.lon) * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(h));
-}
-
-export function nearestLocation(
-  point: { lat: number; lon: number },
-  candidates: readonly Location[],
-): { location: Location; km: number } | null {
-  let best: { location: Location; km: number } | null = null;
-  for (const location of candidates) {
-    const km = distanceKm(point, location);
-    if (!best || km < best.km) best = { location, km };
-  }
-  return best;
-}
+export {
+  distanceKm,
+  nearestLocation,
+} from '../../dist/capabilities/evidence-collection/locations.js';

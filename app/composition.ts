@@ -31,6 +31,11 @@ import {
 } from './capabilities/damage-accounting/index.js';
 import { damageAccountScopeSchema } from './capabilities/damage-accounting/contracts.js';
 import { createWorldModelDamageInputTool } from './capabilities/damage-account/world-input-adapter.js';
+import {
+  createEvidenceCollectionAssignments,
+  createEvidenceCollectionCapability,
+  createEvidenceCollectionTools,
+} from './capabilities/evidence-collection/index.js';
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
@@ -57,7 +62,14 @@ export function createExecutionRegistry(options: {
       !damageAccountScopeSchema.safeParse(request.scope).success &&
       calculatedDamage.matches(request),
   });
-  registry.registerCapability(createPm25Capability());
+  const collection = createEvidenceCollectionCapability();
+  registry.registerCapability(collection);
+  const pm25 = createPm25Capability();
+  registry.registerCapability({
+    ...pm25,
+    // Explicit fresh collection is separate from summarizing stored samples.
+    matches: (request) => !collection.matches(request) && pm25.matches(request),
+  });
   const componentIntake = createDamageAccountingCapability();
   registry.registerCapability({
     ...componentIntake,
@@ -72,12 +84,15 @@ export function createExecutionRegistry(options: {
   for (const assignment of [
     ...createDamageAccountAssignments(),
     ...createPm25Assignments(),
+    ...createEvidenceCollectionAssignments(),
     ...createDamageAccountingAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])
     registry.registerAssignment(assignment);
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
+  for (const tool of createEvidenceCollectionTools(options))
+    registry.registerTool(tool);
   for (const tool of createDamageAccountTools(options))
     registry.registerTool(tool);
   return registry;

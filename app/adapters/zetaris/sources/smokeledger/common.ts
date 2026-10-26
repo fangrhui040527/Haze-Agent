@@ -2,10 +2,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Pool, type PoolClient } from 'pg';
+import { envFileCandidates } from '../../scripts/env-files.ts';
 
 const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = path.resolve(SOURCE_DIR, '../../../../../');
-const ZETARIS_ROOT = path.resolve(SOURCE_DIR, '../../');
 const LOCATIONS_PATH = path.resolve(
   SOURCE_DIR,
   '../air_quality/locations.json',
@@ -35,45 +34,45 @@ export interface CliOptions {
 export type SqlValue = string | number | boolean | Date | null;
 
 export async function loadEnvironment(): Promise<void> {
-  for (const root of [PROJECT_ROOT, ZETARIS_ROOT]) {
-    for (const fileName of ['.env.local', '.env']) {
-      let contents: string;
-      try {
-        contents = await readFile(path.join(root, fileName), 'utf8');
-      } catch (error) {
-        if (isNodeError(error) && error.code === 'ENOENT') {
-          continue;
-        }
-        throw error;
+  for (const envPath of envFileCandidates()) {
+    let contents: string;
+    try {
+      contents = await readFile(envPath, 'utf8');
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') {
+        continue;
+      }
+      throw error;
+    }
+
+    for (const line of contents.split(/\r?\n/u)) {
+      const match =
+        /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/u.exec(
+          line,
+        );
+      if (!match) {
+        continue;
       }
 
-      for (const line of contents.split(/\r?\n/u)) {
-        const match =
-          /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/u.exec(line);
-        if (!match) {
-          continue;
-        }
-
-        const [, key, rawValue] = match;
-        if (
-          key === undefined ||
-          rawValue === undefined ||
-          process.env[key] !== undefined
-        ) {
-          continue;
-        }
-
-        let value = rawValue;
-        if (
-          (value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))
-        ) {
-          value = value.slice(1, -1);
-        } else {
-          value = value.replace(/\s+#.*$/u, '').trim();
-        }
-        process.env[key] = value;
+      const [, key, rawValue] = match;
+      if (
+        key === undefined ||
+        rawValue === undefined ||
+        process.env[key] !== undefined
+      ) {
+        continue;
       }
+
+      let value = rawValue;
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      } else {
+        value = value.replace(/\s+#.*$/u, '').trim();
+      }
+      process.env[key] = value;
     }
   }
 }

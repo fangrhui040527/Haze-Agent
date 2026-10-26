@@ -1,16 +1,19 @@
 # Repository scripts
 
-Run commands from the repository root. Zetaris and PostgreSQL helpers have
+Run these commands from `app/adapters/zetaris`. Configuration lives in the Haze
+repository root `.env`. Zetaris and PostgreSQL helpers have
 Deno/TypeScript and Python versions with matching settings and behaviour.
 The local file downloaders are Python-only.
 
 <a id="find-your-organization-id"></a>
 ## Configure access
 
-The scripts read `.env.local` from the repository root, or from the top-level
+The scripts read `.env` from the Haze repository root, or from the top-level
 checkout when run in a Git worktree. This file is gitignored. Do not replace an
-existing file or commit credentials. The platform bundle's `.env` is separate.
-See the [client setup guide](../docs/connections/client-setup.md) for how to
+existing file or commit credentials. Legacy `app/adapters/zetaris/.env.local`
+files supply missing settings; root `.env` values take precedence. Start with
+[the shared template](../../../../.env.example). The platform bundle's `.env` is separate.
+See the [client setup guide](../../../../docs/Zetaris/connections/client-setup.md) for how to
 find your organisation ID and protect your credentials.
 
 The quick SQL helpers use the **UI proxy**. Set its UI origin, numeric org ID,
@@ -44,7 +47,7 @@ PGSSLMODE=disable
 
 Set `PGSSLMODE=verify-full` when the server has a trusted certificate that
 matches its host. Exported environment variables take precedence over
-`.env.local`.
+`.env`.
 
 <a id="verify-sql-execution"></a>
 <a id="check-the-zetaris-connection"></a>
@@ -76,7 +79,7 @@ python3 scripts/query_zetaris.py --file path/to/query.sql
 ```
 
 Each request goes through the UI's `/api/proxy/...` route. The shared helper
-loads `.env.local`, gets a token, and sends the bearer token, `X-Org-ID`, and a
+loads `.env`, gets a token, and sends the bearer token, `X-Org-ID`, and a
 fresh UUID `X-Request-ID`. Requests time out after 30 seconds. `ZETARIS_QUERY_LIMIT`
 defaults to 1000 rows; `ZETARIS_ENGINE_ID` is optional. A 404 usually means
 `ZETARIS_BASE_URL` is not the UI origin or the UI does not expose proxy routes.
@@ -159,7 +162,7 @@ python3 scripts/onboard.py teardown sic_edgar_usl --drop-namespace --yes
 `--drop-namespace` removes every USL in that namespace. This runner leaves
 REST/file registrations, Lightning databases and SchemaStore containers for
 manual cleanup; its output lists them. That is a runner limitation, not proof
-that the platform has no removal command. See [tested cleanup](../docs/guides/troubleshooting.md#cleanup).
+that the platform has no removal command. See [tested cleanup](../../../../docs/Zetaris/guides/troubleshooting.md#cleanup).
 If objects remain, inspect their definitions and use `--skip-exists` on the
 next run. Check the verbose plan when adding statement types.
 
@@ -182,7 +185,7 @@ python3 -m venv .venv
 ```
 
 Deno entrypoints include their network, environment, and file permissions in
-their first line and load `.env.local` themselves. If direct execution is not
+their first line and load `.env` themselves. If direct execution is not
 available, run a script with its needed flags, for example:
 
 ```sh
@@ -216,5 +219,5 @@ python3 scripts/fetch_openfoodfacts.py --sample-rows 5000
 
 The PUDL chart example is conditional on an already verified PUDL table.
 PUDL registration is currently known to fail; start with another source. See
-[troubleshooting](../docs/guides/troubleshooting.md) for connection and
+[troubleshooting](../../../../docs/Zetaris/guides/troubleshooting.md) for connection and
 partial-setup recovery.

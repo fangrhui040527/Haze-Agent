@@ -56,10 +56,10 @@ The documented public sources are:
 - Open-Meteo air quality: <https://air-quality-api.open-meteo.com/v1/air-quality>
   (no key).
 
-FIRMS requires a personal free map key. Add `FIRMS_MAP_KEY=...` to either the
-gitignored root `.env` file or `app/adapters/zetaris/.env.local`; never commit
+FIRMS requires a personal free map key. Add `FIRMS_MAP_KEY=...` to the
+gitignored root `.env` file; never commit
 the key. Open-Meteo needs no key.
-Set `SMOKELEDGER_DATABASE_URL` in `.env` or `app/adapters/zetaris/.env.local`
+Set `SMOKELEDGER_DATABASE_URL` in root `.env`
 to override the local PostgreSQL connection.
 
 The fetchers upsert repeated fire and wind observations. PM2.5 forecasts are
@@ -70,7 +70,7 @@ been saved if a later API batch fails.
 
 ## Register the database and bootstrap the Zetaris USL
 
-Start Zetaris and make sure `app/adapters/zetaris/.env.local` contains the
+Start Zetaris and make sure the Haze root `.env` contains the
 Zetaris REST connection settings. From the repository root, preview the setup:
 
 ```powershell

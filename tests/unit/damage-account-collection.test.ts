@@ -32,9 +32,12 @@ const gap = {
 
 function servicesFor(inputs: Artifact[], input?: unknown) {
   const source = createSyntheticDamageArtifact();
-  const tool = vi.fn(async (id: string) =>
-    id === DAMAGE_WORLD_TOOL_ID ? gap : normalizeDamageInputs([source]),
+  const tool = vi.fn((id: string) =>
+    Promise.resolve(
+      id === DAMAGE_WORLD_TOOL_ID ? gap : normalizeDamageInputs([source]),
+    ),
   );
+  const question = vi.fn();
   const save = vi.fn((kind: string, content: unknown): Artifact => ({
     ...source,
     id: randomUUID(),
@@ -61,7 +64,7 @@ function servicesFor(inputs: Artifact[], input?: unknown) {
     },
     tool,
     save,
-    question: vi.fn(),
+    question,
     message: vi.fn(),
     inbox: () => [],
     read: () => {
@@ -69,7 +72,7 @@ function servicesFor(inputs: Artifact[], input?: unknown) {
     },
     escalate: vi.fn(),
   };
-  return { services, tool, save };
+  return { services, tool, save, question };
 }
 
 describe('damage collection intake routing', () => {
@@ -89,7 +92,7 @@ describe('damage collection intake routing', () => {
 
     expect(tool).toHaveBeenCalledExactlyOnceWith('damage.read-input', {
       source_refs: [ref],
-      method_ids: expect.any(Array),
+      method_ids: expect.any(Array) as unknown,
     });
     expect(result.status).toBe('completed');
   });
@@ -97,7 +100,7 @@ describe('damage collection intake routing', () => {
   it('refreshes World Model after a correction retaining original non-assignment evidence', async () => {
     const retainedSource = createSyntheticDamageArtifact();
     const expected = { countries: ['Corrected Country'] };
-    const { services, tool } = servicesFor([retainedSource], {
+    const { services, tool, question } = servicesFor([retainedSource], {
       expected_scope: expected,
     });
 
@@ -107,7 +110,7 @@ describe('damage collection intake routing', () => {
       DAMAGE_WORLD_TOOL_ID,
       damageWorldQuerySchema.parse({ expected_scope: expected }),
     );
-    expect(services.question).not.toHaveBeenCalled();
+    expect(question).not.toHaveBeenCalled();
   });
 
   it.each(['damage.world-selection', 'damage.world-inputs'])(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { openMeteoSpec } from '../src/hazeops/adapters/openMeteo.ts';
+import { openMeteoSpec } from '../../dist/capabilities/evidence-collection/sources/openMeteo.js';
 import { entityId } from '../src/world/hazeWorld.ts';
 import { projectItems } from '../src/world/projection.ts';
 import { KLANG, memoryWorld, modeledResult } from './helpers.ts';

@@ -273,17 +273,36 @@ export function assembleManagerContext(
       status.truncated = true;
     }
     const starting = context.capabilities.find(
-      (capability) => capability.available && capability.templates.length,
+      (capability) => capability.available && capability.templates?.length,
     );
     for (const capability of context.capabilities)
       if (capability !== starting) capability.templates = [];
     for (const capability of context.capabilities)
       if (!relevantCapabilities.has(capability.card.id)) {
         capability.reasons = [];
-        if (capability.card.purpose.length > 120)
+        const purpose = capability.card.purpose ?? '';
+        if (purpose.length > 120)
           capability.card.purpose =
-            capability.card.purpose.slice(0, 120) + ' [Purpose truncated.]';
+            purpose.slice(0, 120) + ' [Purpose truncated.]';
       }
+    if (bytes(context) > limit && !currentPlan) {
+      const templated = new Set(
+        context.capabilities.flatMap((capability) =>
+          (capability.templates ?? []).map(
+            (template) => template.definition_id,
+          ),
+        ),
+      );
+      // Exact starting plans already name these registered definitions. The
+      // runtime resolves and validates their agents and grants at dispatch.
+      context.definitions = context.definitions.filter(
+        (definition) => !templated.has(definition.id),
+      );
+      status.missing.push(
+        'Definition details repeated by exact starting templates omitted; runtime registration and plan validation remain authoritative.',
+      );
+      status.truncated = true;
+    }
     if (currentPlan) {
       const admitted = new Set(
         context.assignments.map((assignment) => assignment.definition_id),
@@ -301,7 +320,7 @@ export function assembleManagerContext(
       status.truncated = true;
     }
     for (const assignment of context.assignments)
-      if (assignment.brief.length > 200) {
+      if (assignment.brief && assignment.brief.length > 200) {
         assignment.brief =
           assignment.brief.slice(0, 160) + ' [Brief truncated.]';
         status.truncated = true;
@@ -328,7 +347,7 @@ export function assembleManagerContext(
         return true;
       });
     for (const assignment of context.assignments)
-      assignment.gaps = unique(assignment.gaps, seenGaps);
+      assignment.gaps = unique(assignment.gaps ?? [], seenGaps);
     for (const review of context.reviews)
       review.limitations = unique(review.limitations, seenLimitations);
     const seenReviews = new Set<string>();
@@ -451,17 +470,6 @@ export function assembleManagerContext(
       (correction.context_refs ?? []).map((ref) => ref.id),
     ),
   ]);
-  const intermediateAssignments = new Set(
-    task.assignments
-      .filter(
-        (assignment) =>
-          assignment.run_id === task.current_run_id &&
-          assignment.objective_revision === task.objective_revision &&
-          assignment.role !== 'EvidenceCritic' &&
-          !['cancelled', 'stale', 'failed'].includes(assignment.status),
-      )
-      .flatMap((assignment) => assignment.dependencies),
-  );
   const protectedArtifact = (artifact: ManagerContext['artifacts'][number]) =>
     suppliedIds.has(artifact.ref.id) ||
     (artifact.current &&
@@ -469,7 +477,6 @@ export function assembleManagerContext(
         artifact.kind.endsWith('.capture') ||
         (artifact.kind !== 'assignment.summary' &&
           artifact.assignment_id !== undefined &&
-          !intermediateAssignments.has(artifact.assignment_id) &&
           task.assignments.some(
             (assignment) =>
               assignment.id === artifact.assignment_id &&
@@ -492,10 +499,12 @@ export function assembleManagerContext(
     status.truncated = true;
   }
   if (bytes(context) > limit) {
-    for (const capability of context.capabilities)
-      if (capability.card.purpose.length > 80)
+    for (const capability of context.capabilities) {
+      const purpose = capability.card.purpose ?? '';
+      if (purpose.length > 80)
         capability.card.purpose =
-          capability.card.purpose.slice(0, 64) + ' [Purpose truncated.]';
+          purpose.slice(0, 64) + ' [Purpose truncated.]';
+    }
     status.truncated = true;
   }
   // Optional prose and inspection excerpts must not displace exact
@@ -534,12 +543,139 @@ export function assembleManagerContext(
       status.truncated = true;
     }
   }
-  if (bytes(context) > limit && currentPlan) {
+  // Available catalog descriptions are optional before planning too. Retain
+  // the executable starting plan, identifiers and every unavailable reason.
+  if (bytes(context) > limit) {
     for (const capability of context.capabilities) {
+      if (!capability.card.purpose) delete capability.card.purpose;
       if (!capability.available) continue;
       if (bytes(context) > limit) capability.reasons = [];
       if (bytes(context) > limit) capability.card.purpose = '';
     }
+  }
+  if (bytes(context) > limit) {
+    // These are context views, not persisted provenance. Exact artifact refs,
+    // statuses, verdicts and nonempty limitations remain in this checkpoint.
+    for (const assignment of context.assignments)
+      if (assignment.status === 'completed') {
+        delete assignment.capability;
+        delete assignment.objective_revision;
+        delete assignment.brief;
+        delete assignment.dependencies;
+        if (!assignment.gaps?.length) delete assignment.gaps;
+      }
+    for (const capability of context.capabilities) {
+      if (!capability.card.purpose) delete capability.card.purpose;
+      if (!capability.reasons?.length) delete capability.reasons;
+      if (!capability.templates?.length) delete capability.templates;
+      if (!capability.peer_requirements?.length)
+        delete capability.peer_requirements;
+      if (!capability.prerequisites?.length) delete capability.prerequisites;
+      if (!capability.review_requirements?.length)
+        delete capability.review_requirements;
+    }
+    for (const artifact of context.artifacts) {
+      const producer = context.assignments.find(
+        (assignment) => assignment.id === artifact.assignment_id,
+      );
+      if (
+        artifact.current &&
+        producer?.revision === artifact.assignment_revision
+      )
+        delete artifact.assignment_revision;
+      delete artifact.truncated;
+    }
+    for (const review of context.reviews) {
+      const catalog = context.artifacts.find(
+        (artifact) =>
+          artifact.current &&
+          artifact.ref.id === review.artifact.id &&
+          'version' in review.artifact &&
+          artifact.ref.version === review.artifact.version &&
+          artifact.ref.sha256 === review.artifact.sha256,
+      );
+      if (catalog) {
+        review.artifact = { id: catalog.ref.id };
+        if (
+          catalog.assignment_id === review.producer_assignment_id &&
+          context.assignments.some(
+            (assignment) =>
+              assignment.id === review.producer_assignment_id &&
+              assignment.revision === review.producer_revision,
+          )
+        ) {
+          delete review.producer_assignment_id;
+          delete review.producer_revision;
+        }
+      }
+    }
+    status.truncated = true;
+  }
+  if (bytes(context) > limit && currentPlan) {
+    context.definitions = [];
+    if (context.interpretation) context.interpretation = {};
+    for (const assignment of context.assignments)
+      if (
+        assignment.status === 'completed' &&
+        assignment.support !== 'gap' &&
+        !context.capabilities.some((capability) =>
+          capability.peer_requirements?.some((requirement) =>
+            requirement.definitions.includes(assignment.definition_id ?? ''),
+          ),
+        )
+      ) {
+        delete assignment.definition_id;
+      }
+    context.events = context.events.filter((event) => {
+      if (
+        [
+          'specialist_escalated',
+          'assignment_failed',
+          'review_objection',
+          'task_updated',
+          'world_lifecycle_changed',
+        ].includes(event.type)
+      )
+        return true;
+      status.omitted_events++;
+      return false;
+    });
+    status.missing = status.missing.filter((note) =>
+      note.startsWith('Artifact unavailable'),
+    );
+    status.missing.push(
+      'Optional metadata omitted; exact references retained.',
+    );
+  }
+  if (bytes(context) > limit && currentPlan)
+    for (const capability of context.capabilities) {
+      if (bytes(context) <= limit) break;
+      delete capability.card.version;
+      delete capability.card.readiness;
+    }
+  if (bytes(context) > limit && currentPlan) {
+    for (const artifact of context.artifacts) {
+      const index = context.assignments.findIndex(
+        (assignment) => assignment.id === artifact.assignment_id,
+      );
+      if (!artifact.current || index < 0) continue;
+      artifact.assignment_index = index;
+      delete artifact.assignment_id;
+    }
+    status.missing = status.missing.filter((note) =>
+      note.startsWith('Artifact unavailable'),
+    );
+    status.missing.push(
+      'Metadata compacted; assignment_index uses the zero-based assignments array.',
+    );
+  }
+  if (bytes(context) > limit && currentPlan) {
+    // Compaction prose is optional too. Keep unavailable-evidence warnings,
+    // every advertised capability ID and exact review/evidence references.
+    // The structured truncation flag and omission counts still disclose loss.
+    status.missing = status.missing.filter((note) =>
+      note.startsWith('Artifact unavailable'),
+    );
   }
   if (bytes(context) > limit)
     throw new TaskError(
