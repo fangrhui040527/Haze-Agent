@@ -1,18 +1,29 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
-import { fixtureResult } from '../../services/agents/testFixtures.ts';
+import {
+  artifactRef,
+  artifactId,
+  fixtureResult,
+} from '../../services/agents/testFixtures.ts';
 import { TaskResult } from './TaskResult.tsx';
 import { EvidenceResult } from './EvidenceResult.tsx';
 describe('general result shell and optional domain details', () => {
   it('renders generic results, pinned sources, review, and work products without domain fields', () => {
     const result = fixtureResult();
     const markup = renderToStaticMarkup(
-      createElement(TaskResult, {
-        evidence: { taskUrl: '/api/tasks/fixture', result },
-      }),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(TaskResult, {
+          evidence: { taskUrl: '/api/tasks/fixture', result },
+        }),
+      ),
     );
     expect(markup).toContain('Work products');
+    expect(markup).toContain('href="/task/fixture"');
+    expect(markup).toContain('Open task report');
     expect(markup).toContain('Exact source');
     expect(markup).toContain('Result: partial. Review: needs review.');
     expect(markup).toContain('Observations are unavailable.');
@@ -25,9 +36,13 @@ describe('general result shell and optional domain details', () => {
     result.currency = 'stale';
     result.review.status = 'rejected';
     const markup = renderToStaticMarkup(
-      createElement(TaskResult, {
-        evidence: { taskUrl: '/api/tasks/fixture', result },
-      }),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(TaskResult, {
+          evidence: { taskUrl: '/api/tasks/fixture', result },
+        }),
+      ),
     );
     expect(markup).toContain('Stale result');
     expect(markup).toContain('Review: rejected');
@@ -63,5 +78,34 @@ describe('general result shell and optional domain details', () => {
         }),
       ),
     ).toBe('');
+  });
+  it('withholds a rejected artifact independently of aggregate review, tied to its exact version', () => {
+    const result = fixtureResult();
+    result.review.checks = [
+      {
+        artifact: artifactRef,
+        producer_assignment_id: artifactId,
+        producer_revision: 2,
+        verdict: 'rejected',
+        limitations: ['Missing numerical support.'],
+      },
+    ];
+    const render = () =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(TaskResult, {
+            evidence: { taskUrl: '/api/tasks/fixture', result },
+          }),
+        ),
+      );
+    expect(render()).toContain(
+      'This artifact was rejected in review. Domain calculations are withheld.',
+    );
+    result.review.checks[0].artifact = { ...artifactRef, version: 2 };
+    expect(render()).not.toContain(
+      'This artifact was rejected in review. Domain calculations are withheld.',
+    );
   });
 });

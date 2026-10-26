@@ -1,12 +1,27 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseContractJson } from '../contracts/json.js';
 import { TaskError, type TaskIdentity } from '../contracts/tasks.js';
-import { createExecutionRegistry } from '../composition.js';
+import {
+  worldApiBrowseQuerySchema,
+  worldApiRecordParamsSchema,
+  worldApiRecordReadQuerySchema,
+  worldRecordHistoryResponseSchema,
+  worldRecordLineageResponseSchema,
+  worldRecordReadResponseSchema,
+  worldTaskResponseSchema,
+  worldProjectionRebuildRequestSchema,
+} from '../contracts/world-api.js';
+import { worldLineageInputSchema } from '../contracts/world-services.js';
+import {
+  createDashboardServices,
+  createExecutionRegistry,
+} from '../composition.js';
 import {
   TaskRuntime,
   localTaskIdentity,
   type TaskRuntimeOptions,
 } from './runtime.js';
+import { browseWorldRecords } from './world-control-plane.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -113,6 +128,9 @@ export function createTaskHandler(
         ...(options.env ? { env: options.env } : {}),
       }),
   });
+  let dashboard: ReturnType<typeof createDashboardServices> | undefined;
+  let closed = false;
+  let closing: Promise<void> | undefined;
   const handler = (request: IncomingMessage, response: ServerResponse) => {
     const send = (status: number, data: unknown) => {
       response.writeHead(status, {
@@ -123,7 +141,64 @@ export function createTaskHandler(
       response.end(JSON.stringify(data));
     };
     const handle = async () => {
+      if (closed)
+        throw new TaskError(
+          503,
+          'runtime_closed',
+          'The application is closing.',
+        );
       const { url, identity } = authorize(request);
+      if (
+        /^\/api\/(?:health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:\/|$)/.test(
+          url.pathname,
+        )
+      ) {
+        if (
+          url.pathname === '/api/heartbeat/tick' &&
+          request.method === 'POST'
+        ) {
+          idempotencyKey(request);
+          const body = await readBody(request, 1024);
+          if (
+            body === null ||
+            typeof body !== 'object' ||
+            Array.isArray(body) ||
+            Object.keys(body).length !== 0
+          )
+            throw new TaskError(
+              400,
+              'invalid_heartbeat',
+              'Heartbeat expects an empty JSON object.',
+            );
+        }
+        if (closed)
+          throw new TaskError(
+            503,
+            'runtime_closed',
+            'The application is closing.',
+          );
+        dashboard ??= createDashboardServices({
+          store: runtime.store,
+          identity,
+          mode: runtime.executionMode,
+          env: options.env ?? {},
+        });
+        await dashboard.hazeops.ready;
+        if (closed)
+          throw new TaskError(
+            503,
+            'runtime_closed',
+            'The application is closing.',
+          );
+        dashboard.view.start();
+        dashboard.hazeops.start();
+        if (await dashboard.view.handle(request, response, url)) return;
+        throw new TaskError(
+          404,
+          'route_not_found',
+          'Application API route not found.',
+        );
+      }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') {
         send(200, runtime.capabilities(identity));
         return;
@@ -155,8 +230,149 @@ export function createTaskHandler(
         send(200, runtime.store.artifact(artifact[1]!, identity));
         return;
       }
+      if (url.pathname === '/api/world/records') {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        const queryValues: Record<string, string> = {};
+        for (const [key, value] of url.searchParams) {
+          if (Object.hasOwn(queryValues, key))
+            throw new TaskError(400, 'invalid_query', 'Duplicate query key.');
+          Object.defineProperty(queryValues, key, {
+            value,
+            enumerable: true,
+          });
+        }
+        const query = worldApiBrowseQuerySchema.safeParse(queryValues);
+        if (!query.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        send(
+          200,
+          browseWorldRecords(
+            runtime.store,
+            identity,
+            runtime.executionMode,
+            query.data,
+          ),
+        );
+        return;
+      }
+      if (url.pathname === '/api/world/projections/rebuild') {
+        if (request.method !== 'POST')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size > 0)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        const key = idempotencyKey(request);
+        const body = worldProjectionRebuildRequestSchema.safeParse(
+          await readBody(request, 1024),
+        );
+        if (!body.success)
+          throw new TaskError(
+            400,
+            'invalid_world_rebuild',
+            'Projection rebuild expects an empty JSON object.',
+          );
+        send(
+          200,
+          runtime.store.worldRebuildProjections(
+            identity,
+            runtime.executionMode,
+            key,
+            body.data,
+          ),
+        );
+        return;
+      }
+      const worldRecord = /^\/api\/world\/records\/([^/]+)$/.exec(url.pathname);
+      if (worldRecord && request.method === 'GET') {
+        let recordId: string;
+        try {
+          recordId = decodeURIComponent(worldRecord[1]!);
+        } catch {
+          throw new TaskError(400, 'invalid_record_id', 'Invalid record ID.');
+        }
+        const paramsResult = worldApiRecordParamsSchema.safeParse({
+          record_id: recordId,
+        });
+        if (!paramsResult.success)
+          throw new TaskError(400, 'invalid_record_id', 'Invalid record ID.');
+        const params = paramsResult.data;
+        const allowedQueryKeys = new Set(['limit', 'cursor', 'view']);
+        for (const key of url.searchParams.keys())
+          if (!allowedQueryKeys.has(key))
+            throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        for (const key of allowedQueryKeys)
+          if (url.searchParams.getAll(key).length > 1)
+            throw new TaskError(400, 'invalid_query', 'Duplicate query key.');
+        const queryResult = worldApiRecordReadQuerySchema.safeParse({
+          limit: url.searchParams.get('limit') ?? undefined,
+          cursor: url.searchParams.get('cursor') ?? undefined,
+          view: url.searchParams.get('view') ?? undefined,
+        });
+        if (!queryResult.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        const query = queryResult.data;
+        if (query.view === 'detail') {
+          send(
+            200,
+            worldRecordReadResponseSchema.parse({
+              view: 'detail',
+              detail: runtime.store.worldRecordDetailForIdentity(
+                identity,
+                runtime.executionMode,
+                params.record_id,
+              ),
+            }),
+          );
+          return;
+        }
+        const lineageInput = worldLineageInputSchema.safeParse({
+          record_id: params.record_id,
+          limit: query.limit,
+          ...(query.cursor ? { cursor: query.cursor } : {}),
+        });
+        if (!lineageInput.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        const page = runtime.store.worldLineageForIdentity(
+          identity,
+          runtime.executionMode,
+          lineageInput.data,
+        );
+        if (query.view === 'history') {
+          send(
+            200,
+            worldRecordReadResponseSchema.parse({
+              view: 'history',
+              history: worldRecordHistoryResponseSchema.parse({
+                ...page,
+                schema_version: 'haze.world.history-page.v1',
+              }),
+            }),
+          );
+          return;
+        }
+        send(
+          200,
+          worldRecordReadResponseSchema.parse({
+            view: 'lineage',
+            lineage: worldRecordLineageResponseSchema.parse(page),
+          }),
+        );
+        return;
+      }
       const match =
-        /^\/api\/tasks\/([A-Za-z0-9-]+)(?:\/(events|updates|control))?$/.exec(
+        /^\/api\/tasks\/([A-Za-z0-9-]+)(?:\/(events|updates|control|world))?$/.exec(
           url.pathname,
         );
       if (!match)
@@ -174,6 +390,15 @@ export function createTaskHandler(
             await readBody(request, 65536),
             idempotencyKey(request),
             identity,
+          ),
+        );
+        return;
+      }
+      if (match[2] === 'world' && request.method === 'GET') {
+        send(
+          200,
+          worldTaskResponseSchema.parse(
+            runtime.store.worldTaskView(id, identity),
           ),
         );
         return;
@@ -221,5 +446,20 @@ export function createTaskHandler(
         });
     });
   };
-  return Object.assign(handler, { runtime, close: () => runtime.close() });
+  return Object.assign(handler, {
+    runtime,
+    close: () => {
+      if (closing) return closing;
+      closed = true;
+      closing = (async () => {
+        dashboard?.view.close();
+        try {
+          await dashboard?.hazeops.close();
+        } finally {
+          await runtime.close();
+        }
+      })();
+      return closing;
+    },
+  });
 }

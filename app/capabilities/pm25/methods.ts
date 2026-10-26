@@ -8,6 +8,8 @@ export { framePm25Scope } from './contracts.js';
 import {
   EvidenceSourceError,
   PM25_SOURCE_ID,
+  LEGACY_PM25_SOURCE_ID,
+  parseFiniteNumber,
   type EvidenceCapture,
   type EvidenceRow,
   type EvidenceScope,
@@ -21,7 +23,7 @@ const timestamp = z.iso.datetime({ offset: true });
 /** Domain rules live in this capability, rather than in the shared runtime. */
 export const pm25Capability = {
   id: 'pm25-evidence-summary',
-  version: '1',
+  version: '2',
   purpose:
     'Summarize a bounded location/period selection of modeled PM2.5 evidence.',
   work_products: ['evidence-selection', 'coverage-analysis', 'evidence-review'],
@@ -125,15 +127,19 @@ function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
       'The raw evidence does not match the authorized source selection.',
     );
   const start = rawInstant(row['valid_utc']) as string;
+  const normalizedValue =
+    row['pm25'] === null ? null : parseFiniteNumber(row['pm25']);
+  const latitude = row['lat'] === null ? null : parseFiniteNumber(row['lat']);
+  const longitude = row['lon'] === null ? null : parseFiniteNumber(row['lon']);
   const parsed = captureSchema.shape.rows.element.safeParse({
     start,
     end: start,
-    value: row['pm25'],
+    value: normalizedValue,
     issued_at: null,
     location: row['town'],
     ingested_at: rawInstant(row['ingested_utc'], true),
-    latitude: row['lat'],
-    longitude: row['lon'],
+    latitude,
+    longitude,
   });
   if (
     !parsed.success ||
@@ -160,8 +166,11 @@ export function validateCapture(
       'The evidence adapter returned an invalid capture shape or source semantics.',
     );
   const selected = parsed.data;
+  const sourceMatches =
+    selected.source === sourceId ||
+    (sourceId === PM25_SOURCE_ID && selected.source === LEGACY_PM25_SOURCE_ID);
   if (
-    selected.source !== sourceId ||
+    !sourceMatches ||
     selected.location.toLowerCase() !== scope.location.toLowerCase() ||
     Buffer.byteLength(selected.raw, 'utf8') > 524_288
   )

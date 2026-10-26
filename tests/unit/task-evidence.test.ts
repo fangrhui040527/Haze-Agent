@@ -3,6 +3,10 @@ import {
   PM25_SOURCE_ID,
   resolveEvidenceSource,
 } from '../../app/capabilities/pm25/evidence.js';
+import {
+  analyzePm25,
+  independentlyCheckPm25,
+} from '../../app/capabilities/pm25/methods.js';
 
 const env = {
   ZETARIS_API_KEY: 'test-secret-not-in-artifacts',
@@ -26,7 +30,45 @@ const row: unknown[] = [
 ];
 const signal = () => new AbortController().signal;
 
-describe('Zetaris SmokeLedger PM2.5 evidence boundary', () => {
+describe('Zetaris Open-Meteo snapshot PM2.5 evidence boundary', () => {
+  it('reconstructs decimal-string REST cells without changing the retained evidence', async () => {
+    const encoded = [...row];
+    encoded[4] = '1.8E1';
+    encoded[7] = '3.04';
+    encoded[8] = '101.44';
+    const raw = JSON.stringify({ data: [encoded] });
+    const evidence = await resolveEvidenceSource(
+      env,
+      vi.fn<typeof fetch>().mockResolvedValue(new Response(raw)),
+    ).retrieve(scope, signal());
+    expect(evidence.raw).toBe(raw);
+    expect(evidence.rows[0]).toMatchObject({
+      value: 18,
+      latitude: 3.04,
+      longitude: 101.44,
+    });
+    expect(
+      independentlyCheckPm25(evidence, analyzePm25(evidence, scope), scope)
+        .valid,
+    ).toBe(true);
+  });
+
+  it.each(['', ' ', 'Infinity', '0x10', true, false])(
+    'rejects a nonnumeric REST concentration %j',
+    async (value) => {
+      const invalid = [...row];
+      invalid[4] = value;
+      await expect(
+        resolveEvidenceSource(
+          env,
+          vi
+            .fn<typeof fetch>()
+            .mockResolvedValue(Response.json({ data: [invalid] })),
+        ).retrieve(scope, signal()),
+      ).rejects.toMatchObject({ code: 'invalid_evidence' });
+    },
+  );
+
   it('preserves an unknown remote outcome after network interruption without substituting evidence', async () => {
     const fetcher = vi
       .fn<typeof fetch>()
@@ -66,11 +108,52 @@ describe('Zetaris SmokeLedger PM2.5 evidence boundary', () => {
     const body = JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string) as {
       sql: string;
     };
-    expect(body.sql).toContain('FROM sl_pg.pm25');
+    expect(body.sql).toContain('FROM air_quality.hourly_observations q');
+    expect(body.sql).not.toContain('sl_pg');
     expect(body.sql).toContain("'Selected Town'");
-    expect(body.sql).toContain("'2026-10-24 03:00:00.000'");
-    expect(body.sql).toContain("p.`source` = 'open-meteo-air-quality'");
+    expect(body.sql).toContain(
+      "q.observation_time < '2026-10-24T03:00:00.000Z'",
+    );
+    expect(body.sql).not.toContain('TIMESTAMP');
+    expect(body.sql).toContain("'open-meteo-air-quality' AS source");
+    expect(body.sql).toContain('q.ingested_utc');
+    expect(body.sql).toContain('q.requested_latitude AS lat');
   });
+
+  it('normalizes numeric strings returned by the Zetaris SQL API', async () => {
+    const stringNumbers = [...row];
+    stringNumbers[4] = '18.5';
+    stringNumbers[7] = '3.04';
+    stringNumbers[8] = '101.44';
+    const capture = await resolveEvidenceSource(
+      env,
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ data: [stringNumbers] })),
+    ).retrieve(scope, signal());
+    expect(capture.rows[0]).toMatchObject({
+      value: 18.5,
+      latitude: 3.04,
+      longitude: 101.44,
+    });
+    expect(analyzePm25(capture, scope).coverage.usable_row_count).toBe(1);
+  });
+
+  it.each(['', '18.5µg/m3', 'NaN', 'Infinity'])(
+    'rejects malformed string concentrations: %s',
+    async (value) => {
+      const malformed = [...row];
+      malformed[4] = value;
+      await expect(
+        resolveEvidenceSource(
+          env,
+          vi
+            .fn<typeof fetch>()
+            .mockResolvedValue(Response.json({ data: [malformed] })),
+        ).retrieve(scope, signal()),
+      ).rejects.toMatchObject({ code: 'invalid_evidence' });
+    },
+  );
 
   it('selects latest ingestion per sample and preserves null values as unknown', async () => {
     const newest = [...row];

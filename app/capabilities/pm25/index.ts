@@ -1,4 +1,6 @@
 import type { Artifact } from '../../contracts/artifacts.js';
+import { artifactRefSchema } from '../../contracts/artifacts.js';
+import { z } from 'zod';
 import type {
   AssignmentDefinition,
   CapabilityDefinition,
@@ -19,15 +21,57 @@ import {
   independentlyCheckPm25,
   pm25AnalysisSchema,
 } from './methods.js';
+import { pm25WorldModelAdapter } from './world.js';
 
 export { framePm25Scope } from './contracts.js';
 export { analyzePm25, independentlyCheckPm25 } from './methods.js';
+export { pm25WorldModelAdapter } from './world.js';
 
 export function createPm25Capability(): CapabilityDefinition {
   return {
+    prerequisites: [
+      {
+        definition_id: 'pm25.analyze',
+        depends_on_definitions: ['pm25.retrieve'],
+      },
+      {
+        definition_id: 'pm25.check',
+        depends_on_definitions: ['pm25.retrieve'],
+      },
+    ],
+    review_requirements: [
+      {
+        artifact_kind: 'pm25.analysis',
+        review_definition_id: 'pm25.check',
+        producer_definition_ids: ['pm25.analyze'],
+      },
+    ],
+    peer_requirements: [
+      {
+        definitions: ['pm25.analyze', 'pm25.check'],
+        purpose: 'numerical-check',
+      },
+    ],
+    normalizeReview(artifact) {
+      if (artifact.kind !== 'review') return undefined;
+      const content = z
+        .object({
+          verdict: z.enum(['supported', 'rejected']),
+          reviewed_artifacts: z.array(artifactRefSchema),
+          limitations: z.array(z.string()).default([]),
+        })
+        .safeParse(artifact.content);
+      return content.success
+        ? {
+            verdict: content.data.verdict,
+            artifacts: content.data.reviewed_artifacts,
+            limitations: content.data.limitations,
+          }
+        : undefined;
+    },
     card: {
       id: 'pm25-evidence-summary',
-      version: '3',
+      version: '4',
       purpose:
         'Investigate bounded modeled PM2.5 evidence with reproducible analysis and independent numerical checking.',
       work_products: [
@@ -45,7 +89,12 @@ export function createPm25Capability(): CapabilityDefinition {
         'Live readiness requires a captured configured model/tool execution.',
       ],
     },
-    matches: (request) => /PM2[.]?5/iu.test(request.objective),
+    matches: (request) =>
+      /PM2[.]?5/iu.test(request.objective) &&
+      !/^\s*(?:please\s+)?(?:explain|describe|interpret|what|why|how)\b.*\b(?:report|source|supplied|imported)\b/iu.test(
+        request.objective,
+      ),
+    worldModel: pm25WorldModelAdapter,
     assignments(request) {
       let input: unknown;
       try {
@@ -101,8 +150,9 @@ export function createPm25Tools(
   return [
     {
       id: PM25_SOURCE_ID,
-      version: '3',
+      version: '4',
       mode,
+      manager_read_only: true,
       description:
         'Read bounded modeled PM2.5 evidence for a town and UTC interval; SQL is constructed by this capability.',
       inputSchema: pm25ScopeSchema,
@@ -142,7 +192,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
   return [
     {
       id: 'pm25.retrieve',
-      version: '3',
+      version: '4',
       capability,
       agent: 'HazeOps',
       tools: [PM25_SOURCE_ID],
@@ -209,7 +259,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.analyze',
-      version: '3',
+      version: '4',
       capability,
       agent: 'WorkerShield',
       tools: [],
@@ -294,7 +344,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.check',
-      version: '3',
+      version: '4',
       capability,
       agent: 'EvidenceCritic',
       tools: [],
@@ -358,6 +408,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
         const artifact = services.save('review', {
           ...checked,
           verdict: checked.valid ? 'supported' : 'rejected',
+          reviewer_role: 'EvidenceCritic',
           reviewed_artifacts: [capture, analysis].map(
             ({ id, version, sha256 }) => ({ id, version, sha256 }),
           ),
@@ -376,7 +427,7 @@ export function createPm25Assignments(): AssignmentDefinition[] {
     },
     {
       id: 'pm25.observation-gap',
-      version: '3',
+      version: '4',
       capability,
       agent: 'HazeOps',
       tools: [],

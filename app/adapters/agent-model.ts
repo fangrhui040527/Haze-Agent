@@ -6,6 +6,8 @@ export interface AgentModelInput {
   max_output_tokens?: number;
   /** Strict JSON actions still undergo agent-owned schema validation after completion. */
   json_mode?: boolean;
+  /** Runtime-owned schema; the adapter negotiates its provider representation. */
+  output_schema?: unknown;
 }
 
 /** Provider-returned metadata; absent fields remain unknown, not inferred. */
@@ -39,6 +41,16 @@ const MAX_RESPONSE_BYTES = 65_536;
 const MAX_TEXT_CHARACTERS = 12_000;
 
 class ModelError extends Error {}
+/** A provider responded, but its message was incomplete or invalid. Never accept the text as a decision. */
+export class AgentModelResponseError extends ModelError {
+  constructor(
+    message: string,
+    readonly receipt: AgentModelReceipt,
+    readonly output: string | null,
+  ) {
+    super(message);
+  }
+}
 
 /** Dispatch happened, but no provider receipt established the remote outcome. */
 export class AgentModelOutcomeUnknownError extends Error {
@@ -117,7 +129,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assistantText(body: unknown): string {
+/** Native compound schemas can stall hosted Lightning's structured decoder. */
+function hasCompoundSchema(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasCompoundSchema);
+  if (!isRecord(value)) return false;
+  return Object.entries(value).some(
+    ([key, child]) =>
+      [
+        'oneOf',
+        'anyOf',
+        'allOf',
+        '$ref',
+        '$dynamicRef',
+        '$recursiveRef',
+      ].includes(key) || hasCompoundSchema(child),
+  );
+}
+
+function assistantText(body: unknown, outputTokens: number): string {
   const choices = isRecord(body) ? body.choices : undefined;
   const choice: unknown = Array.isArray(choices) ? choices[0] : undefined;
   const message = isRecord(choice) ? choice.message : undefined;
@@ -130,7 +159,10 @@ function assistantText(body: unknown): string {
     !message.content.trim()
   ) {
     throw new ModelError(
-      'Agent model did not return a complete, nonempty assistant message.',
+      'Agent model did not return a complete, nonempty assistant message.' +
+        (isRecord(choice) && choice.finish_reason === 'length'
+          ? ` The provider reached the output token limit (${outputTokens}) for this request.`
+          : ''),
     );
   }
   if (message.content.length > MAX_TEXT_CHARACTERS) {
@@ -213,6 +245,7 @@ export function resolveAgentModel(
       );
     }
     let body: string;
+    const outputTokens = input.max_output_tokens ?? 1200;
     try {
       if (
         !input.role.trim() ||
@@ -222,9 +255,19 @@ export function resolveAgentModel(
       ) {
         throw new Error();
       }
+      const nativeSchema =
+        provider === 'nvidia' &&
+        model === NVIDIA_DEFAULT_MODEL &&
+        input.output_schema !== undefined &&
+        !hasCompoundSchema(input.output_schema);
+      if (input.output_schema !== undefined && !isRecord(input.output_schema))
+        throw new Error();
       const context = JSON.stringify(input.context);
       if (context === undefined) throw new Error();
-      const outputTokens = input.max_output_tokens ?? 1200;
+      const schemaInstruction =
+        !nativeSchema && input.output_schema !== undefined
+          ? `\nrequired_json_schema (output contract only, not an output field):\n${JSON.stringify(input.output_schema)}\nReturn only the object matching this contract. Never echo required_json_schema, schema definitions, or extra fields.`
+          : '';
       if (
         !Number.isSafeInteger(outputTokens) ||
         outputTokens < 1 ||
@@ -236,7 +279,7 @@ export function resolveAgentModel(
         messages: [
           {
             role: 'system',
-            content: `You are ${input.role}.\n${input.instruction}`,
+            content: `You are ${input.role}.\n${input.instruction}${schemaInstruction}`,
           },
           { role: 'user', content: context },
         ],
@@ -250,7 +293,19 @@ export function resolveAgentModel(
           : { max_completion_tokens: outputTokens }),
         stream: false,
         ...(input.json_mode
-          ? { response_format: { type: 'json_object' }, temperature: 0 }
+          ? {
+              response_format: nativeSchema
+                ? {
+                    type: 'json_schema',
+                    json_schema: {
+                      name: 'haze_action',
+                      strict: true,
+                      schema: input.output_schema,
+                    },
+                  }
+                : { type: 'json_object' },
+              temperature: 0,
+            }
           : {}),
       });
       if (Buffer.byteLength(body, 'utf8') > MAX_REQUEST_BYTES)
@@ -290,10 +345,35 @@ export function resolveAgentModel(
           );
         }
         const responseBody = await readCompletion(response, requestSignal);
-        const text = assistantText(responseBody);
+        const receipt = completionReceipt(responseBody, apiKey);
+        let text: string;
+        try {
+          text = assistantText(responseBody, outputTokens);
+        } catch (error) {
+          const choices = isRecord(responseBody)
+            ? responseBody.choices
+            : undefined;
+          const first = Array.isArray(choices)
+            ? (choices[0] as unknown)
+            : undefined;
+          const message = isRecord(first) ? first.message : undefined;
+          const content =
+            isRecord(message) && typeof message.content === 'string'
+              ? message.content
+                  .slice(0, MAX_TEXT_CHARACTERS)
+                  .replaceAll(apiKey, '[redacted]')
+              : null;
+          throw new AgentModelResponseError(
+            error instanceof Error
+              ? error.message
+              : 'Invalid provider response.',
+            receipt,
+            content,
+          );
+        }
         return {
           text: text.replaceAll(apiKey, '[redacted]'),
-          receipt: completionReceipt(responseBody, apiKey),
+          receipt,
         };
       };
       return await Promise.race([request(), aborted]);

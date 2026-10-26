@@ -1,8 +1,10 @@
 import type {
+  Assignment,
   TaskEvent,
   TaskRecord,
   TaskResult,
 } from '../../../../app/contracts/tasks.ts';
+import type { ManagerState } from '../../../../app/contracts/manager.ts';
 export const taskId = '11111111-1111-4111-8111-111111111111';
 export const runId = '22222222-2222-4222-8222-222222222222';
 export const artifactId = '33333333-3333-4333-8333-333333333333';
@@ -109,6 +111,104 @@ export function fixtureTask(): TaskRecord {
     corrections: [],
     artifacts: [],
     result: fixtureResult(),
+  };
+}
+/** Deterministic saved Manager state, shared by readback and workspace tests. */
+export function fixtureManager(): ManagerState {
+  return {
+    version: 'manager.v4',
+    run_id: runId,
+    plan_revision: 2,
+    last_handled_event_cursor: 3,
+    interpretation: {
+      scope: 'Explain the supplied evidence within its measured coverage.',
+      deliverables: ['An evidence-backed explanation and coverage gaps.'],
+      assumptions: ['The supplied source is the intended input.'],
+      intended_use: 'Understand the source conclusions.',
+      stopping_conditions: ['All selected claims have an independent check.'],
+    },
+    plans: [
+      {
+        revision: 1,
+        objective_revision: 1,
+        decision_id: 'initial',
+        reason: 'Inspect the original source.',
+        assignment_revisions: [],
+        created_at: at,
+      },
+      {
+        revision: 2,
+        objective_revision: 1,
+        decision_id: 'repair',
+        reason: 'Investigate the reviewer objection before synthesis.',
+        assignment_revisions: [{ id: artifactId, revision: 2 }],
+        created_at: at,
+      },
+    ],
+    decisions: [
+      {
+        created_at: at,
+        decision: {
+          id: 'repair',
+          run_id: runId,
+          generation: 1,
+          objective_revision: 1,
+          plan_revision: 1,
+          event_cursor: 3,
+          explanation:
+            'The review identified a coverage gap requiring investigation.',
+          references: [artifactRef],
+          action: {
+            type: 'wait',
+            reason: 'Wait for the coverage investigation.',
+          },
+        },
+      },
+    ],
+    inspections: [
+      {
+        artifact: artifactRef,
+        run_id: runId,
+        objective_revision: 1,
+        plan_revision: 1,
+        excerpt: 'Exact source excerpt.',
+        inspected_at: at,
+      },
+    ],
+    pending_events: [
+      { type: 'review.objection', message: 'Direct observations are missing.' },
+    ],
+    dispatch_receipts: [],
+  };
+}
+export function fixtureAssignment(): Assignment {
+  return {
+    id: artifactId,
+    task_id: taskId,
+    run_id: runId,
+    role: 'HazeOps',
+    definition_id: 'evidence-synthesis',
+    definition_version: '1',
+    agent_version: '1',
+    capability_version: '1',
+    capability: 'evidence-synthesis',
+    revision: 2,
+    objective_revision: 1,
+    generation: 1,
+    acknowledged_revision: 1,
+    brief: 'Investigate the missing observations and retain exact references.',
+    dependencies: [],
+    inputs: [artifactRef],
+    tools: [],
+    status: 'running',
+    deadline: '2099-01-01T00:00:00Z',
+    max_model_calls: 2,
+    usage: { model_calls: 1, tool_calls: 0 },
+    outputs: [],
+    assumptions: [],
+    gaps: [],
+    support: 'unknown',
+    usability: 'needs_review',
   };
 }
 export function receipt(

@@ -4,6 +4,10 @@ import type {
   TaskControl,
   TaskUpdate,
 } from '../../../../app/contracts/controls.ts';
+import {
+  worldRecordReadResponseSchema,
+  worldTaskResponseSchema,
+} from '../../../../app/contracts/world-api.ts';
 import { abortError, delay, isAbortError } from '../../shared/lib/delay.ts';
 import type {
   AgentAnswer,
@@ -364,6 +368,49 @@ export class HttpAgentService implements AgentService {
         false,
       );
     return artifact;
+  }
+  async readWorldTask(taskId: string, signal?: AbortSignal) {
+    const parsed = worldTaskResponseSchema.safeParse(
+      await this.read(
+        `/api/tasks/${encodeURIComponent(taskId)}/world`,
+        {},
+        signal,
+      ),
+    );
+    if (!parsed.success || parsed.data.task_id !== taskId)
+      throw new AgentRunError(
+        'The current World Model status response failed validation.',
+        false,
+      );
+    return parsed.data;
+  }
+  async readWorldRecord(
+    recordId: string,
+    view: 'detail' | 'history' | 'lineage',
+    options: { limit?: number; cursor?: string } = {},
+    signal?: AbortSignal,
+  ) {
+    const query = new URLSearchParams({ view });
+    if (options.limit !== undefined) query.set('limit', String(options.limit));
+    if (options.cursor !== undefined) query.set('cursor', options.cursor);
+    const parsed = worldRecordReadResponseSchema.safeParse(
+      await this.read(
+        `/api/world/records/${encodeURIComponent(recordId)}?${query}`,
+        {},
+        signal,
+      ),
+    );
+    if (!parsed.success)
+      throw new AgentRunError(
+        'The World Model record response failed validation.',
+        false,
+      );
+    if (parsed.data.view !== view)
+      throw new AgentRunError(
+        'The World Model record response did not match the requested view.',
+        false,
+      );
+    return parsed.data;
   }
   async capabilities(signal?: AbortSignal) {
     const { capabilityCardSchema } =

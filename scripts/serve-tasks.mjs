@@ -9,16 +9,21 @@ if (flags.some((flag) => flag !== '--fixture'))
   );
 const fixture = flags.includes('--fixture');
 const handler = createTaskHandler({
-  stateDirectory: resolve(process.env.STATE_DIR || '.state/general-v1'),
+  stateDirectory: resolve(
+    process.env.HAZE_TASK_STATE_DIR ??
+      process.env.STATE_DIR ??
+      '.state/general-v2',
+  ),
   env: process.env,
   mode: fixture ? 'fixture' : 'live',
+  acceptancePolicy: process.env.HAZE_WORLD_ACCEPTANCE_POLICY,
 });
 const server = createServer(handler);
 server.requestTimeout = 15_000;
 server.headersTimeout = 10_000;
 server.listen(Number(process.env.HAZE_TASK_PORT || 8787), '127.0.0.1', () => {
   console.log(
-    `Local general task API (${fixture ? 'EXPLICIT FIXTURE' : 'configured live'}): http://127.0.0.1:${server.address().port}/api/tasks`,
+    `Local Haze application API (${fixture ? 'EXPLICIT FIXTURE' : 'configured live'}): http://127.0.0.1:${server.address().port}/api/tasks (dashboard, HazeOps and World Model share this runtime)`,
   );
   process.send?.({ port: server.address().port });
 });

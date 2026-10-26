@@ -5,16 +5,16 @@ import type {
 import type { DataService, DataSnapshot, LiveUpdate } from './DataService.ts';
 
 /**
- * Real data from the Haze server (server/), which reads the Meterless World Model
- * fed by HazeOps. The browser never talks to Zetaris, OpenAQ, FIRMS or the engines
- * directly; keys stay on the server.
+ * Dashboard views from the shared app backend and authoritative SQLite World Model.
+ * HazeOps watchers and agent tasks retain evidence in that same model. Source
+ * credentials and retrieval stay in the backend.
  *
  *   GET /api/snapshot     -> DataSnapshot
  *   GET /api/items/:id    -> ItemDetail (404 -> null)
- *   GET /api/stream (SSE) -> "upsert" events carrying LiveUpdate
+ *   GET /api/stream (SSE) -> "reset" / "upsert" events carrying LiveUpdate
  */
 export class HttpDataService implements DataService {
-  readonly label = 'Haze server (real data)';
+  readonly label = 'Haze app (shared World Model)';
   private readonly baseUrl: string;
 
   constructor(baseUrl: string) {
@@ -49,9 +49,13 @@ export class HttpDataService implements DataService {
     // EventSource reconnects by itself after a dropped connection.
     const source = new EventSource(`${this.baseUrl}/api/stream`);
     source.addEventListener('hello', () => onStatus('live'));
-    source.addEventListener('upsert', (event) => {
+    const receive = (event: Event) => {
       onUpdate(JSON.parse((event as MessageEvent<string>).data) as LiveUpdate);
-    });
+    };
+    // Every connection begins with a snapshot, including reconnects. This also
+    // covers changes made between the initial HTTP load and subscribing.
+    source.addEventListener('reset', receive);
+    source.addEventListener('upsert', receive);
     source.onerror = () => {
       onStatus(source.readyState === EventSource.CLOSED ? 'error' : 'offline');
     };

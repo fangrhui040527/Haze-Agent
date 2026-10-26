@@ -18,7 +18,7 @@
     "noEmit": true
   },
   "include": [
-    "third_party/zetaris/sources/smokeledger/**/*.ts",
-    "third_party/zetaris/usl/bootstrap_smokeledger.ts"
+    "app/adapters/zetaris/legacy/smokeledger/**/*.ts",
+    "app/adapters/zetaris/usl/bootstrap_smokeledger.ts"
   ]
 }

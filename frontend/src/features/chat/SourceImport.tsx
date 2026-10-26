@@ -15,6 +15,7 @@ const TYPES: Record<string, ArtifactImport['media_type']> = {
   csv: 'text/csv',
   json: 'application/json',
 };
+const DEFAULT_FORMATS = ['txt', 'md', 'markdown', 'csv', 'json'] as const;
 export async function sourceImportFromFile(
   file: File,
 ): Promise<ArtifactImport> {
@@ -46,15 +47,23 @@ export function SourceImport({
   importSource,
   disabled,
   idPrefix = 'task',
+  formats = DEFAULT_FORMATS,
+  defaultFilename = 'pasted-source.txt',
+  required = false,
+  attachmentPurpose,
 }: {
   idPrefix?: string;
   sources: Artifact[];
   onChange(sources: Artifact[]): void;
   importSource(source: ArtifactImport, key: string): Promise<Artifact>;
   disabled: boolean;
+  formats?: readonly string[];
+  defaultFilename?: string;
+  required?: boolean;
+  attachmentPurpose?: string;
 }) {
   const [pasted, setPasted] = useState('');
-  const [filename, setFilename] = useState('pasted-source.txt');
+  const [filename, setFilename] = useState(defaultFilename);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +75,10 @@ export function SourceImport({
     const key = retry?.file === file ? retry.key : crypto.randomUUID();
     retryRef.current = { file, key };
     try {
+      if (!formats.includes(file.name.split('.').at(-1)?.toLowerCase() ?? ''))
+        throw new Error(
+          `Choose a UTF-8 ${formats.map((format) => `.${format}`).join(' or ')} file.`,
+        );
       const imported = await importSource(
         await sourceImportFromFile(file),
         key,
@@ -92,13 +105,19 @@ export function SourceImport({
     <div className={styles.sourceImport}>
       <label htmlFor={`${idPrefix}-source`}>
         Attach source material{' '}
-        <span className={styles.muted}>(optional, UTF-8, up to 1 MiB)</span>
+        <span className={styles.muted}>
+          ({required ? 'required' : 'optional'}, UTF-8, up to 1 MiB)
+        </span>
       </label>
       <input
         ref={inputRef}
         id={`${idPrefix}-source`}
         type="file"
-        accept=".txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json"
+        accept={
+          formats === DEFAULT_FORMATS
+            ? '.txt,.md,.markdown,.csv,.json,text/plain,text/markdown,text/csv,application/json'
+            : formats.map((format) => `.${format}`).join(',')
+        }
         disabled={disabled || pending || sources.length >= 64}
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -109,7 +128,9 @@ export function SourceImport({
         <summary>Paste a source instead</summary>
         <div className={styles.updateForm}>
           <label htmlFor={`${idPrefix}-filename`}>
-            Source filename (.txt, .md, .csv, or .json)
+            {formats === DEFAULT_FORMATS
+              ? 'Source filename (.txt, .md, .csv, or .json)'
+              : `Source filename (${formats.map((format) => `.${format}`).join(', ')})`}
           </label>
           <input
             id={`${idPrefix}-filename`}
@@ -183,9 +204,10 @@ export function SourceImport({
       )}
       {sources.length > 0 && (
         <p className={styles.muted}>
-          {idPrefix === 'task'
-            ? 'Attached sources accompany your next task.'
-            : 'Attached sources accompany this correction or clarification.'}{' '}
+          {attachmentPurpose ??
+            (idPrefix === 'task'
+              ? 'Attached sources accompany your next task.'
+              : 'Attached sources accompany this correction or clarification.')}{' '}
           Origin labels are supplied attribution.
         </p>
       )}

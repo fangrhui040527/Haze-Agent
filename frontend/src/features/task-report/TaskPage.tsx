@@ -10,6 +10,8 @@ import type {
 import { Badge } from '../../shared/ui/Badge.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
+import { GeneralTaskPage } from './GeneralTaskPage.tsx';
+import { BackLink } from '../../shared/ui/BackLink.tsx';
 
 /**
  * A task report (Architecture v0.14 §17), written in front of the user: the steps
@@ -26,6 +28,16 @@ const reducedMotion = () =>
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function TaskPage() {
+  const { id = '' } = useParams();
+  // Existing dashboard reports used task_ identities before general task pages.
+  return id.startsWith('task_') ? (
+    <DashboardReportPage key={id} />
+  ) : (
+    <GeneralTaskPage key={id} taskId={id} />
+  );
+}
+
+export function DashboardReportPage() {
   const { id = '' } = useParams();
   const [steps, setSteps] = useState<TaskStep[]>([]);
   const [blocks, setBlocks] = useState<TaskBlock[]>([]);
@@ -83,9 +95,7 @@ export function TaskPage() {
 
   return (
     <article className={styles.page} aria-busy={writing}>
-      <p className={styles.back}>
-        <Link to="/">← Back to the dashboard</Link>
-      </p>
+      <BackLink>Back to the dashboard</BackLink>
 
       <ol className={styles.steps} aria-label="What the agents are doing">
         {steps.map((s) => (

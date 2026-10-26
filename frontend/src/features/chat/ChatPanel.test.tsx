@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
-import { fixtureTask } from '../../services/agents/testFixtures.ts';
+import {
+  fixtureManager,
+  fixtureTask,
+} from '../../services/agents/testFixtures.ts';
 import { ChatPanel } from './ChatPanel.tsx';
 
 function renderChat(run = idleRun()) {
@@ -123,7 +126,7 @@ describe('chat after crew demo retirement', () => {
       },
     ];
     const markup = renderChat();
-    expect(markup).toContain('href="/task/report-1"');
+    expect(markup).toContain('href="/report/report-1"');
     expect(markup).toContain('Template answer from real records');
   });
 
@@ -135,7 +138,11 @@ describe('chat after crew demo retirement', () => {
     run.task = {
       id: 'current',
       schemaVersion: 'haze.task.v3',
-      record: { ...fixtureTask(), status: 'running' },
+      record: {
+        ...fixtureTask(),
+        status: 'running',
+        manager: fixtureManager(),
+      },
       taskUrl: '/api/tasks/current',
       status: 'running',
     };
@@ -145,5 +152,11 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Cancel task');
     expect(markup).toContain('Pause task');
     expect(markup).toContain('Saved task');
+    expect(markup).toContain('href="/task/current"');
+    expect(markup).toContain('Open task report');
+    expect(markup).toContain('href="/manager/current"');
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).not.toContain('id="manager-workspace-title"');
+    expect(markup).not.toContain('Interpreted objective');
   });
 });

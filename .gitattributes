@@ -2,3 +2,5 @@
 *.pdf binary
 # Preserve the exact upstream source/license/lockfile bytes used by SHA-256 pins.
 third_party/** -text
+# Preserve the relocated Zetaris source and license bytes as-is.
+app/adapters/zetaris/** -text

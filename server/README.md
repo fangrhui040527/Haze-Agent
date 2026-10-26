@@ -1,99 +1,28 @@
-# HazeWatch server
+# Shared application backend
 
-The API behind the HazeWatch dashboard. It owns the pinned **Meterless World Model** and
-**H-MEM** engines and runs **HazeOps**, which retrieves real haze evidence for every configured
-location (Klang first) and writes it into the World Model.
+The dashboard backend and HazeOps watchers have moved into `app/`. Dashboard UI
+remains in `frontend/`. Tasks, collection, dashboard APIs and the World Model now
+use one runtime and one scoped SQLite store.
 
-```
-frontend ──HTTP + SSE──► server ──► World Model (facts, evidence)   ◄── HazeOps watchers
-                                └─► H-MEM (chat memory)                 Open-Meteo, OpenAQ,
-                                                                        NASA FIRMS, Zetaris
-```
-
-## Run
+From the repository root:
 
 ```sh
-# once, in the repository root: builds and hash-checks the pinned engines
 npm run build
-
-cd server
-npm ci
-npm start          # API on http://127.0.0.1:8000
+npm --prefix frontend run dev
 ```
 
-Then run the frontend (`cd frontend && npm run dev`). Vite proxies `/api` to this server.
+Vite dev and preview handle every application API route locally. A separate
+port-8000 process and `HAZE_API` proxy are unnecessary. For a standalone backend,
+run `npm run tasks:serve` (default `127.0.0.1:8787`). This directory retains only
+a compatibility launcher: `npm start --prefix server` starts that same backend.
 
-Configuration comes from the repository-root `.env` (never commit it):
+See [the dashboard and state migration guide](../app/dashboard/README.md) for
+configuration, module locations and importing a legacy `.state/haze` archive.
+The old World Model JSON, raw evidence and H-MEM files remain untouched until
+explicitly handled. H-MEM chat memory is archival and is not part of the active
+shared World Model.
 
-| Variable                               | Needed for                                  | Default                                      |
-| -------------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `OPEN_AQ_KEY`                          | OpenAQ ground stations (Malaysia)           | watcher disabled if missing                  |
-| `FIRMS_MAP_KEY`                        | NASA FIRMS fire hotspots                    | watcher disabled if missing                  |
-| `ZETARIS_USERNAME`, `ZETARIS_PASSWORD` | local Zetaris platform                      | watcher disabled if missing                  |
-| `ZETARIS_BASE_URL`                     | Zetaris REST gateway                        | `http://localhost:3000`                      |
-| `HAZEOPS_COVERAGE`                     | `malaysia`, `asean` or `worldwide`          | `asean`: 75 Malaysian places + 20 neighbours |
-| `HAZEOPS_SCHEDULER`                    | `off` to stop automatic polling             | on                                           |
-| `SAMPLE_MODE`                          | `true` disables every network source        | off                                          |
-| `PORT`, `HOST`                         | listen address                              | `8000`, `127.0.0.1`                          |
-| `HAZEWATCH_STATE_DIR`                  | where state lives                           | `.state/hazewatch`                           |
-| `HAZE_OPERATOR_TOKEN`                  | protects `/api/heartbeat/tick` off-loopback | unset (loopback only)                        |
-
-Malaysian places beyond the frontend list come from `server/config/locations-malaysia.json` (rebuild with `node server/scripts/build-malaysia-locations.mjs`; coordinates from GeoNames via the Open-Meteo Geocoding API, CC BY 4.0).
-
-Open-Meteo needs no key. Its free API is for non-commercial use and requires attribution to
-the Copernicus Atmosphere Monitoring Service (CAMS) and Open-Meteo.
-
-## API
-
-| Endpoint                       | Purpose                                                                |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| `GET /api/health`              | engine pins, watcher status, which agents are connected                |
-| `GET /api/snapshot`            | all items, locations, sources (`DataSnapshot`)                         |
-| `GET /api/items/:id`           | one item with location, sources, related items                         |
-| `GET /api/evidence/:id`        | one pinned evidence record with its provenance                         |
-| `GET /api/stream`              | SSE: `upsert` events when items change                                 |
-| `GET /api/hazeops/watchers`    | each watcher's Spec §12 declaration and state                          |
-| `GET /api/manager/assignments` | what the Manager assigned to each agent, and how it ended              |
-| `GET /api/runtime/jobs`        | recent runtime jobs, each with its own deadline                        |
-| `POST /api/heartbeat/tick`     | operator-only: run due watchers now (Spec §15.2)                       |
-| `POST /api/runs`               | ask a question → `{ runId }`                                           |
-| `GET /api/runs/:id/events`     | SSE: `agent` events (`AgentEvent`), then `answer`                      |
-| `POST /api/runs/:id/cancel`    | cancel a run                                                           |
-| `POST /api/reports`            | open a task report (scheduling or revenue recovery only; others → 422) |
-| `GET /api/reports/:id`         | the finished result envelope (v0.14 §16), 202 while running            |
-| `GET /api/reports/:id/events`  | SSE: `step` and `block` events as the report is written, then `result` |
-| `POST /api/reports/:id/cancel` | cancel a task                                                          |
-| `POST /api/runs/:id/feedback`  | `{ kind: helpful                                                       | not_helpful | wrong }` → H-MEM feedback |
-
-The spec defines polling only; SSE is a HazeWatch addition.
-
-## What is real and what is not
-
-- **Real:** World Model and H-MEM (pinned Meterless reference engines), HazeOps retrieval from
-  four sources, evidence pinning with SHA-256, Manager deadlines (300 s per job, 2 at once,
-  3 attempts per source call, 20 s each).
-- **Not connected:** EvidenceCritic (independent checks) and WorkerShield (the AI agent). So
-  nothing is marked "verified", and chat answers are templates filled from real records, not
-  AI-written. Health questions get no advice.
-- **Zetaris:** login works; no haze queries are configured yet. Add pinned queries to
-  `server/config/zetaris-queries.json` (`{ "queries": [{ id, version, description, sql,
-sourceKind, columns: { locationId, observedAt, pm25 }, unit }] }`). The local platform's
-  query engine container must be running.
-
-## Limits of the reference engines
-
-The pinned World Model keeps everything in memory and rewrites its JSON file on each write.
-HazeOps writes only changes and keeps raw bytes outside it, which is fine for days of demo
-data, not for production. H-MEM recall is keyword-like (hash embedder), not semantic.
-
-## Tests
-
-```sh
-npm test         # needs `npm run build` in the repository root first
-npm run typecheck
-```
-
-Data model: [`docs/05-world-model-data-model.md`](../docs/05-world-model-data-model.md).
-
-The original `/api/tasks` report endpoints remain aliases for direct server clients.
-The frontend uses `/api/reports` so these template reports do not collide with the separate general v3 evidence task API at `/api/tasks`.
+The duplicate template chat/report protocol is retired. `/api/runs` and
+`/api/reports` return explicit guidance to the durable v3 `/api/tasks` API.
+Old report event streams emit a readable failure message; old reports themselves
+were process-memory records and were never durable saved tasks.

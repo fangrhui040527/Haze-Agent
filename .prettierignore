@@ -3,11 +3,16 @@ vendor/
 third_party/
 # SmokeLedger sidecar keeps its own code style and checks (npm run smokeledger:test).
 smokeledger/
+app/adapters/zetaris/
 dist/
 coverage/
 package-lock.json
 # Generated demo data (written by `npm run data:generate` / the Demo Data page's Export).
 frontend/public/demo-data/
+# Retain the pinned upstream control plane and license byte for byte.
+frontend/public/meterless-world-model/live.html
+frontend/public/meterless-world-model/LICENSE
+frontend/public/meterless-world-model/UPSTREAM-README.md
 docs/**/*.pdf
 # Architecture reference source is retained as supplied.
 docs/architecture/haze-architecture-v0.8.html

@@ -11,6 +11,7 @@ export default tseslint.config(
       'vendor/**',
       'third_party/**',
       'smokeledger/**',
+      'app/adapters/zetaris/**',
     ],
   },
   {

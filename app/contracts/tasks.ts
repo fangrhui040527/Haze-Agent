@@ -6,6 +6,7 @@ import {
   boundedJsonSchema,
 } from './artifacts.js';
 import { agentRoleSchema } from './capabilities.js';
+import { managerStateSchema, artifactReviewCheckSchema } from './manager.js';
 
 const text = z.string().min(1).max(4096);
 const count = z.number().int().nonnegative();
@@ -155,6 +156,7 @@ export const taskResultSchema = z.strictObject({
     artifact: artifactRefSchema.optional(),
     scope: text,
     limitations: z.array(text).max(64),
+    checks: z.array(artifactReviewCheckSchema).max(256).optional(),
   }),
   currency: z.enum(['current', 'stale']),
   next_requirements: z.array(text).max(64),
@@ -210,6 +212,7 @@ export const taskRecordSchema = z.strictObject({
   corrections: z.array(correctionSchema),
   questions: z.array(questionSchema),
   artifacts: z.array(artifactApplicabilitySchema),
+  manager: managerStateSchema.optional(),
   result: taskResultSchema.optional(),
   error: z.strictObject({ code: text, message: text }).optional(),
 });

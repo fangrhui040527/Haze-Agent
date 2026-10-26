@@ -91,6 +91,7 @@ function context(overrides: Partial<ToolContext> = {}): ToolContext {
     taskId: 'task-1',
     runId: 'run-1',
     assignmentId: 'assignment-1',
+    assignmentRevision: 1,
     objectiveRevision: 1,
     generation: 1,
     identity: { principal: 'p', workspace: 'w' },

@@ -58,13 +58,29 @@ function Header() {
         </span>
         <nav className={styles.nav} aria-label="Main">
           <NavLink
-            to="/"
+            to="/dashboard"
             end
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`
             }
           >
             Dashboard
+          </NavLink>
+          <NavLink
+            to="/world-model"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            World Model
+          </NavLink>
+          <NavLink
+            to="/memory"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Memory
           </NavLink>
           <NavLink
             to="/demo-data"
@@ -84,8 +100,8 @@ function Footer() {
   return (
     <footer className={styles.footer}>
       Not medical advice. Follow your local authorities. Sources are listed on
-      each item. Table items are fictional samples; evidence answers identify
-      their source and execution mode.
+      each item. Fictional samples are labeled as demo data; evidence answers
+      identify their source and execution mode.
     </footer>
   );
 }

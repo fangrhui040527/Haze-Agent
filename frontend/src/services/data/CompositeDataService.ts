@@ -31,6 +31,8 @@ export class CompositeDataService implements DataService {
   private readonly real: DataService;
   private readonly demo: DataService;
   private mode: Mode = 'demo';
+  private realSnapshot: DataSnapshot | null = null;
+  private demoSnapshot: DataSnapshot | null = null;
 
   constructor(real: DataService, demo: DataService) {
     this.real = real;
@@ -53,13 +55,30 @@ export class CompositeDataService implements DataService {
       if (signal?.aborted) throw error;
       // server unreachable: fall back to demo data
     }
+    this.realSnapshot = real;
+    this.demoSnapshot = null;
+    return this.combine(signal);
+  }
+
+  private async combine(signal?: AbortSignal): Promise<DataSnapshot> {
+    if (
+      !this.demoSnapshot &&
+      (!this.realSnapshot?.items.length ||
+        demoPreference.get().showDemoWithReal)
+    ) {
+      const demo = await this.demo.loadSnapshot(signal);
+      this.demoSnapshot ??= demo;
+    }
+    // Read the latest real snapshot after the demo load: stream updates may have
+    // arrived while the local demo data was loading.
+    const real = this.realSnapshot;
     const hasReal = (real?.items.length ?? 0) > 0;
     const includeDemo = !hasReal || demoPreference.get().showDemoWithReal;
     if (real && hasReal && !includeDemo) {
       this.mode = 'real';
       return real;
     }
-    const demo = await this.demo.loadSnapshot(signal);
+    const demo = this.demoSnapshot as DataSnapshot;
     if (!real || !hasReal) {
       this.mode = 'demo';
       return demo;
@@ -84,33 +103,69 @@ export class CompositeDataService implements DataService {
     onUpdate: (update: LiveUpdate) => void,
     onStatus: (status: ConnectionStatus) => void,
   ): () => void {
-    const reload = () =>
-      this.loadSnapshot()
-        .then((snapshot) => onUpdate({ kind: 'reset', snapshot }))
-        .catch(() => onStatus('error'));
+    let active = true;
+    let revision = 0;
+    let resetting = false;
+    let realStatus: ConnectionStatus = 'connecting';
+    let demoStatus: ConnectionStatus = 'connecting';
+    const reportStatus = () => {
+      if (active) onStatus(this.mode === 'demo' ? demoStatus : realStatus);
+    };
+    const reset = () => {
+      const current = ++revision;
+      resetting = true;
+      void this.combine()
+        .then((snapshot) => {
+          if (!active || current !== revision) return;
+          resetting = false;
+          onUpdate({ kind: 'reset', snapshot });
+          reportStatus();
+        })
+        .catch(() => {
+          if (active && current === revision) {
+            resetting = false;
+            onStatus('error');
+          }
+        });
+    };
+    const apply = (snapshot: DataSnapshot | null, update: LiveUpdate) => {
+      if (update.kind === 'reset') return update.snapshot;
+      if (!snapshot) return null;
+      return {
+        ...snapshot,
+        items: unionById(update.items, snapshot.items),
+        asOf: update.asOf,
+      };
+    };
 
     // Both streams stay open; updates are routed by the current mode so that switching
     // modes needs no resubscription.
     const stopReal = this.real.subscribe(
       (update) => {
-        if (this.mode !== 'demo') onUpdate(update);
-        else if (update.kind === 'upsert' && update.items.length > 0)
-          void reload();
+        if (!active) return;
+        this.realSnapshot = apply(this.realSnapshot, update);
+        if (update.kind === 'reset' || this.mode === 'demo' || resetting)
+          reset();
+        else onUpdate(update);
       },
       (status) => {
-        if (this.mode !== 'demo') onStatus(status);
-        else if (status === 'live') void reload(); // server came back: check for real data
+        realStatus = status;
+        reportStatus();
       },
     );
     const stopDemo = this.demo.subscribe(
       (update) => {
+        if (!active) return;
+        this.demoSnapshot = apply(this.demoSnapshot, update);
         if (this.mode === 'real') return;
         // A regenerated demo dataset must not wipe real items in mixed mode.
-        if (update.kind === 'reset' && this.mode === 'real+demo') void reload();
+        if (resetting || (update.kind === 'reset' && this.mode === 'real+demo'))
+          reset();
         else onUpdate(update);
       },
       (status) => {
-        if (this.mode === 'demo') onStatus(status);
+        demoStatus = status;
+        reportStatus();
       },
     );
     // Turning demo data on or off reloads everything.
@@ -119,9 +174,11 @@ export class CompositeDataService implements DataService {
       const now = demoPreference.get().showDemoWithReal;
       if (now === seen) return;
       seen = now;
-      void reload();
+      reset();
     });
     return () => {
+      active = false;
+      revision += 1;
       stopReal();
       stopDemo();
       stopPreference();
