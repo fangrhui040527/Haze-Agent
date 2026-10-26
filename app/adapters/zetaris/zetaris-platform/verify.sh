@@ -6,13 +6,13 @@
 # verify-install.sh, builds a throwaway stack on empty volumes and destroys them
 # afterwards; never point that one at a real install.
 #
-# Usage: ./verify.sh
+# Usage from the Haze repository root: bash app/adapters/zetaris/zetaris-platform/verify.sh
 # Exits non-zero if any check fails.
 
 set -uo pipefail
 
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-cd "$HERE"
+cd "$HERE/../../../.."
 
 pass=0; fail=0
 # the driver creates the organisation and its administrator on first start, so until it
@@ -24,7 +24,7 @@ bad()  { printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); }
 hint() { printf '        -> %s\n' "$1"; }
 
 DC="docker compose"
-$DC version >/dev/null 2>&1 || { printf 'ERROR: the docker compose plugin is missing. Run ./preflight.sh\n' >&2; exit 1; }
+$DC version >/dev/null 2>&1 || { printf 'ERROR: the docker compose plugin is missing. Run bash app/adapters/zetaris/zetaris-platform/preflight.sh\n' >&2; exit 1; }
 
 printf '%s\n' "Zetaris platform -- verify"
 printf '%s\n' "=========================="
@@ -37,7 +37,7 @@ printf '\n'
 ENV_FILE="${COMPOSE_ENV_FILES:-.env}"
 ENV_FILE="${ENV_FILE%%,*}"          # COMPOSE_ENV_FILES may list several; the first wins
 if [ ! -f "$ENV_FILE" ]; then
-    printf 'ERROR: no %s here. Run ./env/make-env.sh first.\n' "$ENV_FILE" >&2
+    printf 'ERROR: no %s at the repository root. Configure root .env using .env.example and the settings issued with your Zetaris download.\n' "$ENV_FILE" >&2
     exit 1
 fi
 # Read only the two values needed to log in. Sourcing the whole file would execute it.
@@ -62,7 +62,7 @@ for svc in postgres driver api ui; do
     else
         bad "${svc}: ${state}${health:+/${health}}"
         hint "see why with: docker compose logs --tail=50 ${svc}"
-        [ "$svc" = "driver" ] && hint "a driver that exits on startup is usually out of memory -- run ./preflight.sh"
+        [ "$svc" = "driver" ] && hint "a driver that exits on startup is usually out of memory -- run bash app/adapters/zetaris/zetaris-platform/preflight.sh"
     fi
 done
 

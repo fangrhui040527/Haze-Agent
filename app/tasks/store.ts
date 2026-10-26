@@ -1493,7 +1493,10 @@ export class TaskStore {
     const current_acceptances = records.flatMap((record) => {
       const context = this.world.context(scope, record.ref.id);
       if (!context) return [];
-      this.requireWorldSupportAccess(task, context.support_artifacts);
+      this.requireWorldSupportAccess(
+        task,
+        this.world.supportArtifacts(scope, record.ref.id),
+      );
       return context.acceptances.flatMap((acceptance) => {
         const current = this.world.currentAcceptance(scope, acceptance.id, {
           policyHash: this.worldAcceptancePolicy.sha256,
@@ -1681,7 +1684,10 @@ export class TaskStore {
           this.worldSupportIsCurrent(identity, mode, outcome),
       }),
     );
-    this.requireWorldSupportAccess(requester, context.support_artifacts);
+    this.requireWorldSupportAccess(
+      requester,
+      this.world.supportArtifacts(scope, recordId),
+    );
     return worldContextOutputSchema.parse({
       ...context,
       acceptances: current.filter(
@@ -3328,6 +3334,7 @@ export class TaskStore {
         ) {
           const content = {
             schema_version: 'haze.evidence.raw-chunk.v1',
+            mode,
             raw_sha256: record.rawSha256,
             index: offset / chunkBytes,
             raw_base64: raw
@@ -3528,6 +3535,22 @@ export class TaskStore {
     // dependency graphs are re-walked once per path (exponential).
     projectedKeys = new Set<string>(),
   ): void {
+    if (
+      artifact.task_id &&
+      this.core(artifact.task_id, artifact.identity).mode !== mode
+    )
+      fail('world_mode_mismatch', 'World Model execution mode mismatch.', 403);
+    if (
+      artifact.producer.kind === 'service' &&
+      artifact.producer.id === 'HazeOps' &&
+      (artifact.kind === 'haze.evidence.capture' ||
+        artifact.kind === 'haze.evidence.raw.chunk') &&
+      (typeof artifact.content !== 'object' ||
+        artifact.content === null ||
+        Array.isArray(artifact.content) ||
+        artifact.content.mode !== mode)
+    )
+      fail('world_mode_mismatch', 'World Model execution mode mismatch.', 403);
     const key = `${artifact.id}/${artifact.version}`;
     if (ancestors.has(key))
       fail('artifact_dependency_cycle', 'Artifact dependency cycle detected.');

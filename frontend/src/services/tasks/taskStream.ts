@@ -5,9 +5,8 @@ const baseUrl = (
 ).replace(/\/+$/, '');
 
 /**
- * Follows one task report on the Haze server (server/src/tasks):
- *   GET /api/reports/:id/events (SSE) -> "step" and "block" events, then "result" or "failed"
- * The server replays earlier events on connect, so reopening a report rebuilds it.
+ * Reads the retired dashboard report stream for an old report link.
+ * The shared API emits a failure with guidance to create a durable /api/tasks task.
  * Returns a function that stops listening.
  */
 export function followTask(

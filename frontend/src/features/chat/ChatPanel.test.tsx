@@ -4,8 +4,11 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import {
+  at,
   fixtureManager,
   fixtureTask,
+  runId,
+  taskId,
 } from '../../services/agents/testFixtures.ts';
 import { ChatPanel } from './ChatPanel.tsx';
 
@@ -28,6 +31,7 @@ function idleRun(): AgentRun {
     serviceLabel: 'Evidence task API',
     ask: vi.fn(),
     cancel: vi.fn(),
+    reset: vi.fn(),
     task: null,
     operationPending: false,
     operationError: null,
@@ -58,10 +62,11 @@ describe('chat after crew demo retirement', () => {
   it('offers the current evidence example without a crew-demo launch action', () => {
     const markup = renderChat();
     expect(markup).toContain(
-      'Explain the main conclusions in my attached sources',
+      'Explain the difference between modeled PM2.5 estimates and sensor observations.',
     );
-    expect(markup).toContain('Attach source material');
-    expect(markup).toContain('Optional task scope');
+    expect(markup).not.toContain(
+      'Explain the main conclusions from the available evidence',
+    );
     expect(markup).not.toContain('Klang crew sample');
     expect(markup).not.toContain('Legacy scheduling demo');
   });
@@ -154,9 +159,74 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Saved task');
     expect(markup).toContain('href="/task/current"');
     expect(markup).toContain('Open task report');
-    expect(markup).toContain('href="/manager/current"');
-    expect(markup).toContain('Open Manager workspace');
+    expect(markup).not.toContain('href="/manager/current"');
+    expect(markup).not.toContain('Correct or clarify this task');
+    expect(markup).not.toContain('Open Manager workspace');
+    expect(markup).not.toContain('Attach source material');
+    expect(markup).not.toContain('Paste a source instead');
+    expect(markup).not.toContain('Optional task scope');
     expect(markup).not.toContain('id="manager-workspace-title"');
     expect(markup).not.toContain('Interpreted objective');
+    expect(markup).not.toContain(
+      'Describe what you need to understand or investigate.',
+    );
+    expect(markup).not.toContain(
+      'Explain the difference between modeled PM2.5 estimates',
+    );
+  });
+
+  it('shows a restored completed task without welcome prompts and lets it be cleared', () => {
+    const run = idleRun();
+    run.status = 'completed';
+    run.statusText = 'Answer ready.';
+    run.task = {
+      id: 'current',
+      schemaVersion: 'haze.task.v3',
+      record: fixtureTask(),
+      taskUrl: '/api/tasks/current',
+      status: 'completed',
+    };
+    const markup = renderChat(run);
+    expect(markup).toContain(run.task.record!.result!.answer);
+    expect(markup).toContain('Clear chat');
+    expect(markup).not.toContain(
+      'Describe what you need to understand or investigate.',
+    );
+    expect(markup).not.toContain(
+      'Explain the difference between modeled PM2.5 estimates',
+    );
+  });
+
+  it('shows missing-evidence questions with a route to answer them', () => {
+    const run = idleRun();
+    const record = fixtureTask();
+    record.status = 'waiting';
+    delete record.result;
+    record.questions = [
+      {
+        id: taskId,
+        task_id: taskId,
+        run_id: runId,
+        objective_revision: 1,
+        question: 'Which evidence or source should I analyze?',
+        kind: 'human',
+        status: 'open',
+        created_at: at,
+      },
+    ];
+    run.status = 'waiting';
+    run.task = {
+      id: taskId,
+      schemaVersion: 'haze.task.v3',
+      record,
+      taskUrl: `/api/tasks/${taskId}`,
+      status: 'waiting',
+    };
+    const markup = renderChat(run);
+    expect(markup).toContain('Which evidence or source should I analyze?');
+    expect(markup).toContain('Answer in task report');
+    expect(markup).toContain(`href="/task/${taskId}"`);
+    expect(markup).not.toContain('Result: full');
+    expect(markup).not.toContain('Correct or clarify this task');
   });
 });

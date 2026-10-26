@@ -39,12 +39,14 @@ same-origin local API; never put credentials in `VITE_*` variables. Restart Vite
 configuration. Dev and preview must not simultaneously own the same application state directory (`.state/general-v2` by default).
 Static hosting needs an authenticated backend adapter.
 
-The PM2.5 task reads `air_quality.hourly_observations` from local Zetaris. Publish
+Start local Zetaris with `docker compose up -d` from the repository root after
+configuring the shared root `.env`. The PM2.5 task reads
+`air_quality.hourly_observations` from Zetaris. Publish
 the source with `npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run`
 from the repository root, review the plan, then rerun without `--dry-run`.
 Collection is separate from task execution; asking a question does not refresh
-the snapshot. Existing SmokeLedger PostgreSQL rows are retained by legacy tooling
-and are not imported automatically into the new source.
+the snapshot. Historical SmokeLedger rows are not imported automatically into
+the current source; the old PostgreSQL ingestion tooling has been removed.
 
 Try: “Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24,
 distinguish modeled values from observations, and identify coverage gaps.” Edit the location and
@@ -54,10 +56,13 @@ and actual execution provenance. **Stop waiting** detaches the browser; an admit
 readable through **Saved task**. **Open task report** opens that same task at `/task/:id`,
 including its actual receipts, source material, questions, controls and current result.
 Retrying a submission keeps its idempotency key.
+**Clear chat** resets the browser conversation and selected task. The saved server
+report remains available at its task URL.
 
-Every task uses the general v3 protocol. Only an objective is required. Attach or paste
-UTF-8 text, Markdown, CSV, or JSON source material (up to 1 MiB per source), and provide
-optional JSON scope when useful. Questions and exact corrections remain in saved history.
+Every task uses the general v3 protocol. Chat starts a task from your question.
+Use the saved task report to answer clarification questions, submit exact corrections,
+revise scope, or attach UTF-8 text, Markdown, CSV, or JSON source material (up to 1 MiB per source).
+Questions and exact corrections remain in saved history.
 The office shows actual assignment receipts and waiting states. Pause, cancel, resume,
 continuation, and permission revocation use current revision expectations; receipts distinguish
 requested and confirmed state. Fixture adapters are labeled and do not establish live readiness.
@@ -288,7 +293,7 @@ No code or image assets were copied.
 
 ## General task interface
 
-Chat uses `haze.task.request.v3` for every task. Only the objective is required. Optional source imports accept UTF-8 text, Markdown, CSV, and JSON, up to 1 MiB per file. Scope is optional JSON interpreted by a registered capability.
+Chat uses `haze.task.request.v3` for every task and submits your question as the objective. Saved task reports provide clarification and correction forms with optional revised JSON scope and source imports. Source imports accept UTF-8 text, Markdown, CSV, and JSON, up to 1 MiB per file; scope is interpreted by a registered capability.
 
 The local Vite API plugin serves task admission/readback/events, corrections, controls, authorized capabilities, and exact artifacts. It uses `.state/general-v1` unless `STATE_DIR` is explicitly set. Set server-side `HAZE_EXECUTION_MODE=fixture` for fixture verification; live is the default. There is no automatic fixture fallback.
 

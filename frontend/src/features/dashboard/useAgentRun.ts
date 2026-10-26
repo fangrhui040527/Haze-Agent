@@ -41,6 +41,8 @@ export interface AgentRun {
   serviceLabel: string;
   ask(request: AskRequest): Promise<AgentAnswer>;
   cancel(): void;
+  /** Forget the dashboard selection without changing the saved server task. */
+  reset(): void;
   task: AgentTaskHandle | null;
   operationPending: boolean;
   operationError: string | null;
@@ -81,6 +83,7 @@ export function useAgentRun(
     null,
   );
   const controllerRef = useRef<AbortController | null>(null);
+  const restorationRef = useRef<AbortController | null>(null);
   const taskRef = useRef<AgentTaskHandle | null>(null);
   const operationRef = useRef<AbortController | null>(null);
   // Failed delivery can be retried with the same exact body and key.
@@ -158,7 +161,13 @@ export function useAgentRun(
           signal: controller.signal,
           execute: (readback) => execute(controller.signal, onEvent, readback),
           currentTask: () => taskRef.current,
-          onTask,
+          onTask: (admitted) => {
+            if (
+              !controller.signal.aborted &&
+              controllerRef.current === controller
+            )
+              onTask(admitted);
+          },
           onAnswer: (answer) => {
             if (
               controller.signal.aborted ||
@@ -225,6 +234,7 @@ export function useAgentRun(
       return;
     }
     const controller = new AbortController();
+    restorationRef.current = controller;
     agentService
       .readTask(savedTaskId, controller.signal)
       .then((record) => {
@@ -262,12 +272,17 @@ export function useAgentRun(
           setStatus('failed');
         }
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (restorationRef.current === controller) restorationRef.current = null;
+    };
   }, [initialTaskId, observe, onTask, storageKey]);
   const ask = useCallback(
     async (request: AskRequest) => {
       if (controllerRef.current)
         throw new Error('A task is already being observed.');
+      restorationRef.current?.abort();
+      restorationRef.current = null;
       setEvents([]);
       setStatus('running');
       setStartedAt(Date.now());
@@ -284,6 +299,34 @@ export function useAgentRun(
     [observe, onTask],
   );
   const cancel = useCallback(() => controllerRef.current?.abort(), []);
+  const reset = useCallback(() => {
+    // Reports opened at a task URL stay pinned to that task.
+    if (initialTaskId !== undefined) return;
+    const observer = controllerRef.current;
+    const operation = operationRef.current;
+    controllerRef.current = null;
+    operationRef.current = null;
+    restorationRef.current?.abort();
+    restorationRef.current = null;
+    observer?.abort();
+    operation?.abort();
+    taskRef.current = null;
+    operationKeys.current.clear();
+    setEvents([]);
+    setStatus('idle');
+    setStartedAt(null);
+    setTask(null);
+    setLatestAnswer(null);
+    setReceipt(null);
+    setOperationPending(false);
+    setOperationError(null);
+    setObservationError(null);
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {
+      /* The in-memory selection is still cleared when storage is unavailable. */
+    }
+  }, [initialTaskId, storageKey]);
   const mutate = useCallback(
     async (body: TaskControl | TaskUpdate) => {
       const admitted = taskRef.current;
@@ -316,11 +359,15 @@ export function useAgentRun(
                 key,
                 controller.signal,
               );
+        if (controller.signal.aborted || operationRef.current !== controller)
+          throw abortError();
         setReceipt(received);
         const record = await agentService.readTask!(
           admitted.id,
           controller.signal,
         );
+        if (controller.signal.aborted || operationRef.current !== controller)
+          throw abortError();
         onTask({
           ...admitted,
           status: record.status,
@@ -351,7 +398,11 @@ export function useAgentRun(
               admitted.id,
               controller.signal,
             );
-            onTask({ ...admitted, status: record.status, record });
+            if (
+              !controller.signal.aborted &&
+              operationRef.current === controller
+            )
+              onTask({ ...admitted, status: record.status, record });
           } catch {
             /* Keep the original operation error. */
           }
@@ -438,6 +489,7 @@ export function useAgentRun(
       : agentService.label,
     ask,
     cancel,
+    reset,
     task,
     operationPending,
     operationError,
