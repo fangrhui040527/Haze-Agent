@@ -541,6 +541,23 @@ export function assembleManagerContext(
       if (bytes(context) > limit) capability.card.purpose = '';
     }
   }
+  if (bytes(context) > limit && context.definitions.length > 1) {
+    // Runtime grants the World Model read tools to every definition; state
+    // shared grants once instead of repeating them on each definition.
+    const shared = context.definitions[0]!.tools.filter((tool) =>
+      context.definitions.every((d) => d.tools.includes(tool)),
+    );
+    if (shared.length) {
+      for (const definition of context.definitions)
+        definition.tools = definition.tools.filter(
+          (tool) => !shared.includes(tool),
+        );
+      status.missing.push(
+        `Tools granted to every definition: ${shared.join(', ')}.`,
+      );
+      status.truncated = true;
+    }
+  }
   if (bytes(context) > limit)
     throw new TaskError(
       422,

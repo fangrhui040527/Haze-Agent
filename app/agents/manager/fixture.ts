@@ -232,7 +232,8 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
   const unfinished = [
     ...work
       .filter((a) => a.status !== 'completed' || a.support === 'gap')
-      .map((a) => a.error?.message ?? a.brief),
+      // Completed briefs may be compacted to '' under the context budget.
+      .map((a) => a.error?.message || a.brief || a.definition_id),
     ...context.reviews
       .filter((c) => c.verdict !== 'supported')
       .map((c) => `Independent review unresolved for ${c.artifact.id}.`),
