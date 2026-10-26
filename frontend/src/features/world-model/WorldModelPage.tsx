@@ -233,7 +233,7 @@ export function WorldModelPage() {
             >
               Source &amp; license ↗
             </a>
-            <Link to="/" className={styles.backLink}>
+            <Link to="/dashboard" className={styles.backLink}>
               ← Back to dashboard
             </Link>
           </div>
@@ -404,7 +404,7 @@ export function WorldModelPage() {
                             ? 'Try another record kind or ID.'
                             : 'Run an evidence task to retain records here. Explore the reference sandbox to try Meterless with sample data.'}
                         </p>
-                        {!kind && !query && <Link to="/">Start a task</Link>}
+                        {!kind && !query && <Link to="/dashboard">Start a task</Link>}
                       </div>
                     )}
                     <ul className={styles.recordList}>
