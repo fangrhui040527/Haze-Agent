@@ -130,16 +130,35 @@ function requestInstant(value: string): string {
   return normalized;
 }
 
-function coordinate(value: unknown, maximum: number): number | null {
+/**
+ * The numeric columns have a numeric schema contract, but Zetaris serializes
+ * SQL DOUBLE PRECISION as a JSON string ("29.8"); a JSON number stays valid.
+ * Only the JSON number grammar is accepted, so empty, padded, hexadecimal,
+ * Infinity and NaN text remain invalid evidence rather than becoming zero.
+ */
+function numeric(value: unknown, message: string): number | null {
   if (value === null) return null;
-  if (
-    typeof value !== 'number' ||
-    !Number.isFinite(value) ||
-    Math.abs(value) > maximum
-  ) {
-    return invalid('Zetaris returned invalid town coordinates.');
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : invalid(message);
   }
-  return value;
+  if (
+    typeof value !== 'string' ||
+    value.length > 40 ||
+    !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u.test(value)
+  ) {
+    return invalid(message);
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : invalid(message);
+}
+
+function coordinate(value: unknown, maximum: number): number | null {
+  const message = 'Zetaris returned invalid town coordinates.';
+  const parsed = numeric(value, message);
+  if (parsed !== null && Math.abs(parsed) > maximum) {
+    return invalid(message);
+  }
+  return parsed;
 }
 
 function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
@@ -179,14 +198,11 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   if (start < scope.period.start || start >= scope.period.end) {
     return invalid('Zetaris returned a sample outside the requested period.');
   }
-  const concentration = row['pm25'];
-  if (
-    concentration !== null &&
-    (typeof concentration !== 'number' ||
-      !Number.isFinite(concentration) ||
-      concentration < 0)
-  ) {
-    return invalid('Zetaris returned an invalid PM2.5 concentration.');
+  const concentrationMessage =
+    'Zetaris returned an invalid PM2.5 concentration.';
+  const concentration = numeric(row['pm25'], concentrationMessage);
+  if (concentration !== null && concentration < 0) {
+    return invalid(concentrationMessage);
   }
   // Historical ingestion wrote collection time into issued_utc. It is retained
   // in raw evidence, but cannot establish provider issuance for this source.

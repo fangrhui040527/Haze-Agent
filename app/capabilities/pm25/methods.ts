@@ -96,6 +96,27 @@ function rawInstant(value: unknown, nullable = false): string | null {
   return new Date(milliseconds).toISOString();
 }
 
+/**
+ * The raw SQL schema permits numeric strings: Zetaris serializes DOUBLE
+ * PRECISION that way. Only the JSON number grammar is accepted, so empty,
+ * padded, hexadecimal, Infinity and NaN text stay invalid rather than zero.
+ * Checked here independently of the retrieval adapter's own parsing.
+ */
+function rawNumber(value: unknown): number | null {
+  const message = 'The raw evidence contains an invalid number.';
+  if (value === null) return null;
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : invalid(message);
+  if (
+    typeof value !== 'string' ||
+    value.length > 40 ||
+    !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u.test(value)
+  )
+    return invalid(message);
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : invalid(message);
+}
+
 function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   const columns = [
     'town',
@@ -128,12 +149,12 @@ function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   const parsed = captureSchema.shape.rows.element.safeParse({
     start,
     end: start,
-    value: row['pm25'],
+    value: rawNumber(row['pm25']),
     issued_at: null,
     location: row['town'],
     ingested_at: rawInstant(row['ingested_utc'], true),
-    latitude: row['lat'],
-    longitude: row['lon'],
+    latitude: rawNumber(row['lat']),
+    longitude: rawNumber(row['lon']),
   });
   if (
     !parsed.success ||

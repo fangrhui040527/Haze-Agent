@@ -177,8 +177,12 @@ export class TaskRuntime {
     );
     const maximums = investigation
       ? {
-          max_model_calls: 20,
-          max_tool_calls: 20,
+          // A model-driven specialist spends three turns per revision (call
+          // the granted method, persist its exact output, finish), so an
+          // investigation that is also corrected needs roughly twice that
+          // across every specialist. These remain ceilings, not targets.
+          max_model_calls: 40,
+          max_tool_calls: 40,
           max_assignments: 16,
           max_artifacts: 64,
         }
@@ -709,7 +713,9 @@ export class TaskRuntime {
           tools: definition.tools,
           inputs: this.contextRefs(task),
           input: json(item.input ?? null),
-          max_model_calls: 4,
+          // Three turns seat one pass; the rest covers a correction and one
+          // clarifying question without reopening the run budget.
+          max_model_calls: 8,
         };
       });
       this.store.createAssignments(
@@ -865,7 +871,7 @@ export class TaskRuntime {
           citations,
           uncertainty,
           instruction:
-            'Return strict JSON {"answer":"source-backed prose"}. Cite only supplied citation IDs. Preserve gaps, modeled/source semantics and review limitations. Do not manufacture missing evidence.',
+            'Return strict JSON {"answer":"source-backed prose"}. The answer MUST carry at least one inline citation marker in square brackets, for example "24 modeled samples for Klang, range 9.6 to 60.8 [E1]." Use only the ids listed in citations: S ids are supplied sources and E ids are retrieved evidence. Finding labels such as F1 are not citation ids and are rejected. Preserve gaps, modeled/source semantics and review limitations. Do not manufacture missing evidence.',
         },
         controller.signal,
       );
@@ -1043,16 +1049,29 @@ export class TaskRuntime {
         : purpose === 'synthesis'
           ? synthesisSchema
           : agentActionSchema);
+    // A specialist chooses between seven action shapes every turn. The full
+    // union schema dominates its input and slows a configured route without
+    // improving compliance, so the exact key set of each variant is stated
+    // instead. Planning and synthesis keep the schema: their single shape is
+    // small and is not enumerated here.
+    const enumerated = purpose !== 'plan' && purpose !== 'synthesis';
+    const contract = enumerated
+      ? 'Return a JSON object matching exactly one of the action variants listed here, without code fences. Return exactly one action per response, never two and never one nested inside another. The history already lists every action you dispatched together with its output, so a call that already returned output must not be repeated: advance to the next step instead. Choose one variant and include only its keys: tool {id,type,tool,input}; save {id,type,kind,content}; save_tool_result {id,type,kind,tool_action_id}; question {id,type,prompt}; message {id,type,recipient,purpose,text}; wait {id,type}; finish {id,type,summary,support,uncertainty,outputs}. The "type" field carries the variant name and the object is the entire response. In finish, "support" is exactly one of "supported", "partial" or "gap", "uncertainty" is an array of strings, and "outputs" is an array of saved artifact references shaped {id,version,sha256}. Never repeat a key within one object. If the history ends with a rejected_action entry, your previous response was refused: apply its remedy and return the corrected action under a new unique "id". Every action needs an "id" that you have not used before in this assignment.'
+      : 'Return a JSON object matching required_json_schema, without code fences. The action object is the entire response: never nest it under a key or add keys the schema does not list.';
     const input = {
       role: assignment.role,
-      instruction: `${agent.instructions} Return a JSON object matching required_json_schema, without code fences. All uncertainty fields are JSON arrays, including []. A source-backed direct response must cite the supplied exact citation IDs, for example {"id":"response-1","type":"respond","answer":"Source-backed explanation [S1].","uncertainty":[]}.`,
+      instruction: `${agent.instructions} ${contract} All uncertainty fields are JSON arrays, including []. A source-backed direct response must cite the supplied exact citation IDs, for example {"id":"response-1","type":"respond","answer":"Source-backed explanation [S1].","uncertainty":[]}.`,
       context: {
         ...(typeof context === 'object' && context !== null
           ? context
           : { input: context }),
-        required_json_schema: z.toJSONSchema(actionSchema, {
-          unrepresentable: 'any',
-        }),
+        ...(enumerated
+          ? {}
+          : {
+              required_json_schema: z.toJSONSchema(actionSchema, {
+                unrepresentable: 'any',
+              }),
+            }),
       },
       max_output_tokens: task.limits.max_model_output_tokens,
       json_mode: true,
@@ -1503,6 +1522,16 @@ export class TaskRuntime {
           task.id,
           assignment.id,
           action.id,
+          leaseOf(assignment),
+        );
+      },
+      reject: (response, reason) => {
+        this.store.rejectResponse(
+          task.id,
+          assignment.id,
+          `rejected-${randomUUID()}`,
+          json(response),
+          reason,
           leaseOf(assignment),
         );
       },

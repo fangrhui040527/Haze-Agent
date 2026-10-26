@@ -119,6 +119,8 @@ export interface ActionRecord {
   response: JsonValue;
   action: JsonValue;
   dispatched: boolean;
+  /** Set when the response failed validation and no action was dispatched. */
+  rejected?: string;
   created_at: string;
 }
 export interface PeerChannel {
@@ -422,11 +424,15 @@ export class TaskStore {
           for (const ref of parsed.context_refs)
             this.artifact(ref.id, identity, ref);
           const limits = resourceLimitsSchema.parse({
-            deadline: new Date(Date.now() + 90_000).toISOString(),
-            max_model_calls: 6,
-            max_tool_calls: 6,
-            max_assignments: 6,
-            max_artifacts: 16,
+            // Investigation profile (docs/architecture/general-agent-refactor-plan.md).
+            // Model-driven specialists each spend turns, so the short-lookup
+            // ceiling of six cannot seat Manager planning, three specialists
+            // and synthesis in one run.
+            deadline: new Date(Date.now() + 300_000).toISOString(),
+            max_model_calls: 40,
+            max_tool_calls: 40,
+            max_assignments: 16,
+            max_artifacts: 64,
             max_model_input_bytes: 16_384,
             max_model_output_tokens: 1200,
             reserved_model_calls: 2,
@@ -1104,6 +1110,58 @@ export class TaskStore {
         response,
         action: validatedAction,
         dispatched: false,
+        created_at: now(),
+      };
+      this.db
+        .prepare('INSERT INTO actions VALUES(?,?,?,?,?)')
+        .run(id, taskId, assignmentId, fingerprint, JSON.stringify(action));
+      return action;
+    });
+  }
+  /**
+   * Record a model response that failed validation. No action is dispatched,
+   * but the response is marked consumed: an unconsumed response is replayed on
+   * the next turn, which would hand a specialist the same malformed text it
+   * was asked to correct.
+   */
+  rejectResponse(
+    taskId: string,
+    assignmentId: string,
+    actionId: string,
+    response: JsonValue,
+    reason: string,
+    expected?: LeaseExpectation,
+  ): ActionRecord {
+    return this.atomic(() => {
+      const task = this.core(taskId),
+        run = this.run(task.current_run_id),
+        assignment = this.assignment(assignmentId, taskId);
+      this.assertCurrent(task, run, assignment);
+      this.expectLease(assignment, expected);
+      const id = `${assignmentId}:${assignment.revision}:${actionId}`,
+        fingerprint = contractHash({ response, rejected: reason });
+      const prior = this.db
+        .prepare('SELECT fingerprint,body FROM actions WHERE id=?')
+        .get(id) as { fingerprint: string; body: string } | undefined;
+      if (prior) {
+        if (prior.fingerprint !== fingerprint)
+          fail('action_conflict', 'Action ID reused with different content.');
+        return decode<ActionRecord>(prior.body);
+      }
+      const action: ActionRecord = {
+        created_generation: run.generation,
+        id,
+        action_id: actionId,
+        task_id: taskId,
+        run_id: run.id,
+        objective_revision: task.objective_revision,
+        assignment_id: assignmentId,
+        assignment_revision: assignment.revision,
+        generation: run.generation,
+        response,
+        action: null,
+        dispatched: true,
+        rejected: reason,
         created_at: now(),
       };
       this.db

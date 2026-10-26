@@ -92,6 +92,12 @@ export interface AgentExecutionServices extends AssignmentServices {
   toolCards: unknown[];
   model(context: unknown): Promise<AgentModelCompletion>;
   accept(response: AgentModelCompletion, action: AgentAction): boolean;
+  /**
+   * Record a response that failed validation. Nothing is dispatched, but the
+   * response is consumed so the next turn is a fresh completion rather than a
+   * replay of the same malformed text.
+   */
+  reject(response: AgentModelCompletion, reason: string): void;
 }
 
 /** Registration describes implementations. Task grants are checked separately at every boundary. */

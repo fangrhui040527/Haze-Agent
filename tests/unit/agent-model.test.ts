@@ -516,16 +516,16 @@ describe('office agent model adapter', () => {
     expect(fetcher.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
   });
 
-  it('bounds an unresponsive provider to 60 seconds and aborts the request', async () => {
+  it('bounds an unresponsive provider to 120 seconds and aborts the request', async () => {
     vi.useFakeTimers();
     const fetcher = vi
       .fn<typeof fetch>()
       .mockImplementation(() => new Promise<Response>(() => undefined));
     const pending = run(fetcher);
     const rejected = expect(pending).rejects.toThrow(
-      'timed out after 60 seconds',
+      'timed out after 120 seconds',
     );
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(120_000);
     await rejected;
     expect(fetcher.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
