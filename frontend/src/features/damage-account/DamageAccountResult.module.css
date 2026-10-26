@@ -1,0 +1,73 @@
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-block: var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.result h4 {
+  font-size: var(--text-md);
+}
+
+.result h5 {
+  font: inherit;
+  font-weight: 800;
+  margin-block: var(--space-3) var(--space-1);
+}
+
+.result p {
+  max-width: 72ch;
+}
+
+.status {
+  padding: var(--space-2);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.tableScroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.tableScroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.tableScroll caption {
+  text-align: left;
+  font-weight: 700;
+  padding-block: var(--space-2) var(--space-1);
+}
+
+.tableScroll th,
+.tableScroll td {
+  padding: var(--space-2);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 7rem;
+}
+
+.tableScroll th {
+  background: var(--color-surface-2);
+}
+
+.hash {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}

@@ -8,6 +8,7 @@ export { framePm25Scope } from './contracts.js';
 import {
   EvidenceSourceError,
   PM25_SOURCE_ID,
+  LEGACY_PM25_SOURCE_ID,
   type EvidenceCapture,
   type EvidenceRow,
   type EvidenceScope,
@@ -21,7 +22,7 @@ const timestamp = z.iso.datetime({ offset: true });
 /** Domain rules live in this capability, rather than in the shared runtime. */
 export const pm25Capability = {
   id: 'pm25-evidence-summary',
-  version: '1',
+  version: '2',
   purpose:
     'Summarize a bounded location/period selection of modeled PM2.5 evidence.',
   work_products: ['evidence-selection', 'coverage-analysis', 'evidence-review'],
@@ -181,8 +182,11 @@ export function validateCapture(
       'The evidence adapter returned an invalid capture shape or source semantics.',
     );
   const selected = parsed.data;
+  const sourceMatches =
+    selected.source === sourceId ||
+    (sourceId === PM25_SOURCE_ID && selected.source === LEGACY_PM25_SOURCE_ID);
   if (
-    selected.source !== sourceId ||
+    !sourceMatches ||
     selected.location.toLowerCase() !== scope.location.toLowerCase() ||
     Buffer.byteLength(selected.raw, 'utf8') > 524_288
   )

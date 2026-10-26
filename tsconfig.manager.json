@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "outDir": ".state/manager-build/dist",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["app/agents/manager/index.ts", "app/orchestration/ports.ts"]
+}

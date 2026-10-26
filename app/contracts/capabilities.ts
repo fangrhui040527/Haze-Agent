@@ -6,6 +6,7 @@ export const agentRoleSchema = z.enum([
   'HazeOps',
   'WorkerShield',
   'EvidenceCritic',
+  'DamageAccountant',
 ]);
 export const capabilityCardSchema = z.strictObject({
   id: identifierSchema,

@@ -67,6 +67,22 @@ function Header() {
             Dashboard
           </NavLink>
           <NavLink
+            to="/world-model"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            World Model
+          </NavLink>
+          <NavLink
+            to="/memory"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Memory
+          </NavLink>
+          <NavLink
             to="/demo-data"
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`

@@ -1,0 +1,90 @@
+.page {
+  max-width: 72rem;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.header,
+.form,
+.section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.header > p {
+  max-width: 68ch;
+}
+
+.intake {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr);
+  gap: var(--space-6);
+  padding-block: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.intake h2 {
+  margin-bottom: var(--space-4);
+}
+
+.form input,
+.form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.form textarea {
+  resize: vertical;
+}
+
+.form label {
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  line-height: var(--line-height);
+}
+
+.intake > section > .note {
+  margin-top: var(--space-4);
+}
+
+.identifier,
+.answer {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.error {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  overflow-wrap: anywhere;
+}
+
+.details > :not(summary) {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 700px) {
+  .intake {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

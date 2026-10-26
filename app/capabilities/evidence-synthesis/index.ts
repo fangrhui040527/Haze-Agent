@@ -1,10 +1,48 @@
+import { z } from 'zod';
 import type {
   AssignmentDefinition,
   CapabilityDefinition,
 } from '../../orchestration/ports.js';
+import { artifactRefSchema } from '../../contracts/artifacts.js';
+import { parseContractJson } from '../../contracts/json.js';
+import { synthesisNotesSchema, synthesisReviewSchema } from './contracts.js';
+import { evidenceSynthesisWorldModelAdapter } from './world.js';
 
 export function createEvidenceSynthesisCapability(): CapabilityDefinition {
   return {
+    prerequisites: [
+      {
+        definition_id: 'evidence-synthesis.review',
+        depends_on_definitions: ['evidence-synthesis.extract'],
+      },
+    ],
+    review_requirements: [
+      {
+        artifact_kind: 'evidence-synthesis.notes',
+        review_definition_id: 'evidence-synthesis.review',
+        producer_definition_ids: ['evidence-synthesis.extract'],
+      },
+    ],
+    peer_requirements: [
+      {
+        definitions: [
+          'evidence-synthesis.extract',
+          'evidence-synthesis.review',
+        ],
+        purpose: 'synthesis-review',
+      },
+    ],
+    normalizeReview(artifact) {
+      if (artifact.kind !== 'evidence-synthesis.review') return undefined;
+      const parsed = synthesisReviewSchema.safeParse(artifact.content);
+      return parsed.success
+        ? {
+            verdict: parsed.data.status,
+            artifacts: [parsed.data.notes, ...parsed.data.reviewed_sources],
+            limitations: parsed.data.limitations,
+          }
+        : undefined;
+    },
     card: {
       id: 'evidence-synthesis',
       version: 'evidence-synthesis.v3',
@@ -23,6 +61,7 @@ export function createEvidenceSynthesisCapability(): CapabilityDefinition {
       ],
     },
     matches: () => true,
+    worldModel: evidenceSynthesisWorldModelAdapter,
     assignments: (request) => [
       {
         key: 'synthesis',
@@ -79,12 +118,28 @@ export function createEvidenceSynthesisAssignments(): AssignmentDefinition[] {
           ).slice(0, 2400),
         }));
         const artifact = services.save('evidence-synthesis.notes', {
+          schema_version: 'haze.evidence-synthesis.notes.v1',
           notes,
           limitations: [
             'Excerpts are bounded; the exact full source remains accessible by immutable reference.',
             'Source origin is user-declared attribution.',
           ],
         });
+        const reviewer = services.context.peers.find(
+          (peer) => peer.definition_id === 'evidence-synthesis.review',
+        );
+        if (reviewer)
+          services.message(
+            reviewer.id,
+            'synthesis-review',
+            JSON.stringify({
+              artifact: {
+                id: artifact.id,
+                version: artifact.version,
+                sha256: artifact.sha256,
+              },
+            }),
+          );
         return {
           status: 'completed',
           summary: notes
@@ -107,41 +162,78 @@ export function createEvidenceSynthesisAssignments(): AssignmentDefinition[] {
       instructions:
         'Check exact notes against independently read source content; never approve producer-owned outputs.',
       execute: (services) => {
-        const notes = services.context.inputs.find(
-          (artifact) => artifact.kind === 'evidence-synthesis.notes',
+        const producer = services.context.peers.find(
+          (peer) => peer.definition_id === 'evidence-synthesis.extract',
         );
-        if (!notes)
+        const message = services
+          .inbox()
+          .find((item) => item.sender === producer?.id);
+        if (!message)
+          return {
+            status: 'waiting_peer',
+            summary: 'Waiting for exact synthesis notes to review.',
+            support: 'partial',
+            uncertainty: [],
+            outputs: [],
+          };
+        let payload: unknown;
+        try {
+          payload = parseContractJson(message.text);
+        } catch {
+          throw new Error(
+            'Synthesis review message is not valid contract JSON.',
+          );
+        }
+        const messageSchema = z.strictObject({
+          artifact: artifactRefSchema,
+        });
+        const parsedMessage = messageSchema.safeParse(payload);
+        if (!parsedMessage.success)
+          throw new Error(
+            'Synthesis review message has an invalid exact reference.',
+          );
+        const notes = services.read(parsedMessage.data.artifact);
+        if (notes.kind !== 'evidence-synthesis.notes')
           throw new Error('Missing synthesis notes for independent review.');
-        const data = notes.content as {
-          notes: {
-            artifact: { id: string; sha256: string };
-            excerpt: string;
-          }[];
-        };
-        const checked = data.notes.every((note) =>
-          services.context.inputs.some(
-            (source) =>
-              source.id === note.artifact.id &&
-              source.sha256 === note.artifact.sha256 &&
-              (typeof source.content === 'string'
-                ? source.content
-                : JSON.stringify(source.content)
-              ).startsWith(note.excerpt),
-          ),
-        );
-        if (!checked)
-          throw new Error('Source excerpt or immutable citation mismatch.');
-        const artifact = services.save('evidence-synthesis.review', {
+        const parsedNotes = synthesisNotesSchema.safeParse(notes.content);
+        if (!parsedNotes.success)
+          throw new Error('Synthesis notes do not match the strict schema.');
+        const checkedSources = parsedNotes.data.notes.map((note) => {
+          const source = services.read(note.artifact);
+          const text =
+            typeof source.content === 'string'
+              ? source.content
+              : JSON.stringify(source.content);
+          if (
+            source.version !== note.artifact.version ||
+            source.sha256 !== note.artifact.sha256 ||
+            text.slice(0, 2400) !== note.excerpt
+          )
+            throw new Error('Source excerpt or immutable citation mismatch.');
+          return {
+            id: source.id,
+            version: source.version,
+            sha256: source.sha256,
+          };
+        });
+        const reviewContent = synthesisReviewSchema.parse({
+          schema_version: 'haze.evidence-synthesis.review.v1',
+          notes: parsedMessage.data.artifact,
+          reviewed_sources: checkedSources,
           status: 'supported',
           checks: [
-            'Exact source references',
-            'Quotation prefix match',
-            'Separate producer and reviewer',
+            'exact_source_id_version_hash',
+            'excerpt_matches_source_prefix',
+            'separate_producer_and_reviewer',
           ],
           limitations: [
-            'This checks extracted material, not scientific validity or every final prose statement.',
+            'This checks exact citations and excerpts, not source authenticity, scientific validity, or final-prose entailment.',
           ],
         });
+        const artifact = services.save(
+          'evidence-synthesis.review',
+          reviewContent,
+        );
         return {
           status: 'completed',
           summary: 'Independent citation and excerpt integrity checks passed.',

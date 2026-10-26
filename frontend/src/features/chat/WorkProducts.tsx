@@ -10,10 +10,12 @@ export function WorkProducts({
   products,
   baseUrl = '',
   rejected = false,
+  rejectedProducts = [],
 }: {
   products: ArtifactRef[];
   baseUrl?: string;
   rejected?: boolean;
+  rejectedProducts?: ArtifactRef[];
 }) {
   if (!products.length)
     return (
@@ -30,7 +32,15 @@ export function WorkProducts({
             key={`${product.id}/${product.version}`}
             product={product}
             baseUrl={baseUrl}
-            rejected={rejected}
+            rejected={
+              rejected ||
+              rejectedProducts.some(
+                (reference) =>
+                  reference.id === product.id &&
+                  reference.version === product.version &&
+                  reference.sha256 === product.sha256,
+              )
+            }
           />
         ))}
       </ul>
@@ -56,7 +66,11 @@ function WorkProduct({
     agentService
       .readArtifact(id, controller.signal)
       .then((value) => {
-        if (value.version !== version || value.sha256 !== sha256)
+        if (
+          value.id !== id ||
+          value.version !== version ||
+          value.sha256 !== sha256
+        )
           throw new Error(
             'The work product does not match its pinned version and hash.',
           );
@@ -74,6 +88,12 @@ function WorkProduct({
   }, [expanded, artifact, id, version, sha256]);
   return (
     <li>
+      {rejected && (
+        <p className={styles.staleResult}>
+          This artifact was rejected in review. Domain calculations are
+          withheld.
+        </p>
+      )}
       <details onToggle={(event) => setExpanded(event.currentTarget.open)}>
         <summary>
           {artifact?.filename ?? artifact?.kind ?? 'Saved work product'} -
@@ -101,12 +121,6 @@ function WorkProduct({
             </p>
             {!rejected && artifact.kind === 'pm25.analysis' && (
               <EvidenceResult content={artifact.content} />
-            )}
-            {rejected && (
-              <p>
-                Domain calculations are withheld because review rejected this
-                result.
-              </p>
             )}
             <details>
               <summary>Artifact content</summary>

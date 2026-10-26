@@ -30,6 +30,41 @@ function run(fetcher: typeof fetch, env: NodeJS.ProcessEnv = selected) {
   );
 }
 
+async function lightningRequest(schema: unknown) {
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(completion('{"type":"finish"}'));
+  await resolveAgentModel(
+    { HAZE_PROVIDER: 'nvidia', NVIDIA_API_KEY: 'test-key' },
+    fetcher,
+  ).complete(
+    {
+      ...input,
+      json_mode: true,
+      output_schema: schema,
+      max_output_tokens: 1200,
+    },
+    new AbortController().signal,
+  );
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  return JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string) as {
+    model: string;
+    max_tokens: number;
+    messages: { role: string; content: string }[];
+    response_format: {
+      type: string;
+      json_schema?: { name: string; strict: boolean; schema: unknown };
+    };
+  };
+}
+
+const actionBranches = ['finish', 'question'].map((type) => ({
+  type: 'object',
+  properties: { type: { const: type } },
+  required: ['type'],
+  additionalProperties: false,
+}));
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -70,6 +105,204 @@ describe('office agent model adapter', () => {
     ) as Record<string, unknown>;
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(body.max_completion_tokens).toBe(191);
+  });
+  it('retains real provider receipts and bounded redacted partial text when generation is incomplete', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        id: 'partial-id',
+        model: 'selected-model',
+        usage: { prompt_tokens: 13, completion_tokens: 191 },
+        choices: [
+          {
+            finish_reason: 'length',
+            message: {
+              role: 'assistant',
+              content: 'partial test-server-secret JSON',
+            },
+          },
+        ],
+      }),
+    );
+    const failure: unknown = await run(fetcher).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toMatchObject({
+      receipt: {
+        response_id: 'partial-id',
+        response_model: 'selected-model',
+        input_tokens: 13,
+        output_tokens: 191,
+      },
+      output: 'partial [redacted] JSON',
+    });
+    expect(String(failure)).toContain('complete, nonempty');
+  });
+  it('rejects length-limited responses even when their text is valid JSON and reports the admitted limit', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        id: 'length-limited-json',
+        model: 'selected-model',
+        usage: { prompt_tokens: 13, completion_tokens: 191 },
+        choices: [
+          {
+            finish_reason: 'length',
+            message: {
+              role: 'assistant',
+              content: '{"answer":"test-server-secret"}',
+            },
+          },
+        ],
+      }),
+    );
+    const failure: unknown = await resolveAgentModel(selected, fetcher)
+      .complete(
+        { ...input, json_mode: true, max_output_tokens: 191 },
+        new AbortController().signal,
+      )
+      .catch((error: unknown) => error);
+    expect(failure).toMatchObject({
+      message:
+        'Agent model did not return a complete, nonempty assistant message. The provider reached the output token limit (191) for this request.',
+      receipt: {
+        response_id: 'length-limited-json',
+        response_model: 'selected-model',
+        input_tokens: 13,
+        output_tokens: 191,
+      },
+      output: '{"answer":"[redacted]"}',
+    });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it('uses the probed hosted Lightning native schema and preserves the exact output allowance', async () => {
+    const schema = {
+      type: 'object',
+      properties: { type: { const: 'finish' } },
+      required: ['type'],
+      additionalProperties: false,
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(completion('{"type":"finish"}'));
+    await resolveAgentModel(
+      { HAZE_PROVIDER: 'nvidia', NVIDIA_API_KEY: 'test-key' },
+      fetcher,
+    ).complete(
+      {
+        ...input,
+        json_mode: true,
+        output_schema: schema,
+        max_output_tokens: 191,
+      },
+      new AbortController().signal,
+    );
+    const body = JSON.parse(
+      fetcher.mock.calls[0]?.[1]?.body as string,
+    ) as Record<string, unknown>;
+    expect(body.response_format).toEqual({
+      type: 'json_schema',
+      json_schema: { name: 'haze_action', strict: true, schema },
+    });
+    expect(body.max_tokens).toBe(191);
+    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
+    expect(JSON.stringify(body.messages)).not.toContain('required_json_schema');
+  });
+  it('chooses JSON mode upfront for nested action unions and supplies the unchanged schema only in system instructions', async () => {
+    const union = { oneOf: actionBranches };
+    const schema = {
+      type: 'object',
+      properties: {
+        action: union,
+        // Property names belong to the instance, even when they name keywords.
+        enum: union,
+      },
+      $defs: { Actions: union },
+    };
+    const original = structuredClone(schema);
+    const body = await lightningRequest(schema);
+    expect(body).toMatchObject({
+      model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+      max_tokens: 1200,
+    });
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.messages[0]?.role).toBe('system');
+    expect(body.messages[0]?.content).toContain(JSON.stringify(schema));
+    expect(body.messages[0]?.content).toContain(
+      'required_json_schema (output contract only, not an output field)',
+    );
+    expect(body.messages[0]?.content).toContain(
+      'Never echo required_json_schema, schema definitions, or extra fields.',
+    );
+    expect(body.messages[1]).toEqual({
+      role: 'user',
+      content: JSON.stringify(input.context),
+    });
+    expect(schema).toEqual(original);
+  });
+  it.each([
+    {
+      name: 'oneOf',
+      schema: { oneOf: actionBranches },
+    },
+    {
+      name: 'anyOf',
+      schema: { anyOf: actionBranches },
+    },
+    {
+      name: 'allOf',
+      schema: { allOf: [{ type: 'object' }] },
+    },
+    {
+      name: 'nested reference',
+      schema: {
+        type: 'array',
+        items: { $ref: '#/$defs/Action' },
+        $defs: { Action: actionBranches[0] },
+      },
+    },
+  ])('uses the unchanged $name contract in JSON mode', async ({ schema }) => {
+    const original = structuredClone(schema);
+    const body = await lightningRequest(schema);
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.messages[0]?.content).toContain(JSON.stringify(original));
+    expect(body.messages[1]?.content).toBe(JSON.stringify(input.context));
+    expect(schema).toEqual(original);
+  });
+  it('preserves schema-shaped literals when conservatively choosing JSON mode', async () => {
+    const literal = { oneOf: actionBranches };
+    const schema = {
+      type: 'object',
+      properties: { result: { const: literal, enum: [literal] } },
+      default: literal,
+      examples: [literal],
+    };
+    const body = await lightningRequest(schema);
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.messages[0]?.content).toContain(JSON.stringify(schema));
+  });
+  it('retains prompt schema validation for unprobed compatible routes without switching providers', async () => {
+    const schema = {
+      type: 'object',
+      properties: { type: { const: 'finish' } },
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(completion('{"type":"finish"}'));
+    await resolveAgentModel(selected, fetcher).complete(
+      { ...input, json_mode: true, output_schema: schema },
+      new AbortController().signal,
+    );
+    const body = JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string) as {
+      response_format: unknown;
+      messages: { role: string; content: string }[];
+      model: string;
+    };
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.messages[0]?.content).toContain(JSON.stringify(schema));
+    expect(body.messages[1]).toEqual({
+      role: 'user',
+      content: JSON.stringify(input.context),
+    });
+    expect(body.model).toBe('selected-model');
   });
 
   it.each([1, 191, 1200, 2400])(

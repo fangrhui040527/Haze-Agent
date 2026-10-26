@@ -41,14 +41,15 @@ jobs:
         run: npm ci --prefix server
       - name: Verify engine and workflow pins
         run: npm run verify:pins
+      # The server/ compatibility aliases delegate to these same root checks.
       - name: Check types
         run: npm run typecheck
+      - name: Build
+        run: npm run build
       - name: Lint
         run: npm run lint
       - name: Check formatting
         run: npm run format:check
-      - name: Build
-        run: npm run build
       - name: Build frontend and check browser/server integration types
         run: npm --prefix frontend run build
       - name: Test general frontend results, questions, controls and receipts
@@ -61,10 +62,6 @@ jobs:
         run: npm run test:integration
         env:
           STATE_DIR: ${{ runner.temp }}/haze-general-verification
-      - name: Check Haze server types
-        run: npm run typecheck --prefix server
-      - name: Run Haze server tests (needs the build above)
-        run: npm test --prefix server
 
   postgres:
     name: PostgreSQL saver integration

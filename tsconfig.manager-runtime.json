@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.manager.json",
+  "compilerOptions": {
+    "noCheck": true
+  },
+  "include": [
+    "app/agents/manager/index.ts",
+    "app/tasks/runtime.ts",
+    "app/orchestration/ports.ts"
+  ]
+}

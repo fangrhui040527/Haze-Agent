@@ -63,7 +63,10 @@ export interface AgentRun {
   latestAnswer: AgentAnswer | null;
 }
 
-export function useAgentRun(initialTaskId?: string): AgentRun {
+export function useAgentRun(
+  initialTaskId?: string,
+  storageKey = 'haze.general.task.id',
+): AgentRun {
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [status, setStatus] = useState<RunStatus>('idle');
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -108,7 +111,7 @@ export function useAgentRun(initialTaskId?: string): AgentRun {
       taskRef.current = admitted;
       setTask(admitted);
       try {
-        sessionStorage.setItem('haze.general.task.id', admitted.id);
+        sessionStorage.setItem(storageKey, admitted.id);
       } catch {
         /* Readback still works without browser storage. */
       }
@@ -121,7 +124,7 @@ export function useAgentRun(initialTaskId?: string): AgentRun {
         setStatus('failed');
       else if (admitted.status === 'completed') setStatus('completed');
     },
-    [initialTaskId],
+    [initialTaskId, storageKey],
   );
   const observe = useCallback(
     async (
@@ -208,7 +211,7 @@ export function useAgentRun(initialTaskId?: string): AgentRun {
     let savedTaskId = initialTaskId ?? null;
     if (initialTaskId === undefined) {
       try {
-        savedTaskId = sessionStorage.getItem('haze.general.task.id');
+        savedTaskId = sessionStorage.getItem(storageKey);
       } catch {
         /* Browser storage is optional. */
       }
@@ -260,7 +263,7 @@ export function useAgentRun(initialTaskId?: string): AgentRun {
         }
       });
     return () => controller.abort();
-  }, [initialTaskId, observe, onTask]);
+  }, [initialTaskId, observe, onTask, storageKey]);
   const ask = useCallback(
     async (request: AskRequest) => {
       if (controllerRef.current)

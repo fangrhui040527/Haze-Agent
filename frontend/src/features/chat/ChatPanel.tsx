@@ -393,6 +393,9 @@ export function ChatPanel({
         <div className={styles.currentTask}>
           <TaskControls run={run} />
           <TaskQuestions run={run} />
+          <Link to={`/manager/${encodeURIComponent(run.task.id)}`}>
+            Open Manager workspace
+          </Link>
           {run.task.record.result &&
             !currentResultInHistory &&
             (run.task.record.result.currency === 'current' ||

@@ -559,6 +559,17 @@ describe('general contract and authoritative SQLite store', () => {
     const updated = store.read(task.id, identity);
     expect(updated.questions[0]!.status).toBe('answered');
     expect(updated.corrections[0]!.context_refs).toEqual([ref(imported)]);
+    expect(() => store.acquireAssignment(task.id, job.id)).toThrow(
+      'applicability',
+    );
+    store.recordApplicability(
+      task.id,
+      identity,
+      ref(imported),
+      true,
+      'The supplied source was explicitly inspected against the clarification.',
+      'Manager:test',
+    );
     expect(store.acquireAssignment(task.id, job.id)?.inputs).toEqual([
       ref(imported),
     ]);

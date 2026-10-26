@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentEvent } from '../../shared/types/agents.ts';
 import { HttpAgentService } from './HttpAgentService.ts';
 import {
+  worldRecordReadResponseSchema,
+  worldTaskResponseSchema,
+} from '../../../../app/contracts/world-api.ts';
+import {
   admitted,
   artifactId,
   artifactRef,
@@ -9,6 +13,7 @@ import {
   controlReceipt,
   expectation,
   fixtureTask,
+  fixtureManager,
   receipt,
   request,
   taskId,
@@ -34,6 +39,23 @@ function completedFetch() {
     .mockResolvedValueOnce(json(fixtureTask()));
 }
 describe('general task browser service (fixture wiring)', () => {
+  it('preserves optional Manager readback and artifact review checks through contract parsing', async () => {
+    const record = fixtureTask();
+    record.manager = fixtureManager();
+    record.result!.review.checks = [
+      {
+        artifact: artifactRef,
+        producer_assignment_id: artifactId,
+        producer_revision: 2,
+        verdict: 'needs_review',
+        limitations: ['Independent check pending.'],
+      },
+    ];
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(record));
+    const saved = await new HttpAgentService('', fetcher).readTask(taskId);
+    expect(saved.manager).toEqual(record.manager);
+    expect(saved.result!.review.checks).toEqual(record.result!.review.checks);
+  });
   it('submits objective-only v3 intake and exposes actual receipts and pinned sources', async () => {
     const fetcher = completedFetch();
     const events: AgentEvent[] = [];
@@ -248,5 +270,43 @@ describe('general task browser service (fixture wiring)', () => {
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
     expect(events).toEqual([]);
+  });
+  it('reads schema-checked current World Model status and paginated lineage', async () => {
+    const taskWorld = worldTaskResponseSchema.parse({
+      schema_version: 'haze.world.task-view.v1',
+      task_id: taskId,
+      mode: 'fixture',
+      records: [],
+      current_acceptances: [],
+      truncated: false,
+    });
+    const lineage = worldRecordReadResponseSchema.parse({
+      view: 'lineage',
+      lineage: {
+        schema_version: 'haze.world.lineage-page.v1',
+        record: { id: 'wmr:lineage', revision: 1, sha256: 'a'.repeat(64) },
+        entries: [],
+        page: { limit: 10, has_more: false },
+      },
+    });
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json(taskWorld))
+      .mockResolvedValueOnce(json(lineage));
+    const service = new HttpAgentService('/backend', fetcher);
+    expect(await service.readWorldTask(taskId)).toEqual(taskWorld);
+    expect(
+      await service.readWorldRecord('wmr:lineage', 'lineage', { limit: 10 }),
+    ).toEqual(lineage);
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      `/backend/api/tasks/${taskId}/world`,
+      '/backend/api/world/records/wmr%3Alineage?view=lineage&limit=10',
+    ]);
+  });
+  it('shows invalid current World Model responses as explicit service errors', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({}));
+    await expect(
+      new HttpAgentService('', fetcher).readWorldTask(taskId),
+    ).rejects.toThrow('current World Model status response failed validation');
   });
 });

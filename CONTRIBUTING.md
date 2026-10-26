@@ -40,7 +40,7 @@ Before review, run the checks relevant to the change and record any unavailable 
 
 `app/tasks/` owns the general lifecycle, authoritative SQLite records, controls, recovery and HTTP. `app/orchestration/` owns the typed executable registry, action contracts and reference checkpoints. Browser-safe public schemas live in `app/contracts/`; `json.ts` supplies separate server-only serialization/hashing. Executable agent modules own instructions, validation and bounded loops. Capabilities own domain inputs, methods, retrieval guidance, artifacts and independent checks. Only `app/composition.ts` imports domain modules into the running application. Lint and architecture tests enforce that boundary. See the [general engine guide](docs/orchestration/general-engine.md).
 
-Preserve Manager, HazeOps, WorkerShield and EvidenceCritic as the four domain roles. LangGraph and savers provide execution infrastructure. Requests, checkpoints, model agreement and structural validation do not grant scientific approval or accepted-state authority.
+Preserve Manager, HazeOps, WorkerShield, EvidenceCritic and DamageAccountant as the five domain roles. DamageAccountant owns imported-input accounting; HazeOps acquires evidence, WorkerShield supplies intervention options and EvidenceCritic reviews independently. The fifth role does not add execution slots or budgets. LangGraph and savers provide execution infrastructure. Requests, checkpoints, model agreement and structural validation do not grant scientific approval or accepted-state authority.
 
 The v0.13 scheduling package and connected demo UI have been removed; see the [retirement record](docs/history/legacy-retirement.md). Do not restore mandatory planning bundles, crew defaults or schedule-only contracts to general task admission. Retained historical design documents describe prior decisions and are not current implementation instructions.
 
@@ -61,6 +61,6 @@ Update active documentation and example references when removing or moving code.
 
 ## Dependencies, source pins and secrets
 
-Preserve checksum-pinned sources under `third_party/meterless/`, including their complete declared inventory, upstream lockfiles, licenses and notices. Edit the pin and provenance deliberately when updating upstream; the build rejects missing or changed files. Generated `dist/` and `vendor/` remain ignored. Retained Zetaris scripts and datasets are independent operator tooling and must not be removed solely because the PM2.5 runtime does not import them.
+Preserve checksum-pinned sources under `third_party/meterless/`, including their complete declared inventory, upstream lockfiles, licenses and notices. Edit the pin and provenance deliberately when updating upstream; the build rejects missing or changed files. Generated `dist/` and `vendor/` remain ignored. Retained Zetaris scripts and datasets under `app/adapters/zetaris/` are independent operator tooling and must not be removed solely because the PM2.5 runtime does not import them.
 
 Update Node/npm pins together and regenerate lockfiles with the pinned npm version. Store real credentials only in process environment, ignored environment files or CI secrets. `.env.example` contains placeholders; browser `VITE_*` variables must never contain credentials.

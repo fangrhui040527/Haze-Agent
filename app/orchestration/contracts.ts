@@ -10,6 +10,17 @@ export const assignmentOutputSchema = z.strictObject({
 export const agentActionSchema = z.discriminatedUnion('type', [
   z.strictObject({
     id: z.string().min(1).max(128),
+    type: z.literal('escalate'),
+    reason: z.enum([
+      'missing_dependency',
+      'scope_conflict',
+      'unavailable_resource',
+      'peer_request',
+    ]),
+    message: z.string().min(1).max(2000),
+  }),
+  z.strictObject({
+    id: z.string().min(1).max(128),
     type: z.literal('tool'),
     tool: z.string().min(1),
     input: z.unknown(),

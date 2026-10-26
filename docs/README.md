@@ -4,8 +4,11 @@ Start with the [project README](../README.md) for setup and current behavior.
 
 ## Architecture
 
+- [Executable LangGraph runtime](architecture/langgraph-runtime.md) — independent Manager and specialist graphs, receipts, waits, recovery and authority fences.
+- [v0.14 schema catalog and implementation audit](architecture/schema-catalog-v014.md) - schemas by component, fields, source evidence and implementation gaps.
 - [Haze Agent Architecture v0.14](architecture/Haze_Agent_Architecture_v0.14.pdf) — target architecture.
 - [General agent refactor plan](architecture/general-agent-refactor-plan.md) — proposed reusable task engine and separate agent modules.
+- [DamageAccountant implementation plan](architecture/damage-accountant-plan.md) — specialist, linked accounting capability, integration phases and release checks.
 - [Hybrid Architecture v0.1](architecture/Haze_Hybird_Architecture_v0.1.pdf) — supplied architecture reference.
 - [Architecture v0.8](architecture/haze-architecture-v0.8.html) — historical HTML reference.
 
@@ -17,8 +20,15 @@ Start with the [project README](../README.md) for setup and current behavior.
 
 ## Orchestration
 
+- [Isolated Manager testing](Testing/manager-testing.md) - interactive live Manager chat, focused unit checks and synthetic specialist scenarios.
+- [World Model control plane](Testing/world-model-control-plane.md) - inspect retained records, rebuild SQLite projections, run the original Meterless sandbox and verify the integration.
 - [General task engine](orchestration/general-engine.md) - current v3 protocol, ownership, controls and recovery.
+- [LangGraph implementation report](orchestration/langgraph-implementation-report.md) — baseline, runtime migration verification and remaining release gates.
+- [LangGraph cutover and rollback](orchestration/langgraph-cutover-runbook.md) — explicit state-copy migration and matching executable/snapshot recovery.
+- [World Model data model](05-world-model-data-model.md) — legacy HazeOps storage and the active v3 model, acceptance, and access boundaries.
 - [General engine verification](orchestration/general-engine-verification.md) - release checks and explicit fixture/live evidence.
+- [DamageAccountant implementation report](orchestration/damage-accountant-implementation-report.md) - imported accounting, independent checks, task integration and empirical release gates.
+- [World Model damage input adapter](orchestration/world-model-damage-input-adapter-report.md) - request-only accounting, exact evidence selection, provenance checks and the Jev assessment.
 
 The v1/v2 guides below are retained historical records.
 
@@ -31,6 +41,13 @@ The v1/v2 guides below are retained historical records.
 
 - [Engine pins](infrastructure/engine-pins.md) — pinned sources, builds and update checks.
 - [Compatibility probe](infrastructure/compatibility-probe.md) — engine, model and checkpoint compatibility checks.
+
+## Zetaris
+
+- [Connections and client setup](Zetaris/connections/README.md).
+- [Installation guide](Zetaris/install/updated_zetaris_installation_guide.md).
+- [SQL command reference](Zetaris/guides/zetaris-lightning-sql-commands.md).
+- [SQL companion](Zetaris/guides/zetaris-lightning-sql-companion.md).
 
 ## Frontend
 
