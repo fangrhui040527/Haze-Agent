@@ -7,39 +7,33 @@ configured source. A request limit is not a guarantee of data availability.
 
 | Source | Collection window or access path | Refresh boundary |
 | --- | --- | --- |
-| Open-Meteo air quality | Collection requests `past_days=1`, `forecast_days=3`, UTC; the merged snapshot may contain older retained hours | `npm run zetaris:fetch:pm25` or the daily updater's `--air-quality` step |
-| Open-Meteo wind | The same requested window at 10 m and 850 hPa, UTC; merged by location/time/level | `npm run zetaris:fetch:wind` |
+| Open-Meteo air quality | Live per-location REST tables request `past_days=1`, `forecast_days=3`, UTC | `npm run zetaris:fetch:pm25` registers the selected REST tables and view |
+| Open-Meteo wind | Live per-location REST tables request the same window at 10 m and 850 hPa, UTC | `npm run zetaris:fetch:wind` registers the selected REST tables and view |
 | Data.gov.my weather | Current forecast returned through its REST registration | Queried through Zetaris |
 | NASA FIRMS | Configured regional/day-range satellite detections | Rerun the FIRMS ingester to publish newer CSV data |
 | NASA POWER | Date-keyed climate view | Rerun its registration/view generation for a newer target date |
 | Windy GFS and CAMS | Forecast for the configured point, frozen in CSV snapshots | Rerun the Windy ingester on demand |
 
-Air-quality and wind snapshot publication preserves previously collected hours
-and other locations while replacing matching rows. This is current-value
-retention, not a complete archive of provider model runs. Check `ingested_utc`
-for local receipt time; it does not establish provider issuance. `issued_utc`
-stays unknown when the upstream response does not identify its issue time.
-
 ## Publication and task queries
 
-A `SELECT` over `air_quality.hourly_observations` or `wind.hourly_observations`
-reads the published FileStore snapshot. It does not call Open-Meteo or move the
-window forward. Use repeated `--location` IDs to collect selected places,
-`--dry-run` to preview without API or database changes, and `--skip-api` to
-republish the cached snapshot without claiming fresh collection.
+A `SELECT` over `air_quality.hourly_observations` or
+`open_meteo_wind.hourly_observations`
+may call Open-Meteo through Zetaris. `--test` registers Kuala Lumpur only;
+repeated `--location` IDs select specific locations, and `--dry-run` previews
+SQL without changing Zetaris. Full registration creates one endpoint per
+canonical location, so monitor provider usage and verify predicate pushdown
+before broad queries.
 
 The PM2.5 task reads the air-quality base view directly for an increasing UTC
-interval of at most 31 days. That is an input bound; missing stored dates remain
+interval of at most 31 days. That is an input bound; missing dates remain
 coverage gaps. Activated environmental USL tables have a separate lifecycle;
-a source publication alone does not establish that an existing USL copy was
+registering a source alone does not establish that an existing USL copy was
 refreshed.
 
 ## Historical examples
 
 The examples below are dated illustrative outputs from the earlier source
-setup around 22–23 October 2026. They do not establish current coverage or
-validate the new snapshot publication path. Air-quality timestamps and values
-are preserved here as examples; current publication uses UTC.
+setup around 22–23 October 2026. They do not establish current coverage.
 
 ## Historical illustrative outputs
 

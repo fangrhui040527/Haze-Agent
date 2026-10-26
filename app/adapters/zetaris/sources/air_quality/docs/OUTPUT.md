@@ -4,7 +4,8 @@
 
 - **Entity Name**: `air_quality_obs`
 - **Schema**: `lightning.metastore.malaysia_env_usl.air_quality_obs`
-- **Base Source**: View `air_quality.hourly_observations` (combining 345 `aq_*_raw` REST tables)
+- **Base Source**: Live federated view `air_quality.hourly_observations`
+  (combining one `aq_<location_id>` REST table per selected location)
 - **Primary / Foreign Key**:
   - `location_index` (Foreign Key referencing `location_dim.location_index`)
   - Grain: 1 observation per location per hour (`location_index`, `observation_time`)

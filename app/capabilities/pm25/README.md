@@ -28,18 +28,19 @@ The capability can also infer scope from an objective such as:
 Date-only values in this phrase mean midnight UTC. Conflicting explicit and
 inferred scopes require clarification.
 
-The read-only tool `zetaris-open-meteo-pm25` queries the published
-`air_quality.hourly_observations` snapshot through Zetaris. The source ingester
-in `app/adapters/zetaris/sources/air_quality/` writes Open-Meteo/CAMS modeled
-PM2.5 and PM10 to CSV and registers the files in Zetaris FileStore. The tool
-selects the requested town and UTC interval, retains the exact response, SQL and
-raw row indices, and selects the latest locally ingested row for each sample
-time. The raw selection is bounded to 1,500 rows; truncation is recorded.
+The read-only tool `zetaris-open-meteo-pm25` queries the federated
+`air_quality.hourly_observations` view through Zetaris. The source ingester in
+`app/adapters/zetaris/sources/air_quality/` registers Open-Meteo/CAMS REST tables
+for canonical locations and a normalized view. The tool selects the requested
+town and UTC interval, retains the exact response, SQL and raw row indices, and
+records query time as local ingestion time because the provider response has no
+issuance timestamp. The raw selection is bounded to 1,500 rows; truncation is
+recorded.
 
 Preview publication with `npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run`
 from the repository root. Run without `--dry-run` only after reviewing the plan.
-The available dates are the dates present in the published snapshot, even when
-the requested interval is within the 31-day request limit. The source is not a
+The available dates depend on the provider response and requested window, even
+when the requested interval is within the 31-day task limit. The source is not a
 complete historical or provider model-run archive.
 
 Live execution requires the existing Zetaris service and credentials described
@@ -77,7 +78,7 @@ authority.
 - Values are modeled instantaneous concentrations in µg/m³ at stored hourly
   timestamps. They are not ground-station observations or hourly averages.
 - Provider issuance time, native model resolution and town-wide representativeness
-  remain unverified. Local ingestion time does not establish a model run.
+  remain unverified. The live source has no durable ingestion timestamp.
 - No observation coverage, causal attribution, health advice or operational
   decision is established by this method.
 - Fixture checks establish integration behavior. Live readiness requires a

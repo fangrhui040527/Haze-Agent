@@ -33,23 +33,22 @@ Open-Meteo and Data.gov.my fetchers do not
 require keys.
 
 The examples provide configuration names and local development defaults, not
-hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
-Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
-have their own source folders alongside air quality. PostgreSQL is no longer
-required for these source-ingestion commands or the PM2.5 task. Preview a bounded
-setup from the repository root before applying it:
+hosted-service credentials. Open-Meteo PM2.5 and wind are federated through
+per-location Zetaris REST tables and expose unified views; FIRMS has its own
+source folder. PostgreSQL is not required for these source-ingestion commands
+or the PM2.5 task. Preview a bounded setup from the repository root:
 
 ```sh
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
-npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 ```
 
-After reviewing the plan, rerun the selected command without `--dry-run` to
-fetch and register the source snapshots. A task reads the published snapshot;
-it does not refresh it. Existing SmokeLedger PostgreSQL data and its optional
-USL remain under [legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md).
-No existing database rows or saved task captures are migrated automatically.
+After reviewing the SQL, rerun the selected command without `--dry-run` to
+register the REST tables and views. Zetaris queries may contact Open-Meteo;
+start with `--test` or selected locations and verify provider usage before
+registering all 345 endpoints. Existing SmokeLedger PostgreSQL data remains
+under [legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md); it is
+not required by the current source path and is not migrated automatically.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris

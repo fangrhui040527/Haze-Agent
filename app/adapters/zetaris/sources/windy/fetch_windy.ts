@@ -67,6 +67,7 @@ interface CliOptions {
   levels: string[];
   jsonPath: string | null;
   all: boolean;
+  prepareOnly: boolean;
   locationName?: string | undefined;
   dryRun: boolean;
   testOnly: boolean;
@@ -141,6 +142,7 @@ function parseCliArgs(locations: LocationItem[]): CliOptions {
     levels: ["surface"],
     jsonPath: null,
     all: false,
+    prepareOnly: false,
     locationName: "WP Kuala Lumpur",
     dryRun: false,
     testOnly: false,
@@ -163,6 +165,7 @@ function parseCliArgs(locations: LocationItem[]): CliOptions {
     else if (arg === "--levels") options.levels = next().split(",").map((l) => l.trim()).filter(Boolean);
     else if (arg === "--json") options.jsonPath = next();
     else if (arg === "--all") options.all = true;
+    else if (arg === "--prepare-only") options.prepareOnly = true;
     else if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--test-only") options.testOnly = true;
     else if (arg === "--help" || arg === "-h") {
@@ -447,7 +450,7 @@ async function main(): Promise<void> {
   }
 
   // ---------------------------------------------------------------------------
-  // Export CSVs & Register in Zetaris FileStore
+  // Export CSVs and optionally prepare them for the bootstrap's registration.
   // ---------------------------------------------------------------------------
   const DATA_DIR = path.join(__dirname, "data");
   if (!fs.existsSync(DATA_DIR)) {
@@ -480,13 +483,16 @@ async function main(): Promise<void> {
       console.log(`[DRY-RUN] docker exec zetaris-driver-1 mkdir -p ${CONTAINER_DIR}`);
       console.log(`[DRY-RUN] docker cp ${DATA_DIR}/. zetaris-driver-1:${CONTAINER_DIR}/`);
     } else {
-      try {
-        await runCommand("docker", ["exec", "zetaris-driver-1", "mkdir", "-p", CONTAINER_DIR], REPO_ROOT);
-        await runCommand("docker", ["cp", `${DATA_DIR}/.`, `zetaris-driver-1:${CONTAINER_DIR}/`], REPO_ROOT);
-        console.log(`  ✓ Copied CSV data → zetaris-driver-1:${CONTAINER_DIR}`);
-      } catch (err) {
-        console.warn(`  ⚠ docker cp warning: ${(err as Error).message}`);
-      }
+      await runCommand("docker", ["exec", "zetaris-driver-1", "mkdir", "-p", CONTAINER_DIR], REPO_ROOT);
+      await runCommand("docker", ["cp", `${DATA_DIR}/.`, `zetaris-driver-1:${CONTAINER_DIR}/`], REPO_ROOT);
+      await runCommand("docker", ["exec", "zetaris-driver-1", "test", "-s", `${CONTAINER_DIR}/windy_gfs.csv`], REPO_ROOT);
+      await runCommand("docker", ["exec", "zetaris-driver-1", "test", "-s", `${CONTAINER_DIR}/windy_cams.csv`], REPO_ROOT);
+      console.log(`  ✓ Copied and verified CSV data → zetaris-driver-1:${CONTAINER_DIR}`);
+    }
+
+    if (options.prepareOnly) {
+      console.log("✓ Windy CSV files are ready for Zetaris registration.");
+      return;
     }
 
     const registrationSql = `
@@ -495,7 +501,7 @@ DESCRIBE BY "Windy Point Forecast CSV files";
 
 CREATE SCHEMASTORE CONTAINER windy;
 
-CREATE LIGHTNING FILESTORE TABLE windy_gfs_raw
+CREATE LIGHTNING FILESTORE TABLE windy_gfs_raw_v2
 FROM WINDY_FILES
 FORMAT CSV
 OPTIONS (
@@ -504,7 +510,7 @@ OPTIONS (
     inferSchema "true"
 );
 
-CREATE LIGHTNING FILESTORE TABLE windy_cams_raw
+CREATE LIGHTNING FILESTORE TABLE windy_cams_raw_v2
 FROM WINDY_FILES
 FORMAT CSV
 OPTIONS (
@@ -529,7 +535,7 @@ SELECT
     CAST(wind_speed_ms AS DOUBLE) AS wind_speed_ms,
     CAST(wind_direction_deg AS DOUBLE) AS wind_direction_deg,
     CAST(wind_gust_ms AS DOUBLE) AS wind_gust_ms
-FROM WINDY_FILES.windy_gfs_raw;
+FROM WINDY_FILES.windy_gfs_raw_v2;
 
 CREATE SCHEMASTORE VIEW cams_air_quality WITH CONTAINER windy AS
 SELECT
@@ -542,7 +548,7 @@ SELECT
     CAST(aqi_us AS DOUBLE) AS aqi_us,
     CAST(no2_ug_m3 AS DOUBLE) AS no2_ug_m3,
     CAST(dust_ug_m3 AS DOUBLE) AS dust_ug_m3
-FROM WINDY_FILES.windy_cams_raw;
+FROM WINDY_FILES.windy_cams_raw_v2;
 `.trim();
 
     console.log("Registering WINDY_FILES database, container, and FileStore tables in Zetaris...");

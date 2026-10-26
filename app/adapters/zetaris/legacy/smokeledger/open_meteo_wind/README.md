@@ -1,8 +1,8 @@
 # Legacy SmokeLedger Open-Meteo wind fetcher
 
-Current ingestion uses `sources/wind/fetch_wind.ts` and
-`npm run zetaris:fetch:wind`. This retained script writes only to the optional
-legacy PostgreSQL store; it does not publish the current Zetaris snapshot.
+The current Zetaris source is `sources/open_meteo_wind/fetch_open_meteo_wind.ts`
+and `npm run zetaris:fetch:wind`. This retained legacy script writes only to
+the optional PostgreSQL store and is not used by the Zetaris source.
 
 Fetches 10 m and 850 hPa hourly winds for canonical locations and stores
 eastward (`u`) and northward (`v`) components in the SmokeLedger PostgreSQL

@@ -17,8 +17,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": [
-    "app/adapters/zetaris/legacy/smokeledger/**/*.ts",
-    "app/adapters/zetaris/usl/bootstrap_smokeledger.ts"
-  ]
+  "include": ["app/adapters/zetaris/legacy/smokeledger/**/*.ts"]
 }

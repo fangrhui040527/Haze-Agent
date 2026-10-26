@@ -1,7 +1,7 @@
 # Legacy SmokeLedger PostgreSQL store
 
 This package retains the earlier PostgreSQL ingestion path and schema. It is
-optional legacy tooling, separate from the current Zetaris FileStore source
+optional legacy tooling, separate from the current Zetaris REST source
 ingestion. Existing databases and volumes are preserved; no stored rows are
 migrated automatically.
 
@@ -11,12 +11,11 @@ Use the current provider sources for new collection:
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:firms -- --dry-run
-npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 ```
 
 Review a plan before running its command without `--dry-run`. The PM2.5 task now
-queries the published `air_quality.hourly_observations` snapshot through
-Zetaris, rather than `sl_pg.pm25`.
+queries the federated `air_quality.hourly_observations` view through Zetaris,
+rather than `sl_pg.pm25`.
 
 ## Retained PostgreSQL workflow
 
@@ -46,23 +45,17 @@ The legacy PM2.5 table upserts matching town/time/kind rows when provider
 issuance is unknown. `ingested_utc` is local receipt time; it is not a provider
 model issue time. These rows do not form an immutable model-run archive.
 
-## Optional Zetaris registration and USL
+## Retained Zetaris registration and legacy USL definitions
 
 `sql/02_zetaris_register.sql` exposes this existing PostgreSQL schema as `sl_pg`.
 The `host.docker.internal:5433` JDBC address lets Docker Desktop containers
 reach the local PostgreSQL port. The related model remains under
 `app/adapters/zetaris/usl/smokeledger_usl/`.
 
-Preview its optional bootstrap with:
-
-```powershell
-npm run zetaris:bootstrap:smokeledger -- --dry-run
-```
-
-The real bootstrap starts the optional database, registers its tables, compiles
-and activates the legacy USL and runs verification queries. Repeated USL
-activation refresh behaviour is unverified. This workflow is not required for
-current PM2.5 task execution and does not migrate rows to the new source view.
+`sql/02_zetaris_register.sql` and the related USL files are retained as
+historical definitions. The dedicated SmokeLedger bootstrap has been removed;
+these files are not invoked by the current environmental bootstrap and are not
+required for current PM2.5 task execution.
 
 The schema also retains planned domain tables for concessions, companies,
 trajectories, attribution, projections, cases, guidance and agent runs. Their

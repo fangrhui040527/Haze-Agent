@@ -1,47 +1,40 @@
 # PM2.5 evidence boundary
 
-The enabled tool is `zetaris-open-meteo-pm25`. It reads the published
-`air_quality.hourly_observations` snapshot through the configured Zetaris direct
-REST API for the request's exact town and start-inclusive, end-exclusive UTC
-period. The source contains Open-Meteo/CAMS modeled PM2.5. A task does not query
-public Open-Meteo, connect to PostgreSQL, refresh a source, or substitute another
-provider when Zetaris is unavailable.
+The enabled tool is `zetaris-open-meteo-pm25`. It reads the
+`air_quality.hourly_observations` view through the configured Zetaris REST API
+for the request's exact town and start-inclusive, end-exclusive UTC period. The
+view federates Open-Meteo/CAMS modeled PM2.5. A task does not query public
+Open-Meteo directly, connect to PostgreSQL, refresh source registrations, or
+substitute another provider when Zetaris is unavailable.
 
 ## Ingestion and publication
 
-`app/adapters/zetaris/sources/air_quality/fetch_air_quality.ts` collects PM2.5 and
-PM10 for canonical locations, normalizes the hourly response and publishes a CSV
-snapshot to the Zetaris driver. Zetaris exposes that file through
-`OPEN_METEO_AIR_QUALITY.hourly_snapshot` and the stable
+`app/adapters/zetaris/sources/air_quality/fetch_air_quality.ts` registers one
+Open-Meteo REST table per selected canonical location and creates the
 `air_quality.hourly_observations` view. The view includes `location_name`,
-`requested_latitude`, `requested_longitude`, `observation_time`, `pm2_5_ug_m3`,
-`pm10_ug_m3`, `ingested_utc` and `issued_utc`.
+`requested_latitude`, `requested_longitude`, `observation_time`, and
+`pm2_5_ug_m3`/`pm10_ug_m3`.
 
-Preview a single-location publication from the repository root:
+Preview single-location REST registration from the repository root:
 
 ```powershell
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 ```
 
-After reviewing the plan, rerun without `--dry-run` to collect and publish. The
-default upstream request uses `past_days=1`, `forecast_days=3` and `timezone=GMT`.
-The local snapshot merges rows by location and sample time, replaces matching
-values, and retains previously collected hours and other locations. The cache
-retains the latest raw response for each collected location and receipt
-metadata. It is not an immutable archive of all provider model runs. A
-`--skip-api` publication reuses the cached snapshot without making data newer.
-
-`npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run` previews
-the PM2.5, wind and FIRMS source setup together. Source publication is operator
-tooling, separate from task execution. The PM2.5 task reads the base snapshot
+After reviewing the plan, rerun without `--dry-run` to register. The generated
+endpoint uses `past_days=1`, `forecast_days=3`, and `timezone=GMT`. In `--test`
+mode the source registers Kuala Lumpur only; normal mode registers all
+canonical locations unless specific `--location` IDs are supplied. Zetaris may
+contact provider endpoints while registering or querying them. Source setup is
+operator tooling, separate from task execution. The PM2.5 task reads the base
 view and does not require environmental USL compilation or activation.
 
 ## Data and provenance
 
-The capture retains the exact UTF-8 JSON response, SQL, request ID, retrieval
-time, raw row count, selected raw row indices and truncation status. Task
-artifact storage hashes and persists this capture. Duplicate sample times select
-the latest local ingestion. Local receipt does not establish provider issuance.
+The task capture retains the exact UTF-8 JSON response returned by Zetaris, SQL,
+request ID, retrieval time, raw row count, selected raw row indices and
+truncation status. Task artifact storage hashes and persists this capture.
+Local receipt does not establish provider issuance.
 
 The provider defines `pm2_5` as an instantaneous near-surface concentration in
 µg/m³, and describes the model and output grids in the
@@ -53,9 +46,8 @@ unknown. Hourly API output does not establish native hourly model resolution.
 The view exposes requested town coordinates. Model grid-cell support and
 town-wide representativeness remain unverified. The adapter does not claim
 ground-station observations or an exhaustive search for observational data.
-`issued_utc` remains unknown when the provider does not supply its model issue
-time; `ingested_utc` records local receipt. A saved task's exact capture remains
-unchanged when a later publication updates the source snapshot.
+The source view does not claim a provider model issue time. A saved task's exact
+capture remains unchanged when a later query returns different provider data.
 
 Each tool call has one request, a 30-second maximum, a 512-KiB response bound,
 and a 1,500-row retained selection. It requests one additional row to detect
@@ -83,10 +75,9 @@ runtime does not log in with username/password or create credentials.
 `SAMPLE_MODE=true` explicitly disables retrieval.
 
 This source migration changes code and local setup tooling. It does not itself
-establish that a live Zetaris instance has the new FileStore table, view or
+establish that a live Zetaris instance has the new REST tables, view or
 requested coverage. A successful live check must capture the configured source
-execution after publication; fixture and captured transport tests establish
-adapter wiring only.
+execution; fixture and captured transport tests establish adapter wiring only.
 
 ### Historical access check on 25 October 2026
 
@@ -95,7 +86,7 @@ and missing `ZETARIS_API_KEY`, `ZETARIS_USERNAME` and `ZETARIS_PASSWORD`. The ro
 environment file then contained model configuration but no Zetaris
 configuration. No credentials were printed, created or requested, and no
 external setup was changed. That check did not verify the old datasource or any
-live rows and does not verify the current snapshot source.
+live rows and does not verify the current REST-federated source.
 
 ### Historical SmokeLedger source check on 26 October 2026
 

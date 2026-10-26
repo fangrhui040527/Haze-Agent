@@ -6,6 +6,9 @@
 --   - windy.cams_air_quality: CAMS air quality, PM2.5, PM10, AQI, NO2, dust
 -- =============================================================================
 
+DROP VIEW IF EXISTS windy.gfs_forecast;
+DROP VIEW IF EXISTS windy.cams_air_quality;
+
 CREATE SCHEMASTORE VIEW gfs_forecast WITH CONTAINER windy AS
 SELECT
     location_name,
@@ -20,7 +23,7 @@ SELECT
     CAST(wind_speed_ms AS DOUBLE) AS wind_speed_ms,
     CAST(wind_direction_deg AS DOUBLE) AS wind_direction_deg,
     CAST(wind_gust_ms AS DOUBLE) AS wind_gust_ms
-FROM WINDY_FILES.windy_gfs_raw;
+FROM WINDY_FILES.windy_gfs_raw_v2;
 
 CREATE SCHEMASTORE VIEW cams_air_quality WITH CONTAINER windy AS
 SELECT
@@ -33,4 +36,4 @@ SELECT
     CAST(aqi_us AS DOUBLE) AS aqi_us,
     CAST(no2_ug_m3 AS DOUBLE) AS no2_ug_m3,
     CAST(dust_ug_m3 AS DOUBLE) AS dust_ug_m3
-FROM WINDY_FILES.windy_cams_raw;
+FROM WINDY_FILES.windy_cams_raw_v2;

@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as envFiles from '../../app/adapters/zetaris/scripts/env-files.ts';
-import { loadEnvironment } from '../../app/adapters/zetaris/sources/shared/snapshot.ts';
 
 const candidatesForRoot = envFiles.envFileCandidates;
+const { loadEnvironment } = envFiles;
 const keys = [
   'HAZE_ENV_TEST_PROCESS',
   'HAZE_ENV_TEST_ROOT',
@@ -68,9 +68,6 @@ describe('shared server environment configuration', () => {
   });
 
   it('preserves process settings and root values, including empty values, while filling missing legacy settings', async () => {
-    vi.spyOn(envFiles, 'envFileCandidates').mockImplementation(() =>
-      candidatesForRoot(root),
-    );
     vi.stubEnv('HAZE_ENV_TEST_PROCESS', 'process');
     writeEnv(join(root, '.env'), {
       HAZE_ENV_TEST_PROCESS: 'root',
@@ -84,7 +81,7 @@ describe('shared server environment configuration', () => {
       HAZE_ENV_TEST_LEGACY: 'legacy',
     });
 
-    await loadEnvironment();
+    loadEnvironment(candidatesForRoot(root));
 
     expect(process.env.HAZE_ENV_TEST_PROCESS).toBe('process');
     expect(process.env.HAZE_ENV_TEST_ROOT).toBe('root');
@@ -93,14 +90,11 @@ describe('shared server environment configuration', () => {
   });
 
   it('loads existing adapter settings when the root file is absent', async () => {
-    vi.spyOn(envFiles, 'envFileCandidates').mockImplementation(() =>
-      candidatesForRoot(root),
-    );
     writeEnv(join(root, 'app/adapters/zetaris/.env.local'), {
       HAZE_ENV_TEST_LEGACY: 'legacy',
     });
 
-    await loadEnvironment();
+    loadEnvironment(candidatesForRoot(root));
 
     expect(process.env.HAZE_ENV_TEST_LEGACY).toBe('legacy');
     expect(process.env.HAZE_ENV_TEST_ROOT).toBeUndefined();

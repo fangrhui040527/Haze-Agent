@@ -199,8 +199,7 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
     (concentration !== null && concentration < 0)
   )
     return invalid('Zetaris returned an invalid PM2.5 concentration.');
-  // Snapshot receipt and historical collection times never establish provider
-  // model issuance, even when retained in the raw issued_utc field.
+  // The live REST source has no provider issuance or durable ingestion time.
   return {
     start,
     end: start,
@@ -246,8 +245,8 @@ export function resolveEvidenceSource(
         '  q.ingested_utc, q.requested_latitude AS lat, q.requested_longitude AS lon',
         'FROM air_quality.hourly_observations q',
         `WHERE LOWER(q.location_name) = LOWER(${town})`,
-        // FileStore snapshots preserve normalized ISO UTC strings. Comparing
-        // them directly avoids the query engine's session-timezone conversion.
+        // The source requests GMT and the view casts response times to TIMESTAMP.
+        // Query bounds are normalized to UTC before being interpolated.
         `AND q.observation_time >= '${scope.period.start}'`,
         `AND q.observation_time < '${scope.period.end}'`,
         'ORDER BY q.observation_time ASC, q.ingested_utc DESC, q.pm2_5_ug_m3 ASC',
@@ -297,8 +296,8 @@ export function resolveEvidenceSource(
       data.slice(0, ROW_LIMIT).forEach((item, rawIndex) => {
         const row = parseRow(item, scope);
         const previous = selected.get(row.start);
-        // Pin the latest locally ingested capture for each sample time. This
-        // is a retrieval selection, never a claim about provider model runs.
+        // Preserve one deterministic row per sample time; this does not
+        // identify a provider model run.
         if (
           !previous ||
           (row.ingested_at ?? '') > (previous.row.ingested_at ?? '')
@@ -333,13 +332,13 @@ export function resolveEvidenceSource(
         sample_interval_minutes: 60,
         units_reference: UNIT_REFERENCE,
         limitations: [
-          'Only stored Open-Meteo/CAMS modeled PM2.5 snapshots in Zetaris air_quality.hourly_observations were queried. Ground-station observations and other sources were not searched.',
+          'Only Open-Meteo/CAMS modeled PM2.5 rows federated through Zetaris air_quality.hourly_observations were queried. Ground-station observations and other sources were not searched.',
           'Samples are instantaneous concentrations at stored hourly timestamps, not measured observations or hourly averages. Hourly output does not establish native model resolution.',
-          'Units follow the Open-Meteo pm2_5 source definition; each ingestion validates the provider unit before publishing its snapshot.',
+          'Units follow the Open-Meteo pm2_5 source definition.',
           'Town coordinates are requested target coordinates. They do not establish returned model grid-cell support or town-wide representativeness.',
-          'Provider issuance time is unknown. ingested_utc records local snapshot receipt, not provider issuance.',
-          'Timestamp fields without an explicit offset are interpreted as UTC under the source snapshot contract.',
-          'For duplicate sample times the most recently ingested stored row is selected; this is not a provider-issued model version. Exact raw rows and selection indices are retained.',
+          'Provider issuance and durable ingestion times are unknown.',
+          'Source timestamps are requested in GMT and represented as UTC under the source contract.',
+          'Duplicate sample timestamps are resolved by query ordering, not by provider issuance. Exact raw rows and selection indices are retained.',
           ...(truncated
             ? [
                 `The raw selection exceeded ${ROW_LIMIT} rows and is truncated. Coverage beyond retained rows is unknown.`,

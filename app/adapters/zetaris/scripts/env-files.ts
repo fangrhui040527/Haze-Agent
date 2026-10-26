@@ -31,3 +31,32 @@ export function envFileCandidates(projectRoot = PROJECT_ROOT): string[] {
     ...roots.map((root) => join(root, 'app/adapters/zetaris/.env')),
   ];
 }
+
+/** Load configured env files without overriding variables already in process. */
+export function loadEnvironment(
+  files: string[] = envFileCandidates(),
+): void {
+  for (const file of files) {
+    let content: string;
+    try {
+      content = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    for (const raw of content.split(/\r?\n/u)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#') || !line.includes('=')) continue;
+      const separator = line.indexOf('=');
+      const name = line.slice(0, separator).trim();
+      let value = line.slice(separator + 1).trim();
+      if (
+        value.length >= 2 &&
+        value[0] === value[value.length - 1] &&
+        (value[0] === '"' || value[0] === "'")
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (process.env[name] === undefined) process.env[name] = value;
+    }
+  }
+}
