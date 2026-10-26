@@ -1,0 +1,260 @@
+{
+  "sources": [
+    {
+      "id": "cams_gfas",
+      "category": "fire emissions",
+      "url": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-fire-emissions-gfas?tab=overview",
+      "allowed_hosts": ["ads.atmosphere.copernicus.eu"],
+      "purpose": "Candidate fire-radiative-power-derived emissions and plume injection metadata.",
+      "terms": ["emission", "fire radiative power", "species", "resolution", "version", "injection"]
+    },
+    {
+      "id": "cams_eac4",
+      "category": "gridded PM2.5",
+      "url": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-reanalysis-eac4?tab=overview",
+      "allowed_hosts": ["ads.atmosphere.copernicus.eu"],
+      "purpose": "Candidate historical global atmospheric-composition reanalysis; modeled, not monitor data.",
+      "terms": ["PM2.5", "particulate", "resolution", "2003", "reanalysis", "uncertainty"]
+    },
+    {
+      "id": "era5_single_levels",
+      "category": "historical meteorology",
+      "url": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview",
+      "allowed_hosts": ["cds.climate.copernicus.eu"],
+      "purpose": "Candidate historical weather fields for reviewed transport-model inputs.",
+      "terms": ["hourly", "resolution", "ensemble", "uncertainty", "1940", "wind"]
+    },
+    {
+      "id": "worldpop_population_api",
+      "category": "population grid",
+      "url": "https://www.worldpop.org/rest/data/pop",
+      "allowed_hosts": ["www.worldpop.org", "hub.worldpop.org"],
+      "purpose": "Official WorldPop catalogue endpoint; inspect available gridded product aliases and years.",
+      "terms": ["Malaysia", "100m", "1km", "2015-2030", "2024", "constrained"]
+    },
+    {
+      "id": "ghsl_population",
+      "category": "population grid",
+      "url": "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php",
+      "allowed_hosts": ["human-settlement.emergency.copernicus.eu"],
+      "purpose": "Candidate Global Human Settlement Layer population-grid documentation and downloads.",
+      "terms": ["population", "resolution", "grid", "2020", "2030", "download"]
+    },
+    {
+      "id": "data_gov_my_catalogue_api",
+      "category": "Malaysia health, labour, population and prices",
+      "url": "https://developer.data.gov.my/static-api/data-catalogue",
+      "allowed_hosts": ["developer.data.gov.my"],
+      "purpose": "Official API documentation for discovering Malaysia government statistics datasets.",
+      "terms": ["health", "labour", "salary", "price", "population", "API"]
+    },
+    {
+      "id": "data_gov_my_catalogue_portal",
+      "category": "Malaysia official data catalogue",
+      "url": "https://data.gov.my/data-catalogue",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Browse official catalogue listings for health, deaths, pollution, labour and price datasets.",
+      "terms": ["Healthcare", "Deaths", "Pollution", "Labour", "Prices", "Health", "hospital", "respiratory", "mortality", "admission", "absence", "wage", "cause", "workplace", "worker", "haze", "smoke", "peat", "burning", "illness"]
+    },
+    {
+      "id": "data_gov_my_deaths_district_sex",
+      "category": "baseline health context",
+      "url": "https://data.gov.my/data-catalogue/deaths_district_sex",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Official annual all-cause deaths and crude death rates by residence district and sex; not cause-specific or haze-attributable.",
+      "terms": ["district", "sex", "deaths", "crude death rate", "population", "registration", "API", "license"]
+    },
+    {
+      "id": "data_gov_my_deaths_district_sex_api",
+      "category": "baseline health context API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=deaths_district_sex&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded three-row public API sample for aggregated annual all-cause district death counts and rates.",
+      "terms": ["date", "state", "district", "sex", "abs", "rate"]
+    },
+    {
+      "id": "data_gov_my_healthcare_staff",
+      "category": "health service capacity",
+      "url": "https://data.gov.my/data-catalogue/healthcare_staff",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Official annual public-sector healthcare staff counts by state and type; capacity context, not health outcomes or unit costs.",
+      "terms": ["staff", "doctor", "nurse", "state", "date", "healthcare", "license"]
+    },
+    {
+      "id": "data_gov_my_healthcare_staff_api",
+      "category": "health service capacity API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=healthcare_staff&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded three-row public API sample for aggregated healthcare workforce counts.",
+      "terms": ["date", "state", "staff_type", "staff"]
+    },
+    {
+      "id": "data_gov_my_air_pollution_api",
+      "category": "observed air quality API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded public API sample of monthly monitoring-station pollutant aggregates for comparison, not a gridded exposure product.",
+      "terms": ["date", "PM2.5", "PM10", "station", "pollutant"]
+    },
+    {
+      "id": "data_gov_my_air_pollution_pm25_api",
+      "category": "observed air quality API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&contains=PM%202.5%40pollutant&sort=-date&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded sample of the three latest monthly PM2.5 values for comparison; not a gridded exposure product.",
+      "terms": ["date", "PM 2.5", "concentration"]
+    },
+    {
+      "id": "data_gov_my_lfs_month",
+      "category": "labour context",
+      "url": "https://data.gov.my/data-catalogue/lfs_month",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Official monthly national/state Labour Force Survey indicators; not event-related absence or lost workdays.",
+      "terms": ["employment", "unemployment", "labour force", "monthly", "state", "survey", "license"]
+    },
+    {
+      "id": "data_gov_my_lfs_month_api",
+      "category": "labour context API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=lfs_month&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded three-row API sample of monthly labour-market aggregates.",
+      "terms": ["date", "state", "employment", "unemployment", "rate"]
+    },
+    {
+      "id": "data_gov_my_wages_real_state",
+      "category": "wage valuation context",
+      "url": "https://data.gov.my/data-catalogue/wages_real_state",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Official annual real mean/median monthly wages by state at 2010 prices; wage context, not measured haze-related work loss.",
+      "terms": ["wages", "state", "monthly", "2010 prices", "employees", "license"]
+    },
+    {
+      "id": "data_gov_my_wages_real_state_api",
+      "category": "wage valuation context API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=wages_real_state&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded three-row API sample of annual state wage statistics.",
+      "terms": ["date", "state", "wages_median_real", "wages_mean_real"]
+    },
+    {
+      "id": "data_gov_my_hospital_beds",
+      "category": "health service capacity",
+      "url": "https://data.gov.my/data-catalogue/hospital_beds",
+      "allowed_hosts": ["data.gov.my"],
+      "purpose": "Official annual public-sector active hospital bed counts; service capacity, not health outcomes or treatment unit costs.",
+      "terms": ["hospital beds", "state", "district", "hospital type", "date", "license"]
+    },
+    {
+      "id": "data_gov_my_hospital_beds_api",
+      "category": "health service capacity API",
+      "url": "https://api.data.gov.my/data-catalogue/?id=hospital_beds&limit=3",
+      "allowed_hosts": ["api.data.gov.my"],
+      "purpose": "Bounded three-row API sample of annual public hospital bed counts.",
+      "terms": ["date", "state", "district", "type", "beds"]
+    },
+    {
+      "id": "data_gov_my_opendosm_api",
+      "category": "Malaysia official statistics API",
+      "url": "https://developer.data.gov.my/static-api/opendosm",
+      "allowed_hosts": ["developer.data.gov.my"],
+      "purpose": "Official OpenDOSM API documentation linked from the Data.gov.my API guide.",
+      "terms": ["dataset", "API", "query", "response", "download", "population"]
+    },
+    {
+      "id": "open_dosm",
+      "category": "Malaysia official statistics",
+      "url": "https://open.dosm.gov.my/",
+      "allowed_hosts": ["open.dosm.gov.my"],
+      "purpose": "Official DOSM open-data portal; discover documented datasets and download/API links.",
+      "terms": ["health", "labour", "wage", "salary", "price", "download", "API"]
+    },
+    {
+      "id": "dosm_population_district",
+      "category": "population context",
+      "url": "https://open.dosm.gov.my/data-catalogue/population_district",
+      "allowed_hosts": ["open.dosm.gov.my"],
+      "purpose": "District-level population candidate; not a population grid.",
+      "terms": ["population", "district", "year", "sex", "age", "download"]
+    },
+    {
+      "id": "dosm_monthly_air_pollution",
+      "category": "air-quality context",
+      "url": "https://open.dosm.gov.my/data-catalogue/air_pollution",
+      "allowed_hosts": ["open.dosm.gov.my"],
+      "purpose": "Official monthly air-pollution dataset candidate; verify variables and monitoring basis.",
+      "terms": ["air pollution", "PM2.5", "PM10", "monthly", "station", "unit"]
+    },
+    {
+      "id": "dosm_labour_market",
+      "category": "work-disruption context",
+      "url": "https://open.dosm.gov.my/dashboard/labour-market",
+      "allowed_hosts": ["open.dosm.gov.my"],
+      "purpose": "Official labour-market context; not by itself a haze-attributable work-disruption dataset.",
+      "terms": ["labour", "employment", "unemployment", "wages", "data", "download"]
+    },
+    {
+      "id": "dosm_producer_prices",
+      "category": "economic valuation context",
+      "url": "https://open.dosm.gov.my/dashboard/producer-prices",
+      "allowed_hosts": ["open.dosm.gov.my"],
+      "purpose": "Official producer-price context; not a source of health-outcome unit costs.",
+      "terms": ["producer", "price", "index", "methodology", "data", "download"]
+    },
+    {
+      "id": "who_air_quality_guidelines",
+      "category": "health risk evidence",
+      "url": "https://www.who.int/publications/i/item/9789240034228",
+      "allowed_hosts": ["www.who.int"],
+      "purpose": "Health evidence and guideline reference; not a Malaysia-specific risk-function approval.",
+      "terms": ["health", "risk", "PM2.5", "evidence", "uncertainty", "exposure"]
+    },
+    {
+      "id": "who_gho_api_documentation",
+      "category": "health baseline data API",
+      "url": "https://www.who.int/data/gho/info/gho-odata-api",
+      "allowed_hosts": ["www.who.int"],
+      "purpose": "Official documentation for the WHO Global Health Observatory OData API.",
+      "terms": ["indicator", "filter", "country", "TimeDimension", "OData", "API"]
+    },
+    {
+      "id": "who_mortality_estimates",
+      "category": "baseline health rates",
+      "url": "https://www.who.int/data/gho/data/themes/mortality-and-global-health-estimates",
+      "allowed_hosts": ["www.who.int"],
+      "purpose": "WHO Global Health Estimates theme page for mortality indicators and technical sources.",
+      "terms": ["mortality", "cause", "estimates", "data", "indicator", "method"]
+    },
+    {
+      "id": "who_ncd_mortality_indicator",
+      "category": "baseline health rates",
+      "url": "https://www.who.int/data/gho/data/indicators/indicator-details/GHO/gho-ghe-ncd-mortality-rate",
+      "allowed_hosts": ["www.who.int"],
+      "purpose": "WHO metadata for age-standardized NCD mortality rates; broad baseline context, not haze-attributable outcomes.",
+      "terms": ["mortality rate", "age-standardized", "cause", "age", "sex", "estimates"]
+    },
+    {
+      "id": "who_ncd_mortality_indicator_lookup",
+      "category": "baseline health rates API discovery",
+      "url": "https://ghoapi.azureedge.net/api/Indicator?$filter=contains(IndicatorName,%27NCD%20mortality%20rate%27)&$top=5",
+      "allowed_hosts": ["ghoapi.azureedge.net"],
+      "purpose": "Bounded official GHO indicator catalogue query to identify API codes for the documented NCD mortality indicator.",
+      "terms": ["IndicatorCode", "IndicatorName", "mortality"]
+    },
+    {
+      "id": "who_gho_api_sample_malaysia",
+      "category": "health baseline API shape",
+      "url": "https://ghoapi.azureedge.net/api/WHOSIS_000001?$filter=SpatialDim%20eq%20%27MYS%27",
+      "allowed_hosts": ["ghoapi.azureedge.net"],
+      "purpose": "Bounded Malaysia-filtered example using the WHO-documented API pattern; life expectancy is not a cause-specific haze input.",
+      "terms": ["SpatialDim", "TimeDimensionBegin", "NumericValue", "MYS", "WHOSIS_000001"]
+    },
+    {
+      "id": "epa_benmap",
+      "category": "health impact methods",
+      "url": "https://www.epa.gov/benmap/benmap-manual-and-supporting-documentation",
+      "allowed_hosts": ["www.epa.gov"],
+      "purpose": "Method/software reference for health-impact analysis; US functions are not automatically transferable to Malaysia.",
+      "terms": ["risk", "concentration-response", "health impact", "uncertainty", "BenMAP", "population"]
+    }
+  ]
+}
