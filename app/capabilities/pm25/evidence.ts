@@ -132,26 +132,26 @@ function requestInstant(value: string): string {
   return normalized;
 }
 
-/** The direct REST API may encode SQL numeric cells as decimal strings. */
-function numericCell(value: unknown): number | null {
-  if (value === null) return null;
-  const number =
-    typeof value === 'string' &&
-    /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu.test(value.trim())
-      ? Number(value)
-      : value;
-  if (typeof number !== 'number' || !Number.isFinite(number))
-    return invalid('Zetaris returned an invalid numeric cell.');
-  return number;
-}
-
 function coordinate(value: unknown, maximum: number): number | null {
-  const number = numericCell(value);
-  if (number === null) return null;
-  if (Math.abs(number) > maximum) {
+  if (value === null) return null;
+  const parsed = parseFiniteNumber(value);
+  if (parsed === undefined || Math.abs(parsed) > maximum) {
     return invalid('Zetaris returned invalid town coordinates.');
   }
-  return number;
+  return parsed;
+}
+
+/** The direct REST API may encode SQL numeric cells as decimal strings. */
+export function parseFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : undefined;
+  if (
+    typeof value !== 'string' ||
+    !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u.test(value.trim())
+  )
+    return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
@@ -191,16 +191,16 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   if (start < scope.period.start || start >= scope.period.end) {
     return invalid('Zetaris returned a sample outside the requested period.');
   }
-  const concentration = numericCell(row['pm25']);
+  const rawConcentration = row['pm25'];
+  const concentration =
+    rawConcentration === null ? null : parseFiniteNumber(rawConcentration);
   if (
-    concentration !== null &&
-    (typeof concentration !== 'number' ||
-      !Number.isFinite(concentration) ||
-      concentration < 0)
-  ) {
+    concentration === undefined ||
+    (concentration !== null && concentration < 0)
+  )
     return invalid('Zetaris returned an invalid PM2.5 concentration.');
-  }
-  // Snapshot receipt time never establishes provider model issuance.
+  // Snapshot receipt and historical collection times never establish provider
+  // model issuance, even when retained in the raw issued_utc field.
   return {
     start,
     end: start,

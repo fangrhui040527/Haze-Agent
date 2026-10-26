@@ -96,3 +96,25 @@ environment file then contained model configuration but no Zetaris
 configuration. No credentials were printed, created or requested, and no
 external setup was changed. That check did not verify the old datasource or any
 live rows and does not verify the current snapshot source.
+
+### Historical SmokeLedger source check on 26 October 2026
+
+After starting the local `smokeledger-db` Compose service, the read-only
+preflight passed: Zetaris REST was reachable, `SELECT 1` succeeded, and the
+`sl_pg` datasource was listed. The then-current SmokeLedger PM2.5 adapter retrieved
+Kuala Lumpur samples for 2026-10-23 UTC and the analysis reported 24 usable
+modeled rows, from 00:00 through 23:00 UTC, without truncation.
+
+The live response serialized numeric SQL values as strings. The adapter
+accepts only strictly formatted finite numeric strings and normalizes them
+before analysis; malformed values remain rejected. Focused tests, type checks,
+the production build, and the live adapter/analysis check passed.
+
+The full live task and World Model acceptance flow did not complete. The
+isolated task server lacked `HAZE_PROVIDER` and its server-side model API key,
+so the initial planning assignment failed before the PM2.5 workflow ran.
+Consequently this check verified Zetaris access and the legacy SmokeLedger PM2.5
+retrieval/analysis boundary. It does not verify the current snapshot source,
+a live task, independent review, World Model projection, or live acceptance.
+No World Model task
+records were created by the direct adapter check.
