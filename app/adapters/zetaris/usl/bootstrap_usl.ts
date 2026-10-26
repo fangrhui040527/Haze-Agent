@@ -10,6 +10,7 @@
  *   --env-only       Bootstrap ONLY the Environmental USL (malaysia_env_usl)
  *   --law-only       Bootstrap ONLY the Law USL (malaysia_law_usl)
  *   --smokeledger-only Bootstrap ONLY the SmokeLedger USL (smokeledger_usl)
+ *   --replace-smokeledger Remove an existing SmokeLedger USL before compiling its new schema
  *   --with-smokeledger Include SmokeLedger in a selected Environmental or Law run
  *   (default)        Bootstrap Environmental, Law, and SmokeLedger
  *
@@ -49,6 +50,7 @@ const RUN_SQL = path.join(ZETARIS_ROOT, "scripts", "run_sql.py");
 
 const LOCATIONS_CONTAINER_PATH = "/home/zetaris/customer-data/shared/locations";
 const LAW_CONTAINER_PATH = "/home/zetaris/customer-data/shared/law";
+const WINDY_CONTAINER_PATH = "/home/zetaris/customer-data/shared/windy";
 
 // Windy register SQL carries a `${WINDY_API_KEY}` placeholder that must be
 // filled from .env.local before it is sent. The key is never printed or logged.
@@ -244,67 +246,80 @@ async function runTsScript(
 // Health checks
 // ---------------------------------------------------------------------------
 
-async function verifyEnvUsl(): Promise<void> {
-  console.log("\n  ==> Running federated Environmental USL verification health check...");
-  const envTestSql = [
-    "SELECT loc.location_index, loc.location_name, loc.latitude, loc.longitude, w.morning_forecast",
-    "FROM lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc",
-    "LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_code lc ON loc.location_index = lc.location_index",
-    "LEFT JOIN lightning.metastore.malaysia_env.malaysia_env_usl.weather_forecast w ON lc.location_code = w.location_code",
-    "LIMIT 5;",
-  ].join(" ");
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-env-"));
+async function verifyUsl(
+  name: string,
+  sql: string,
+  tempPrefix: string,
+): Promise<void> {
+  console.log(`\n  ==> Verifying ${name} USL entities...`);
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), tempPrefix));
   const tmpFile = path.join(tmpDir, "verify.sql");
   try {
-    fs.writeFileSync(tmpFile, envTestSql, "utf-8");
+    fs.writeFileSync(tmpFile, sql, "utf-8");
     await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
-    console.log("  ✓ Environmental USL: Federated join verified successfully!");
-  } catch (err) {
-    console.warn(`  ⚠ Environmental health check warning: ${(err as Error).message}`);
+    console.log(`  ✓ ${name} USL: Entity verification succeeded.`);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 
+async function verifyEnvUsl(skipPower: boolean): Promise<void> {
+  const entities = [
+    "location_dim",
+    "location_code",
+    "weather_forecast",
+    "active_fires",
+    "air_quality_obs",
+    "open_meteo_pm25_obs",
+    "open_meteo_wind_obs",
+    ...(!skipPower ? ["power_daily"] : []),
+    "windy_forecast_obs",
+    "windy_air_quality_obs",
+  ];
+  const sql = entities
+    .map(
+      (entity) =>
+        `SELECT * FROM lightning.metastore.malaysia_env.malaysia_env_usl.${entity} LIMIT 1;`,
+    )
+    .join("\n");
+  await verifyUsl("Environmental", sql, "zetaris-verify-env-");
+}
+
 async function verifyLawUsl(): Promise<void> {
-  console.log("\n  ==> Running Law USL verification health check...");
-  const lawTestSql = [
+  const sql = [
     "SELECT doc.document_id, doc.instrument_code, p.page_number, p.is_provenance_page",
     "FROM lightning.metastore.malaysia_law.malaysia_law_usl.law_documents doc",
     "JOIN lightning.metastore.malaysia_law.malaysia_law_usl.law_pages p ON doc.document_id = p.document_id",
     "LIMIT 3;",
   ].join(" ");
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-law-"));
-  const tmpFile = path.join(tmpDir, "verify.sql");
-  try {
-    fs.writeFileSync(tmpFile, lawTestSql, "utf-8");
-    await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
-    console.log("  ✓ Law USL: Join verified successfully!");
-  } catch (err) {
-    console.warn(`  ⚠ Law health check warning: ${(err as Error).message}`);
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  }
+  await verifyUsl("Law", sql, "zetaris-verify-law-");
 }
 
 async function verifySmokeledgerUsl(): Promise<void> {
-  console.log("\n  ==> Running SmokeLedger USL verification health check...");
-  const smokeledgerTestSql = [
-    "SELECT location_name",
-    "FROM lightning.metastore.smokeledger.smokeledger_usl.locations",
-    "LIMIT 5;",
-  ].join(" ");
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-smokeledger-"));
-  const tmpFile = path.join(tmpDir, "verify.sql");
-  try {
-    fs.writeFileSync(tmpFile, smokeledgerTestSql, "utf-8");
-    await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
-    console.log("  ✓ SmokeLedger USL: Query verified successfully!");
-  } catch (err) {
-    console.warn(`  ⚠ SmokeLedger health check warning: ${(err as Error).message}`);
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  }
+  const entities = [
+    "towns",
+    "fires",
+    "wind",
+    "pm25",
+    "concessions",
+    "companies",
+    "runs",
+    "trajectory_points",
+    "attribution",
+    "projections",
+    "cases",
+    "case_events",
+    "evidence",
+    "guidance",
+    "agent_runs",
+  ];
+  const sql = entities
+    .map(
+      (entity) =>
+        `SELECT * FROM lightning.metastore.smokeledger.smokeledger_usl.${entity} LIMIT 1;`,
+    )
+    .join("\n");
+  await verifyUsl("SmokeLedger", sql, "zetaris-verify-smokeledger-");
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +330,7 @@ interface CliOptions {
   runEnv: boolean;
   runLaw: boolean;
   runSmokeledger: boolean;
+  replaceSmokeledger: boolean;
   skipPower: boolean;
   testMode: boolean;
   dryRun: boolean;
@@ -326,6 +342,7 @@ function parseArgs(): CliOptions {
   const lawOnly = argv.includes("--law-only") || argv.includes("--law");
   const smokeledgerOnly = argv.includes("--smokeledger-only");
   const withSmokeledger = argv.includes("--with-smokeledger");
+  const replaceSmokeledger = argv.includes("--replace-smokeledger");
   const selectedLayer = envOnly || lawOnly || smokeledgerOnly;
   if (smokeledgerOnly && (envOnly || lawOnly || withSmokeledger)) {
     throw new Error("--smokeledger-only cannot be combined with other layer selection flags.");
@@ -335,6 +352,7 @@ function parseArgs(): CliOptions {
     runEnv: !selectedLayer || envOnly,
     runLaw: !selectedLayer || lawOnly,
     runSmokeledger: smokeledgerOnly || withSmokeledger || !selectedLayer,
+    replaceSmokeledger,
     skipPower: argv.includes("--skip-power"),
     testMode: argv.includes("--test"),
     dryRun: argv.includes("--dry-run"),
@@ -351,14 +369,18 @@ async function main(): Promise<void> {
     runEnv,
     runLaw,
     runSmokeledger,
+    replaceSmokeledger,
     skipPower,
     testMode,
     dryRun,
   } = parseArgs();
+  if (replaceSmokeledger && !runSmokeledger) {
+    throw new Error("--replace-smokeledger requires SmokeLedger to be selected.");
+  }
   const t0 = Date.now();
   const layers = [
-    runEnv ? "Environmental" : null,
     runLaw ? "Law" : null,
+    runEnv ? "Environmental" : null,
     runSmokeledger ? "SmokeLedger" : null,
   ].filter((layer): layer is string => layer !== null);
 
@@ -376,13 +398,34 @@ async function main(): Promise<void> {
     console.log("  • Law USL (malaysia_law_usl): Documents, Full-text Pages");
   }
   if (runSmokeledger) {
-    console.log("  • SmokeLedger USL (smokeledger_usl): read-only smoke view over current Zetaris source feeds");
-    console.log("    Requires the Environmental USL and published wind snapshot; no PostgreSQL is used.");
+    console.log("  • SmokeLedger USL (smokeledger_usl): 15-entity PostgreSQL-free model");
+    console.log("    Requires the Environmental USL and its Windy forecast feed.");
   }
   console.log("=".repeat(70));
 
   // =========================================================================
-  // SECTION 1: ENVIRONMENTAL USL
+  // SECTION 1: LAW USL
+  // =========================================================================
+  if (runLaw) {
+    console.log("\n>>> BOOTSTRAPPING LAW USL (malaysia_law_usl) <<<");
+
+    // 1. Flatten & Copy
+    console.log("\n[Law Step 1/2] Flattening Law JSON & Copying to Docker...");
+    await runTsScript(path.join(SRC_ROOT, "law", "flatten_law_json.ts"), [], dryRun);
+    const lawDataDir = path.join(SRC_ROOT, "law", "data");
+    if (fs.existsSync(lawDataDir)) {
+      await dockerCp(lawDataDir, "zetaris-driver-1", LAW_CONTAINER_PATH, dryRun);
+    }
+
+    // 2. Register, Compile & Activate
+    console.log("\n[Law Step 2/2] Registering, Compiling & Activating Law USL...");
+    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_register.sql"), dryRun, true);
+    await runSqlFile(path.join(USL_ROOT, "law_usl", "usl_schema.sql"), dryRun);
+    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_activate.sql"), dryRun);
+  }
+
+  // =========================================================================
+  // SECTION 2: ENVIRONMENTAL USL
   // =========================================================================
   if (runEnv) {
     console.log("\n>>> BOOTSTRAPPING ENVIRONMENTAL USL (malaysia_env_usl) <<<");
@@ -441,6 +484,12 @@ async function main(): Promise<void> {
       ["--all", "--prepare-only"],
       dryRun,
     );
+    await dockerCp(
+      path.join(SRC_ROOT, "windy", "data"),
+      "zetaris-driver-1",
+      WINDY_CONTAINER_PATH,
+      dryRun,
+    );
     console.log("Registering Windy FileStore tables and creating views...");
     await runWindyRegister(dryRun);
     await runSqlFile(path.join(WINDY_SQL_DIR, "windy_view.sql"), dryRun, true);
@@ -458,38 +507,25 @@ async function main(): Promise<void> {
       await runSqlFile(path.join(SRC_ROOT, "nasa_power", "sql", "power_activate.sql"), dryRun);
     }
     await runSqlFile(path.join(WINDY_SQL_DIR, "windy_activate.sql"), dryRun);
-  }
-
-  // =========================================================================
-  // SECTION 2: LAW USL
-  // =========================================================================
-  if (runLaw) {
-    console.log("\n>>> BOOTSTRAPPING LAW USL (malaysia_law_usl) <<<");
-
-    // 1. Flatten & Copy
-    console.log("\n[Law Step 1/2] Flattening Law JSON & Copying to Docker...");
-    await runTsScript(path.join(SRC_ROOT, "law", "flatten_law_json.ts"), [], dryRun);
-    const lawDataDir = path.join(SRC_ROOT, "law", "data");
-    if (fs.existsSync(lawDataDir)) {
-      await dockerCp(lawDataDir, "zetaris-driver-1", LAW_CONTAINER_PATH, dryRun);
-    }
-
-    // 2. Register, Compile & Activate
-    console.log("\n[Law Step 2/2] Registering, Compiling & Activating Law USL...");
-    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_register.sql"), dryRun, true);
-    await runSqlFile(path.join(USL_ROOT, "law_usl", "usl_schema.sql"), dryRun);
-    await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_activate.sql"), dryRun);
+    await runSqlFile(path.join(USL_ROOT, "env_usl", "compat_activate.sql"), dryRun);
   }
 
   // =========================================================================
   // SECTION 3: SMOKELEDGER USL
   // =========================================================================
   if (runSmokeledger) {
-    console.log("\n>>> BOOTSTRAPPING SMOKELEDGER USL (smokeledger_usl) <<<");
-    console.log("\n[SmokeLedger Step 1/2] Compiling the source-backed SmokeLedger USL...");
+    console.log("\n>>> BOOTSTRAPPING SMOKELEDGER USL (15 entities, PostgreSQL-free) <<<");
+    if (replaceSmokeledger) {
+      console.log("\n[SmokeLedger Step 0/2] Removing the existing SmokeLedger USL as requested...");
+      await runSqlFile(
+        path.join(USL_ROOT, "smokeledger_usl", "usl_remove.sql"),
+        dryRun,
+      );
+    }
+    console.log("\n[SmokeLedger Step 1/2] Compiling the 15-entity SmokeLedger USL...");
     await runSqlFile(path.join(USL_ROOT, "smokeledger_usl", "usl_schema.sql"), dryRun);
 
-    console.log("\n[SmokeLedger Step 2/2] Activating Environmental records and published wind feed...");
+    console.log("\n[SmokeLedger Step 2/2] Activating Environmental records and Windy forecasts...");
     await runSqlFile(
       path.join(USL_ROOT, "smokeledger_usl", "usl_activate.sql"),
       dryRun,
@@ -500,17 +536,18 @@ async function main(): Promise<void> {
   // Summary & Health Checks
   // -------------------------------------------------------------------------
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log("\n" + "=".repeat(70));
-  console.log(`🎉 Bootstrap completed in ${elapsed}s!`);
   if (testMode) {
     console.log(`⚠ Test mode was enabled: per-location REST sources registered for "${TEST_LOCATION_ID}" only.`);
   }
 
   if (!dryRun) {
-    if (runEnv) await verifyEnvUsl();
+    if (runEnv) await verifyEnvUsl(skipPower);
     if (runLaw) await verifyLawUsl();
     if (runSmokeledger) await verifySmokeledgerUsl();
   }
+
+  console.log("\n" + "=".repeat(70));
+  console.log(`🎉 Bootstrap completed in ${elapsed}s!`);
 
   if (runEnv) {
     console.log("\nActive Entities in lightning.metastore.malaysia_env.malaysia_env_usl:");
@@ -519,6 +556,7 @@ async function main(): Promise<void> {
     console.log("  • weather_forecast (FK: location_code)");
     console.log("  • active_fires     (FK: location_index)");
     console.log("  • air_quality_obs      (FK: location_index)");
+    console.log("  • open_meteo_pm25_obs, open_meteo_wind_obs (compatibility entities)");
     if (!skipPower) {
       console.log("  • power_daily      (FK: location_index)");
     }
@@ -534,8 +572,9 @@ async function main(): Promise<void> {
 
   if (runSmokeledger) {
     console.log("\nActive Entities in lightning.metastore.smokeledger.smokeledger_usl:");
-    console.log("  • locations, fires, pm25, wind");
-    console.log("  • Read-only source-backed view; legacy PostgreSQL workflow tables are not included");
+    console.log("  • 15 PostgreSQL-free entities: towns, fires, wind, pm25, concessions, companies, runs,");
+    console.log("    trajectory_points, attribution, projections, cases, case_events, evidence, guidance, agent_runs");
+    console.log("  • Environmental feeds populate towns, fires, wind, and pm25; other entities are empty placeholders");
   }
 
   console.log("=".repeat(70));

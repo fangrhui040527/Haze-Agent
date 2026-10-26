@@ -70,6 +70,7 @@ interface CliOptions {
   locationName?: string | undefined;
   dryRun: boolean;
   testOnly: boolean;
+  prepareOnly: boolean;
 }
 
 function loadLocations(): LocationItem[] {
@@ -144,6 +145,7 @@ function parseCliArgs(locations: LocationItem[]): CliOptions {
     locationName: "WP Kuala Lumpur",
     dryRun: false,
     testOnly: false,
+    prepareOnly: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -165,6 +167,7 @@ function parseCliArgs(locations: LocationItem[]): CliOptions {
     else if (arg === "--all") options.all = true;
     else if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--test-only") options.testOnly = true;
+    else if (arg === "--prepare-only") options.prepareOnly = true;
     else if (arg === "--help" || arg === "-h") {
       console.log("See the header of this file for usage.");
       process.exit(0);
@@ -470,7 +473,11 @@ async function main(): Promise<void> {
     console.log(`  ✓ Wrote CAMS dataset: ${camsPath} (${(camsResult.data.ts ?? []).length} rows)`);
   }
 
-  if (!options.testOnly) {
+  if (options.prepareOnly) {
+    console.log("\nPrepared Windy CSV files locally; Zetaris publication was skipped.");
+  }
+
+  if (!options.testOnly && !options.prepareOnly) {
     console.log("\n========================================================");
     console.log(" Publishing CSVs & Registering FileStore in Zetaris");
     console.log("========================================================");
