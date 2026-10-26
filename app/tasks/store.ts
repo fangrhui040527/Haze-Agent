@@ -46,6 +46,7 @@ import {
   type TaskResult,
 } from '../contracts/tasks.js';
 import { migrateWorldSchema } from './world-schema.js';
+import { WorldModelStore } from './world-store.js';
 
 export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v1';
 export const STORAGE_MARKER = 'storage-format.json';
@@ -174,6 +175,7 @@ export interface StoreDefinitions {
 export class TaskStore {
   readonly db: DatabaseSync;
   readonly directory: string;
+  readonly world: WorldModelStore;
   private definitions: StoreDefinitions | undefined;
   private transactionDepth = 0;
   constructor(
@@ -243,6 +245,9 @@ export class TaskStore {
       this.db.close();
       throw error;
     }
+    this.world = new WorldModelStore(this.db, (operation) =>
+      this.atomic(operation),
+    );
     if (options.recover !== false) this.recover();
   }
   configureDefinitions(definitions: StoreDefinitions) {
