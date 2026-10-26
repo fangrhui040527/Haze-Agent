@@ -7,7 +7,11 @@ import type {
   PutWorldRecordInput,
   RelateWorldRecordsInput,
 } from '../../app/tasks/world-store.js';
-import type { WorldRecord } from '../../app/contracts/world.js';
+import {
+  worldRecordSchema,
+  type WorldRecord,
+} from '../../app/contracts/world.js';
+import type { ArtifactRef } from '../../app/contracts/artifacts.js';
 
 const identity = { principal: 'test-user', workspace: 'test-workspace' };
 const scope = { ...identity, mode: 'fixture' as const };
@@ -61,6 +65,14 @@ function relate(
   to: WorldRecord['ref'],
 ): RelateWorldRecordsInput {
   return { scope, operation_key, kind, from, to, recorded_at: at };
+}
+
+function artifactRef(value: {
+  id: string;
+  version: number;
+  sha256: string;
+}): ArtifactRef {
+  return { id: value.id, version: value.version, sha256: value.sha256 };
 }
 
 describe('transactional World Model writes', () => {
@@ -270,5 +282,210 @@ describe('transactional World Model writes', () => {
     expect(() => store.world.rebuildProjections(scope)).toThrow();
     expect(store.world.record(scope, location.ref.id)).toEqual(location);
     expect(store.world.projectionCursor(scope)).toBe(1);
+  });
+
+  it('projects imported context only when a task adopts it in that execution mode', () => {
+    const store = createStore();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Private source content.').toString(
+          'base64',
+        ),
+      },
+      identity,
+      'import-source',
+    ).artifact;
+    const ref = artifactRef(source);
+
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM world_entities').get(),
+    ).toEqual({ count: 0 });
+
+    const task = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Review the imported source.',
+        context_refs: [ref],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'adopt-source',
+      { mode: 'fixture' },
+    ).task;
+
+    const records = store.db
+      .prepare(
+        `SELECT body FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=? AND kind=?`,
+      )
+      .all(
+        identity.principal,
+        identity.workspace,
+        task.mode,
+        'artifact_reference',
+      ) as {
+      body: string;
+    }[];
+    expect(records).toHaveLength(1);
+    expect(
+      worldRecordSchema.parse(JSON.parse(records[0]!.body)).payload,
+    ).toEqual({
+      artifact: ref,
+      kind: 'source.import',
+      producer: source.producer,
+      created_at: source.created_at,
+      dependencies: [],
+      evidence_origin: 'user_supplied',
+    });
+    expect(JSON.stringify(records[0]!.body)).not.toContain(
+      'Private source content.',
+    );
+    const projectedRef = worldRecordSchema.parse(
+      JSON.parse(records[0]!.body),
+    ).ref;
+    expect(
+      store.world.record({ ...scope, mode: 'live' }, projectedRef.id),
+    ).toBeUndefined();
+  });
+
+  it('projects produced artifact references and dependency links in the artifact transaction', () => {
+    const store = createStore();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Evidence source.').toString('base64'),
+      },
+      identity,
+      'artifact-source',
+    ).artifact;
+    const task = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Analyze the evidence source.',
+        context_refs: [artifactRef(source)],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'artifact-task',
+      { mode: 'fixture' },
+    ).task;
+    const assignment = store.createAssignments(
+      task.id,
+      task.current_run_id,
+      task.objective_revision,
+      [
+        {
+          role: 'HazeOps',
+          definition_id: 'test.analysis',
+          capability: 'test',
+          definition_version: '1',
+          brief: 'Create a derived analysis.',
+          inputs: [artifactRef(source)],
+        },
+      ],
+    )[0]!;
+    store.acquireAssignment(task.id, assignment.id);
+
+    const output = store.saveArtifact(task.id, identity, {
+      kind: 'test.analysis',
+      producer: { kind: 'assignment', id: assignment.id },
+      dependencies: [artifactRef(source)],
+      content: { finding: 'bounded' },
+    });
+    const artifactRecords = store.db
+      .prepare(
+        `SELECT body FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=? AND kind=?`,
+      )
+      .all(
+        identity.principal,
+        identity.workspace,
+        'fixture',
+        'artifact_reference',
+      ) as {
+      body: string;
+    }[];
+    expect(artifactRecords).toHaveLength(2);
+    const outputRecord = artifactRecords
+      .map((row) => worldRecordSchema.parse(JSON.parse(row.body)))
+      .find(
+        (record) =>
+          record.external_id === `artifact:${output.id}:${output.version}`,
+      );
+    const sourceRecord = artifactRecords
+      .map((row) => worldRecordSchema.parse(JSON.parse(row.body)))
+      .find(
+        (record) =>
+          record.external_id === `artifact:${source.id}:${source.version}`,
+      );
+    expect(outputRecord).toBeDefined();
+    expect(sourceRecord).toBeDefined();
+    expect(
+      store.world.relationships(
+        { ...scope, mode: 'fixture' },
+        outputRecord!.ref.id,
+      ),
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'depends_on',
+        from: outputRecord!.ref,
+        to: sourceRecord!.ref,
+      }),
+    );
+  });
+
+  it('rolls back task creation and World Model projection when artifact projection fails', () => {
+    const store = createStore();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Evidence source.').toString('base64'),
+      },
+      identity,
+      'rollback-source',
+    ).artifact;
+    store.db.exec(`CREATE TRIGGER reject_world_events
+      BEFORE INSERT ON world_events
+      BEGIN SELECT RAISE(ABORT, 'injected projection failure'); END;`);
+
+    expect(() =>
+      store.admit(
+        {
+          schema_version: 'haze.task.request.v3',
+          objective: 'This admission must roll back.',
+          context_refs: [artifactRef(source)],
+          constraints: [],
+          desired_deliverables: [],
+        },
+        identity,
+        'rollback-task',
+        { mode: 'fixture' },
+      ),
+    ).toThrow('injected projection failure');
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM tasks').get(),
+    ).toEqual({ count: 0 });
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM world_entities').get(),
+    ).toEqual({ count: 0 });
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM world_events').get(),
+    ).toEqual({ count: 0 });
+    expect(
+      store.db
+        .prepare(
+          'SELECT COUNT(*) AS count FROM world_operation_receipts WHERE operation_key=?',
+        )
+        .get(`project-artifact:${source.id}:${source.version}`),
+    ).toEqual({ count: 0 });
   });
 });

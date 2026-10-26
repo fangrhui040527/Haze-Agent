@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { contractHash } from '../contracts/json.js';
+import type { Artifact } from '../contracts/artifacts.js';
 import {
   worldEventSchema,
   worldOperationReceiptSchema,
@@ -184,6 +185,37 @@ export class WorldModelStore {
       );
       this.saveOperation(receipt);
       return { value: record, receipt, changed: true };
+    });
+  }
+
+  projectArtifact(
+    artifact: Artifact,
+    mode: WorldScope['mode'],
+  ): WorldWriteResult<WorldRecord> {
+    const { id, version, sha256 } = artifact;
+    return this.putRecord({
+      scope: {
+        principal: artifact.identity.principal,
+        workspace: artifact.identity.workspace,
+        mode,
+      },
+      operation_key: `project-artifact:${id}:${version}`,
+      kind: 'artifact_reference',
+      external_id: `artifact:${id}:${version}`,
+      payload: {
+        artifact: { id, version, sha256 },
+        kind: artifact.kind,
+        producer: artifact.producer,
+        created_at: artifact.created_at,
+        dependencies: artifact.dependencies,
+        ...(artifact.evidence_origin === undefined
+          ? {}
+          : { evidence_origin: artifact.evidence_origin }),
+      },
+      producer: {
+        kind: artifact.producer.kind,
+        id: artifact.producer.id,
+      },
     });
   }
 

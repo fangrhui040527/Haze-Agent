@@ -464,6 +464,10 @@ export class TaskStore {
             created_at: at,
             updated_at: at,
           };
+          for (const ref of parsed.context_refs) {
+            const artifact = this.artifact(ref.id, identity, ref);
+            this.projectArtifact(artifact, task.mode);
+          }
           const run: RunRecord = {
             id: runId,
             task_id: id,
@@ -1379,6 +1383,7 @@ export class TaskStore {
           : { evidence_origin: options.evidence_origin }),
       };
       this.insertArtifact(artifact);
+      this.projectArtifact(artifact, task.mode);
       run.usage.artifacts++;
       this.putRun(run);
       if (assignment) {
@@ -1407,6 +1412,37 @@ export class TaskStore {
       );
       return artifact;
     });
+  }
+  private projectArtifact(
+    artifact: Artifact,
+    mode: TaskRecord['mode'],
+    ancestors = new Set<string>(),
+  ): void {
+    const key = `${artifact.id}/${artifact.version}`;
+    if (ancestors.has(key))
+      fail('artifact_dependency_cycle', 'Artifact dependency cycle detected.');
+    const nextAncestors = new Set(ancestors).add(key);
+    const dependencies = artifact.dependencies.map((ref) =>
+      this.artifact(ref.id, artifact.identity, ref),
+    );
+    for (const dependency of dependencies)
+      this.projectArtifact(dependency, mode, nextAncestors);
+
+    const projected = this.world.projectArtifact(artifact, mode).value;
+    for (const dependency of dependencies) {
+      const projectedDependency = this.world.projectArtifact(
+        dependency,
+        mode,
+      ).value;
+      this.world.relate({
+        scope: projected.scope,
+        operation_key: `artifact-dependency:${artifact.id}:${artifact.version}:${dependency.id}:${dependency.version}`,
+        kind: 'depends_on',
+        from: projected.ref,
+        to: projectedDependency.ref,
+        recorded_at: artifact.created_at,
+      });
+    }
   }
   private applicability(
     taskId: string,
