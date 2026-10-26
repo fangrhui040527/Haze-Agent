@@ -224,6 +224,56 @@ describe('authorized World Model reuse services', () => {
     expect(history.entries.map((entry) => entry.event_kind)).toContain(
       'record_created',
     );
+    const pinnedHold = store.world.hold(
+      { ...identity, mode: 'fixture' },
+      sourceWorldRecord.ref,
+      'The pinned World Model record changed.',
+      'correction',
+    );
+    const lifecycleEvents = store
+      .events(consumer.id, identity)
+      .events.filter((event) => event.type === 'world_lifecycle_changed');
+    expect(lifecycleEvents).toHaveLength(1);
+    expect(lifecycleEvents[0]?.data).toMatchObject({
+      event_kind: 'hold_created',
+      record_ids: [sourceWorldRecord.ref.id],
+    });
+    const worldEventCount = store.world.events({
+      ...identity,
+      mode: 'fixture',
+    }).length;
+    store.db.exec(
+      `CREATE TRIGGER reject_world_task_notification
+       BEFORE INSERT ON events
+       WHEN json_extract(NEW.body,'$.type')='world_lifecycle_changed'
+       BEGIN SELECT RAISE(ABORT,'notification failed'); END;`,
+    );
+    expect(() =>
+      store.world.clearHold(
+        { ...identity, mode: 'fixture' },
+        pinnedHold.id,
+        'Attempted clear.',
+      ),
+    ).toThrow('notification failed');
+    expect(
+      store.world.activeHolds(
+        { ...identity, mode: 'fixture' },
+        sourceWorldRecord.ref.id,
+      ),
+    ).toHaveLength(1);
+    expect(store.world.events({ ...identity, mode: 'fixture' })).toHaveLength(
+      worldEventCount,
+    );
+    store.db.exec('DROP TRIGGER reject_world_task_notification;');
+    const directory = store.directory;
+    store.close();
+    const reopened = new TaskStore(directory, { recover: false });
+    stores.push(reopened);
+    expect(
+      reopened
+        .events(consumer.id, identity)
+        .events.filter((event) => event.type === 'world_lifecycle_changed'),
+    ).toHaveLength(1);
   });
 
   it('rejects mode crossover and requires an explicit intended use', () => {
@@ -268,7 +318,15 @@ describe('authorized World Model reuse services', () => {
       store.worldContext(task.id, identity, 'live', record.ref.id),
     ).toThrow('execution mode mismatch');
     expect(() =>
-      store.pinWorldContext(task.id, identity, assignment.id, 1, [], '  '),
+      store.pinWorldContext(
+        task.id,
+        identity,
+        assignment.id,
+        1,
+        [],
+        '  ',
+        record.ref.id,
+      ),
     ).toThrow('intended use is required');
   });
 

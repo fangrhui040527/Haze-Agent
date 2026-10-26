@@ -62,6 +62,7 @@ export function createWorldModelTools(store: TaskStore, mode: ExecutionMode) {
         context.generation,
         value.support_artifacts,
         input.stated_use,
+        input.record_id,
       );
       const snapshot = store.saveArtifact(context.taskId, context.identity, {
         kind: 'world.context.snapshot',

@@ -107,6 +107,7 @@ export class WorldModelStore {
     private readonly db: DatabaseSync,
     private readonly transaction: Transaction,
     private readonly clock: () => string = () => new Date().toISOString(),
+    private readonly onEvent?: (event: WorldEvent) => void,
   ) {
     this.replayPendingProjections();
   }
@@ -1434,6 +1435,7 @@ export class WorldModelStore {
         stored.recorded_at,
       );
     this.applyProjection(event);
+    this.onEvent?.(event);
   }
 
   private parseEventRow(

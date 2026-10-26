@@ -15,6 +15,7 @@ import {
 } from '../contracts/json.js';
 import { CONTRACT_LIMITS } from '../contracts/common.js';
 import {
+  artifactRefSchema,
   artifactImportSchema,
   artifactSchema,
   type Artifact,
@@ -48,6 +49,7 @@ import {
 } from '../contracts/tasks.js';
 import {
   worldAcceptanceOutcomeSchema,
+  type WorldEvent,
   type WorldAcceptanceOutcome,
   type WorldRecord,
 } from '../contracts/world.js';
@@ -277,6 +279,7 @@ export class TaskStore {
       CREATE INDEX IF NOT EXISTS task_events ON events(task_id,cursor);
       CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,principal TEXT NOT NULL,workspace TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS applicability(task_id TEXT NOT NULL,artifact_id TEXT NOT NULL,objective_revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(task_id,artifact_id,objective_revision));
+      CREATE TABLE IF NOT EXISTS world_task_pins(task_id TEXT NOT NULL,principal TEXT NOT NULL,workspace TEXT NOT NULL,mode TEXT NOT NULL,record_id TEXT NOT NULL,support_artifacts TEXT NOT NULL,generation INTEGER NOT NULL,PRIMARY KEY(task_id,record_id,generation));
       CREATE TABLE IF NOT EXISTS corrections(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS questions(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,assignment_id TEXT NOT NULL,body TEXT NOT NULL);
@@ -291,11 +294,89 @@ export class TaskStore {
       this.db.close();
       throw error;
     }
-    this.world = new WorldModelStore(this.db, (operation) =>
-      this.atomic(operation),
+    this.world = new WorldModelStore(
+      this.db,
+      (operation) => this.atomic(operation),
+      undefined,
+      (event) => this.publishWorldLifecycle(event),
     );
     this.world.holdPolicyChanges(this.worldAcceptancePolicy.sha256);
     if (options.recover !== false) this.recover();
+  }
+  private publishWorldLifecycle(event: WorldEvent): void {
+    const recordIds = new Set<string>();
+    const artifactIds = new Set<string>();
+    if (
+      event.event_kind === 'record_created' ||
+      event.event_kind === 'record_revised'
+    ) {
+      recordIds.add(event.value.ref.id);
+      if (
+        event.value.kind === 'artifact_reference' &&
+        typeof event.value.payload === 'object' &&
+        event.value.payload !== null &&
+        !Array.isArray(event.value.payload)
+      ) {
+        const ref = artifactRefSchema.safeParse(event.value.payload.artifact);
+        if (ref.success) artifactIds.add(ref.data.id);
+      }
+    } else if (event.event_kind === 'relationship_created') {
+      recordIds.add(event.value.from.id);
+      recordIds.add(event.value.to.id);
+    } else if (event.event_kind === 'acceptance_evaluated') {
+      recordIds.add(event.value.subject.id);
+      for (const support of event.value.support_revisions)
+        if (support.artifact) artifactIds.add(support.artifact.id);
+    } else if (
+      event.event_kind === 'hold_created' ||
+      event.event_kind === 'hold_cleared'
+    ) {
+      recordIds.add(event.value.subject.id);
+    }
+    const conditions: string[] = [];
+    const values: (string | number)[] = [
+      event.scope.principal,
+      event.scope.workspace,
+      event.scope.mode,
+    ];
+    if (recordIds.size) {
+      conditions.push(
+        `record_id IN (${[...recordIds].map(() => '?').join(',')})`,
+      );
+      values.push(...recordIds);
+    }
+    if (artifactIds.size) {
+      conditions.push(
+        `EXISTS (
+          SELECT 1 FROM json_each(world_task_pins.support_artifacts) pinned
+          WHERE json_extract(pinned.value,'$.id') IN (${[...artifactIds]
+            .map(() => '?')
+            .join(',')})
+        )`,
+      );
+      values.push(...artifactIds);
+    }
+    if (conditions.length === 0) return;
+    const pins = this.db
+      .prepare(
+        `SELECT DISTINCT task_id FROM world_task_pins
+         WHERE principal=? AND workspace=? AND mode=?
+         AND (${conditions.join(' OR ')})`,
+      )
+      .all(...values) as { task_id: string }[];
+    for (const { task_id } of pins)
+      this.appendEvent(
+        task_id,
+        'world_lifecycle_changed',
+        'Runtime',
+        'World Model state changed for context pinned by this task. Refresh status before reuse.',
+        {
+          world_event_id: event.event_id,
+          world_sequence: event.sequence,
+          event_kind: event.event_kind,
+          record_ids: [...recordIds],
+        },
+      );
   }
   configureDefinitions(definitions: StoreDefinitions) {
     this.definitions = copy(definitions);
@@ -533,6 +614,7 @@ export class TaskStore {
     generation: number,
     refs: ArtifactRef[],
     statedUse: string,
+    recordId: string,
   ): void {
     if (!statedUse.trim())
       fail(
@@ -583,6 +665,21 @@ export class TaskStore {
         );
       }
       this.putAssignment(assignment);
+      this.db
+        .prepare(
+          `INSERT OR REPLACE INTO world_task_pins
+           (task_id,principal,workspace,mode,record_id,support_artifacts,generation)
+           VALUES(?,?,?,?,?,?,?)`,
+        )
+        .run(
+          taskId,
+          identity.principal,
+          identity.workspace,
+          task.mode,
+          recordId,
+          JSON.stringify(refs),
+          generation,
+        );
       this.appendEvent(
         taskId,
         'world_context_retrieved',
