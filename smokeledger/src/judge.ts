@@ -59,7 +59,7 @@ export async function judge(
   const cited = citedSentences(text);
   if (!cited.length) return det;
   const ev = [
-    ...evidence.map((e) => `${e.evidence_id}\nSQL: ${e.sql}\nROWS: ${JSON.stringify(e.rows.slice(0, 40))}`),
+    ...evidence.map((e) => `${e.evidence_id}\nSQL: ${e.sql}\n${judgeRows(e.rows)}`),
     ...memories.map((m) => `M:${m.id}\nMEMORY: ${m.content}`),
   ].join("\n\n");
   const { message, model } = await chat(
@@ -76,6 +76,27 @@ export async function judge(
     { model: CONFIG.llm.modelJudge, temperature: 0, json: true },
   );
   return { ...parseJudgeReply(message.content ?? "", cited), judgeModel: model };
+}
+
+const JUDGE_ROW_LIMIT = 200;
+const EPOCH_MIN = 1_500_000_000; // 2017
+const EPOCH_MAX = 2_200_000_000; // 2039
+
+/**
+ * Display only (stored rows and hashes are untouched): show up to JUDGE_ROW_LIMIT rows and
+ * annotate epoch-second values with UTC and Malaysia time so the model checks facts, not arithmetic.
+ */
+export function judgeRows(rows: unknown[][]): string {
+  const label = (v: unknown) => {
+    const n = typeof v === "number" ? v : typeof v === "string" && /^\d{10}$/.test(v) ? Number(v) : NaN;
+    if (!(n >= EPOCH_MIN && n <= EPOCH_MAX)) return v;
+    const utc = new Date(n * 1000);
+    const myt = new Date(n * 1000 + 8 * 3_600_000);
+    return `${v} (${utc.toISOString().slice(0, 16)}Z = ${myt.toISOString().slice(0, 16).replace("T", " ")} MYT)`;
+  };
+  const shown = rows.slice(0, JUDGE_ROW_LIMIT).map((row) => row.map(label));
+  const note = rows.length > JUDGE_ROW_LIMIT ? `ROWS (first ${JUDGE_ROW_LIMIT} of ${rows.length}):` : `ROWS (all ${rows.length}):`;
+  return `${note} ${JSON.stringify(shown)}`;
 }
 
 /** Sentences the model lane checks: those citing evidence or memory. */

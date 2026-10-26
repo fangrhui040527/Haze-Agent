@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { citedSentences, deterministicCheck, parseJudgeReply, splitSentences } from "../src/judge.ts";
+import { citedSentences, deterministicCheck, judgeRows, parseJudgeReply, splitSentences } from "../src/judge.ts";
 import type { Evidence } from "../src/query.ts";
 
 const ev = (id: string): Evidence => ({ evidence_id: id, backend: "postgres", sql: "SELECT 1", executed_utc: "", row_count: 1, sha256: "", rows: [[1]] });
@@ -50,4 +50,14 @@ test("judge: fails closed on unreadable output, missing verdicts and non-boolean
   const missing = parseJudgeReply('{"verdicts":[{"id":"S1","supported":true}]}', S);
   assert.deepEqual(missing.problems, ['No judge verdict for: "Peak was 118 [E-0123456789]."']);
   assert.equal(parseJudgeReply('{"verdicts":[{"id":"S1","supported":"yes"},{"id":"S2","supported":true}]}', S).ok, false);
+});
+
+test("judge rows: all rows up to the limit, epoch seconds annotated in UTC and Malaysia time", () => {
+  const rows = Array.from({ length: 73 }, (_, i) => [1793120400 + i * 3600, 25 + i]);
+  const shown = judgeRows(rows);
+  assert.match(shown, /^ROWS \(all 73\):/);
+  assert.match(shown, /1793120400 \(2026-10-27T17:00Z = 2026-10-28 01:00 MYT\)/);
+  assert.match(shown, /2026-10-30T17:00Z = 2026-10-31 01:00 MYT/, "the 73rd row is visible");
+  assert.match(judgeRows([[42.5, "Batu Pahat"]]), /\[42\.5,"Batu Pahat"\]/, "non-epoch values are unchanged");
+  assert.match(judgeRows(Array.from({ length: 250 }, () => [1])), /^ROWS \(first 200 of 250\):/);
 });

@@ -50,6 +50,8 @@ export async function buildWarning(fw: ForwardResult, townName: string): Promise
   );
   if (!eProj.rows.length)
     throw new Error(`No projection for ${townName}: load PM2.5 for this town (at least 18 of the last 24 hours plus a forecast).`);
+  // The forward run's own row holds its issue time, so "Issued for" cites evidence that contains it.
+  const eIssued = await evidence(`SELECT run_id, kind, ${epoch("center_utc")} AS issued_epoch FROM {src}.runs WHERE run_id = '${run}'`);
 
   const rows = eProj.rows.map(([t, pm, api, p, s]) => ({ tMs: toMs(t), pm: num(pm), api: num(api), p: num(p), smoke: num(s) }));
   const first = rows.find((r) => r.api > PARAMS.api.closeThreshold) ?? null;
@@ -79,7 +81,7 @@ export async function buildWarning(fw: ForwardResult, townName: string): Promise
   const L: string[] = [];
   L.push(`# Haze outlook: ${townName}`);
   L.push("");
-  L.push(`Issued for ${localTime(fw.nowMs)} ${id(eProj)}.`);
+  L.push(`Issued for ${localTime(fw.nowMs)} ${id(eIssued)}.`);
   const now = rows[0];
   L.push(`Now: the 24-hour average PM2.5 is ${now.pm.toFixed(1)} ug/m3, about API ${Math.round(now.api)} ${id(eProj)}.`);
   if (first)
@@ -101,7 +103,7 @@ export async function buildWarning(fw: ForwardResult, townName: string): Promise
   L.push(adviceFor(worst));
   L.push("Schools close on the official APIMS reading, not on this projection. Use this outlook to plan childcare and medication early.");
   const text = L.join("\n");
-  const all = [eProj, ...(eFires ? [eFires] : [])];
+  const all = [eIssued, eProj, ...(eFires ? [eFires] : [])];
   const v = await judge(text.split("## What to do")[0], all, { useModel: false });
   if (!v.ok) throw new Error(`Warning failed its own citation check: ${v.problems.join("; ")}`);
 
