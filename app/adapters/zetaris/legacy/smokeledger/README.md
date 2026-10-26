@@ -45,17 +45,17 @@ The legacy PM2.5 table upserts matching town/time/kind rows when provider
 issuance is unknown. `ingested_utc` is local receipt time; it is not a provider
 model issue time. These rows do not form an immutable model-run archive.
 
-## Retained Zetaris registration and legacy USL definitions
+## Retained PostgreSQL-backed Zetaris registration
 
 `sql/02_zetaris_register.sql` exposes this existing PostgreSQL schema as `sl_pg`.
 The `host.docker.internal:5433` JDBC address lets Docker Desktop containers
-reach the local PostgreSQL port. The related model remains under
-`app/adapters/zetaris/usl/smokeledger_usl/`.
+reach the local PostgreSQL port.
 
-`sql/02_zetaris_register.sql` and the related USL files are retained as
-historical definitions. The dedicated SmokeLedger bootstrap has been removed;
-these files are not invoked by the current environmental bootstrap and are not
-required for current PM2.5 task execution.
+This registration and the legacy `bootstrap_smokeledger.ts` script are kept
+only for users deliberately using the old PostgreSQL store. The current
+`smokeledger_usl` is a read-only model over the Environmental USL and does not
+run this registration or require PostgreSQL. See
+`app/adapters/zetaris/usl/smokeledger_usl/README.md` for its bootstrap commands.
 
 The schema also retains planned domain tables for concessions, companies,
 trajectories, attribution, projections, cases, guidance and agent runs. Their

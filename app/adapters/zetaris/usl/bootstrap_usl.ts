@@ -2,14 +2,16 @@
 /**
  * Malaysia Unified Semantic Layer (USL) — End-to-End Initializer
  * ==============================================================================
- * Single-command initialization for the Malaysian Environmental and Legal
- * semantic layers.
+ * Single-command initialization for the Malaysian Environmental, Legal, and
+ * SmokeLedger semantic layers.
  *
  * Target selection flags:
  * -----------------------
  *   --env-only       Bootstrap ONLY the Environmental USL (malaysia_env_usl)
  *   --law-only       Bootstrap ONLY the Law USL (malaysia_law_usl)
- *   (default)        Bootstrap both USLs
+ *   --smokeledger-only Bootstrap ONLY the SmokeLedger USL (smokeledger_usl)
+ *   --with-smokeledger Include SmokeLedger in a selected Environmental or Law run
+ *   (default)        Bootstrap Environmental, Law, and SmokeLedger
  *
  * Additional options:
  * -------------------
@@ -23,6 +25,8 @@
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --law-only
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --smokeledger-only
+ *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --with-smokeledger
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --env-only --skip-power
  *   node --experimental-strip-types app/zetaris/usl/bootstrap_usl.ts --test
  *   npx tsx app/zetaris/usl/bootstrap_usl.ts --law-only
@@ -105,8 +109,12 @@ async function dockerCp(
     await runCommand("docker", ["exec", "-u", "root", container, "chmod", "-R", "777", dst]);
     console.log(`  ✓ Copied ${src} → ${container}:${dst}`);
   } catch (err) {
-    console.warn(`  ⚠ docker cp failed (${dst}): ${(err as Error).message}`);
-    console.warn("    Assuming direct filesystem mount — continuing.");
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Failed to stage ${src} in ${container}:${dst}. ` +
+        'If Docker reported a missing bind-mount source, recreate the Zetaris ' +
+        `stack from its current Compose directory before retrying. Cause: ${detail}`,
+    );
   }
 }
 
@@ -279,6 +287,26 @@ async function verifyLawUsl(): Promise<void> {
   }
 }
 
+async function verifySmokeledgerUsl(): Promise<void> {
+  console.log("\n  ==> Running SmokeLedger USL verification health check...");
+  const smokeledgerTestSql = [
+    "SELECT location_name",
+    "FROM lightning.metastore.smokeledger.smokeledger_usl.locations",
+    "LIMIT 5;",
+  ].join(" ");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "zetaris-verify-smokeledger-"));
+  const tmpFile = path.join(tmpDir, "verify.sql");
+  try {
+    fs.writeFileSync(tmpFile, smokeledgerTestSql, "utf-8");
+    await runCommand(PYTHON_BIN, [RUN_SQL, tmpFile], ZETARIS_ROOT);
+    console.log("  ✓ SmokeLedger USL: Query verified successfully!");
+  } catch (err) {
+    console.warn(`  ⚠ SmokeLedger health check warning: ${(err as Error).message}`);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
@@ -286,6 +314,7 @@ async function verifyLawUsl(): Promise<void> {
 interface CliOptions {
   runEnv: boolean;
   runLaw: boolean;
+  runSmokeledger: boolean;
   skipPower: boolean;
   testMode: boolean;
   dryRun: boolean;
@@ -295,16 +324,17 @@ function parseArgs(): CliOptions {
   const argv = process.argv.slice(2);
   const envOnly = argv.includes("--env-only") || argv.includes("--env");
   const lawOnly = argv.includes("--law-only") || argv.includes("--law");
-  if (argv.includes("--smokeledger-only")) {
-    throw new Error(
-      "The PostgreSQL-backed SmokeLedger bootstrap is not part of this Zetaris bootstrap.",
-    );
+  const smokeledgerOnly = argv.includes("--smokeledger-only");
+  const withSmokeledger = argv.includes("--with-smokeledger");
+  const selectedLayer = envOnly || lawOnly || smokeledgerOnly;
+  if (smokeledgerOnly && (envOnly || lawOnly || withSmokeledger)) {
+    throw new Error("--smokeledger-only cannot be combined with other layer selection flags.");
   }
-  const selectedLayer = envOnly || lawOnly;
 
   return {
     runEnv: !selectedLayer || envOnly,
     runLaw: !selectedLayer || lawOnly,
+    runSmokeledger: smokeledgerOnly || withSmokeledger || !selectedLayer,
     skipPower: argv.includes("--skip-power"),
     testMode: argv.includes("--test"),
     dryRun: argv.includes("--dry-run"),
@@ -320,6 +350,7 @@ async function main(): Promise<void> {
   const {
     runEnv,
     runLaw,
+    runSmokeledger,
     skipPower,
     testMode,
     dryRun,
@@ -328,6 +359,7 @@ async function main(): Promise<void> {
   const layers = [
     runEnv ? "Environmental" : null,
     runLaw ? "Law" : null,
+    runSmokeledger ? "SmokeLedger" : null,
   ].filter((layer): layer is string => layer !== null);
 
   console.log("=".repeat(70));
@@ -342,6 +374,12 @@ async function main(): Promise<void> {
   }
   if (runLaw) {
     console.log("  • Law USL (malaysia_law_usl): Documents, Full-text Pages");
+  }
+  if (runSmokeledger) {
+    console.log("  • SmokeLedger USL (smokeledger_usl): read-only smoke view over current Zetaris source feeds");
+    if (!runEnv) {
+      console.log("    Requires the Environmental USL to already be bootstrapped; no PostgreSQL is used.");
+    }
   }
   console.log("=".repeat(70));
 
@@ -469,6 +507,21 @@ async function main(): Promise<void> {
     await runSqlFile(path.join(SRC_ROOT, "law", "sql", "law_activate.sql"), dryRun);
   }
 
+  // =========================================================================
+  // SECTION 3: SMOKELEDGER USL
+  // =========================================================================
+  if (runSmokeledger) {
+    console.log("\n>>> BOOTSTRAPPING SMOKELEDGER USL (smokeledger_usl) <<<");
+    console.log("\n[SmokeLedger Step 1/2] Compiling the source-backed SmokeLedger USL...");
+    await runSqlFile(path.join(USL_ROOT, "smokeledger_usl", "usl_schema.sql"), dryRun);
+
+    console.log("\n[SmokeLedger Step 2/2] Activating current environmental source feeds...");
+    await runSqlFile(
+      path.join(USL_ROOT, "smokeledger_usl", "usl_activate.sql"),
+      dryRun,
+    );
+  }
+
   // -------------------------------------------------------------------------
   // Summary & Health Checks
   // -------------------------------------------------------------------------
@@ -482,6 +535,7 @@ async function main(): Promise<void> {
   if (!dryRun) {
     if (runEnv) await verifyEnvUsl();
     if (runLaw) await verifyLawUsl();
+    if (runSmokeledger) await verifySmokeledgerUsl();
   }
 
   if (runEnv) {
@@ -504,6 +558,12 @@ async function main(): Promise<void> {
     console.log("\nActive Entities in lightning.metastore.malaysia_law.malaysia_law_usl:");
     console.log("  • law_documents    (Primary Key: document_id)");
     console.log("  • law_pages        (Primary Key: (document_id, page_number), FK: document_id)");
+  }
+
+  if (runSmokeledger) {
+    console.log("\nActive Entities in lightning.metastore.smokeledger.smokeledger_usl:");
+    console.log("  • locations, fires, pm25, wind");
+    console.log("  • Read-only source-backed view; legacy PostgreSQL workflow tables are not included");
   }
 
   console.log("=".repeat(70));

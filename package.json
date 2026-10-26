@@ -25,6 +25,7 @@
     "smokeledger:fetch:firms": "npm run zetaris:fetch:firms --",
     "smokeledger:fetch:wind": "npm run zetaris:fetch:wind --",
     "smokeledger:fetch:pm25": "npm run zetaris:fetch:pm25 --",
+    "zetaris:bootstrap:smokeledger": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --smokeledger-only",
     "build": "npm run vendor:engines && node scripts/build.mjs",
     "vendor:engines": "node scripts/vendor-engines.mjs",
     "verify:pins": "node scripts/verify-pins.mjs",

@@ -1,21 +1,20 @@
 -- Run after compiling and activating the SmokeLedger USL.
 
--- Recent fire detections.
-SELECT fire_id, acq_utc, lat, lon, frp, satellite, confidence
+-- Recent source-backed fire detections.
+SELECT location_index, acq_utc, fire_latitude, fire_longitude, frp, satellite, confidence
 FROM lightning.metastore.smokeledger.smokeledger_usl.fires
 ORDER BY acq_utc DESC
 LIMIT 20;
 
--- Most recent stored hourly PM2.5 forecasts by town.
-SELECT town, valid_utc, issued_utc, pm25, api_source
+-- Recent PM2.5 values, with source provenance preserved.
+SELECT location_index, observation_time, api_source, pm2_5_ug_m3, pm10_ug_m3
 FROM lightning.metastore.smokeledger.smokeledger_usl.pm25
-WHERE kind = 'model'
-ORDER BY valid_utc DESC
+ORDER BY observation_time DESC
 LIMIT 20;
 
--- Latest 10 m wind observations per stored grid point.
-SELECT lat, lon, valid_utc, u, v
+-- Recent Open-Meteo wind values.
+SELECT location_index, level, observation_time, wind_speed_ms, wind_direction_deg, u_ms, v_ms
 FROM lightning.metastore.smokeledger.smokeledger_usl.wind
 WHERE level = '10m'
-ORDER BY valid_utc DESC
+ORDER BY observation_time DESC
 LIMIT 20;

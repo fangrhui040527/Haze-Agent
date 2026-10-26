@@ -46,9 +46,12 @@ npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
 After reviewing the SQL, rerun the selected command without `--dry-run` to
 register the REST tables and views. Zetaris queries may contact Open-Meteo;
 start with `--test` or selected locations and verify provider usage before
-registering all 345 endpoints. Existing SmokeLedger PostgreSQL data remains
-under [legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md); it is
-not required by the current source path and is not migrated automatically.
+registering all 345 endpoints. The default USL bootstrap includes a read-only
+SmokeLedger view over the Environmental USL's current location, fire, PM2.5,
+and wind feeds; PostgreSQL is not required. Existing SmokeLedger PostgreSQL
+data and its legacy tooling remain under
+[legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md) and are not
+migrated automatically.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris
