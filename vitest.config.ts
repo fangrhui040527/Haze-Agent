@@ -8,7 +8,9 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['tests/unit/**/*.test.ts'],
-          testTimeout: 10_000,
+          // Runtime integration tests run SQLite + LangGraph end to end; shared
+          // CI runners are slow enough that 10s timed out passing tests.
+          testTimeout: 30_000,
         },
       },
       {
