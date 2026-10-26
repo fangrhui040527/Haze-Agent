@@ -16,8 +16,7 @@ import styles from './TaskPage.module.css';
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
   const run = useAgentRun(taskId);
-  const record =
-    run.task?.id === taskId ? run.task.record : undefined;
+  const record = run.task?.id === taskId ? run.task.record : undefined;
   const lifecycleCursor = run.events.reduce(
     (cursor, event) =>
       event.type === 'task_event' &&

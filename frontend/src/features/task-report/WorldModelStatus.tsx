@@ -48,7 +48,7 @@ function RecordLineage({ recordId }: { recordId: string }) {
     const controller = new AbortController();
     setLineage(null);
     setError(null);
-    const read = agentService.readWorldRecord;
+    const read = agentService.readWorldRecord?.bind(agentService);
     if (!read) {
       setError('This task service cannot read World Model lineage.');
       return () => controller.abort();
@@ -173,7 +173,9 @@ function AcceptanceDetails({
         .map((support) => (
           <p key={support.id}>
             Evidence:{' '}
-            <a href={`/api/artifacts/${encodeURIComponent(support.artifact!.id)}`}>
+            <a
+              href={`/api/artifacts/${encodeURIComponent(support.artifact!.id)}`}
+            >
               {support.artifact!.id}
             </a>{' '}
             version {support.artifact!.version}
@@ -225,10 +227,9 @@ export function WorldModelStatus({
           )}
           <ul className={styles.worldRecords}>
             {state.data.records.map((record) => {
-              const acceptance =
-                state.data!.current_acceptances.find(
-                  (value) => value.subject === record.ref.id,
-                )?.acceptance;
+              const acceptance = state.data!.current_acceptances.find(
+                (value) => value.subject === record.ref.id,
+              )?.acceptance;
               const presentation =
                 statusPresentation[acceptance?.status ?? 'none'];
               const limitations = recordLimitations(record);
@@ -236,17 +237,13 @@ export function WorldModelStatus({
                 <li key={`${record.ref.id}:${record.ref.revision}`}>
                   <div className={styles.worldRecordHeading}>
                     <h3>{record.kind}</h3>
-                    <Badge tone={presentation.tone}>
-                      {presentation.label}
-                    </Badge>
+                    <Badge tone={presentation.tone}>{presentation.label}</Badge>
                   </div>
                   <p className={styles.block}>
                     Scope: {record.scope.workspace}, {record.scope.mode};{' '}
                     producer: {record.producer.kind} {record.producer.id}.
                   </p>
-                  {acceptance && (
-                    <AcceptanceDetails acceptance={acceptance} />
-                  )}
+                  {acceptance && <AcceptanceDetails acceptance={acceptance} />}
                   {limitations.length > 0 && (
                     <p>Limitations: {limitations.join('; ')}</p>
                   )}

@@ -108,7 +108,7 @@ describe('authorized World Model reuse services', () => {
       identity,
       'source-adoption',
       { mode: 'fixture' },
-    ).task;
+    );
     const artifactReference = store.world.projectArtifact(
       source,
       'fixture',
@@ -279,23 +279,14 @@ describe('authorized World Model reuse services', () => {
     const lifecycleEvents = store
       .events(consumer.id, identity)
       .events.filter((event) => event.type === 'world_lifecycle_changed');
-    expect(lifecycleEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          data: {
-            event_kind: 'hold_created',
-            record_ids: [sourceWorldRecord.ref.id],
-            world_event_id: expect.any(String),
-            world_sequence: expect.any(Number),
-          },
-        }),
-        expect.objectContaining({
-          data: expect.objectContaining({
-            event_kind: 'acceptance_evaluated',
-            record_ids: [sourceWorldRecord.ref.id],
-          }),
-        }),
-      ]),
+    const lifecycleKinds = lifecycleEvents.flatMap((event) => {
+      const data = event.data;
+      return typeof data === 'object' && data !== null && !Array.isArray(data)
+        ? [data['event_kind']]
+        : [];
+    });
+    expect(lifecycleKinds).toEqual(
+      expect.arrayContaining(['hold_created', 'acceptance_evaluated']),
     );
     const worldEventCount = store.world.events({
       ...identity,

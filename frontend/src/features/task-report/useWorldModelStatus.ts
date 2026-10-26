@@ -26,7 +26,7 @@ export function useWorldModelStatus(
     }
     const controller = new AbortController();
     setState({ data: null, loading: true, error: null });
-    const read = agentService.readWorldTask;
+    const read = agentService.readWorldTask?.bind(agentService);
     if (!read) {
       setState({
         data: null,

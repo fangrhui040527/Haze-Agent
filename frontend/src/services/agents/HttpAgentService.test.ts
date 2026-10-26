@@ -278,11 +278,7 @@ describe('general task browser service (fixture wiring)', () => {
     const service = new HttpAgentService('/backend', fetcher);
     expect(await service.readWorldTask(taskId)).toEqual(taskWorld);
     expect(
-      await service.readWorldRecord(
-        'wmr:lineage',
-        'lineage',
-        { limit: 10 },
-      ),
+      await service.readWorldRecord('wmr:lineage', 'lineage', { limit: 10 }),
     ).toEqual(lineage);
     expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
       `/backend/api/tasks/${taskId}/world`,
