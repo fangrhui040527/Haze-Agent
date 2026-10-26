@@ -9,6 +9,7 @@ import type {
   AgentModel,
   AgentModelInput,
 } from '../../app/adapters/agent-model.js';
+import { scriptedAgentModel } from './scripted-model.js';
 import { TaskStore } from '../../app/tasks/store.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -89,7 +90,11 @@ async function runtime(
     ...(options.acceptancePolicy
       ? { acceptancePolicy: options.acceptancePolicy }
       : {}),
-    ...(options.model ? { model: scriptedManager(options.model) } : {}),
+    // Specialists are model-driven, so a provider is required even in fixture
+    // mode: fixture substitutes the source, not the reasoning.
+    model: options.model
+      ? scriptedManager(options.model)
+      : scriptedAgentModel(),
   });
   cleanups.push(async () => {
     await instance.close();
@@ -160,6 +165,7 @@ describe('general runtime', () => {
       stateDirectory: directory,
       registry,
       mode: 'fixture',
+      model: scriptedAgentModel(),
     });
     cleanups.push(async () => {
       await instance.close();
@@ -189,8 +195,12 @@ describe('general runtime', () => {
         (assignment) => assignment.definition_id === 'pm25.retrieve',
       )?.outputs,
     ).toEqual([]);
+    // A model-driven specialist charges a model attempt before its tool
+    // attempt, so assert on the tool attempt rather than the first one.
     expect(
-      instance.store.attempts(paused.id, localTaskIdentity)[0],
+      instance.store
+        .attempts(paused.id, localTaskIdentity)
+        .find((attempt) => attempt.kind === 'tool'),
     ).toMatchObject({ status: 'unknown', accepted: false });
     instance.control(
       paused.id,
@@ -205,7 +215,9 @@ describe('general runtime', () => {
       ['completed', 'failed'].includes(task.status),
     );
     expect(complete.status, complete.error?.message).toBe('completed');
-    expect(complete.usage.tool_calls).toBe(2);
+    // The replaced retrieval plus coverage and the independent check: the
+    // first retrieval attempt stays charged with an unknown outcome.
+    expect(complete.usage.tool_calls).toBe(4);
     expect(complete.limits.deadline).toBe(paused.limits.deadline);
     expect(calls).toBe(2);
   });
@@ -243,8 +255,11 @@ describe('general runtime', () => {
     );
     expect(paused.status, paused.error?.message).toBe('paused');
     expect(paused.usage.model_calls).toBe(1);
+    // This case charges a provider call, not a tool call.
     expect(
-      instance.store.attempts(paused.id, localTaskIdentity)[0],
+      instance.store
+        .attempts(paused.id, localTaskIdentity)
+        .find((attempt) => attempt.kind === 'model'),
     ).toMatchObject({ status: 'unknown', accepted: false });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(calls).toBe(1);
@@ -604,7 +619,7 @@ describe('general runtime', () => {
     expect(task.corrections[0]?.passage).toBe('Use this imported source.');
     expect(task.result?.sources[0]?.artifact.id).toBe(source.id);
   });
-  it('runs PM2.5 methods, independent checks, and a persisted bounded peer exchange', async () => {
+  it('runs PM2.5 methods through model-driven specialists and keeps the independent check separate from the producer', async () => {
     const instance = await runtime();
     const admitted = instance.admit(
       {
@@ -625,19 +640,26 @@ describe('general runtime', () => {
     expect(task.status, task.error?.message).toBe('completed');
     expect(task.result?.completion).toBe('partial');
     expect(task.result?.answer).toContain('[E1]');
-    expect(
-      task.result?.work_products.some(
-        (ref) =>
-          instance.store.artifact(ref.id, localTaskIdentity).kind ===
-          'pm25.analysis',
-      ),
-    ).toBe(true);
+    const products = (task.result?.work_products ?? []).map((ref) =>
+      instance.store.artifact(ref.id, localTaskIdentity),
+    );
+    const kinds = products.map((artifact) => artifact.kind).join(',');
+    const analysis = products.find(
+      (artifact) => artifact.kind === 'pm25.analysis',
+    );
+    expect(analysis, kinds).toBeDefined();
+    // The reviewer's own artifact is deliberately excluded from work
+    // products and surfaces through the review section instead.
+    expect(task.result?.review.status, kinds).toBe('supported');
+    // Retrieval, coverage and the independent check are three granted methods.
+    // The analysis is a pinned dependency, so the producer has already
+    // completed and the critic records its verdict instead of messaging it.
+    expect(task.usage.tool_calls).toBe(3);
     expect(
       instance.store
         .events(task.id, localTaskIdentity)
         .events.filter((event) => event.type === 'peer_message_sent'),
-    ).toHaveLength(2);
-    expect(task.usage.tool_calls).toBe(1);
+    ).toHaveLength(0);
     const projected = projectedWorldRecords(instance, task);
     expect(projected.map((record) => record.kind)).toEqual(
       expect.arrayContaining([

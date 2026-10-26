@@ -35,7 +35,7 @@
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:postgres": "vitest run --project postgres",
-    "test:integration": "node scripts/verify-general.mjs --fixture && node scripts/verify-damage-account.mjs --fixture && npm run test:crashes",
+    "test:integration": "npm run build && node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/verify-general.mjs --fixture && node scripts/verify-damage-account.mjs --fixture && npm run test:crashes",
     "damage:verify": "npm run build && node --env-file-if-exists=.env scripts/verify-damage-account.mjs",
     "damage:demo": "npm run build && node scripts/demo-damage-account.mjs",
     "frontend:check": "npm --prefix frontend run build && npm --prefix frontend test",

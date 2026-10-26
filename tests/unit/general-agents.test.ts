@@ -5,6 +5,7 @@ import { workerShieldAgent } from '../../app/agents/workershield/index.js';
 import { evidenceCriticAgent } from '../../app/agents/evidence-critic/index.js';
 import { managerAgent } from '../../app/agents/manager/index.js';
 import { damageAccountantAgent } from '../../app/agents/damage-accountant/index.js';
+import type { Artifact } from '../../app/contracts/artifacts.js';
 import type {
   AgentDefinition,
   AgentExecutionServices,
@@ -55,17 +56,27 @@ async function executeAgent(
   return result.output!;
 }
 
-function services(actions: unknown[]) {
+interface Saved {
+  kind: string;
+  content: unknown;
+  origin?: string | undefined;
+}
+
+function services(actions: unknown[], toolOutput: unknown = { value: 42 }) {
   const accepted: string[] = [],
     tools: string[] = [],
-    questions: string[] = [];
+    questions: string[] = [],
+    rejected: string[] = [],
+    messages: { recipient: string; text: string }[] = [],
+    saved: Saved[] = [];
+  let version = 0;
   const api: AgentExecutionServices = {
     brief: 'Answer only from admitted evidence.',
     instructions: 'Use granted tools.',
-    maxTurns: 3,
+    maxTurns: 6,
     history: [],
     toolCards: [],
-    input: null,
+    input: { location: 'Klang' },
     context: {
       taskId: 'task',
       runId: 'run',
@@ -78,42 +89,97 @@ function services(actions: unknown[]) {
       signal: new AbortController().signal,
       inputs: [],
       outputs: [],
-      peers: [],
+      peers: [{ id: 'peer-1', definition_id: 'pm25.analyze', revision: 1 }],
     },
-    model: () =>
-      Promise.resolve({
-        text: JSON.stringify(actions.shift()),
+    model: () => {
+      const next = actions.shift();
+      return Promise.resolve({
+        // A raw string stands for text a provider actually returned, so a
+        // malformed response can be exercised verbatim.
+        text: typeof next === 'string' ? next : JSON.stringify(next),
         receipt: {
           response_model: null,
           response_id: null,
           input_tokens: null,
           output_tokens: null,
         },
-      }),
+      });
+    },
     accept: (_response, action) => {
       accepted.push(action.id);
       return true;
     },
+    reject: (_response, reason) => {
+      rejected.push(reason);
+    },
     tool: (id) => {
       tools.push(id);
-      return Promise.resolve({ value: 42 });
+      return Promise.resolve(toolOutput);
     },
-    save: () => {
-      throw new Error('No save action expected.');
+    save: (kind, content, metadata) => {
+      saved.push({ kind, content, origin: metadata?.evidence_origin });
+      version += 1;
+      return {
+        id: `artifact-${version}`,
+        version,
+        sha256: `sha-${version}`,
+      } as unknown as Artifact;
     },
     question: (prompt) => {
       questions.push(prompt);
     },
-    message: () => {
-      throw new Error('No message expected.');
+    message: (recipient, _purpose, text) => {
+      messages.push({ recipient, text });
     },
     inbox: () => [],
     read: () => {
       throw new Error('No read expected.');
     },
   };
-  return { api, accepted, tools, questions };
+  return { api, accepted, tools, questions, rejected, messages, saved };
 }
+
+const specialists = [hazeOpsAgent, workerShieldAgent, evidenceCriticAgent];
+
+describe('agent role contracts', () => {
+  it('gives every role a distinct, non-boilerplate definition', () => {
+    const texts = [...specialists, managerAgent].map(
+      (agent) => agent.instructions,
+    );
+    expect(new Set(texts).size).toBe(texts.length);
+    for (const text of texts) expect(text.length).toBeGreaterThan(400);
+  });
+
+  it('binds HazeOps to retrieval and to tool-sourced numbers', () => {
+    const text = hazeOpsAgent.instructions;
+    expect(text).toMatch(/retrieval/i);
+    expect(text).toMatch(/registered deterministic method/i);
+    expect(text).toMatch(/ask one question/i);
+    // Retrieval does not judge or review its own evidence.
+    expect(text).toMatch(/do not analyse it, judge it or review it/i);
+  });
+
+  it('binds WorkerShield to downgrading rather than blocking', () => {
+    const text = workerShieldAgent.instructions;
+    expect(text).toMatch(/you do not block delivery/i);
+    expect(text).toMatch(/downgrade/i);
+    expect(text).toMatch(/never infer observations from model output/i);
+    expect(text).toMatch(/health, exposure and operational decisions/i);
+  });
+
+  it('binds EvidenceCritic to method-sourced verdicts and no self-approval', () => {
+    const text = evidenceCriticAgent.instructions;
+    expect(text).toMatch(/cannot approve anything you produced yourself/i);
+    expect(text).toMatch(/registered checking method/i);
+    expect(text).toMatch(/never certify figures you merely read/i);
+    expect(text).toMatch(/scientific review, which you never perform/i);
+  });
+
+  // The Manager's own instruction guarantees are asserted by its owner's
+  // tests; this file covers the three specialists. Only the distinctness and
+  // length check above still spans every role.
+});
+
 describe('declarative agents executed by the specialist graph', () => {
   for (const agent of [
     hazeOpsAgent,
@@ -144,6 +210,87 @@ describe('declarative agents executed by the specialist graph', () => {
       expect(output.support).toBe('partial');
     });
   }
+
+  it('persists the exact tool output, never model-authored evidence', async () => {
+    const capture = { rows: [{ value: 29.8 }], raw: 'exact response text' };
+    const test = services(
+      [
+        {
+          id: 'call',
+          type: 'tool',
+          tool: 'zetaris-smokeledger-pm25',
+          input: { location: 'Klang' },
+        },
+        {
+          id: 'keep',
+          type: 'save_tool_result',
+          kind: 'pm25.capture',
+          tool_action_id: 'call',
+        },
+        {
+          id: 'done',
+          type: 'finish',
+          summary: 'Retained the exact selection.',
+          support: 'partial',
+          uncertainty: [],
+          outputs: [],
+        },
+      ],
+      capture,
+    );
+    await executeAgent(hazeOpsAgent, test.api);
+    expect(test.saved).toEqual([{ kind: 'pm25.capture', content: capture }]);
+    // The retained content is the provider response, not a retyping of it.
+    expect(test.saved[0]!.content).toBe(capture);
+  });
+
+  it('files a retrieved selection as external, not as derived work', async () => {
+    const live = { evidence_origin: 'modeled', rows: [{ value: 29.8 }] };
+    const fixture = { evidence_origin: 'synthetic_fixture', rows: [] };
+    for (const [output, expected] of [
+      [live, 'external_source'],
+      [fixture, 'synthetic_fixture'],
+    ] as const) {
+      const test = services(
+        [
+          { id: 'call', type: 'tool', tool: 'src', input: {} },
+          {
+            id: 'keep',
+            type: 'save_tool_result',
+            kind: 'pm25.capture',
+            tool_action_id: 'call',
+          },
+          {
+            id: 'done',
+            type: 'finish',
+            summary: 'Retained.',
+            support: 'partial',
+            uncertainty: [],
+            outputs: [],
+          },
+        ],
+        output,
+      );
+      await executeAgent(hazeOpsAgent, test.api);
+      expect(test.saved[0]?.origin).toBe(expected);
+    }
+  });
+
+  it('refuses to persist a tool result that was never dispatched', async () => {
+    const test = services([
+      {
+        id: 'keep',
+        type: 'save_tool_result',
+        kind: 'pm25.capture',
+        tool_action_id: 'never-called',
+      },
+    ]);
+    await expect(executeAgent(hazeOpsAgent, test.api)).rejects.toThrow(
+      'No dispatched tool action produced that result.',
+    );
+    expect(test.saved).toEqual([]);
+  });
+
   it('rejects executable payload fields before any tool dispatch', async () => {
     const test = services([
       {
@@ -158,6 +305,7 @@ describe('declarative agents executed by the specialist graph', () => {
     expect(test.tools).toEqual([]);
     expect(test.accepted).toEqual([]);
   });
+
   it('persists one question and yields without further model turns', async () => {
     const test = services([
       {
@@ -173,6 +321,60 @@ describe('declarative agents executed by the specialist graph', () => {
     expect(test.accepted).toEqual(['question']);
     expect(test.questions).toHaveLength(1);
   });
+  it('addresses a peer by its named instance id', async () => {
+    const test = services([
+      {
+        id: 'verdict',
+        type: 'message',
+        recipient: 'peer-1',
+        purpose: 'numerical-check',
+        text: 'Independent checks completed.',
+      },
+      {
+        id: 'done',
+        type: 'finish',
+        summary: 'Review recorded.',
+        support: 'supported',
+        uncertainty: [],
+        outputs: [],
+      },
+    ]);
+    await executeAgent(evidenceCriticAgent, test.api);
+    expect(test.messages).toEqual([
+      { recipient: 'peer-1', text: 'Independent checks completed.' },
+    ]);
+  });
+
+  it('consumes a rejected response and corrects itself on the next turn', async () => {
+    const test = services([
+      '{"id":"dup","type":"wait","id":"dup"}',
+      {
+        id: 'done',
+        type: 'finish',
+        summary: 'Corrected after the refusal.',
+        support: 'partial',
+        uncertainty: [],
+        outputs: [],
+      },
+    ]);
+    const output = await executeAgent(hazeOpsAgent, test.api);
+    // Consuming the response is what stops the runtime replaying it.
+    expect(test.rejected).toHaveLength(1);
+    expect(test.rejected[0]).toContain('duplicate_json_key');
+    expect(test.accepted).toEqual(['done']);
+    expect(output.summary).toBe('Corrected after the refusal.');
+  });
+
+  it('stops after the correction budget without dispatching anything', async () => {
+    const malformed = '{"id":"x","type":"wait","id":"x"}';
+    const test = services([malformed, malformed, malformed]);
+    await expect(executeAgent(hazeOpsAgent, test.api)).rejects.toThrow(
+      'duplicate_json_key',
+    );
+    expect(test.rejected).toHaveLength(3);
+    expect(test.accepted).toEqual([]);
+  });
+
   it('escalates a missing dependency to the Manager and yields with retained outputs', async () => {
     const test = services([
       {

@@ -67,8 +67,13 @@ function admit(
   store: TaskStore,
   key: string = randomUUID(),
   tools: string[] = [],
+  limits?: Record<string, unknown>,
 ) {
-  return store.admit(request(), identity, key, { mode: 'fixture', tools }).task;
+  return store.admit(request(), identity, key, {
+    mode: 'fixture',
+    tools,
+    ...(limits ? { limits } : {}),
+  }).task;
 }
 function definition(
   overrides: Partial<AssignmentDefinition> = {},
@@ -285,7 +290,12 @@ describe('general contract and authoritative SQLite store', () => {
   });
   it('reserves model turns for synthesis and independent review, charging failures without retries', () => {
     const store = create(),
-      task = admit(store),
+      // Pin the ceiling: this asserts the reservation rule, not the
+      // admission default, which the Investigation profile raised to 20.
+      task = admit(store, randomUUID(), [], {
+        max_model_calls: 6,
+        reserved_model_calls: 2,
+      }),
       jobs = assignments(store, task, [
         definition({ definition_id: 'evidence-synthesis.extract' }),
         definition({
