@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import type { Artifact } from '../../contracts/artifacts.js';
+import {
+  artifactRefSchema,
+  type Artifact,
+} from '../../contracts/artifacts.js';
 import type {
   AssignmentDefinition,
   AssignmentOutput,
@@ -304,6 +307,37 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
       roles: ['HazeOps', 'WorkerShield', 'EvidenceCritic'],
       readiness: 'implemented',
       limitations: SMOKELEDGER_LIMITATIONS,
+    },
+    // Both producer outputs need the independent review before the Manager may select them.
+    review_requirements: [
+      {
+        artifact_kind: 'smokeledger.air_outlook',
+        review_definition_id: 'smokeledger.review',
+        producer_definition_ids: ['smokeledger.air_outlook'],
+      },
+      {
+        artifact_kind: 'smokeledger.trace_sources',
+        review_definition_id: 'smokeledger.review',
+        producer_definition_ids: ['smokeledger.trace_sources'],
+      },
+    ],
+    normalizeReview(artifact) {
+      if (artifact.kind !== 'review') return undefined;
+      const content = z
+        .looseObject({
+          valid: z.boolean(),
+          reviewed_artifacts: z.array(artifactRefSchema),
+          findings: z.array(z.string()).default([]),
+        })
+        .safeParse(artifact.content);
+      // Passed checks support the exact reviewed revisions; any failed hash or claim rejects them.
+      return content.success
+        ? {
+            verdict: content.data.valid ? 'supported' : 'rejected',
+            artifacts: content.data.reviewed_artifacts,
+            limitations: content.data.findings,
+          }
+        : undefined;
     },
     // Claim only requests with a readable town and window; other haze questions stay with
     // the team's capabilities or become explicit gaps there.

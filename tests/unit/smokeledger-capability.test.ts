@@ -553,3 +553,56 @@ describe('smokeledger assignments', () => {
     expect(saved[0]!.kind).toBe('evidence.gap');
   });
 });
+
+describe('smokeledger review gate (task runtime review checks)', () => {
+  const capability = createSmokeLedgerCapability();
+  const ref = { id: crypto.randomUUID(), version: 1, sha256: 'c'.repeat(64) };
+  const review = (content: unknown) =>
+    ({ kind: 'review', content }) as unknown as Artifact;
+
+  it('requires the independent review for both producer outputs', () => {
+    expect(capability.review_requirements).toEqual([
+      expect.objectContaining({
+        artifact_kind: 'smokeledger.air_outlook',
+        review_definition_id: 'smokeledger.review',
+      }),
+      expect.objectContaining({
+        artifact_kind: 'smokeledger.trace_sources',
+        review_definition_id: 'smokeledger.review',
+      }),
+    ]);
+  });
+
+  it('maps passed checks to supported and any failed check to rejected', () => {
+    expect(
+      capability.normalizeReview!(
+        review({ valid: true, reviewed_artifacts: [ref], findings: [] }),
+      ),
+    ).toEqual({ verdict: 'supported', artifacts: [ref], limitations: [] });
+    expect(
+      capability.normalizeReview!(
+        review({
+          valid: false,
+          reviewed_artifacts: [ref],
+          findings: ['E-0000000000: hash changed'],
+        }),
+      ),
+    ).toEqual({
+      verdict: 'rejected',
+      artifacts: [ref],
+      limitations: ['E-0000000000: hash changed'],
+    });
+  });
+
+  it('gives no verdict for unreadable or non-review artifacts, leaving the default needs_review', () => {
+    expect(capability.normalizeReview!(review({ verdict: 'ok' }))).toBe(
+      undefined,
+    );
+    expect(
+      capability.normalizeReview!({
+        kind: 'evidence.gap',
+        content: {},
+      } as unknown as Artifact),
+    ).toBe(undefined);
+  });
+});
