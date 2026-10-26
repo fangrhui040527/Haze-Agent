@@ -31,9 +31,9 @@ npm --prefix frontend ci
 npm run build
 ```
 
-Configure the existing model route in server-only root `.env` (`HAZE_PROVIDER` plus its key/model settings). Configure existing Zetaris REST access in `app/adapters/zetaris/.env.local` or the process environment (`ZETARIS_API_KEY`, `ZETARIS_REST_URL`, `ZETARIS_ORG_ID`). No service is provisioned by this implementation. Do not use browser `VITE_*` variables for credentials.
+Configure the existing model route in server-only root `.env` (`HAZE_PROVIDER` plus its key/model settings). Configure existing Zetaris REST access in that same root `.env` or the process environment (`ZETARIS_API_KEY`, `ZETARIS_REST_URL`, `ZETARIS_ORG_ID`). No service is provisioned by this implementation. Do not use browser `VITE_*` variables for credentials.
 
-The existing frontend also reads the exact Zetaris `.env.local` file server-side; process environment takes precedence. Start it with:
+The frontend reads the shared root `.env` server-side; process environment takes precedence, and the legacy Zetaris `.env.local` file supplies missing settings. Start it with:
 
 ```sh
 npm --prefix frontend run dev

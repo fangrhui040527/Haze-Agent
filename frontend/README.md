@@ -32,8 +32,9 @@ These commands work in PowerShell and macOS/Linux shells. If your terminal is al
 Keep the terminal running and open the **Local** URL printed by Vite, usually **http://localhost:5173**. If that port is occupied, Vite may choose another port. Stop the server with `Ctrl + C`.
 
 Live tasks require a configured model provider. Capabilities that retrieve external evidence also require their server-side source configuration. Vite dev/preview read
-the root model configuration and the exact `app/adapters/zetaris/.env.local` source configuration
-server-side, with process environment taking precedence. Keep `VITE_API_BASE_URL` empty for the
+the shared root `.env` configuration server-side, with process environment taking
+precedence and `app/adapters/zetaris/.env.local` supplying missing legacy settings.
+Vite mode files retain their normal override behavior. Keep `VITE_API_BASE_URL` empty for the
 same-origin local API; never put credentials in `VITE_*` variables. Restart Vite after changing
 configuration. Dev and preview must not simultaneously own the same general state directory (`.state/general-v1` by default).
 Static hosting needs an authenticated backend adapter.

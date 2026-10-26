@@ -42,6 +42,13 @@ The v1/v2 guides below are retained historical records.
 - [Engine pins](infrastructure/engine-pins.md) — pinned sources, builds and update checks.
 - [Compatibility probe](infrastructure/compatibility-probe.md) — engine, model and checkpoint compatibility checks.
 
+## Zetaris
+
+- [Connections and client setup](Zetaris/connections/README.md).
+- [Installation guide](Zetaris/install/updated_zetaris_installation_guide.md).
+- [SQL command reference](Zetaris/guides/zetaris-lightning-sql-commands.md).
+- [SQL companion](Zetaris/guides/zetaris-lightning-sql-companion.md).
+
 ## Frontend
 
 These documents record frontend discovery and design decisions. The first two describe historical proposals; consult the project README for current behavior.

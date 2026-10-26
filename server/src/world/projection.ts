@@ -10,7 +10,7 @@ import type {
   Trend,
 } from '../../../frontend/src/shared/types/domain.ts';
 import type { WmFact } from '../engines.ts';
-import { freshnessCheck } from '../hazeops/checks.ts';
+import { freshnessCheck } from '../../../dist/capabilities/evidence-collection/checks.js';
 import type { EvidenceRecord, WatcherSpec } from '../hazeops/types.ts';
 import { entityId, type HazeWorld, localId } from './hazeWorld.ts';
 

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { collectOnce } from '../../../dist/capabilities/evidence-collection/collection.js';
 import type { HazeWorld, WriteSummary } from '../world/hazeWorld.ts';
 import type { Brief } from '../manager/manager.ts';
 import type { SourceAdapter, WatcherSpec, WatcherState } from './types.ts';
@@ -157,7 +158,7 @@ export class HazeOps {
       };
     }
     try {
-      const result = await adapter.run({ now, signal, runId });
+      const result = await collectOnce(adapter, { now, signal, runId });
       const cursor =
         result.evidence.map((e) => e.record.rawSha256).join('+') || null;
       const summary = await this.world.writeAdapterResult(result, runId);

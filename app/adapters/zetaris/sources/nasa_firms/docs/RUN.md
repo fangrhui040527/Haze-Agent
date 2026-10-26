@@ -6,7 +6,7 @@ Fetch and register NASA FIRMS near real-time satellite active fire data (VIIRS N
 
 ### Nationwide Fetch, Flatten & Register (Default: Last 3 Days)
 
-Fetches live active fire data across Malaysia for the **last 3 days** (if `FIRMS_MAP_KEY` is set in `.env.local`), flattens partitions, copies flat files to the Docker container (`/home/zetaris/customer-data/shared/firms_flat`), and registers `NASA_FIRMS_FILES.active_fires`:
+Fetches live active fire data across Malaysia for the **last 3 days** (if `FIRMS_MAP_KEY` is set in `.env`), flattens partitions, copies flat files to the Docker container (`/home/zetaris/customer-data/shared/firms_flat`), and registers `NASA_FIRMS_FILES.active_fires`:
 
 ```powershell
 node --experimental-strip-types app/zetaris/sources/nasa_firms/fetch_nasa_firms.ts

@@ -55,7 +55,7 @@ def main() -> int:
     p.add_argument("-e", "--execute", help="run this SQL text instead of a file")
     p.add_argument("--channel", choices=["rest", "jdbc"], default="rest")
     p.add_argument("--jar", help="JDBC driver JAR (or set ZETARIS_JDBC_JAR)")
-    p.add_argument("--env-file", help="env file to load (default: .env.local in the repo root, or the top-level checkout for a worktree)")
+    p.add_argument("--env-file", help="env file to load (default: .env in the repo root, or the top-level checkout for a worktree)")
     p.add_argument("--limit", type=int, default=20, help="max result rows to print per statement")
     p.add_argument("--skip-exists", action="store_true", help="treat 'already exists' errors as skipped, not failures")
     p.add_argument("--dry-run", action="store_true", help="print the statements without connecting")

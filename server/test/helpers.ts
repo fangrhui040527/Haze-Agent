@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPOSITORY_ROOT } from '../src/config.ts';
 import type { WorldModelEngine } from '../src/engines.ts';
-import { pinEvidence } from '../src/hazeops/evidence.ts';
+import { pinEvidence } from '../../dist/capabilities/evidence-collection/evidence.js';
 import type { AdapterResult } from '../src/hazeops/types.ts';
 import { HazeWorld } from '../src/world/hazeWorld.ts';
 

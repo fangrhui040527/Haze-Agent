@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { zetarisAdapter } from '../src/hazeops/adapters/zetaris.ts';
+import { zetarisAdapter } from '../../dist/capabilities/evidence-collection/sources/zetaris.js';
 import { KLANG } from './helpers.ts';
 
 afterEach(() => vi.unstubAllGlobals());

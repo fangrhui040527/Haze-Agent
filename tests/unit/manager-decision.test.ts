@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   managerAgent,
@@ -15,6 +16,7 @@ import {
 import { ExecutionRegistry } from '../../app/orchestration/ports.js';
 import { TaskStore } from '../../app/tasks/store.js';
 import { taskRequestSchema } from '../../app/contracts/tasks.js';
+import { fixtureDecision } from '../../app/agents/manager/fixture.js';
 
 const identity = { principal: 'local-user', workspace: 'local-workspace' };
 const stores: { store: TaskStore; directory: string }[] = [];
@@ -120,6 +122,83 @@ function response(context: ManagerContext) {
   });
 }
 describe('registered Manager decision layer', () => {
+  it('retains product references whose current producer uses a compact assignment index', async () => {
+    const { context } = await setup();
+    context.plan_objective_revision = context.objective_revision;
+    context.assignments = [
+      {
+        id: randomUUID(),
+        role: 'HazeOps',
+        revision: 2,
+        status: 'completed',
+        support: 'supported',
+        usability: 'usable',
+      },
+    ];
+    const product = { id: randomUUID(), version: 1, sha256: 'a'.repeat(64) };
+    context.artifacts = [
+      {
+        ref: product,
+        kind: 'test.finding',
+        current: true,
+        assignment_index: 0,
+      },
+    ];
+
+    const result = managerDecisionSchema.parse(fixtureDecision(context));
+
+    expect(result.action.type).toBe('finalize');
+    if (result.action.type !== 'finalize')
+      throw new Error('Expected retained current producer output.');
+    expect(result.action.work_products).toEqual([product]);
+  });
+  it.each(['empty', 'omitted'] as const)(
+    'retains a valid unfinished description for a compacted completed gap with %s metadata',
+    async (metadata) => {
+      const { context } = await setup();
+      context.plan_objective_revision = context.objective_revision;
+      context.assignments = [
+        {
+          id: randomUUID(),
+          definition_id: 'test.source.inspect',
+          capability: 'test.source',
+          role: 'HazeOps',
+          revision: 1,
+          objective_revision: context.objective_revision,
+          status: 'completed',
+          brief: '',
+          dependencies: [],
+          support: 'gap',
+          usability: 'needs_review',
+          gaps: [],
+        },
+      ];
+      if (metadata === 'omitted') {
+        const assignment = context.assignments[0]!;
+        delete assignment.definition_id;
+        delete assignment.capability;
+        delete assignment.objective_revision;
+        delete assignment.brief;
+        delete assignment.dependencies;
+        delete assignment.gaps;
+        for (const capability of context.capabilities) {
+          delete capability.templates;
+          delete capability.peer_requirements;
+        }
+      }
+
+      const result = managerDecisionSchema.parse(fixtureDecision(context));
+
+      expect(result.action.type).toBe('finalize');
+      if (result.action.type !== 'finalize')
+        throw new Error('Expected a final response with the retained gap.');
+      expect(result.action.unfinished).toEqual([
+        expect.stringContaining(
+          metadata === 'omitted' ? 'HazeOps' : 'test.source.inspect',
+        ),
+      ]);
+    },
+  );
   it('registers a controlled decide entry with no storage or unrestricted adapters', async () => {
     const { context, registry } = await setup();
     expect(context.decision_id).toBe(
@@ -327,6 +406,83 @@ describe('registered Manager decision layer', () => {
         { events: [], artifacts: [], maxBytes: 2048 },
       ),
     ).toThrow('not silently discarded');
+  });
+  it('compacts available catalog prose before the first plan while preserving exact instructions and unavailable evidence warnings', async () => {
+    const { task, registry, store } = await setup();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'unavailable-evidence.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Retained exact evidence.').toString(
+          'base64',
+        ),
+      },
+      identity,
+      'initial-budget-evidence',
+    ).artifact;
+    const ref = {
+      id: source.id,
+      version: source.version,
+      sha256: source.sha256,
+    };
+    store.recordApplicability(
+      task.id,
+      identity,
+      ref,
+      true,
+      'Exact evidence was attached to the task.',
+      'User',
+    );
+    const supplied = store.read(task.id, identity);
+    supplied.original_request.context_refs = [ref];
+    supplied.corrections.push({
+      id: '00000000-0000-4000-8000-000000000072',
+      objective_revision: supplied.objective_revision,
+      kind: 'clarification',
+      passage: 'Keep the original geography and distinguish modeled evidence.',
+      affected_assignment_ids: [],
+      created_at: source.created_at,
+      context_refs: [ref],
+    });
+    const capability = registry.capabilities.get('test.source')!;
+    const template = {
+      key: 'inspect-source',
+      definition_id: 'test.source.inspect',
+      brief: 'Inspect exact retained evidence.',
+      depends_on: [],
+    };
+    registry.capabilities.set('test.source', {
+      ...capability,
+      card: {
+        ...capability.card,
+        purpose: 'Optional available catalog prose. '.repeat(400),
+      },
+      availability: () => ({
+        available: true,
+        reasons: ['Optional catalog availability detail. '.repeat(400)],
+      }),
+      assignments: () => [template],
+    });
+    const state = store.managerState(task.id, identity)!;
+    expect(state.plans).toEqual([]);
+    const context = assembleManagerContext(supplied, registry, state, {
+      events: [],
+      artifacts: [],
+      maxBytes: 6000,
+    });
+    expect(context.request).toEqual(supplied.original_request);
+    expect(context.corrections).toEqual(supplied.corrections);
+    expect(context.context_status.missing).toContain(
+      `Artifact unavailable to this checkpoint: ${source.id}. Access and exact version must be checked before reuse.`,
+    );
+    expect(
+      context.capabilities.find((c) => c.card.id === 'test.source')?.templates,
+    ).toEqual([template]);
+    expect(Buffer.byteLength(JSON.stringify(context))).toBeLessThanOrEqual(
+      6000,
+    );
+    expect(context.context_status.truncated).toBe(true);
   });
   it('shortens optional lookup prose without displacing original constraints, source references, or advertised tool ids', async () => {
     const { task, registry, store } = await setup();

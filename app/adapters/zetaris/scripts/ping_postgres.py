@@ -8,7 +8,7 @@ import zetaris_sql
 
 
 def main() -> int:
-    zetaris_sql.load_env()  # .env.local, repo root or top-level checkout
+    zetaris_sql.load_env()  # .env, repo root or top-level checkout
     password = os.environ.get("PGPASSWORD")
     try:
         host = os.environ.get("PGHOST")
@@ -16,7 +16,7 @@ def main() -> int:
         username = os.environ.get("PGUSER")
         if not host or not database or not username or not password:
             raise RuntimeError(
-                "Set PGHOST, PGDATABASE, PGUSER, and PGPASSWORD in .env.local."
+                "Set PGHOST, PGDATABASE, PGUSER, and PGPASSWORD in .env."
             )
 
         raw_port = os.environ.get("PGPORT", "5432")

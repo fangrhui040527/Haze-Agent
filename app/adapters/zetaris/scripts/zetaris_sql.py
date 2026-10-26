@@ -20,6 +20,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = ROOT.parents[2]
 PLACEHOLDER_UA = "YOUR_APP_NAME YOUR_CONTACT_EMAIL"
 DEFAULT_REST_URL = "http://localhost:8888/api/v1.0"
 DEFAULT_JDBC_URL = "jdbc:zetaris:lightning@localhost:10000"
@@ -35,12 +36,12 @@ class ZetarisError(RuntimeError):
 
 
 def _top_level_checkout() -> Path | None:
-    """The main checkout when ROOT is a git worktree, else None.
+    """The main checkout when PROJECT_ROOT is a git worktree, else None.
 
     A worktree's `.git` is a file reading `gitdir: <top>/.git/worktrees/<name>`.
     """
     try:
-        text = (ROOT / ".git").read_text(encoding="utf-8")
+        text = (PROJECT_ROOT / ".git").read_text(encoding="utf-8")
     except OSError:
         return None  # a normal checkout has a .git directory, not a file
     match = re.match(r"gitdir:\s*(.+)", text)
@@ -48,37 +49,37 @@ def _top_level_checkout() -> Path | None:
         return None
     gitdir = Path(match.group(1).strip())
     if not gitdir.is_absolute():
-        gitdir = (ROOT / gitdir).resolve()
+        gitdir = (PROJECT_ROOT / gitdir).resolve()
     top = gitdir.parent.parent.parent  # <top>/.git/worktrees/<name> -> <top>
-    return top if top.is_dir() and top != ROOT else None
+    return top if top.is_dir() and top != PROJECT_ROOT else None
 
 
-ENV_FILE_NAME = ".env.local"
+ENV_FILE_NAME = ".env"
 
 
 def env_file_candidates() -> list[Path]:
-    """.env.local is the only supported file. It is gitignored, so a git
-    worktree does not have one; look in the top-level checkout too."""
-    dirs = [ROOT] + ([top] if (top := _top_level_checkout()) else [])
-    return [d / ENV_FILE_NAME for d in dirs]
-
-
-def stray_env_hint() -> str:
-    """Advice when a legacy .env exists but .env.local does not."""
-    for d in [ROOT] + ([top] if (top := _top_level_checkout()) else []):
-        if (d / ".env").is_file():
-            return f"found {d / '.env'}, but only {ENV_FILE_NAME} is read; rename or copy it to {d / ENV_FILE_NAME}"
-    return ""
+    """Root .env first, then main checkout and legacy files for missing values."""
+    dirs = [PROJECT_ROOT] + ([top] if (top := _top_level_checkout()) else [])
+    return (
+        [d / ENV_FILE_NAME for d in dirs]
+        + [d / ".env.local" for d in dirs]
+        + [d / "app/adapters/zetaris/.env.local" for d in dirs]
+        + [d / "app/adapters/zetaris/.env" for d in dirs]
+    )
 
 
 def load_env(env_file: str | None = None) -> Path | None:
-    """Load the first .env.local found (repo root, then the top-level checkout
-    for a worktree) into os.environ without overriding variables that are
-    already set. Returns the file used, or None."""
+    """Load root .env and fallbacks without overriding existing variables.
+
+    Returns the first file used, or None. An explicit env_file is used alone.
+    """
     paths = [Path(env_file)] if env_file else env_file_candidates()
+    loaded = None
     for path in paths:
         if not path.is_file():
             continue
+        if loaded is None:
+            loaded = path
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -88,14 +89,13 @@ def load_env(env_file: str | None = None) -> Path | None:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                 value = value[1:-1]
             os.environ.setdefault(key.strip(), value)
-        return path
-    return None
+    return loaded
 
 
 def require(*names: str) -> None:
     missing = [n for n in names if not os.environ.get(n)]
     if missing:
-        raise ZetarisError("Missing in the environment or .env.local: " + ", ".join(missing) + (f" ({hint})" if (hint := stray_env_hint()) else ""))
+        raise ZetarisError("Missing in the environment or root .env: " + ", ".join(missing))
 
 
 # --- SQL splitting ---------------------------------------------------------
@@ -165,7 +165,7 @@ def apply_user_agent(statements: list[str]) -> list[str]:
     if not ua:
         raise ZetarisError(
             "This script contains the user-agent placeholder "
-            f"'{PLACEHOLDER_UA}'. Set ZETARIS_USER_AGENT in .env.local to "
+            f"'{PLACEHOLDER_UA}'. Set ZETARIS_USER_AGENT in .env to "
             "'<app name> <contact email>'."
         )
     if '"' in ua or "'" in ua:

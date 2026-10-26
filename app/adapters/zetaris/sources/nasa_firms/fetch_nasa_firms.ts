@@ -21,6 +21,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import * as crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { envFileCandidates } from "../../scripts/env-files.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,12 +106,7 @@ function locationBbox(loc: LocationRecord): [number, number, number, number] {
 }
 
 async function loadEnvironment(): Promise<void> {
-  const envCandidates = [
-    path.join(ZETARIS_ROOT, ".env.local"),
-    path.join(ZETARIS_ROOT, ".env"),
-    path.join(ZETARIS_ROOT, "..", ".env.local"),
-    path.join(ZETARIS_ROOT, "..", ".env"),
-  ];
+  const envCandidates = envFileCandidates();
 
   for (const envPath of envCandidates) {
     try {
@@ -126,7 +122,7 @@ async function loadEnvironment(): Promise<void> {
         if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
           val = val.slice(1, -1);
         }
-        if (!process.env[key]) {
+        if (process.env[key] === undefined) {
           process.env[key] = val;
         }
       }

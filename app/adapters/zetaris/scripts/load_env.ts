@@ -1,37 +1,15 @@
-// Loads .env.local into the process environment as a side effect of importing
-// this module, so import it first. Looks in the repository root, then, when
-// this checkout is a git worktree, in the top-level checkout, because a
-// gitignored file does not exist in a worktree. Variables already set in the
-// environment win. .env.local is the only supported file name.
+// Loads the Haze root .env as a side effect of importing this module.
+// Process variables win; the main checkout and legacy adapter .env.local
+// supply missing settings. Needs --allow-read and the relevant --allow-env.
 //
 // Needs --allow-read. Setting a variable outside the script's --allow-env list
 // is skipped, not an error.
 
-const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
-
-function topLevelCheckout(): string | null {
-  try {
-    const text = Deno.readTextFileSync(`${root}/.git`);
-    const match = text.match(/^gitdir:\s*(.+)$/m);
-    if (!match) return null;
-    const gitdir = match[1].trim().startsWith("/")
-      ? match[1].trim()
-      : `${root}/${match[1].trim()}`;
-    // <top>/.git/worktrees/<name> -> <top>
-    return gitdir.replace(/\/\.git\/worktrees\/[^/]+\/?$/, "");
-  } catch {
-    return null; // a normal checkout has a .git directory, not a file
-  }
-}
-
-export function envFileCandidates(): string[] {
-  const dirs = [root];
-  const top = topLevelCheckout();
-  if (top && top !== root) dirs.push(top);
-  return dirs.map((d) => `${d}/.env.local`);
-}
+import { envFileCandidates } from "./env-files.ts";
+export { envFileCandidates } from "./env-files.ts";
 
 function load(): string | null {
+  let loaded: string | null = null;
   for (const path of envFileCandidates()) {
     let text: string;
     try {
@@ -39,6 +17,7 @@ function load(): string | null {
     } catch {
       continue;
     }
+    loaded ??= path;
     for (const raw of text.split("\n")) {
       const line = raw.trim();
       if (!line || line.startsWith("#") || !line.includes("=")) continue;
@@ -55,9 +34,8 @@ function load(): string | null {
         // not permitted by --allow-env; the script does not need this variable
       }
     }
-    return path;
   }
-  return null;
+  return loaded;
 }
 
 export const envFile = load();
