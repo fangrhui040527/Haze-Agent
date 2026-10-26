@@ -129,7 +129,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function assistantText(body: unknown): string {
+/** Native compound schemas can stall hosted Lightning's structured decoder. */
+function hasCompoundSchema(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(hasCompoundSchema);
+  if (!isRecord(value)) return false;
+  return Object.entries(value).some(
+    ([key, child]) =>
+      [
+        'oneOf',
+        'anyOf',
+        'allOf',
+        '$ref',
+        '$dynamicRef',
+        '$recursiveRef',
+      ].includes(key) || hasCompoundSchema(child),
+  );
+}
+
+function assistantText(body: unknown, outputTokens: number): string {
   const choices = isRecord(body) ? body.choices : undefined;
   const choice: unknown = Array.isArray(choices) ? choices[0] : undefined;
   const message = isRecord(choice) ? choice.message : undefined;
@@ -142,7 +159,10 @@ function assistantText(body: unknown): string {
     !message.content.trim()
   ) {
     throw new ModelError(
-      'Agent model did not return a complete, nonempty assistant message.',
+      'Agent model did not return a complete, nonempty assistant message.' +
+        (isRecord(choice) && choice.finish_reason === 'length'
+          ? ` The provider reached the output token limit (${outputTokens}) for this request.`
+          : ''),
     );
   }
   if (message.content.length > MAX_TEXT_CHARACTERS) {
@@ -225,6 +245,7 @@ export function resolveAgentModel(
       );
     }
     let body: string;
+    const outputTokens = input.max_output_tokens ?? 1200;
     try {
       if (
         !input.role.trim() ||
@@ -237,21 +258,16 @@ export function resolveAgentModel(
       const nativeSchema =
         provider === 'nvidia' &&
         model === NVIDIA_DEFAULT_MODEL &&
-        input.output_schema !== undefined;
+        input.output_schema !== undefined &&
+        !hasCompoundSchema(input.output_schema);
       if (input.output_schema !== undefined && !isRecord(input.output_schema))
         throw new Error();
-      const context = JSON.stringify(
-        !nativeSchema && input.output_schema !== undefined
-          ? {
-              ...(isRecord(input.context)
-                ? input.context
-                : { input: input.context }),
-              required_json_schema: input.output_schema,
-            }
-          : input.context,
-      );
+      const context = JSON.stringify(input.context);
       if (context === undefined) throw new Error();
-      const outputTokens = input.max_output_tokens ?? 1200;
+      const schemaInstruction =
+        !nativeSchema && input.output_schema !== undefined
+          ? `\nrequired_json_schema (output contract only, not an output field):\n${JSON.stringify(input.output_schema)}\nReturn only the object matching this contract. Never echo required_json_schema, schema definitions, or extra fields.`
+          : '';
       if (
         !Number.isSafeInteger(outputTokens) ||
         outputTokens < 1 ||
@@ -263,7 +279,7 @@ export function resolveAgentModel(
         messages: [
           {
             role: 'system',
-            content: `You are ${input.role}.\n${input.instruction}`,
+            content: `You are ${input.role}.\n${input.instruction}${schemaInstruction}`,
           },
           { role: 'user', content: context },
         ],
@@ -332,7 +348,7 @@ export function resolveAgentModel(
         const receipt = completionReceipt(responseBody, apiKey);
         let text: string;
         try {
-          text = assistantText(responseBody);
+          text = assistantText(responseBody, outputTokens);
         } catch (error) {
           const choices = isRecord(responseBody)
             ? responseBody.choices

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import {
   artifactRef,
+  fixtureManager,
   fixtureTask,
   receipt,
   taskId,
@@ -55,27 +56,30 @@ function render(run: AgentRun, savedTaskId?: string) {
 }
 
 describe('dedicated damage accounting page', () => {
-  it('requires source inputs before starting an account and keeps dashboard navigation available', () => {
+  it('starts with a request-only World Model intake and keeps dashboard navigation available', () => {
     const markup = render(accountRun(false));
     expect(markup).toContain('<h1>Damage accounting</h1>');
     expect(markup).toMatch(/href="\/"[^>]*>Back to the dashboard/);
     expect(markup).toContain('Create an account');
-    expect(markup).toContain('id="damage-source"');
-    expect(markup).toContain('accept=".json,.csv"');
-    expect(markup).toContain('value="damage-inputs.json"');
+    expect(markup).not.toContain('id="damage-source"');
+    expect(markup).not.toContain('type="file"');
+    expect(markup).not.toContain('Paste a source');
     expect(markup).toContain('id="damage-objective"');
     expect(markup).toMatch(
       /<button[^>]*disabled=""[^>]*>Build account<\/button>/,
     );
-    expect(markup).toContain('Attach JSON or CSV to begin.');
+    expect(markup).toContain('No upload is required.');
+    expect(markup).toContain('World Model evidence');
     expect(markup).toContain('Open a saved task');
     expect(markup).toContain('The dashboard keeps its own task and office.');
     expect(markup).not.toContain('Account results');
     expect(markup).not.toContain('Pixel-art office');
+    expect(markup).not.toContain('Open Manager workspace');
   });
 
   it('opens a saved result with exact artifacts, execution mode and retained next requirements', () => {
     const run = accountRun();
+    run.task!.record!.manager = fixtureManager();
     const actual = receipt(1, 'assignment.completed', 'EvidenceCritic');
     run.events = [
       {
@@ -107,6 +111,14 @@ describe('dedicated damage accounting page', () => {
     expect(markup).toContain('Task coordination and execution receipts (1)');
     expect(markup).toContain('EvidenceCritic');
     expect(markup).toContain('Actual assignment.completed');
+    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup.indexOf('Open Manager workspace')).toBeLessThan(
+      markup.indexOf('Task coordination and execution receipts'),
+    );
+    expect(markup).not.toContain('id="manager-workspace-title"');
+    expect(markup).not.toContain('Interpreted objective');
+    expect(markup).not.toContain('Manager decisions and execution details');
   });
 
   it('marks rejected historical results before artifacts load', () => {

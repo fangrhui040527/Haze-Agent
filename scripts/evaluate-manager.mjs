@@ -1,19 +1,19 @@
+import { createManagerSandboxRegistry } from './manager-sandbox.mjs';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID, createHash } from 'node:crypto';
+import {
+  parseManagerEvaluationArgs,
+  selectManagerCases,
+  restrictManagerEvaluationTools,
+  checkManagerEvaluationIsolation,
+  evaluationDefinitionIds,
+  evaluationSpecialistRoles,
+  evaluationLocalToolIds,
+} from './manager-evaluation-support.mjs';
 
 const args = process.argv.slice(2);
-if (!['--scripted', '--live'].includes(args[0]))
-  throw new Error(
-    'Usage: evaluate-manager.mjs --scripted|--live [--baseline ROOT] [--case ID]',
-  );
-const live = args[0] === '--live';
-const baselineIndex = args.indexOf('--baseline');
-const base =
-  baselineIndex < 0 ? resolve('.') : resolve(args[baselineIndex + 1]);
-const baseline = baselineIndex >= 0;
-const caseIndex = args.indexOf('--case');
 const casesBytes = await readFile(
   new URL(
     '../docs/orchestration/manager-evaluation-cases.json',
@@ -21,9 +21,21 @@ const casesBytes = await readFile(
   ),
 );
 const frozen = JSON.parse(casesBytes);
-const cases = frozen.cases.filter(
-  (c) => caseIndex < 0 || c.id === args[caseIndex + 1],
-);
+const options = parseManagerEvaluationArgs(args);
+const cases = selectManagerCases(frozen.cases, options);
+if (options.mode === 'list') {
+  console.log(
+    JSON.stringify(
+      cases.map(({ id, objective }) => ({ id, objective })),
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
+}
+const live = options.mode === 'live';
+const baseline = options.baselineRoot !== undefined;
+const base = resolve(options.baselineRoot ?? options.buildRoot ?? '.');
 const { TaskRuntime, localTaskIdentity } = await import(
   pathToFileURL(join(base, 'dist/tasks/runtime.js'))
 );
@@ -124,11 +136,7 @@ function scriptDecision(c, context) {
             !context.assignments.some(
               (assignment) =>
                 assignment.id === a.assignment_id &&
-                context.definitions.some(
-                  (definition) =>
-                    definition.id === assignment.definition_id &&
-                    definition.agent === 'EvidenceCritic',
-                ),
+                assignment.role === 'EvidenceCritic',
             ) &&
             ['evaluation.finding', 'evaluation.reviewed'].includes(a.kind) &&
             !context.reviews.some(
@@ -248,184 +256,45 @@ function plans(c, revision = 1) {
       return [item('one', 'eval.produce')];
   }
 }
-function registry() {
-  const r = new ExecutionRegistry().registerAgent(managerAgent);
-  for (const id of ['HazeOps', 'WorkerShield', 'EvidenceCritic'])
-    r.registerAgent({
-      id,
-      version: 'evaluation.v1',
-      instructions: 'Use the registered deterministic implementation.',
-    });
-  r.registerCapability({
-    card: {
-      id: 'evaluation',
-      version: '1',
-      purpose:
-        'Synthetic runtime evaluation methods. eval.produce retains a finding; eval.fail fails with an exact known unavailable error; eval.reviewed and eval.review exercise independent repair; eval.peer-* exercise clarification; eval.slow permits correction.',
-      work_products: ['evaluation.finding'],
-      required_tools: [],
-      roles: ['HazeOps', 'EvidenceCritic'],
-      readiness: 'implemented',
-      limitations: [
-        'Synthetic evaluation outputs; no environmental observations.',
-      ],
-    },
-    matches: () => true,
-    assignments: () => [
-      item('one', 'eval.produce'),
-      item('two', 'eval.produce'),
-    ],
-    peer_requirements: [
-      {
-        definitions: ['eval.peer-producer', 'eval.peer-reviewer'],
-        purpose: 'evidence-clarification',
-      },
-    ],
-    review_requirements: [
-      {
-        artifact_kind: 'evaluation.reviewed',
-        review_definition_id: 'eval.review',
-        producer_definition_ids: ['eval.reviewed'],
-      },
-    ],
-    normalizeReview: (a) =>
-      a.kind === 'evaluation.review'
-        ? {
-            verdict: a.content.verdict,
-            artifacts: a.content.reviewed_artifacts,
-            limitations: ['Synthetic independent review.'],
-          }
-        : undefined,
-  });
-  r.registerCapability({
-    card: {
-      id: 'eval.unavailable',
-      version: '1',
-      purpose: 'Remote observation requires unavailable permission.',
-      work_products: [],
-      required_tools: ['denied.observation'],
-      roles: ['HazeOps'],
-      readiness: 'specified',
-      limitations: ['Missing source grant.'],
-    },
-    matches: () => false,
-    assignments: () => [],
-    availability: () => ({
-      available: false,
-      reasons: ['No authorized observation source is configured.'],
-    }),
-  });
-  for (const id of [
-    'eval.produce',
-    'eval.fail',
-    'eval.reviewed',
-    'eval.review',
-    'eval.peer-producer',
-    'eval.peer-reviewer',
-    'eval.slow',
-  ])
-    r.registerAssignment({
-      id,
-      version: '1',
-      capability: 'evaluation',
-      agent:
-        id === 'eval.review' || id === 'eval.peer-reviewer'
-          ? 'EvidenceCritic'
-          : 'HazeOps',
-      tools: [],
-      instructions: `Registered ${id}.`,
-      async execute(s) {
-        if (id === 'eval.fail')
-          throw new Error(
-            'upstream_unavailable: the authorized upstream has no result; use retained-source instead.',
-          );
-        if (id === 'eval.slow')
-          await new Promise((done) => setTimeout(done, 200));
-        if (id === 'eval.review') {
-          const producer = s.context.inputs.find(
-            (a) => a.kind === 'evaluation.reviewed',
-          );
-          if (!producer) throw new Error('Missing exact producer revision.');
-          const a = s.save('evaluation.review', {
-            verdict: producer.content.corrected ? 'supported' : 'rejected',
-            reviewed_artifacts: [exact(producer)],
-          });
-          return {
-            status: 'completed',
-            summary: producer.content.corrected
-              ? 'Corrected finding supported.'
-              : 'Objection: corrected must be true.',
-            support: producer.content.corrected ? 'supported' : 'gap',
-            uncertainty: [],
-            outputs: [a],
-          };
-        }
-        if (id.startsWith('eval.peer-')) {
-          const peer = s.context.peers.find(
-            (p) =>
-              p.definition_id !== id &&
-              p.definition_id.startsWith('eval.peer-'),
-          );
-          if (!peer)
-            throw new Error('A Manager-granted peer channel is required.');
-          const received = s.inbox().find((m) => m.sender === peer.id);
-          if (id === 'eval.peer-producer' && !received) {
-            s.message(
-              peer.id,
-              'evidence-clarification',
-              'Clarify the exact evidence scope.',
-            );
-            return {
-              status: 'waiting_peer',
-              summary: 'Waiting for clarification.',
-              support: 'partial',
-              uncertainty: [],
-              outputs: [],
-            };
-          }
-          if (id === 'eval.peer-reviewer' && !received)
-            return {
-              status: 'waiting_peer',
-              summary: 'Waiting for the producer question.',
-              support: 'partial',
-              uncertainty: [],
-              outputs: [],
-            };
-          if (id === 'eval.peer-reviewer')
-            s.message(
-              peer.id,
-              'evidence-clarification',
-              'This is explicitly synthetic evidence.',
-            );
-        }
-        const a = s.save(
-          id === 'eval.reviewed' ? 'evaluation.reviewed' : 'evaluation.finding',
-          { finding: 'A retained synthetic finding.', ...s.input },
-        );
-        return {
-          status: 'completed',
-          summary: 'A synthetic finding is retained; it is not an observation.',
-          support: 'supported',
-          uncertainty: [],
-          outputs: [a],
-        };
-      },
-    });
-  return r;
-}
+
 const report = {
   schema_version: 'haze.manager.evaluation.v1',
-  evaluator_version: 'manager-evaluator.v2',
+  evaluator_version: 'manager-evaluator.v3',
   mode: live ? 'live' : 'scripted',
   implementation: baseline ? 'baseline' : 'supervised',
   baseline_commit: frozen.baseline_commit,
   cases_sha256: createHash('sha256').update(casesBytes).digest('hex'),
   started_at: new Date().toISOString(),
+  isolation: {
+    manager: {
+      id: managerAgent.id,
+      version: managerAgent.version,
+      implementation: 'registered-manager-code',
+    },
+    manager_model: live
+      ? 'configured-live-model'
+      : 'deterministic-scripted-model',
+    specialists: {
+      implementation: 'deterministic-evaluation-stubs',
+      roles: evaluationSpecialistRoles,
+      assignment_definitions: evaluationDefinitionIds,
+      model_calls_allowed: false,
+      tool_calls_allowed: false,
+    },
+    runtime_local_tools_allowed: evaluationLocalToolIds,
+    runtime_tool_policy:
+      'Remove non-allowlisted tools and definition grants before task admission.',
+    external_tools_allowed: false,
+    state_directory: root,
+    fresh_state_per_run: true,
+    fresh_state_per_case: true,
+    compiled_root: base,
+  },
   cases: [],
 };
 for (const c of cases) {
   const started = Date.now();
-  let runtime, task;
+  let runtime, task, executionRegistry;
   const record = {
     id: c.id,
     expected: c,
@@ -445,9 +314,13 @@ for (const c of cases) {
               receipt,
             }),
         };
+    executionRegistry = createManagerSandboxRegistry({
+      ExecutionRegistry,
+      managerAgent,
+    });
     runtime = new TaskRuntime({
       stateDirectory: join(root, c.id),
-      registry: registry(),
+      registry: executionRegistry,
       mode: live ? 'live' : 'replay',
       ...(model ? { model } : {}),
       env: process.env,
@@ -459,6 +332,11 @@ for (const c of cases) {
         max_artifacts: 64,
       },
     });
+    record.runtime_registered_tool_ids_before_restriction = [
+      ...executionRegistry.tools.keys(),
+    ];
+    record.excluded_runtime_tool_ids =
+      restrictManagerEvaluationTools(executionRegistry);
     const refs = (c.sources ?? []).map((content, i) =>
       exact(
         runtime.importArtifact(
@@ -520,6 +398,9 @@ for (const c of cases) {
     record.events = events;
     record.artifacts = artifacts;
     record.attempts = runtime.store.attempts(task.id, localTaskIdentity);
+    record.isolation = checkManagerEvaluationIsolation(task, record.attempts, [
+      ...executionRegistry.tools.keys(),
+    ]);
     record.observed = {
       status: task.status,
       completion: task.result?.completion,
@@ -535,6 +416,7 @@ for (const c of cases) {
         .map((a) => a.receipt),
     };
     record.passed =
+      record.isolation.passed &&
       task.status === c.expected_status &&
       (c.max_specialists === undefined ||
         specialists.length <= c.max_specialists) &&
@@ -565,6 +447,11 @@ for (const c of cases) {
         runtime.store.artifact(entry.artifact.id, localTaskIdentity),
       );
       record.attempts = runtime.store.attempts(task.id, localTaskIdentity);
+      record.isolation = checkManagerEvaluationIsolation(
+        record.task,
+        record.attempts,
+        [...executionRegistry.tools.keys()],
+      );
     }
   } finally {
     if (runtime) await runtime.close();
@@ -598,6 +485,7 @@ for (const c of cases) {
       case: c.id,
       passed: record.passed,
       observed: record.observed,
+      isolation: record.isolation,
       error: record.error,
       task_error: task?.error,
     }),
@@ -605,11 +493,20 @@ for (const c of cases) {
 }
 report.finished_at = new Date().toISOString();
 report.passed = report.cases.every((c) => c.passed);
+report.summary = {
+  total: report.cases.length,
+  passed_cases: report.cases.filter((c) => c.passed).length,
+  failed_cases: report.cases.filter((c) => !c.passed).length,
+};
 await writeFile(
   join(root, 'report.json'),
   JSON.stringify(report, null, 2) + '\n',
 );
 console.log(
-  JSON.stringify({ report: join(root, 'report.json'), passed: report.passed }),
+  JSON.stringify({
+    report: join(root, 'report.json'),
+    passed: report.passed,
+    ...report.summary,
+  }),
 );
 process.exitCode = report.passed ? 0 : 1;

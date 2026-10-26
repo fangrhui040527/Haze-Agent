@@ -5,9 +5,15 @@ import {
   StateGraph,
   interrupt,
 } from '@langchain/langgraph';
-import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
-import type { AgentModelCompletion } from '../adapters/agent-model.js';
-import type { ManagerContext, ManagerDecision } from '../contracts/manager.js';
+import type {
+  ManagerGraphFactory,
+  ManagerGraphState,
+} from '../../orchestration/manager-workflow.js';
+import type { AgentModelCompletion } from '../../adapters/agent-model.js';
+import type {
+  ManagerContext,
+  ManagerDecision,
+} from '../../contracts/manager.js';
 
 const state = Annotation.Root({
   cycle: Annotation<number>({
@@ -26,25 +32,13 @@ const state = Annotation.Root({
   }),
   route: Annotation<'decide' | 'wait' | 'done'>(),
 });
-export type ManagerGraphState = typeof state.State;
 type Update = Partial<ManagerGraphState> | void;
-export interface ManagerGraphHooks {
-  hydrate(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  context(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  decide(this: void, state: ManagerGraphState): Promise<Update>;
-  validate(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  lookup(this: void, state: ManagerGraphState): Promise<Update>;
-  execute(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  dispatch(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  park(this: void, state: ManagerGraphState): Update | Promise<Update>;
-  trace?(node: string): void;
-}
 
 /** Scheduling is explicit graph control flow; assignments run on independent threads. */
-export function createManagerGraph(
-  checkpointer: BaseCheckpointSaver,
-  hooks: ManagerGraphHooks,
-) {
+export const createManagerGraph: ManagerGraphFactory = (
+  checkpointer,
+  hooks,
+) => {
   const node =
     (name: string, fn: (s: ManagerGraphState) => Update | Promise<Update>) =>
     async (s: ManagerGraphState) => {
@@ -97,4 +91,4 @@ export function createManagerGraph(
       .addEdge('finalize', END)
       .compile({ checkpointer })
   );
-}
+};

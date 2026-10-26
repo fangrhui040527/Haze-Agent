@@ -15,6 +15,7 @@ const worldRecordRef = z.strictObject({
 
 export const worldLookupInputSchema = z.strictObject({
   kind: z.string().min(1).max(128).optional(),
+  artifact_kind: z.string().min(1).max(128).optional(),
   external_id: z.string().min(1).max(256).optional(),
   limit: z.number().int().min(1).max(50).default(20),
 });

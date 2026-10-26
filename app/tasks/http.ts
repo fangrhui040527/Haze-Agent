@@ -2,12 +2,14 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { parseContractJson } from '../contracts/json.js';
 import { TaskError, type TaskIdentity } from '../contracts/tasks.js';
 import {
+  worldApiBrowseQuerySchema,
   worldApiRecordParamsSchema,
   worldApiRecordReadQuerySchema,
   worldRecordHistoryResponseSchema,
   worldRecordLineageResponseSchema,
   worldRecordReadResponseSchema,
   worldTaskResponseSchema,
+  worldProjectionRebuildRequestSchema,
 } from '../contracts/world-api.js';
 import { worldLineageInputSchema } from '../contracts/world-services.js';
 import { createExecutionRegistry } from '../composition.js';
@@ -16,6 +18,7 @@ import {
   localTaskIdentity,
   type TaskRuntimeOptions,
 } from './runtime.js';
+import { browseWorldRecords } from './world-control-plane.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -162,6 +165,62 @@ export function createTaskHandler(
       const artifact = /^\/api\/artifacts\/([A-Za-z0-9-]+)$/.exec(url.pathname);
       if (artifact && request.method === 'GET') {
         send(200, runtime.store.artifact(artifact[1]!, identity));
+        return;
+      }
+      if (url.pathname === '/api/world/records') {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        const queryValues: Record<string, string> = {};
+        for (const [key, value] of url.searchParams) {
+          if (Object.hasOwn(queryValues, key))
+            throw new TaskError(400, 'invalid_query', 'Duplicate query key.');
+          Object.defineProperty(queryValues, key, {
+            value,
+            enumerable: true,
+          });
+        }
+        const query = worldApiBrowseQuerySchema.safeParse(queryValues);
+        if (!query.success)
+          throw new TaskError(
+            400,
+            'invalid_world_query',
+            'World Model query parameters are invalid.',
+          );
+        send(
+          200,
+          browseWorldRecords(
+            runtime.store,
+            identity,
+            runtime.executionMode,
+            query.data,
+          ),
+        );
+        return;
+      }
+      if (url.pathname === '/api/world/projections/rebuild') {
+        if (request.method !== 'POST')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size > 0)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        const key = idempotencyKey(request);
+        const body = worldProjectionRebuildRequestSchema.safeParse(
+          await readBody(request, 1024),
+        );
+        if (!body.success)
+          throw new TaskError(
+            400,
+            'invalid_world_rebuild',
+            'Projection rebuild expects an empty JSON object.',
+          );
+        send(
+          200,
+          runtime.store.worldRebuildProjections(
+            identity,
+            runtime.executionMode,
+            key,
+            body.data,
+          ),
+        );
         return;
       }
       const worldRecord = /^\/api\/world\/records\/([^/]+)$/.exec(url.pathname);

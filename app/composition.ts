@@ -30,6 +30,7 @@ import {
   createDamageAccountingCapability,
 } from './capabilities/damage-accounting/index.js';
 import { damageAccountScopeSchema } from './capabilities/damage-accounting/contracts.js';
+import { createWorldModelDamageInputTool } from './capabilities/damage-account/world-input-adapter.js';
 
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
@@ -37,6 +38,9 @@ export function createExecutionRegistry(options: {
   env?: NodeJS.ProcessEnv;
 }): ExecutionRegistry {
   const registry = new ExecutionRegistry();
+  registry.registerStoreTools((store, mode) => [
+    createWorldModelDamageInputTool(store, mode),
+  ]);
   for (const agent of [
     managerAgent,
     hazeOpsAgent,
@@ -54,7 +58,15 @@ export function createExecutionRegistry(options: {
       calculatedDamage.matches(request),
   });
   registry.registerCapability(createPm25Capability());
-  registry.registerCapability(createDamageAccountingCapability());
+  const componentIntake = createDamageAccountingCapability();
+  registry.registerCapability({
+    ...componentIntake,
+    // Manifest intake and calculation advertise different starting plans.
+    matches: (request) =>
+      componentIntake.matches(request) &&
+      (!calculatedDamage.matches(request) ||
+        damageAccountScopeSchema.safeParse(request.scope).success),
+  });
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [

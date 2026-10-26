@@ -22,6 +22,60 @@ export const worldApiPageQuerySchema = z.strictObject({
   cursor: cursorSchema.optional(),
 });
 
+export const worldApiBrowseQuerySchema = worldApiPageQuerySchema.extend({
+  kind: z.string().min(1).max(128).optional(),
+  query: z.string().min(1).max(256).optional(),
+});
+
+export const WORLD_BROWSE_RESPONSE_BYTES = 2 * 1024 * 1024;
+
+export const worldBrowseResponseSchema = z
+  .strictObject({
+    schema_version: z.literal('haze.world.browse.v1'),
+    scope: worldRecordSchema.shape.scope,
+    records: z.array(worldRecordSchema).max(100),
+    kinds: z
+      .array(
+        z.strictObject({
+          kind: z.string().min(1).max(128),
+          count: z.number().int().nonnegative(),
+        }),
+      )
+      .max(1000),
+    kinds_truncated: z.boolean(),
+    counts: z.strictObject({
+      records: z.number().int().nonnegative(),
+      relationships: z.number().int().nonnegative(),
+      events: z.number().int().nonnegative(),
+    }),
+    projection_cursor: z.number().int().nonnegative(),
+    has_more: z.boolean(),
+    next_cursor: cursorSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    if (
+      new TextEncoder().encode(JSON.stringify(value)).byteLength >
+      WORLD_BROWSE_RESPONSE_BYTES
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'World Model browse response exceeds its 2 MiB bound.',
+      });
+    if (value.has_more !== (value.next_cursor !== undefined))
+      context.addIssue({
+        code: 'custom',
+        message: 'World Model browse cursor must match page availability.',
+      });
+  });
+
+export const worldProjectionRebuildRequestSchema = z.strictObject({});
+export const worldProjectionRebuildResponseSchema = z.strictObject({
+  schema_version: z.literal('haze.world.projection-rebuild.v1'),
+  mode: executionModeSchema,
+  projection_cursor: z.number().int().nonnegative(),
+  reused: z.boolean(),
+});
+
 export const worldApiRecordParamsSchema = z.strictObject({
   record_id: recordIdSchema,
 });
@@ -94,6 +148,11 @@ export const worldRecordNotFoundSchema = z.strictObject({
 });
 
 export type WorldApiPageQuery = z.infer<typeof worldApiPageQuerySchema>;
+export type WorldApiBrowseQuery = z.infer<typeof worldApiBrowseQuerySchema>;
+export type WorldBrowseResponse = z.infer<typeof worldBrowseResponseSchema>;
+export type WorldProjectionRebuildResponse = z.infer<
+  typeof worldProjectionRebuildResponseSchema
+>;
 export type WorldRecordDetailResponse = z.infer<
   typeof worldRecordDetailResponseSchema
 >;

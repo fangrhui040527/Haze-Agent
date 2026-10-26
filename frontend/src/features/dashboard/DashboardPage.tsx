@@ -36,6 +36,16 @@ export function DashboardPage() {
     <div className={styles.grid}>
       <div className={styles.actions}>
         <Link
+          to={
+            run.task
+              ? `/manager/${encodeURIComponent(run.task.id)}`
+              : '/manager'
+          }
+          className={buttonClass('secondary', 'small')}
+        >
+          Manager workspace
+        </Link>
+        <Link
           to="/damage-account"
           className={buttonClass('secondary', 'small')}
         >

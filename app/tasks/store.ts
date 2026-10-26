@@ -74,6 +74,8 @@ import {
 } from '../contracts/world-services.js';
 import {
   worldRecordDetailResponseSchema,
+  worldProjectionRebuildRequestSchema,
+  worldProjectionRebuildResponseSchema,
   worldTaskResponseSchema,
 } from '../contracts/world-api.js';
 import { migrateWorldSchema } from './world-schema.js';
@@ -941,9 +943,9 @@ export class TaskStore {
           item.outputs = [];
           item.acknowledged_revision = 0;
           item.inputs = item.inputs.filter((ref) => {
-            const artifact = this.artifactMetadata(ref.id, task.identity, ref);
-            return (
-              !artifact.assignment_id || !changed.has(artifact.assignment_id)
+            this.artifactMetadata(ref.id, task.identity, ref);
+            return ![...this.artifactAssignments([ref])].some((id) =>
+              changed.has(id),
             );
           });
           delete item.error;
@@ -1006,8 +1008,10 @@ export class TaskStore {
         visiting.add(id);
         for (const dependency of new Set([
           ...item!.dependencies,
-          ...[...this.artifactAssignments(item!.inputs)].filter((id) =>
-            graph.has(id),
+          // Retained outputs from this assignment already exist. They do not
+          // require the assignment to schedule itself; explicit self-edges do.
+          ...[...this.artifactAssignments(item!.inputs)].filter(
+            (producer) => producer !== id && graph.has(producer),
           ),
         ]))
           visit(dependency);
@@ -1434,6 +1438,34 @@ export class TaskStore {
         );
     }
   }
+  worldRebuildProjections(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    key: string,
+    request: unknown,
+  ) {
+    const parsed = worldProjectionRebuildRequestSchema.parse(request);
+    return this.atomic(() => {
+      const result = this.operation(
+        identity,
+        'POST /api/world/projections/rebuild',
+        key,
+        { mode, request: parsed },
+        () => ({
+          schema_version: 'haze.world.projection-rebuild.v1' as const,
+          mode,
+          projection_cursor: this.world.rebuildProjections({
+            ...identity,
+            mode,
+          }),
+        }),
+      );
+      return worldProjectionRebuildResponseSchema.parse({
+        ...result.value,
+        reused: result.reused,
+      });
+    });
+  }
   worldLookup(
     taskId: string,
     identity: TaskIdentity,
@@ -1463,6 +1495,118 @@ export class TaskStore {
       records,
       current_acceptances,
     });
+  }
+  /** Recheck lifecycle state for every pinned dependency at publication time. */
+  revalidateWorldEvidence(
+    taskId: string,
+    identity: TaskIdentity,
+    ref: ArtifactRef,
+  ): void {
+    const requester = this.core(taskId, identity);
+    const pins = this.db
+      .prepare(
+        `SELECT record_id FROM world_task_pins
+         WHERE task_id=? AND principal=? AND workspace=? AND mode=? AND generation=?
+         AND EXISTS (SELECT 1 FROM json_each(support_artifacts) support
+           WHERE json_extract(support.value,'$.id')=?
+           AND json_extract(support.value,'$.version')=?
+           AND json_extract(support.value,'$.sha256')=?)`,
+      )
+      .all(
+        taskId,
+        identity.principal,
+        identity.workspace,
+        requester.mode,
+        this.run(requester.current_run_id).generation,
+        ref.id,
+        ref.version,
+        ref.sha256,
+      ) as { record_id: string }[];
+    if (!pins.length) return;
+    this.requireWorldSupportAccess(requester, [ref]);
+    const scope = { ...identity, mode: requester.mode };
+    const records = this.db
+      .prepare(
+        `SELECT record_id FROM world_entities
+         WHERE principal=? AND workspace=? AND mode=? AND kind='artifact_reference'
+         AND revision=(SELECT MAX(current.revision) FROM world_entities current
+           WHERE current.principal=world_entities.principal
+           AND current.workspace=world_entities.workspace
+           AND current.mode=world_entities.mode
+           AND current.record_id=world_entities.record_id)
+         AND json_extract(body,'$.payload.artifact.id')=?
+         AND json_extract(body,'$.payload.artifact.version')=?
+         AND json_extract(body,'$.payload.artifact.sha256')=?`,
+      )
+      .all(
+        identity.principal,
+        identity.workspace,
+        requester.mode,
+        ref.id,
+        ref.version,
+        ref.sha256,
+      ) as { record_id: string }[];
+    if (
+      !records.length ||
+      [...records, ...pins].some(
+        ({ record_id }) => this.world.activeHolds(scope, record_id).length > 0,
+      )
+    )
+      fail(
+        'world_support_unavailable',
+        'Pinned World Model evidence is revised or held; collect and review fresh evidence before publication.',
+        422,
+      );
+  }
+  /** Foreign assignment provenance is reusable only through an exact governed pin. */
+  worldEvidenceOwner(
+    taskId: string,
+    identity: TaskIdentity,
+    ref: ArtifactRef,
+  ): TaskRecord | undefined {
+    const requester = this.core(taskId, identity);
+    const artifact = this.artifact(ref.id, identity, ref);
+    if (!artifact.task_id || artifact.task_id === taskId) return undefined;
+    const pins = this.db
+      .prepare(
+        'SELECT support_artifacts FROM world_task_pins WHERE task_id=? AND principal=? AND workspace=? AND mode=? AND generation=?',
+      )
+      .all(
+        taskId,
+        identity.principal,
+        identity.workspace,
+        requester.mode,
+        this.run(requester.current_run_id).generation,
+      ) as { support_artifacts: string }[];
+    if (
+      !pins.some((pin) =>
+        (JSON.parse(pin.support_artifacts) as ArtifactRef[]).some(
+          (support) =>
+            support.id === ref.id &&
+            support.version === ref.version &&
+            support.sha256 === ref.sha256,
+        ),
+      )
+    )
+      return undefined;
+    this.requireWorldSupportAccess(requester, [ref]);
+    const owner = this.read(artifact.task_id, identity);
+    if (
+      !owner.artifacts.some(
+        (entry) =>
+          entry.objective_revision === owner.objective_revision &&
+          entry.current &&
+          entry.artifact.id === ref.id &&
+          entry.artifact.version === ref.version &&
+          entry.artifact.sha256 === ref.sha256,
+      )
+    )
+      fail(
+        'world_support_unavailable',
+        'World Model producer evidence is no longer applicable.',
+        422,
+      );
+    return owner;
   }
   worldTaskView(taskId: string, identity: TaskIdentity) {
     const task = this.core(taskId, identity);
@@ -1700,6 +1844,114 @@ export class TaskStore {
         { record_refs: refs },
         assignment.id,
       );
+    });
+  }
+  /** Replace retrieved inputs before a fresh collection, retaining explicit user context. */
+  clearWorldContextPins(
+    taskId: string,
+    identity: TaskIdentity,
+    assignmentId: string,
+    generation: number,
+  ): void {
+    this.atomic(() => {
+      const task = this.core(taskId, identity),
+        run = this.run(task.current_run_id),
+        assignment = this.assignment(assignmentId, taskId);
+      this.assertCurrent(task, run, assignment, generation);
+      // Historical pins identify inputs retained across an objective correction.
+      const pins = this.db
+        .prepare(
+          `SELECT record_id,support_artifacts,generation FROM world_task_pins
+           WHERE task_id=? AND principal=? AND workspace=? AND mode=?`,
+        )
+        .all(taskId, identity.principal, identity.workspace, task.mode) as {
+        record_id: string;
+        support_artifacts: string;
+        generation: number;
+      }[];
+      if (!pins.length) return;
+      const key = (ref: ArtifactRef) =>
+        `${ref.id}:${ref.version}:${ref.sha256}`;
+      const retrieved = new Set(
+        pins.flatMap((pin) =>
+          (JSON.parse(pin.support_artifacts) as ArtifactRef[]).map(key),
+        ),
+      );
+      const explicit = new Set(task.original_request.context_refs.map(key));
+      for (const row of this.db
+        .prepare('SELECT body FROM corrections WHERE task_id=?')
+        .all(taskId) as Row[]) {
+        const correction = decode<{ context_refs?: ArtifactRef[] }>(row.body);
+        for (const ref of correction.context_refs ?? []) explicit.add(key(ref));
+      }
+      const dependsOnRetrieved = new Map<string, boolean>();
+      const visiting = new Set<string>();
+      const retrievedInput = (ref: ArtifactRef): boolean => {
+        const identityKey = key(ref);
+        if (explicit.has(identityKey)) return false;
+        if (retrieved.has(identityKey)) return true;
+        const known = dependsOnRetrieved.get(identityKey);
+        if (known !== undefined) return known;
+        if (visiting.has(identityKey))
+          fail(
+            'artifact_dependency_cycle',
+            'Artifact dependency cycle detected.',
+          );
+        visiting.add(identityKey);
+        const artifact = this.artifactMetadata(ref.id, identity, ref);
+        const depends = artifact.dependencies.some(retrievedInput);
+        visiting.delete(identityKey);
+        dependsOnRetrieved.set(identityKey, depends);
+        return depends;
+      };
+      const assignments = this.allAssignments(run.id);
+      const branch = new Set([assignmentId]);
+      for (let changed = true; changed;) {
+        changed = false;
+        for (const current of assignments)
+          if (
+            !branch.has(current.id) &&
+            current.dependencies.some((id) => branch.has(id))
+          ) {
+            branch.add(current.id);
+            changed = true;
+          }
+      }
+      const removed = new Map<string, ArtifactRef>();
+      for (const current of assignments) {
+        if (!branch.has(current.id)) continue;
+        current.inputs = current.inputs.filter((ref) => {
+          if (!retrievedInput(ref)) return true;
+          removed.set(key(ref), ref);
+          return false;
+        });
+        this.putAssignment(current);
+      }
+      const remaining = new Set(
+        assignments.flatMap((current) => current.inputs.map(key)),
+      );
+      for (const pin of pins)
+        if (
+          pin.generation === generation &&
+          !(JSON.parse(pin.support_artifacts) as ArtifactRef[]).some(
+            (ref) => remaining.has(key(ref)) && !explicit.has(key(ref)),
+          )
+        )
+          this.db
+            .prepare(
+              'DELETE FROM world_task_pins WHERE task_id=? AND record_id=? AND generation=?',
+            )
+            .run(taskId, pin.record_id, generation);
+      for (const [identityKey, ref] of removed)
+        if (!remaining.has(identityKey))
+          this.recordApplicability(
+            taskId,
+            identity,
+            ref,
+            false,
+            'Prior retrieved context was replaced by fresh collection.',
+            'Runtime',
+          );
     });
   }
   private requireWorldSupportAccess(
@@ -2372,8 +2624,10 @@ export class TaskStore {
         visiting.add(id);
         for (const dep of new Set([
           ...item!.dependencies,
-          ...[...this.artifactAssignments(item!.inputs)].filter((producer) =>
-            graph.has(producer),
+          // An exact retained artifact can contain this assignment's own
+          // output without introducing a new scheduling prerequisite.
+          ...[...this.artifactAssignments(item!.inputs)].filter(
+            (producer) => producer !== id && graph.has(producer),
           ),
         ]))
           visit(dep);
@@ -3870,6 +4124,23 @@ export class TaskStore {
         );
         return;
       }
+      const snapshotScope = { ...requester.identity, mode: requester.mode };
+      const currentRecord = this.world.record(
+        snapshotScope,
+        snapshot.data.record.id,
+      );
+      if (
+        !currentRecord ||
+        currentRecord.ref.revision !== snapshot.data.record.revision ||
+        currentRecord.ref.sha256 !== snapshot.data.record.sha256 ||
+        this.world.activeHolds(snapshotScope, snapshot.data.record.id).length >
+          0
+      ) {
+        reasons.push(
+          `Retrieved context ${ref.id} has a revised or held World Model record.`,
+        );
+        return;
+      }
       const directDependencies = new Set(
         artifact.dependencies.map(
           (dependency) =>
@@ -4101,10 +4372,9 @@ export class TaskStore {
                 assignment.brief += `\n\nExact ${update.kind} at objective revision ${task.objective_revision}:\n${update.passage}`;
                 assignment.outputs = [];
                 assignment.inputs = assignment.inputs.filter((ref) => {
-                  const artifact = this.artifactMetadata(ref.id, identity, ref);
-                  return (
-                    !artifact.assignment_id ||
-                    !affected.has(artifact.assignment_id)
+                  this.artifactMetadata(ref.id, identity, ref);
+                  return ![...this.artifactAssignments([ref])].some((id) =>
+                    affected.has(id),
                   );
                 });
                 assignment.inputs = [

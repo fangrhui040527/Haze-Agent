@@ -20,12 +20,15 @@ Start with the [project README](../README.md) for setup and current behavior.
 
 ## Orchestration
 
+- [Isolated Manager testing](Testing/manager-testing.md) - interactive live Manager chat, focused unit checks and synthetic specialist scenarios.
+- [World Model control plane](Testing/world-model-control-plane.md) - inspect retained records, rebuild SQLite projections, run the original Meterless sandbox and verify the integration.
 - [General task engine](orchestration/general-engine.md) - current v3 protocol, ownership, controls and recovery.
 - [LangGraph implementation report](orchestration/langgraph-implementation-report.md) — baseline, runtime migration verification and remaining release gates.
 - [LangGraph cutover and rollback](orchestration/langgraph-cutover-runbook.md) — explicit state-copy migration and matching executable/snapshot recovery.
 - [World Model data model](05-world-model-data-model.md) — legacy HazeOps storage and the active v3 model, acceptance, and access boundaries.
 - [General engine verification](orchestration/general-engine-verification.md) - release checks and explicit fixture/live evidence.
 - [DamageAccountant implementation report](orchestration/damage-accountant-implementation-report.md) - imported accounting, independent checks, task integration and empirical release gates.
+- [World Model damage input adapter](orchestration/world-model-damage-input-adapter-report.md) - request-only accounting, exact evidence selection, provenance checks and the Jev assessment.
 
 The v1/v2 guides below are retained historical records.
 

@@ -71,16 +71,18 @@ export function assembleManagerContext(
       )
       .map((capability) => capability.card.id),
   );
+  const eventCursor = Math.max(
+    state.last_handled_event_cursor,
+    ...options.events.map((event) => event.cursor),
+  );
   const context: ManagerContext = {
     purpose: 'decision',
+    decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}`,
     run_id: task.current_run_id,
     generation: task.generation,
     objective_revision: task.objective_revision,
     plan_revision: state.plan_revision,
-    event_cursor: Math.max(
-      state.last_handled_event_cursor,
-      ...options.events.map((e) => e.cursor),
-    ),
+    event_cursor: eventCursor,
     plan_objective_revision: state.plans.at(-1)?.objective_revision ?? 0,
     source_applicability: [
       ...task.original_request.context_refs,
@@ -158,6 +160,7 @@ export function assembleManagerContext(
         id: a.id,
         definition_id: a.definition_id,
         capability: a.capability,
+        role: a.role,
         revision: a.revision,
         objective_revision: a.objective_revision,
         status: a.status,
@@ -516,6 +519,27 @@ export function assembleManagerContext(
         assignment.brief = '';
     for (const inspection of context.inspections)
       if (bytes(context) > limit) inspection.excerpt = '';
+  }
+  if (bytes(context) > limit) {
+    // Compaction annotations are optional prose too. Keep every unavailable
+    // evidence warning while summarizing repeated catalog/formatting notices.
+    const unavailable = status.missing.filter((note) =>
+      note.startsWith('Artifact unavailable'),
+    );
+    if (status.missing.length - unavailable.length > 1) {
+      status.missing = [
+        ...unavailable,
+        'Optional catalog, brief and excerpt details were compacted; full history remains persisted. Exact requests, corrections, evidence and review references are retained.',
+      ];
+      status.truncated = true;
+    }
+  }
+  if (bytes(context) > limit && currentPlan) {
+    for (const capability of context.capabilities) {
+      if (!capability.available) continue;
+      if (bytes(context) > limit) capability.reasons = [];
+      if (bytes(context) > limit) capability.card.purpose = '';
+    }
   }
   if (bytes(context) > limit)
     throw new TaskError(

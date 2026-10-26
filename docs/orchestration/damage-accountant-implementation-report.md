@@ -1,5 +1,7 @@
 # DamageAccountant implementation report
 
+The subsequent [World Model input adapter](world-model-damage-input-adapter-report.md) replaces the required user-upload intake with a request-only page and governed evidence retrieval. The imported-source path below remains available for compatibility and fixture verification; the numerical and scientific limitations still apply.
+
 DamageAccountant is registered as a fifth specialist under Manager, with a versioned imported-input accounting capability. It produces physical outcomes, financial incidence and selected social welfare from exact retained JSON or CSV inputs, then submits the manifest and components to EvidenceCritic for independent reconstruction. Empirical regional estimation remains gated on the scientific inputs and applicability evidence described in the [implementation plan](../architecture/damage-accountant-plan.md).
 
 Implemented on 25 October 2026 against the existing Manager v4 working tree. Existing uncommitted Manager, runtime, contract and workspace work was preserved. The pre-change focused Manager and runtime baseline passed 56 tests, including the corrected scope hold and resume behavior; the correction failure described in the plan did not reproduce on this baseline.

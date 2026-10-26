@@ -15,6 +15,18 @@ const DamageAccountPage = lazy(() =>
   })),
 );
 
+const ManagerPage = lazy(() =>
+  import('../features/manager/ManagerPage.tsx').then((module) => ({
+    default: module.ManagerPage,
+  })),
+);
+
+const WorldModelPage = lazy(() =>
+  import('../features/world-model/WorldModelPage.tsx').then((module) => ({
+    default: module.WorldModelPage,
+  })),
+);
+
 /**
  * All pages. To add a page: create src/features/<name>/<Name>Page.tsx and add a route here
  * (plus a NavLink in AppLayout.tsx if it belongs in the header).
@@ -27,6 +39,24 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'item/:id', element: <DetailPage /> },
       { path: 'demo-data', element: <DemoDataPage /> },
+      {
+        path: 'world-model',
+        element: (
+          <Suspense fallback={<p role="status">Opening World Model...</p>}>
+            <WorldModelPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'manager/:taskId?',
+        element: (
+          <Suspense
+            fallback={<p role="status">Opening Manager workspace...</p>}
+          >
+            <ManagerPage />
+          </Suspense>
+        ),
+      },
       {
         path: 'damage-account/:taskId?',
         element: (

@@ -181,7 +181,7 @@ describe('general task reports', () => {
     expect(markup).not.toContain('Continue in a new run');
   });
 
-  it('renders saved Manager interpretation, replanning and exact current assignment revisions', () => {
+  it('links to the saved task Manager page instead of embedding coordination details', () => {
     const run = taskRun();
     const record = run.task!.record!;
     record.manager = fixtureManager();
@@ -201,27 +201,28 @@ describe('general task reports', () => {
       },
     ];
     const markup = render(run);
-    expect(markup).toContain('Interpreted objective');
-    expect(markup).toContain(
+    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).not.toContain('id="manager-workspace-title"');
+    expect(markup).not.toContain('Interpreted objective');
+    expect(markup).not.toContain(
       'Explain the supplied evidence within its measured coverage.',
     );
-    expect(markup).toContain('Plan revision 2');
-    expect(markup).toContain('Replanning reason:');
-    expect(markup).toContain(
+    expect(markup).not.toContain('Plan revision 2');
+    expect(markup).not.toContain('Replanning reason:');
+    expect(markup).not.toContain(
       'Investigate the reviewer objection before synthesis.',
     );
-    expect(markup).toContain('evidence-synthesis');
-    expect(markup).toContain('running');
     expect(markup).not.toContain('retired-capability');
     expect(markup).not.toContain('previous-run-capability');
-    expect(markup).toContain(
+    expect(markup).not.toContain(
       '<details><summary>Manager decisions and execution details (1)</summary>',
     );
-    expect(markup).toContain(
+    expect(markup).not.toContain(
       'The review identified a coverage gap requiring investigation.',
     );
-    expect(markup).toContain('Artifact inspections (1)');
-    expect(markup).toContain('Plan history (2)');
+    expect(markup).not.toContain('Artifact inspections (1)');
+    expect(markup).not.toContain('Plan history (2)');
   });
 
   it('exposes rejected claims and next requirements in a partial saved result', () => {
@@ -248,10 +249,11 @@ describe('general task reports', () => {
     ];
     const markup = render(run);
     expect(markup).toContain('Result: partial');
-    expect(markup).toContain('Review objection: work is rejected.');
-    expect(markup).toContain(
+    expect(markup).not.toContain('Review objection: work is rejected.');
+    expect(markup).not.toContain(
       'The source does not contain direct observations.',
     );
+    expect(markup).toContain(`href="/manager/${taskId}"`);
     expect(markup).toContain('Artifact review checks');
     expect(markup).toContain('Review objections');
     expect(markup).toContain(
@@ -263,10 +265,11 @@ describe('general task reports', () => {
 
   it('preserves historical tasks without Manager state and excludes a predecessor Manager', () => {
     const run = taskRun();
-    expect(render(run)).not.toContain('Manager workspace');
+    expect(render(run)).not.toContain('id="manager-workspace-title"');
+    expect(render(run)).toContain(`href="/manager/${taskId}"`);
     run.task!.record!.manager = { ...fixtureManager(), run_id: artifactId };
     const markup = render(run);
-    expect(markup).not.toContain('Manager workspace');
+    expect(markup).not.toContain('id="manager-workspace-title"');
     expect(markup).toContain('Saved result');
   });
 

@@ -123,6 +123,8 @@ async function setup(
         );
         expect(input.context).not.toHaveProperty('required_json_schema');
         const context = input.context as ManagerContext;
+        for (const assignment of context.assignments)
+          expect(registry.agents.has(assignment.role)).toBe(true);
         contexts.push(context);
         return JSON.stringify({
           id: randomUUID(),

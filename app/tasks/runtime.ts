@@ -1,9 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Command } from '@langchain/langgraph';
-import {
-  createManagerGraph,
-  type ManagerGraphState,
-} from '../orchestration/manager-graph.js';
+import type { ManagerGraphState } from '../orchestration/manager-workflow.js';
 import {
   createSpecialistGraph,
   invokeSpecialistGraph,
@@ -72,6 +69,7 @@ import {
   type WorldProjectionRecordInput,
 } from './store.js';
 import { createWorldModelTools, WORLD_TOOL_IDS } from './world-tools.js';
+import { worldContextSnapshotSchema } from '../contracts/world-services.js';
 
 export const localTaskIdentity: TaskIdentity = {
   principal: 'local-user',
@@ -180,6 +178,10 @@ export class TaskRuntime {
       options.registry.registerTool(contextTool);
     if (!options.registry.tools.has(lineageTool.id))
       options.registry.registerTool(lineageTool);
+    for (const factory of options.registry.storeToolFactories)
+      for (const tool of factory(this.store, options.mode ?? 'live'))
+        if (!options.registry.tools.has(tool.id))
+          options.registry.registerTool(tool);
     for (const definition of options.registry.definitions.values())
       if (definition.capability !== 'core.manager')
         definition.tools = [
@@ -581,417 +583,432 @@ export class TaskRuntime {
         ? manager
         : this.store.acquireAssignment(id, manager.id)!;
     };
-    const graph = createManagerGraph((await this.checkpoints).checkpointer, {
-      hydrate: () => {
-        signal.throwIfAborted();
-        let task = this.store.read(id, localTaskIdentity);
-        if (task.status === 'waiting')
-          task = this.store.wakeManager(id, job.cursor);
-        if (!['queued', 'running'].includes(task.status))
-          return { route: 'done' };
-        fresh();
-        this.store.ensureManager(id, task.current_run_id, {
-          definition_id: 'core.manager.coordinator',
-          definition_version: '4',
-          role: 'Manager',
-          capability: 'core.manager',
-          brief:
-            'Frame, supervise, replan and synthesize the admitted objective.',
-          tools: task.permissions.tools,
-          max_model_calls: task.limits.max_model_calls,
-        });
-        return { route: 'decide' };
-      },
-      context: async () => {
-        await new Promise<void>((resolve) => setImmediate(resolve));
-        const task = fresh();
-        coordinator(task);
-        const state = this.store.managerState(id, task.identity)!;
-        const events = this.store.pendingManagerEvents(id, task.identity);
-        const artifacts = this.managerArtifacts(task);
-        const agent = this.options.registry.agents.get('Manager');
-        if (!agent?.decide || !agent.assembleContext)
-          throw new TaskError(
-            422,
-            'manager_executor_missing',
-            'The registered Manager has no controlled decision and context entry points.',
-          );
-        const overhead = Buffer.byteLength(
-          JSON.stringify({
+    const managerAgent = this.options.registry.agents.get('Manager');
+    if (!managerAgent?.createManagerGraph)
+      throw new TaskError(
+        422,
+        'manager_executor_missing',
+        'The registered Manager has no executable workflow topology.',
+      );
+    const graph = managerAgent.createManagerGraph(
+      (await this.checkpoints).checkpointer,
+      {
+        hydrate: () => {
+          signal.throwIfAborted();
+          let task = this.store.read(id, localTaskIdentity);
+          if (task.status === 'waiting')
+            task = this.store.wakeManager(id, job.cursor);
+          if (!['queued', 'running'].includes(task.status))
+            return { route: 'done' };
+          fresh();
+          this.store.ensureManager(id, task.current_run_id, {
+            definition_id: 'core.manager.coordinator',
+            definition_version: '4',
             role: 'Manager',
-            instruction: modelInstruction(agent.instructions),
-            context: {},
-            output_schema: promptSchema(
-              agent.schemas?.decision ?? managerDecisionSchema,
-            ),
-            max_output_tokens: task.limits.max_model_output_tokens,
-            json_mode: true,
-          }),
-          'utf8',
-        );
-        const context = agent.assembleContext(
-          task,
-          this.options.registry,
-          state,
-          {
-            events,
-            artifacts,
-            reviews: assessArtifactReviews(
-              task,
-              this.options.registry,
-              artifacts,
-            ),
-            maxBytes: Math.max(
-              1,
-              task.limits.max_model_input_bytes - overhead - 128,
-            ),
-          },
-        );
-
-        return {
-          context,
-          cursor: context.event_cursor,
-          cycle: state.decisions.length,
-        };
-      },
-      decide: async ({ context }) => {
-        const task = fresh(),
-          state = this.store.managerState(id, task.identity)!;
-        const coordinator = task.assignments.find(
-          (a) => a.id === state.coordinator_assignment_id,
-        )!;
-        const agent = this.options.registry.agents.get('Manager')!;
-        let response: AgentModelCompletion | undefined;
-        const pending = this.store
-          .actions(id, task.identity)
-          .findLast(
-            (action) =>
-              action.assignment_id === coordinator.id &&
-              action.assignment_revision === coordinator.revision &&
-              !action.dispatched,
-          );
-        let original = pending
-          ? managerDecisionSchema.parse(pending.action)
-          : undefined;
-        if (
-          original &&
-          (original.run_id !== task.current_run_id ||
-            original.objective_revision !== task.objective_revision ||
-            original.plan_revision !== state.plan_revision)
-        )
-          throw new TaskError(
-            409,
-            'stale_manager_decision',
-            'A persisted Manager action belongs to a corrected or superseded plan.',
-          );
-        if (!original) {
-          const accepted = this.store
-            .attempts(id, task.identity)
-            .findLast(
-              (attempt) =>
-                attempt.assignment_id === coordinator.id &&
-                attempt.assignment_revision === coordinator.revision &&
-                attempt.accepted &&
-                attempt.kind === 'model' &&
-                typeof attempt.output === 'string' &&
-                !this.store
-                  .actions(id, task.identity)
-                  .some(
-                    (action) =>
-                      typeof action.response === 'object' &&
-                      action.response !== null &&
-                      !Array.isArray(action.response) &&
-                      action.response.text === attempt.output,
-                  ),
+            capability: 'core.manager',
+            brief:
+              'Frame, supervise, replan and synthesize the admitted objective.',
+            tools: task.permissions.tools,
+            max_model_calls: task.limits.max_model_calls,
+          });
+          return { route: 'decide' };
+        },
+        context: async () => {
+          await new Promise<void>((resolve) => setImmediate(resolve));
+          const task = fresh();
+          coordinator(task);
+          const state = this.store.managerState(id, task.identity)!;
+          const events = this.store.pendingManagerEvents(id, task.identity);
+          const artifacts = this.managerArtifacts(task);
+          const agent = this.options.registry.agents.get('Manager');
+          if (!agent?.decide || !agent.assembleContext)
+            throw new TaskError(
+              422,
+              'manager_executor_missing',
+              'The registered Manager has no controlled decision and context entry points.',
             );
-          if (accepted) {
-            const parsed = managerDecisionSchema.safeParse(
-              parseContractJson(accepted.output as string),
-            );
-            if (parsed.success && parsed.data.generation !== task.generation) {
-              original = parsed.data;
-              response = {
-                text: accepted.output as string,
-                receipt: accepted.receipt as unknown as AgentModelReceipt,
-              };
-            }
-          }
-        }
-        const lookupDecisionId = original?.recovery_of ?? original?.id;
-        if (
-          original &&
-          this.store
-            .attempts(id, task.identity)
-            .some(
-              (attempt) =>
-                attempt.run_id === task.current_run_id &&
-                attempt.kind === 'tool' &&
-                ['started', 'unknown'].includes(attempt.status) &&
-                typeof attempt.details === 'object' &&
-                attempt.details !== null &&
-                !Array.isArray(attempt.details) &&
-                attempt.details.manager_decision_id === lookupDecisionId,
-            )
-        ) {
-          this.store.pauseManagerRecovery(
-            id,
+          const overhead = Buffer.byteLength(
+            JSON.stringify({
+              role: 'Manager',
+              instruction: modelInstruction(agent.instructions),
+              context: {},
+              output_schema: promptSchema(
+                agent.schemas?.decision ?? managerDecisionSchema,
+              ),
+              max_output_tokens: task.limits.max_model_output_tokens,
+              json_mode: true,
+            }),
+            'utf8',
+          );
+          const context = agent.assembleContext(
+            task,
+            this.options.registry,
+            state,
             {
-              run_id: task.current_run_id,
-              generation: task.generation,
-              objective_revision: task.objective_revision,
-              plan_revision: state.plan_revision,
+              events,
+              artifacts,
+              reviews: assessArtifactReviews(
+                task,
+                this.options.registry,
+                artifacts,
+              ),
+              maxBytes: Math.max(
+                1,
+                task.limits.max_model_input_bytes - overhead - 128,
+              ),
             },
-            'A persisted Manager lookup has an unknown remote outcome. Its charged attempt is retained; explicitly continue to start a linked run before replacing it.',
           );
-          return;
-        }
-        if (original && !response) {
-          for (const ref of original.references) this.readExact(task, ref);
+
+          return {
+            context,
+            cursor: context.event_cursor,
+            cycle: state.decisions.length,
+          };
+        },
+        decide: async ({ context }) => {
+          const task = fresh(),
+            state = this.store.managerState(id, task.identity)!;
+          const coordinator = task.assignments.find(
+            (a) => a.id === state.coordinator_assignment_id,
+          )!;
+          const agent = this.options.registry.agents.get('Manager')!;
+          let response: AgentModelCompletion | undefined;
+          const pending = this.store
+            .actions(id, task.identity)
+            .findLast(
+              (action) =>
+                action.assignment_id === coordinator.id &&
+                action.assignment_revision === coordinator.revision &&
+                !action.dispatched,
+            );
+          let original = pending
+            ? managerDecisionSchema.parse(pending.action)
+            : undefined;
           if (
-            !pending ||
-            !pending.response ||
-            typeof pending.response !== 'object' ||
-            Array.isArray(pending.response) ||
-            typeof pending.response.text !== 'string'
+            original &&
+            (original.run_id !== task.current_run_id ||
+              original.objective_revision !== task.objective_revision ||
+              original.plan_revision !== state.plan_revision)
           )
             throw new TaskError(
               409,
-              'invalid_pending_manager_action',
-              'The persisted validated Manager response is unavailable.',
+              'stale_manager_decision',
+              'A persisted Manager action belongs to a corrected or superseded plan.',
             );
-          response = pending.response as unknown as AgentModelCompletion;
-        }
-        const decision = managerDecisionSchema.parse(
-          original
-            ? {
-                ...original,
-                id: `recovery-${contractHash({ id: lookupDecisionId, generation: task.generation, event_cursor: context.event_cursor })}`,
-                recovery_of: lookupDecisionId,
-                generation: task.generation,
-                event_cursor: context.event_cursor,
-                explanation:
-                  `Recovery of persisted validated decision ${lookupDecisionId}; objective and plan are unchanged. ${original.explanation}`.slice(
-                    0,
-                    4096,
-                  ),
+          if (!original) {
+            const accepted = this.store
+              .attempts(id, task.identity)
+              .findLast(
+                (attempt) =>
+                  attempt.assignment_id === coordinator.id &&
+                  attempt.assignment_revision === coordinator.revision &&
+                  attempt.accepted &&
+                  attempt.kind === 'model' &&
+                  typeof attempt.output === 'string' &&
+                  !this.store
+                    .actions(id, task.identity)
+                    .some(
+                      (action) =>
+                        typeof action.response === 'object' &&
+                        action.response !== null &&
+                        !Array.isArray(action.response) &&
+                        action.response.text === attempt.output,
+                    ),
+              );
+            if (accepted) {
+              const parsed = managerDecisionSchema.safeParse(
+                parseContractJson(accepted.output as string),
+              );
+              if (
+                parsed.success &&
+                parsed.data.generation !== task.generation
+              ) {
+                original = parsed.data;
+                response = {
+                  text: accepted.output as string,
+                  receipt: accepted.receipt as unknown as AgentModelReceipt,
+                };
               }
-            : await agent.decide!({
-                context,
-                model: async (input) => {
-                  if (task.mode === 'fixture') {
-                    if (!agent.fixtureDecision)
-                      throw new TaskError(
-                        422,
-                        'fixture_manager_missing',
-                        'The registered Manager has no deterministic fixture policy.',
-                      );
-                    response = {
-                      text: JSON.stringify(agent.fixtureDecision(context)),
-                      receipt: {
-                        response_model: null,
-                        response_id: null,
-                        input_tokens: null,
-                        output_tokens: null,
-                      },
-                    };
-                  } else
-                    response = await this.modelTurn(
-                      task,
-                      coordinator,
-                      input,
-                      signal,
-                      `manager:${task.objective_revision}:decision:${state.decisions.length}:model`,
-                    );
-                  return response;
-                },
-              }),
-        );
-
-        return {
-          response: response ?? null,
-          original: original ?? null,
-          decision,
-        };
-      },
-      validate: ({ decision, response }) => {
-        const task = fresh(),
-          manager = coordinator(task);
-        managerDecisionSchema.parse(decision);
-        if (response)
-          this.store.recordAction(
-            id,
-            manager.id,
-            decision.id,
-            json(response),
-            json(decision),
-            leaseOf(manager),
-          );
-      },
-      lookup: async ({ decision, original }) => {
-        const task = fresh();
-        return {
-          lookup:
-            decision.action.type === 'lookup'
-              ? await this.managerLookup(
-                  task,
-                  coordinator(task),
-                  decision.action,
-                  original?.recovery_of ?? original?.id ?? decision.id,
-                  decision.plan_revision,
-                  signal,
-                )
-              : null,
-        };
-      },
-      execute: ({ decision, response, original, lookup }) => {
-        const task = fresh(),
-          manager = coordinator(task);
-        this.store.applyManagerDecision(id, decision, () => {
-          if (response) {
-            this.store.dispatchAction(
-              id,
-              manager.id,
-              decision.id,
-              leaseOf(manager),
-            );
-            if (original)
-              for (const action of this.store
-                .actions(id, task.identity)
-                .filter(
-                  (action) =>
-                    action.assignment_id === manager.id && !action.dispatched,
-                )) {
-                const retained = managerDecisionSchema.safeParse(action.action);
-                const previous = original.recovery_of ?? original.id;
-                if (
-                  retained.success &&
-                  (retained.data.id === previous ||
-                    retained.data.recovery_of === previous)
-                ) {
-                  this.store.adoptAction(
-                    id,
-                    manager.id,
-                    action.action_id,
-                    leaseOf(manager),
-                  );
-                  this.store.dispatchAction(
-                    id,
-                    manager.id,
-                    action.action_id,
-                    leaseOf(manager),
-                  );
-                }
-              }
+            }
           }
-          this.dispatchManagerDecision(fresh(), decision, lookup);
-          return json({ action: decision.action.type });
-        });
-        this.dispatcher.reconcile((candidate) => this.jobCurrent(candidate));
-        const after = this.store.read(id, task.identity);
-        return {
-          forceDecision:
-            [
-              'inspect',
-              'applicability',
-              'lookup',
-              'coordinate',
-              'steer',
-            ].includes(decision.action.type) ||
-            (decision.action.type === 'apply_plan' &&
-              [...this.options.registry.capabilities.values()].some(
-                (capability) =>
-                  (capability.peer_requirements?.length ?? 0) > 0 &&
-                  after.assignments.some(
-                    (a) =>
-                      a.run_id === after.current_run_id &&
-                      a.capability === capability.card.id,
-                  ),
-              )),
-        };
-      },
-      dispatch: ({ forceDecision }) => {
-        const task = this.store.read(id, localTaskIdentity);
-        if (task.status === 'waiting')
-          return {
-            route: 'wait',
-            cursor: this.eventCursor(task),
-            forceDecision: false,
-          };
-        if (!['queued', 'running'].includes(task.status))
-          return { route: 'done' };
-        if (!forceDecision) this.dispatchAssignments(task);
-        const state = this.store.managerState(id, task.identity)!;
-        const pending = this.store.pendingManagerEvents(id, task.identity);
-        const last = state.decisions.at(-1)?.decision;
-        const work = task.assignments.filter(
-          (a) =>
-            a.run_id === task.current_run_id &&
-            a.role !== 'Manager' &&
-            !['cancelled', 'stale'].includes(a.status),
-        );
-        const active = work.some((a) =>
-          ['queued', 'running'].includes(a.status),
-        );
-        const needsDecision =
-          pending.length ||
-          !last ||
-          (last.action.type !== 'wait' && !active) ||
-          forceDecision;
-        return {
-          route: needsDecision ? 'decide' : 'wait',
-          forceDecision: false,
-          cursor: this.eventCursor(task),
-        };
-      },
-      park: ({ cursor }) =>
-        this.store.graph.transaction(() => {
-          const task = this.store.read(id, localTaskIdentity),
-            state = this.store.managerState(id, task.identity)!;
-          const work = task.assignments.filter(
-            (a) => a.run_id === task.current_run_id && a.role !== 'Manager',
-          );
+          const lookupDecisionId = original?.recovery_of ?? original?.id;
           if (
-            task.status !== 'waiting' &&
-            !work.some((a) => ['running', 'queued'].includes(a.status))
-          )
-            this.store.waitForManagerEvent(
+            original &&
+            this.store
+              .attempts(id, task.identity)
+              .some(
+                (attempt) =>
+                  attempt.run_id === task.current_run_id &&
+                  attempt.kind === 'tool' &&
+                  ['started', 'unknown'].includes(attempt.status) &&
+                  typeof attempt.details === 'object' &&
+                  attempt.details !== null &&
+                  !Array.isArray(attempt.details) &&
+                  attempt.details.manager_decision_id === lookupDecisionId,
+              )
+          ) {
+            this.store.pauseManagerRecovery(
               id,
               {
                 run_id: task.current_run_id,
-                generation,
-                objective_revision: revision,
+                generation: task.generation,
+                objective_revision: task.objective_revision,
                 plan_revision: state.plan_revision,
               },
-              state.decisions.at(-1)?.decision.explanation ??
-                'Waiting for a material event.',
+              'A persisted Manager lookup has an unknown remote outcome. Its charged attempt is retained; explicitly continue to start a linked run before replacing it.',
             );
-          this.store.graph.park({
-            ...job,
-            cursor,
-            after_cursor: cursor,
-            event_types: [
-              'assignment_completed',
-              'assignment_failed',
-              'assignment_timed_out',
-              'artifact_saved',
-              'specialist_escalated',
-              'assignment_waiting',
-              'peer_message_sent',
-              'control_resume',
-              'control_continue',
-              'objective_revised',
-            ],
+            return;
+          }
+          if (original && !response) {
+            for (const ref of original.references) this.readExact(task, ref);
+            if (
+              !pending ||
+              !pending.response ||
+              typeof pending.response !== 'object' ||
+              Array.isArray(pending.response) ||
+              typeof pending.response.text !== 'string'
+            )
+              throw new TaskError(
+                409,
+                'invalid_pending_manager_action',
+                'The persisted validated Manager response is unavailable.',
+              );
+            response = pending.response as unknown as AgentModelCompletion;
+          }
+          const decision = managerDecisionSchema.parse(
+            original
+              ? {
+                  ...original,
+                  id: `recovery-${contractHash({ id: lookupDecisionId, generation: task.generation, event_cursor: context.event_cursor })}`,
+                  recovery_of: lookupDecisionId,
+                  generation: task.generation,
+                  event_cursor: context.event_cursor,
+                  explanation:
+                    `Recovery of persisted validated decision ${lookupDecisionId}; objective and plan are unchanged. ${original.explanation}`.slice(
+                      0,
+                      4096,
+                    ),
+                }
+              : await agent.decide!({
+                  context,
+                  model: async (input) => {
+                    if (task.mode === 'fixture') {
+                      if (!agent.fixtureDecision)
+                        throw new TaskError(
+                          422,
+                          'fixture_manager_missing',
+                          'The registered Manager has no deterministic fixture policy.',
+                        );
+                      response = {
+                        text: JSON.stringify(agent.fixtureDecision(context)),
+                        receipt: {
+                          response_model: null,
+                          response_id: null,
+                          input_tokens: null,
+                          output_tokens: null,
+                        },
+                      };
+                    } else
+                      response = await this.modelTurn(
+                        task,
+                        coordinator,
+                        input,
+                        signal,
+                        `manager:${task.objective_revision}:decision:${state.decisions.length}:model`,
+                      );
+                    return response;
+                  },
+                }),
+          );
+
+          return {
+            response: response ?? null,
+            original: original ?? null,
+            decision,
+          };
+        },
+        validate: ({ decision, response }) => {
+          const task = fresh(),
+            manager = coordinator(task);
+          managerDecisionSchema.parse(decision);
+          if (response)
+            this.store.recordAction(
+              id,
+              manager.id,
+              decision.id,
+              json(response),
+              json(decision),
+              leaseOf(manager),
+            );
+        },
+        lookup: async ({ decision, original }) => {
+          const task = fresh();
+          return {
+            lookup:
+              decision.action.type === 'lookup'
+                ? await this.managerLookup(
+                    task,
+                    coordinator(task),
+                    decision.action,
+                    original?.recovery_of ?? original?.id ?? decision.id,
+                    decision.plan_revision,
+                    signal,
+                  )
+                : null,
+          };
+        },
+        execute: ({ decision, response, original, lookup }) => {
+          const task = fresh(),
+            manager = coordinator(task);
+          this.store.applyManagerDecision(id, decision, () => {
+            if (response) {
+              this.store.dispatchAction(
+                id,
+                manager.id,
+                decision.id,
+                leaseOf(manager),
+              );
+              if (original)
+                for (const action of this.store
+                  .actions(id, task.identity)
+                  .filter(
+                    (action) =>
+                      action.assignment_id === manager.id && !action.dispatched,
+                  )) {
+                  const retained = managerDecisionSchema.safeParse(
+                    action.action,
+                  );
+                  const previous = original.recovery_of ?? original.id;
+                  if (
+                    retained.success &&
+                    (retained.data.id === previous ||
+                      retained.data.recovery_of === previous)
+                  ) {
+                    this.store.adoptAction(
+                      id,
+                      manager.id,
+                      action.action_id,
+                      leaseOf(manager),
+                    );
+                    this.store.dispatchAction(
+                      id,
+                      manager.id,
+                      action.action_id,
+                      leaseOf(manager),
+                    );
+                  }
+                }
+            }
+            this.dispatchManagerDecision(fresh(), decision, lookup);
+            return json({ action: decision.action.type });
           });
-        }),
-      trace: (node) =>
-        this.store.appendEvent(
-          id,
-          'graph_node',
-          'Runtime',
-          `Manager graph: ${node}`,
-          json({ thread_id: job.thread_id, node, topology: 'manager.v1' }),
-        ),
-    });
+          this.dispatcher.reconcile((candidate) => this.jobCurrent(candidate));
+          const after = this.store.read(id, task.identity);
+          return {
+            forceDecision:
+              [
+                'inspect',
+                'applicability',
+                'lookup',
+                'coordinate',
+                'steer',
+              ].includes(decision.action.type) ||
+              (decision.action.type === 'apply_plan' &&
+                [...this.options.registry.capabilities.values()].some(
+                  (capability) =>
+                    (capability.peer_requirements?.length ?? 0) > 0 &&
+                    after.assignments.some(
+                      (a) =>
+                        a.run_id === after.current_run_id &&
+                        a.capability === capability.card.id,
+                    ),
+                )),
+          };
+        },
+        dispatch: ({ forceDecision }) => {
+          const task = this.store.read(id, localTaskIdentity);
+          if (task.status === 'waiting')
+            return {
+              route: 'wait',
+              cursor: this.eventCursor(task),
+              forceDecision: false,
+            };
+          if (!['queued', 'running'].includes(task.status))
+            return { route: 'done' };
+          if (!forceDecision) this.dispatchAssignments(task);
+          const state = this.store.managerState(id, task.identity)!;
+          const pending = this.store.pendingManagerEvents(id, task.identity);
+          const last = state.decisions.at(-1)?.decision;
+          const work = task.assignments.filter(
+            (a) =>
+              a.run_id === task.current_run_id &&
+              a.role !== 'Manager' &&
+              !['cancelled', 'stale'].includes(a.status),
+          );
+          const active = work.some((a) =>
+            ['queued', 'running'].includes(a.status),
+          );
+          const needsDecision =
+            pending.length ||
+            !last ||
+            (last.action.type !== 'wait' && !active) ||
+            forceDecision;
+          return {
+            route: needsDecision ? 'decide' : 'wait',
+            forceDecision: false,
+            cursor: this.eventCursor(task),
+          };
+        },
+        park: ({ cursor }) =>
+          this.store.graph.transaction(() => {
+            const task = this.store.read(id, localTaskIdentity),
+              state = this.store.managerState(id, task.identity)!;
+            const work = task.assignments.filter(
+              (a) => a.run_id === task.current_run_id && a.role !== 'Manager',
+            );
+            if (
+              task.status !== 'waiting' &&
+              !work.some((a) => ['running', 'queued'].includes(a.status))
+            )
+              this.store.waitForManagerEvent(
+                id,
+                {
+                  run_id: task.current_run_id,
+                  generation,
+                  objective_revision: revision,
+                  plan_revision: state.plan_revision,
+                },
+                state.decisions.at(-1)?.decision.explanation ??
+                  'Waiting for a material event.',
+              );
+            this.store.graph.park({
+              ...job,
+              cursor,
+              after_cursor: cursor,
+              event_types: [
+                'assignment_completed',
+                'assignment_failed',
+                'assignment_timed_out',
+                'artifact_saved',
+                'specialist_escalated',
+                'assignment_waiting',
+                'peer_message_sent',
+                'control_resume',
+                'control_continue',
+                'objective_revised',
+              ],
+            });
+          }),
+        trace: (node) =>
+          this.store.appendEvent(
+            id,
+            'graph_node',
+            'Runtime',
+            `Manager graph: ${node}`,
+            json({ thread_id: job.thread_id, node, topology: 'manager.v1' }),
+          ),
+      },
+    );
     const config = {
       configurable: { thread_id: job.thread_id },
       durability: 'sync' as const,
@@ -1481,12 +1498,76 @@ export class TaskRuntime {
       artifacts,
     );
     const selected = [...action.work_products, ...action.sources];
+    const foreignOwners = new Map<
+      string,
+      { task: TaskRecord; artifacts: Artifact[] }
+    >();
     const closure = validateArtifactClosure(
       task,
       this.options.registry,
       artifacts,
       selected,
-      (ref) => this.readExact(task, ref),
+      (ref) => {
+        this.store.revalidateWorldEvidence(task.id, task.identity, ref);
+        const artifact = this.readExact(task, ref);
+        if (artifact.kind === 'world.context.snapshot') {
+          const snapshot = worldContextSnapshotSchema.parse(artifact.content);
+          const context = this.store.worldContext(
+            task.id,
+            task.identity,
+            task.mode,
+            snapshot.record.id,
+          );
+          if (
+            context.record.ref.revision !== snapshot.record.revision ||
+            context.record.ref.sha256 !== snapshot.record.sha256 ||
+            this.store.world.activeHolds(
+              context.record.scope,
+              context.record.ref.id,
+            ).length ||
+            snapshot.acceptances.some(
+              (prior) =>
+                prior.status === 'accepted' &&
+                !context.acceptances.some(
+                  (current) =>
+                    current.id === prior.id && current.status === 'accepted',
+                ),
+            )
+          )
+            throw new TaskError(
+              422,
+              'world_context_stale',
+              'Retrieved World Model evidence changed or is held; collect and review a fresh selection.',
+            );
+        }
+        return artifact;
+      },
+      (artifact) => {
+        const owner = this.store.worldEvidenceOwner(
+          task.id,
+          task.identity,
+          exact(artifact),
+        );
+        if (!owner) return undefined;
+        if (!foreignOwners.has(owner.id))
+          foreignOwners.set(owner.id, {
+            task: owner,
+            artifacts: owner.artifacts
+              .filter(
+                (entry) =>
+                  entry.current &&
+                  entry.objective_revision === owner.objective_revision,
+              )
+              .map((entry) =>
+                this.store.artifact(
+                  entry.artifact.id,
+                  task.identity,
+                  entry.artifact,
+                ),
+              ),
+          });
+        return foreignOwners.get(owner.id);
+      },
     );
     let sourceIndex = 0,
       captureIndex = 0;
@@ -1975,7 +2056,7 @@ export class TaskRuntime {
             'Current task grants do not permit this tool.',
           );
         const parsed = tool.inputSchema.parse(structuredClone(input));
-        return this.remoteOperation(
+        const result = await this.remoteOperation(
           task,
           assignment,
           operationKey('tool'),
@@ -1993,6 +2074,18 @@ export class TaskRuntime {
             ),
           (output) => ({ output: json(output) }),
         );
+        // Governed context tools can durably pin inputs while an assignment runs.
+        // Refresh after live execution and replay before subsequent reads or saves.
+        const refreshed = this.store
+          .read(task.id, task.identity)
+          .assignments.find((item) => item.id === assignment.id)!;
+        assignment.inputs = refreshed.inputs;
+        assignment.outputs = refreshed.outputs;
+        context.inputs = refreshed.inputs.map((ref) =>
+          this.readExact(task, ref),
+        );
+        context.outputs = refreshed.outputs;
+        return result;
       },
       save: (kind, content, metadata) =>
         effect('save', { kind, content, metadata: metadata ?? null }, () => {

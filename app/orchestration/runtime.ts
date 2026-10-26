@@ -241,8 +241,12 @@ export function validateArtifactClosure(
   artifacts: Artifact[],
   selected: ArtifactRef[],
   readArtifact: (ref: ArtifactRef) => Artifact,
+  foreignProvenance?: (
+    artifact: Artifact,
+  ) => { task: TaskRecord; artifacts: Artifact[] } | undefined,
 ): Artifact[] {
   const checks = assessArtifactReviews(task, registry, artifacts);
+  const foreignChecks = new Map<string, ArtifactReviewCheck[]>();
   const closure = new Map<string, Artifact>();
   const visiting = new Set<string>();
   const visit = (ref: ArtifactRef) => {
@@ -286,12 +290,30 @@ export function validateArtifactClosure(
       (artifact.producer.kind === 'assignment'
         ? artifact.producer.id
         : undefined);
-    const producer = task.assignments.find((item) => item.id === producerId);
+    const provenance =
+      artifact.task_id && artifact.task_id !== task.id
+        ? foreignProvenance?.(artifact)
+        : undefined;
+    const producerTask = provenance?.task ?? task;
+    if (
+      provenance &&
+      (producerTask.identity.principal !== task.identity.principal ||
+        producerTask.identity.workspace !== task.identity.workspace ||
+        producerTask.mode !== task.mode)
+    )
+      throw new TaskError(
+        403,
+        'world_mode_mismatch',
+        'World Model provenance is outside the current workspace or mode.',
+      );
+    const producer = producerTask.assignments.find(
+      (item) => item.id === producerId,
+    );
     if (
       producerId &&
       (!producer ||
-        producer.run_id !== task.current_run_id ||
-        producer.objective_revision !== task.objective_revision ||
+        producer.run_id !== producerTask.current_run_id ||
+        producer.objective_revision !== producerTask.objective_revision ||
         producer.revision !== artifact.assignment_revision ||
         (producer.status !== 'completed' &&
           !(producer.role === 'Manager' && producer.status === 'running')) ||
@@ -303,7 +325,14 @@ export function validateArtifactClosure(
         'unsupported_final_reference',
         'Final artifacts and their dependencies require completed current producer revisions.',
       );
-    const review = checks.find(
+    if (provenance && !foreignChecks.has(producerTask.id))
+      foreignChecks.set(
+        producerTask.id,
+        assessArtifactReviews(producerTask, registry, provenance.artifacts),
+      );
+    const review = (
+      provenance ? foreignChecks.get(producerTask.id)! : checks
+    ).find(
       (item) =>
         item.artifact.id === ref.id &&
         item.artifact.version === ref.version &&

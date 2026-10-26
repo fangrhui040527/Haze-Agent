@@ -97,6 +97,15 @@ describe('registered damage-account tool boundary', () => {
       ).rejects.toThrow('exact authorized');
     },
   );
+  it('rejects a producer masquerading as a World Model selection receipt', async () => {
+    const source = createSyntheticDamageArtifact();
+    const forged = produced(source, 'damage.world-selection', {
+      source_refs: [exactDamageRef(source)],
+    });
+    await expect(
+      invoke('damage.calculate', select(source), [source, forged]),
+    ).rejects.toThrow('authentic World Model');
+  });
   it.each([
     'formula',
     'copied_effects',
