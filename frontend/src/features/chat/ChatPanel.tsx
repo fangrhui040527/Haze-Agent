@@ -27,6 +27,7 @@ import type { Artifact } from '../../../../app/contracts/artifacts.ts';
 import { TaskResult } from './TaskResult.tsx';
 import { TaskQuestions } from './TaskQuestions.tsx';
 import { TaskControls } from './TaskControls.tsx';
+import { ManagerWorkspace } from '../task-report/ManagerWorkspace.tsx';
 import { SourceImport, sourceReferences } from './SourceImport.tsx';
 import styles from './ChatPanel.module.css';
 
@@ -393,6 +394,7 @@ export function ChatPanel({
         <div className={styles.currentTask}>
           <TaskControls run={run} />
           <TaskQuestions run={run} />
+          <ManagerWorkspace record={run.task.record} />
           {run.task.record.result &&
             !currentResultInHistory &&
             (run.task.record.result.currency === 'current' ||

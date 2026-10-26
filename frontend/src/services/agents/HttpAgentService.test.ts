@@ -13,6 +13,7 @@ import {
   controlReceipt,
   expectation,
   fixtureTask,
+  fixtureManager,
   receipt,
   request,
   taskId,
@@ -38,6 +39,23 @@ function completedFetch() {
     .mockResolvedValueOnce(json(fixtureTask()));
 }
 describe('general task browser service (fixture wiring)', () => {
+  it('preserves optional Manager readback and artifact review checks through contract parsing', async () => {
+    const record = fixtureTask();
+    record.manager = fixtureManager();
+    record.result!.review.checks = [
+      {
+        artifact: artifactRef,
+        producer_assignment_id: artifactId,
+        producer_revision: 2,
+        verdict: 'needs_review',
+        limitations: ['Independent check pending.'],
+      },
+    ];
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(record));
+    const saved = await new HttpAgentService('', fetcher).readTask(taskId);
+    expect(saved.manager).toEqual(record.manager);
+    expect(saved.result!.review.checks).toEqual(record.result!.review.checks);
+  });
   it('submits objective-only v3 intake and exposes actual receipts and pinned sources', async () => {
     const fetcher = completedFetch();
     const events: AgentEvent[] = [];

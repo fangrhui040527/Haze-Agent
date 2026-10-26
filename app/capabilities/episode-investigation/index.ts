@@ -17,6 +17,15 @@ export function createEpisodeInvestigationCapability(
   methods: AssignmentPlan[] = [],
 ): CapabilityDefinition {
   return {
+    peer_requirements: [
+      {
+        definitions: [
+          'episode-investigation.gaps',
+          'episode-investigation.review',
+        ],
+        purpose: 'episode-review',
+      },
+    ],
     card: {
       id: 'episode-investigation',
       version: 'episode-investigation.v3',
@@ -34,7 +43,10 @@ export function createEpisodeInvestigationCapability(
       ],
     },
     matches: (request) =>
-      /episode|investigat|haze|pm2\.?5/i.test(request.objective),
+      /episode|investigat|haze|pm2\.?5/i.test(request.objective) &&
+      !/^\s*(?:please\s+)?(?:explain|describe|interpret|what|why|how)\b.*\b(?:report|source|supplied|imported)\b/iu.test(
+        request.objective,
+      ),
     worldModel: episodeInvestigationWorldModelAdapter,
     assignments: (request) => [
       ...methods,

@@ -10,6 +10,39 @@ import { evidenceSynthesisWorldModelAdapter } from './world.js';
 
 export function createEvidenceSynthesisCapability(): CapabilityDefinition {
   return {
+    prerequisites: [
+      {
+        definition_id: 'evidence-synthesis.review',
+        depends_on_definitions: ['evidence-synthesis.extract'],
+      },
+    ],
+    review_requirements: [
+      {
+        artifact_kind: 'evidence-synthesis.notes',
+        review_definition_id: 'evidence-synthesis.review',
+        producer_definition_ids: ['evidence-synthesis.extract'],
+      },
+    ],
+    peer_requirements: [
+      {
+        definitions: [
+          'evidence-synthesis.extract',
+          'evidence-synthesis.review',
+        ],
+        purpose: 'synthesis-review',
+      },
+    ],
+    normalizeReview(artifact) {
+      if (artifact.kind !== 'evidence-synthesis.review') return undefined;
+      const parsed = synthesisReviewSchema.safeParse(artifact.content);
+      return parsed.success
+        ? {
+            verdict: parsed.data.status,
+            artifacts: [parsed.data.notes, ...parsed.data.reviewed_sources],
+            limitations: parsed.data.limitations,
+          }
+        : undefined;
+    },
     card: {
       id: 'evidence-synthesis',
       version: 'evidence-synthesis.v3',

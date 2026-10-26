@@ -6,7 +6,18 @@ import type {
 } from '../adapters/agent-model.js';
 import type { Artifact, ArtifactRef } from '../contracts/artifacts.js';
 import type { AgentRole, CapabilityCard } from '../contracts/capabilities.js';
-import type { Assignment, TaskRequest } from '../contracts/tasks.js';
+import type {
+  Assignment,
+  TaskRequest,
+  TaskRecord,
+  TaskEvent,
+} from '../contracts/tasks.js';
+import type {
+  ManagerDecision,
+  ManagerState,
+  ArtifactReviewCheck,
+} from '../contracts/manager.js';
+import type { ManagerContext } from '../contracts/manager.js';
 import type { WorldAssessment, WorldRecord } from '../contracts/world.js';
 import type { AgentAction } from './contracts.js';
 
@@ -64,12 +75,31 @@ export interface CapabilityDefinition {
   card: CapabilityCard;
   matches(request: TaskRequest): boolean;
   assignments(request: TaskRequest): AssignmentPlan[];
+  prerequisites?: { definition_id: string; depends_on_definitions: string[] }[];
+  availability?(request: TaskRequest): {
+    available: boolean;
+    reasons: string[];
+  };
+  review_requirements?: {
+    artifact_kind: string;
+    review_definition_id: string;
+    producer_definition_ids?: string[];
+  }[];
+  peer_requirements?: { definitions: [string, string]; purpose: string }[];
+  normalizeReview?(artifact: Artifact):
+    | {
+        verdict: 'supported' | 'rejected' | 'needs_review';
+        artifacts: ArtifactRef[];
+        limitations: string[];
+      }
+    | undefined;
   worldModel?: CapabilityWorldModelAdapter;
 }
 export interface ToolContext {
   taskId: string;
   runId: string;
   assignmentId: string;
+  assignmentRevision: number;
   objectiveRevision: number;
   generation: number;
   identity: { principal: string; workspace: string };
@@ -84,6 +114,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   version: string;
   description: string;
   mode: ExecutionMode;
+  /** Explicit Manager grant; omitted tools are specialist-only. */
+  manager_read_only?: boolean;
   inputSchema: z.ZodType<I>;
   outputSchema: z.ZodType<O>;
   execute(input: I, context: ToolContext): Promise<O>;
@@ -101,6 +133,14 @@ export interface AssignmentServices {
   message(recipient: string, purpose: string, text: string): void;
   inbox(): { id: string; sender: string; recipient: string; text: string }[];
   read(ref: ArtifactRef): Artifact;
+  escalate?(
+    reason:
+      | 'missing_dependency'
+      | 'scope_conflict'
+      | 'unavailable_resource'
+      | 'peer_request',
+    message: string,
+  ): void;
 }
 export interface AssignmentOutput {
   status: 'completed' | 'waiting_human' | 'waiting_peer';
@@ -125,9 +165,30 @@ export interface AgentDefinition {
   id: AgentRole;
   version: string;
   instructions: string;
-  schemas?: Partial<Record<'plan' | 'synthesis' | 'specialist', z.ZodType>>;
+  schemas?: Partial<
+    Record<'plan' | 'synthesis' | 'specialist' | 'decision', z.ZodType>
+  >;
   execute?(services: AgentExecutionServices): Promise<AssignmentOutput>;
+  decide?(services: ManagerServices): Promise<ManagerDecision>;
+  assembleContext?(
+    task: TaskRecord,
+    registry: ExecutionRegistry,
+    state: ManagerState,
+    options: {
+      events: TaskEvent[];
+      artifacts: Artifact[];
+      maxBytes?: number;
+      reviews?: ArtifactReviewCheck[];
+    },
+  ): ManagerContext;
+  fixtureDecision?(context: ManagerContext): ManagerDecision;
 }
+export interface ManagerServices {
+  readonly context: ManagerContext;
+  model(context: unknown): Promise<AgentModelCompletion>;
+}
+export type { ManagerContext } from '../contracts/manager.js';
+export type { ManagerDecision, ManagerState } from '../contracts/manager.js';
 export interface AgentExecutionServices extends AssignmentServices {
   brief: string;
   instructions: string;

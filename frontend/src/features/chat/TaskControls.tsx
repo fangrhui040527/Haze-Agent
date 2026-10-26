@@ -6,6 +6,7 @@ export function TaskControls({ run }: { run: AgentRun }) {
   const [revokedTools, setRevokedTools] = useState<string[]>([]);
   const record = run.task?.record;
   if (!record) return null;
+  const upgrade = record.manager?.upgrade_required;
   const active = ['queued', 'running', 'waiting'].includes(record.status);
   const terminal = ['completed', 'failed', 'cancelled', 'timed_out'].includes(
     record.status,
@@ -28,7 +29,7 @@ export function TaskControls({ run }: { run: AgentRun }) {
             Pause task
           </Button>
         )}
-        {record.status === 'paused' && (
+        {record.status === 'paused' && !upgrade && (
           <Button
             size="small"
             onClick={() => act('resume')}
@@ -47,7 +48,7 @@ export function TaskControls({ run }: { run: AgentRun }) {
             Cancel task
           </Button>
         )}
-        {terminal && (
+        {(terminal || upgrade) && (
           <Button
             size="small"
             onClick={() => act('continue')}
@@ -57,12 +58,17 @@ export function TaskControls({ run }: { run: AgentRun }) {
           </Button>
         )}
       </div>
-      {record.status === 'paused' && (
+      {upgrade && (
+        <p className={styles.staleResult} role="status">
+          {upgrade}
+        </p>
+      )}
+      {record.status === 'paused' && !upgrade && (
         <p className={styles.muted}>
           Resume keeps the existing deadline and remaining budget.
         </p>
       )}
-      {terminal && (
+      {(terminal || upgrade) && (
         <p className={styles.muted}>
           Continuation requests a linked run with fresh bounded resources.
         </p>

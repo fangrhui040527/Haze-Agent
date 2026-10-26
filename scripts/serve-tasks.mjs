@@ -9,7 +9,7 @@ if (flags.some((flag) => flag !== '--fixture'))
   );
 const fixture = flags.includes('--fixture');
 const handler = createTaskHandler({
-  stateDirectory: resolve(process.env.STATE_DIR || '.state/general-v1'),
+  stateDirectory: resolve(process.env.STATE_DIR || '.state/general-v2'),
   env: process.env,
   mode: fixture ? 'fixture' : 'live',
   acceptancePolicy: process.env.HAZE_WORLD_ACCEPTANCE_POLICY,

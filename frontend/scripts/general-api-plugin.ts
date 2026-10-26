@@ -40,7 +40,7 @@ export function generalApiPlugin(): Plugin {
           stateDirectory: resolve(
             import.meta.dirname,
             '../..',
-            env.STATE_DIR ?? '.state/general-v1',
+            env.HAZE_TASK_STATE_DIR ?? env.STATE_DIR ?? '.state/general-v2',
           ),
         });
         closing = undefined;

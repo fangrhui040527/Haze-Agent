@@ -1,18 +1,20 @@
 # General task engine (v3)
 
-The task API is a clean replacement for the historical v1/v2 paths. It retains TypeScript, LangGraph, SQLite and the existing application. The Manager may respond directly, ask a question or create a bounded dependency graph from registered executable definitions. Specialists cannot delegate.
+The task API retains TypeScript, LangGraph, SQLite and the existing application. The registered `manager.v4` decision entry frames, supervises and replans work through an executable Manager graph. Independently checkpointed specialist graphs continue while the Manager evaluates another decision. The Manager may answer directly, ask a question, inspect evidence, perform explicitly granted read-only lookups, apply or steer a bounded dependency graph, grant peer coordination, wait or finalize. Specialists cannot delegate. See the [LangGraph architecture](../architecture/langgraph-runtime.md) and [implementation report](langgraph-implementation-report.md) for runtime verification; [Manager reasoning readiness](manager-completion-report.md) remains separate.
 
 ## Ownership
 
 - `app/contracts/`: browser-safe request, task, result, event, source/artifact, correction, control and capability schemas. `json.ts` is explicitly server-only serialization and hashing.
-- `app/agents/`: versioned Manager, HazeOps, WorkerShield and EvidenceCritic instructions and action validation.
+- `app/agents/`: versioned Manager, HazeOps, WorkerShield, EvidenceCritic and DamageAccountant instructions and action validation.
 - `app/capabilities/`: applicability, input parsing, retrieval guidance, deterministic methods, checks, artifact schemas and optional assignment templates.
 - `app/tasks/`: authoritative row persistence, atomic reservations, task lifecycle, execution services and HTTP.
-- `app/orchestration/`: executable registry, strict action protocol and LangGraph reference checkpoints.
+- `app/orchestration/`: executable registry, strict action protocol and independent LangGraph workflows.
 - `app/adapters/`: provider and authenticated transport; models never submit SQL or executable code.
 - `app/composition.ts`: the single registration point. Core-to-domain imports are prohibited by lint and architecture tests.
 
 PM2.5 scope, SQL construction, retained-source semantics, producer calculations and the separate independent checker live in `app/capabilities/pm25`. Numerical availability is a PM2.5 artifact, not a required global result field.
+
+Imported damage accounting lives in `app/capabilities/damage-account`, with browser-safe versioned contracts in `app/contracts/damage-account.ts`. Composition registers it before PM2.5 and catch-all synthesis. Its optional Manager template collects exact imports, binds scope, compiles three accounting views, assembles the component manifest and independently reviews it. Numerical components and manifests require exact reviews throughout their transitive dependency closure before finalization. Scope corrections hold conflicting old inputs and require matching imports. An explicitly selected optional revision branch decomposes changes and requires its own independent review. See the [implementation report](damage-accountant-implementation-report.md).
 
 ## API
 
@@ -43,7 +45,7 @@ Example intake:
 }
 ```
 
-Updates and controls include `expected_objective_revision`, `expected_run_id`, `expected_generation` and `expected_state_revision` copied from the latest task. A correction advances the objective revision, preserves its exact passage, stales affected branches and fences previous execution. Unaffected immutable material requires a separately recorded applicability check. The original request is retained unchanged.
+Updates and controls include `expected_objective_revision`, `expected_run_id`, `expected_generation` and `expected_state_revision` copied from the latest task. A correction advances the objective revision, preserves its exact passage, stales affected branches and fences previous execution. Unaffected immutable material requires an actual Manager inspection and explicit applicability decision; an unchanged hash alone is insufficient. The original request is retained unchanged.
 
 Control receipts distinguish requested and confirmed local state. They explicitly do not assert that a remote provider stopped running. Resume keeps the same deadline and remaining charged resources. Continue creates a fresh run linked to its predecessor and revalidates its sources and grants. Revocation checks apply at admission, artifact reads and acceptance boundaries.
 
@@ -60,20 +62,17 @@ The Manager alone creates assignments. Definitions and versions, dependencies, e
 
 Defaults permit two active tasks and two shared specialist slots. Each model call is capped by the admitted 16 KiB input and 1,200 output-token allowance. Required review and synthesis retain capacity before specialist work consumes the budget. Failed and unknown remote attempts remain charged. The adapter forwards the admitted output limit unchanged.
 
-One purpose-bound peer channel can join two named assignment instances and revisions. It expires after ten minutes or the run deadline, whichever is sooner, and permits six messages and 12 KiB total. Messages are persisted and deduplicated. Waiting releases a specialist slot; revised, cancelled, revoked or completed participants close the channel. Closed history remains auditable. PM2.5 analysis shares an exact analysis reference, the separate checker replies with its independent verdict, and the waiting producer resumes from its saved work.
+Only an explicit Manager decision can grant the one purpose-bound peer channel between two named assignment instances and revisions. Specialist messaging cannot create a channel. It expires after ten minutes or the run deadline, whichever is sooner, and permits six messages and 12 KiB total. Messages are persisted and deduplicated. Waiting releases a specialist slot; revised, cancelled, revoked or completed participants close the channel. Closed history remains auditable. PM2.5 analysis shares an exact analysis reference, the separate checker replies with its independent verdict, and the waiting producer resumes from its saved work.
 
 Execution completion, evidence support and output usability are separate. An assignment can complete with an evidence gap. Rejected numerical/source material never enters final synthesis. The result carries its answer, exact sources and work products, covered scope, uncertainty, review, currency, next requirements and actual recorded provenance.
 
 ## Persistence and restart
 
-Use `.state/general-v1` or an explicitly configured fresh `STATE_DIR`.
-`storage-format.json` is validated before SQLite is opened. A nonempty unmarked
-or incompatible directory fails without modification. Existing task tables
-and checkpoints are not migrated, deleted, or reinterpreted. World Model
-initialization applies only its own additive, versioned SQLite migrations and
-does not import legacy HazeOps JSON.
+Use an explicitly configured fresh `STATE_DIR` for new execution. `storage-format.json` must identify `haze.general.sqlite.v2` before the runtime opens SQLite. A nonempty unmarked or incompatible directory fails without modification. Migration is an explicit operation from a named, quiescent old-format source into a separate target; startup never migrates a directory automatically. See the [cutover and rollback runbook](langgraph-cutover-runbook.md).
 
-SQLite transactions own reservations and state transitions; assignment updates do not rewrite a whole-task execution snapshot. LangGraph checkpoints contain authoritative record references. On restart, old leases are fenced, completed accepted material is retained and unstarted work can resume. A dispatched remote attempt without a receipt is recorded as unknown and its branch pauses until explicit resume admits replacement work. Late receipts remain historical and cannot become current output. Resume never replenishes a budget or extends a deadline.
+SQLite transactions own reservations, state transitions, operation identities and accepted receipts; assignment updates do not rewrite a whole-task execution snapshot. LangGraph checkpoints use synchronous durability in a fresh checkpoint database. On restart, old leases are fenced, completed accepted material is retained and unstarted work can resume. A dispatched remote attempt without a receipt is recorded as unknown and its branch pauses until explicit resume admits replacement work. Late receipts remain historical and cannot become current output. Resume never replenishes a budget or extends a deadline.
+
+Imported runs are tagged legacy and remain readable. Their checkpoints are archived without being executed. Legacy Resume and objective update are rejected; explicit Continue creates a linked LangGraph successor under the same task ID. Historical artifacts remain inspectable, but reuse still requires permissions, hashes and applicability, and old reviews do not automatically support a successor.
 
 World Model records, events, relationships, acceptance outcomes, dependencies,
 holds, and operation receipts use this same SQLite database and transaction

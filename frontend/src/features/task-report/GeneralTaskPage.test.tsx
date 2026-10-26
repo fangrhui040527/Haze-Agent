@@ -5,6 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import {
   artifactId,
+  artifactRef,
+  fixtureAssignment,
+  fixtureManager,
   fixtureTask,
   receipt,
   taskId,
@@ -176,5 +179,111 @@ describe('general task reports', () => {
     expect(markup).not.toContain('Explain the supplied evidence.');
     expect(markup).not.toContain('Saved result');
     expect(markup).not.toContain('Continue in a new run');
+  });
+
+  it('renders saved Manager interpretation, replanning and exact current assignment revisions', () => {
+    const run = taskRun();
+    const record = run.task!.record!;
+    record.manager = fixtureManager();
+    record.assignments = [
+      fixtureAssignment(),
+      {
+        ...fixtureAssignment(),
+        id: taskId,
+        capability: 'retired-capability',
+        status: 'stale',
+      },
+      {
+        ...fixtureAssignment(),
+        id: record.current_run_id,
+        run_id: artifactId,
+        capability: 'previous-run-capability',
+      },
+    ];
+    const markup = render(run);
+    expect(markup).toContain('Interpreted objective');
+    expect(markup).toContain(
+      'Explain the supplied evidence within its measured coverage.',
+    );
+    expect(markup).toContain('Plan revision 2');
+    expect(markup).toContain('Replanning reason:');
+    expect(markup).toContain(
+      'Investigate the reviewer objection before synthesis.',
+    );
+    expect(markup).toContain('evidence-synthesis');
+    expect(markup).toContain('running');
+    expect(markup).not.toContain('retired-capability');
+    expect(markup).not.toContain('previous-run-capability');
+    expect(markup).toContain(
+      '<details><summary>Manager decisions and execution details (1)</summary>',
+    );
+    expect(markup).toContain(
+      'The review identified a coverage gap requiring investigation.',
+    );
+    expect(markup).toContain('Artifact inspections (1)');
+    expect(markup).toContain('Plan history (2)');
+  });
+
+  it('exposes rejected claims and next requirements in a partial saved result', () => {
+    const run = taskRun();
+    const record = run.task!.record!;
+    record.manager = fixtureManager();
+    record.assignments = [
+      {
+        ...fixtureAssignment(),
+        usability: 'rejected',
+        gaps: ['The source does not contain direct observations.'],
+      },
+    ];
+    record.result!.review.checks = [
+      {
+        artifact: artifactRef,
+        producer_assignment_id: artifactId,
+        producer_revision: 2,
+        reviewer_assignment_id: taskId,
+        reviewer_revision: 1,
+        verdict: 'rejected',
+        limitations: ['A numerical claim lacks supporting observations.'],
+      },
+    ];
+    const markup = render(run);
+    expect(markup).toContain('Result: partial');
+    expect(markup).toContain('Review objection: work is rejected.');
+    expect(markup).toContain(
+      'The source does not contain direct observations.',
+    );
+    expect(markup).toContain('Artifact review checks');
+    expect(markup).toContain('Review objections');
+    expect(markup).toContain(
+      'A numerical claim lacks supporting observations.',
+    );
+    expect(markup).toContain('What is needed next');
+    expect(markup).toContain('Provide direct observations.');
+  });
+
+  it('preserves historical tasks without Manager state and excludes a predecessor Manager', () => {
+    const run = taskRun();
+    expect(render(run)).not.toContain('Manager workspace');
+    run.task!.record!.manager = { ...fixtureManager(), run_id: artifactId };
+    const markup = render(run);
+    expect(markup).not.toContain('Manager workspace');
+    expect(markup).toContain('Saved result');
+  });
+
+  it('offers explicit linked continuation for unfinished legacy Manager tasks', () => {
+    const run = taskRun();
+    run.status = 'paused';
+    const record = run.task!.record!;
+    record.status = 'paused';
+    record.manager = {
+      ...fixtureManager(),
+      upgrade_required:
+        'This run used the previous Manager. Continue in a linked run to use the current version.',
+    };
+    const markup = render(run);
+    expect(markup).toContain('This run used the previous Manager.');
+    expect(markup).toContain('Continue in a new run');
+    expect(markup).toContain('fresh bounded resources');
+    expect(markup).not.toContain('Resume task');
   });
 });

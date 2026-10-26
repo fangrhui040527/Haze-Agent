@@ -34,10 +34,64 @@ export function TaskResult({
         {result.review.status.replaceAll('_', ' ')}. Currency:{' '}
         {isStale ? 'stale' : 'current'}.
       </p>
+      {result.review.checks && result.review.checks.length > 0 && (
+        <section aria-label="Artifact review checks">
+          <h3>Artifact review checks</h3>
+          <ul>
+            {result.review.checks.map((check, index) => (
+              <li key={`${check.artifact.id}-${index}`}>
+                <a
+                  href={`${baseUrl}/api/artifacts/${check.artifact.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`SHA-256 ${check.artifact.sha256}`}
+                >
+                  Artifact version {check.artifact.version}
+                </a>
+                : {check.verdict.replaceAll('_', ' ')}
+                <details>
+                  <summary>Exact review evidence</summary>
+                  <p className={styles.hash}>
+                    Producer {check.producer_assignment_id}, revision{' '}
+                    {check.producer_revision}.{' '}
+                    {check.reviewer_assignment_id
+                      ? `Reviewer ${check.reviewer_assignment_id}, revision ${check.reviewer_revision}.`
+                      : 'Independent review is pending.'}
+                  </p>
+                  {check.review_artifact && (
+                    <a
+                      href={`${baseUrl}/api/artifacts/${check.review_artifact.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Review artifact, version {check.review_artifact.version}
+                    </a>
+                  )}
+                </details>
+                {check.limitations.length > 0 && (
+                  <div>
+                    {check.verdict !== 'supported' && (
+                      <strong>Review objections</strong>
+                    )}
+                    <ul>
+                      {check.limitations.map((limitation, item) => (
+                        <li key={item}>{limitation}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <WorkProducts
         products={result.work_products}
         baseUrl={baseUrl}
         rejected={result.review.status === 'rejected'}
+        rejectedProducts={result.review.checks?.flatMap((check) =>
+          check.verdict === 'rejected' ? [check.artifact] : [],
+        )}
       />
       {result.sources.length > 0 && (
         <section aria-label="Result sources">

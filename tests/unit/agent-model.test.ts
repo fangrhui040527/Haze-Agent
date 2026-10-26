@@ -71,6 +71,89 @@ describe('office agent model adapter', () => {
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(body.max_completion_tokens).toBe(191);
   });
+  it('retains real provider receipts and bounded redacted partial text when generation is incomplete', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        id: 'partial-id',
+        model: 'selected-model',
+        usage: { prompt_tokens: 13, completion_tokens: 191 },
+        choices: [
+          {
+            finish_reason: 'length',
+            message: {
+              role: 'assistant',
+              content: 'partial test-server-secret JSON',
+            },
+          },
+        ],
+      }),
+    );
+    const failure: unknown = await run(fetcher).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toMatchObject({
+      receipt: {
+        response_id: 'partial-id',
+        response_model: 'selected-model',
+        input_tokens: 13,
+        output_tokens: 191,
+      },
+      output: 'partial [redacted] JSON',
+    });
+    expect(String(failure)).toContain('complete, nonempty');
+  });
+  it('uses the probed hosted Lightning native schema and preserves the exact output allowance', async () => {
+    const schema = {
+      type: 'object',
+      properties: { type: { const: 'finish' } },
+      required: ['type'],
+      additionalProperties: false,
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(completion('{"type":"finish"}'));
+    await resolveAgentModel(
+      { HAZE_PROVIDER: 'nvidia', NVIDIA_API_KEY: 'test-key' },
+      fetcher,
+    ).complete(
+      {
+        ...input,
+        json_mode: true,
+        output_schema: schema,
+        max_output_tokens: 191,
+      },
+      new AbortController().signal,
+    );
+    const body = JSON.parse(
+      fetcher.mock.calls[0]?.[1]?.body as string,
+    ) as Record<string, unknown>;
+    expect(body.response_format).toEqual({
+      type: 'json_schema',
+      json_schema: { name: 'haze_action', strict: true, schema },
+    });
+    expect(body.max_tokens).toBe(191);
+    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
+    expect(JSON.stringify(body.messages)).not.toContain('required_json_schema');
+  });
+  it('retains prompt schema validation for unprobed compatible routes without switching providers', async () => {
+    const schema = {
+      type: 'object',
+      properties: { type: { const: 'finish' } },
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(completion('{"type":"finish"}'));
+    await resolveAgentModel(selected, fetcher).complete(
+      { ...input, json_mode: true, output_schema: schema },
+      new AbortController().signal,
+    );
+    const body = JSON.parse(
+      fetcher.mock.calls[0]?.[1]?.body as string,
+    ) as Record<string, unknown>;
+    expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(JSON.stringify(body.messages)).toContain('required_json_schema');
+    expect(body.model).toBe('selected-model');
+  });
 
   it.each([1, 191, 1200, 2400])(
     'passes an admitted output allowance of %i unchanged to each provider',

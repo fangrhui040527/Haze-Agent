@@ -30,6 +30,7 @@ export function createWorldModelTools(store: TaskStore, mode: ExecutionMode) {
     description:
       'Find a bounded list of World Model records in the current workspace and execution mode.',
     mode,
+    manager_read_only: true,
     inputSchema: worldLookupInputSchema,
     outputSchema: worldLookupOutputSchema,
     execute: (input, context) =>
@@ -108,6 +109,7 @@ export function createWorldModelTools(store: TaskStore, mode: ExecutionMode) {
     description:
       'Read a bounded, paginated event lineage for one authorized World Model record.',
     mode,
+    manager_read_only: true,
     inputSchema: worldLineageInputSchema,
     outputSchema: worldLineageOutputSchema,
     execute: (input, context) =>

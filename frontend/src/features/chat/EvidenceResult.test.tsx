@@ -2,7 +2,11 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
-import { fixtureResult } from '../../services/agents/testFixtures.ts';
+import {
+  artifactRef,
+  artifactId,
+  fixtureResult,
+} from '../../services/agents/testFixtures.ts';
 import { TaskResult } from './TaskResult.tsx';
 import { EvidenceResult } from './EvidenceResult.tsx';
 describe('general result shell and optional domain details', () => {
@@ -74,5 +78,34 @@ describe('general result shell and optional domain details', () => {
         }),
       ),
     ).toBe('');
+  });
+  it('withholds a rejected artifact independently of aggregate review, tied to its exact version', () => {
+    const result = fixtureResult();
+    result.review.checks = [
+      {
+        artifact: artifactRef,
+        producer_assignment_id: artifactId,
+        producer_revision: 2,
+        verdict: 'rejected',
+        limitations: ['Missing numerical support.'],
+      },
+    ];
+    const render = () =>
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(TaskResult, {
+            evidence: { taskUrl: '/api/tasks/fixture', result },
+          }),
+        ),
+      );
+    expect(render()).toContain(
+      'This artifact was rejected in review. Domain calculations are withheld.',
+    );
+    result.review.checks[0].artifact = { ...artifactRef, version: 2 };
+    expect(render()).not.toContain(
+      'This artifact was rejected in review. Domain calculations are withheld.',
+    );
   });
 });

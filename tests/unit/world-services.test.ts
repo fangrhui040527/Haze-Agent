@@ -2,7 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ToolContext } from '../../app/orchestration/ports.js';
+import {
+  ExecutionRegistry,
+  type ToolContext,
+} from '../../app/orchestration/ports.js';
+import { assembleManagerContext } from '../../app/agents/manager/context.js';
 import {
   worldApiPageQuerySchema,
   worldRecordDetailResponseSchema,
@@ -47,6 +51,7 @@ function createToolContext(
     taskId,
     runId,
     assignmentId,
+    assignmentRevision: 1,
     objectiveRevision: 1,
     generation: 1,
     identity,
@@ -59,6 +64,55 @@ function createToolContext(
 }
 
 describe('authorized World Model reuse services', () => {
+  it('offers granted read-only World Model tools to the Manager while retaining context writes for specialists', () => {
+    const store = createStore();
+    const registry = new ExecutionRegistry();
+    const [lookup, contextTool, lineage] = createWorldModelTools(
+      store,
+      'fixture',
+    );
+    registry
+      .registerTool(lookup)
+      .registerTool(contextTool)
+      .registerTool(lineage);
+    const task = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Inspect previously retained research evidence.',
+        context_refs: [],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'manager-world-grants',
+      {
+        mode: 'fixture',
+        tools: ['world.lookup', 'world.lineage', 'world.context'],
+      },
+    ).task;
+    const state = store.managerState(task.id, identity)!;
+    const context = assembleManagerContext(task, registry, state, {
+      events: [],
+      artifacts: [],
+    });
+    expect(context.lookups.map((tool) => tool.id)).toEqual([
+      'world.lookup',
+      'world.lineage',
+    ]);
+    expect(registry.tools.get('world.context')?.manager_read_only).not.toBe(
+      true,
+    );
+
+    const revoked = structuredClone(task);
+    revoked.permissions.tools = ['world.context'];
+    expect(
+      assembleManagerContext(revoked, registry, state, {
+        events: [],
+        artifacts: [],
+      }).lookups,
+    ).toEqual([]);
+  });
+
   it('validates versioned API detail, status, pagination, and not-found contracts', () => {
     expect(
       worldApiPageQuerySchema.parse({ limit: '25', cursor: '10' }),

@@ -1,18 +1,24 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { resolve } from 'node:path';
 import type { PreviewServer, ViteDevServer } from 'vite';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { taskRequests } = vi.hoisted(() => ({ taskRequests: [] as string[] }));
+const { taskRequests, taskDirectories } = vi.hoisted(() => ({
+  taskRequests: [] as string[],
+  taskDirectories: [] as string[],
+}));
 vi.mock('../../app/tasks/http.ts', () => ({
-  createTaskHandler: () =>
-    Object.assign(
+  createTaskHandler: (options: { stateDirectory: string }) => {
+    taskDirectories.push(options.stateDirectory);
+    return Object.assign(
       (request: IncomingMessage, response: ServerResponse) => {
         taskRequests.push(request.url ?? '');
         response.writeHead(200, { 'Content-Type': 'application/json' });
         response.end(JSON.stringify({ current_task_api: true }));
       },
       { close: async () => {} },
-    ),
+    );
+  },
 }));
 
 import { generalApiPlugin } from './general-api-plugin.ts';
@@ -51,9 +57,20 @@ async function requestTo(mode: 'dev' | 'preview', url: string) {
 
 beforeEach(() => {
   taskRequests.length = 0;
+  taskDirectories.length = 0;
+  vi.unstubAllEnvs();
 });
 
 describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
+  it('keeps task storage separate from the configured legacy dashboard directory', async () => {
+    vi.stubEnv('STATE_DIR', '.state/legacy-dashboard');
+    vi.stubEnv('HAZE_TASK_STATE_DIR', '.state/separate-general-tasks');
+    await requestTo(mode, '/api/capabilities');
+    expect(taskDirectories).toEqual([
+      resolve(import.meta.dirname, '../..', '.state/separate-general-tasks'),
+    ]);
+    expect(process.env.STATE_DIR).toBe('.state/legacy-dashboard');
+  });
   it('returns JSON 404 for retired and unknown API routes without starting a task runtime', async () => {
     for (const path of [
       '/api/demo/crew-scheduling/sample',
