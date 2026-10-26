@@ -12,11 +12,7 @@ const isRealId = (id: string) => id.startsWith('hz-');
 
 type Mode = 'real' | 'real+demo' | 'demo';
 
-const LABELS: Record<Mode, string> = {
-  real: 'Haze server (real data)',
-  'real+demo': 'Haze server + fictional demo data',
-  demo: 'Mock (fictional demo data, server has no real data)',
-};
+const DEMO_LABEL = 'Mock (fictional demo data, server has no real data)';
 
 function unionById<T extends { id: string }>(first: T[], second: T[]): T[] {
   const seen = new Set(first.map((x) => x.id));
@@ -40,7 +36,14 @@ export class CompositeDataService implements DataService {
   }
 
   get label(): string {
-    return LABELS[this.mode];
+    if (this.mode === 'demo') return DEMO_LABEL;
+    if (this.realSnapshot?.fictional)
+      return this.mode === 'real'
+        ? 'Haze app (fictional fixture data)'
+        : 'Haze app fixture + fictional demo data';
+    return this.mode === 'real'
+      ? 'Haze app (source data)'
+      : 'Haze app + fictional demo data';
   }
 
   async loadSnapshot(signal?: AbortSignal): Promise<DataSnapshot> {

@@ -87,7 +87,10 @@ export function putHazeEntity(
         observed_at: entity.source.at,
         recorded_at: entity.updatedAt,
       }).value;
-  support(world, record, artifact);
+  // Source, location and station metadata describe configuration. Repeated
+  // collections should not attach another capture to an unchanged revision.
+  if (!unchanged || !['location', 'source', 'station'].includes(entity.type))
+    support(world, record, artifact);
   return { record, changed: !unchanged };
 }
 

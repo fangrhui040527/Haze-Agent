@@ -6,9 +6,9 @@ import { MockDataService } from './MockDataService.ts';
 /**
  * THE ONE PLACE that decides where data comes from.
  *
- * Real data comes from the Haze server (server/, proxied at /api by Vite in
- * development; set VITE_API_BASE_URL to point elsewhere). Fictional demo data is used
- * only when the server has no real data, or when turned on from the Demo Data page.
+ * Source data comes from the shared application API at /api, handled by Vite
+ * in development. Fictional demo data is used only when the API has no items,
+ * or when turned on from the Demo Data page.
  */
 export const mockDataService = new MockDataService();
 export const httpDataService = new HttpDataService(

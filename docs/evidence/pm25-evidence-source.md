@@ -66,10 +66,10 @@ disclosed and cannot establish complete coverage.
 ## Migration from SmokeLedger PostgreSQL
 
 The earlier `zetaris-smokeledger-pm25` boundary queried `sl_pg.pm25` and
-`sl_pg.towns`. Its ingestion, SQL schema and optional USL are retained under
-`app/adapters/zetaris/legacy/smokeledger/` and
-`app/adapters/zetaris/usl/smokeledger_usl/`. The default source path now publishes
-Zetaris FileStore snapshots. Existing PostgreSQL rows and saved task artifacts
+`sl_pg.towns`. Its ingestion scripts, SQL schema, optional USL and Compose service
+have been removed. The root Compose file now starts the Zetaris platform; the
+default source path publishes Zetaris FileStore snapshots. Existing PostgreSQL
+volumes, registered Zetaris objects and saved task artifacts
 are not dropped, rewritten or migrated automatically. Historical evidence and
 milestone records continue to describe the source actually used at that time.
 

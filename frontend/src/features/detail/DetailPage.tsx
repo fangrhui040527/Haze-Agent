@@ -200,7 +200,7 @@ export function DetailPage() {
               </Badge>
             )}
             <Badge tone="stale">Revision {item.revision}</Badge>
-            {item.fictional && <Badge tone="warn">Fictional demo data</Badge>}
+            {item.fictional && <Badge tone="warn">Fictional sample</Badge>}
             <Button variant="primary" size="small" onClick={ask}>
               Ask the agents about this
             </Button>

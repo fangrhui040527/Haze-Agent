@@ -1,8 +1,8 @@
 # Repository scripts
 
 Run these commands from `app/adapters/zetaris`. Configuration lives in the Haze
-repository root `.env`. Zetaris and PostgreSQL helpers have
-Deno/TypeScript and Python versions with matching settings and behaviour.
+repository root `.env`. Zetaris helpers have Deno/TypeScript and Python versions
+with matching settings and behaviour.
 The local file downloaders are Python-only.
 
 <a id="find-your-organization-id"></a>
@@ -12,7 +12,8 @@ The scripts read `.env` from the Haze repository root, or from the top-level
 checkout when run in a Git worktree. This file is gitignored. Do not replace an
 existing file or commit credentials. Legacy `app/adapters/zetaris/.env.local`
 files supply missing settings; root `.env` values take precedence. Start with
-[the shared template](../../../../.env.example). The platform bundle's `.env` is separate.
+[the shared template](../../../../.env.example). The root Compose deployment uses
+this same file.
 See the [client setup guide](../../../../docs/Zetaris/connections/client-setup.md) for how to
 find your organisation ID and protect your credentials.
 
@@ -33,21 +34,6 @@ ZETARIS_ENGINE_ID=
 `ZETARIS_BASE_URL` is a UI origin, not the raw API endpoint on port 8888. The
 multi-statement REST/JDBC runner uses `ZETARIS_REST_URL` for the direct API.
 These are different clients and routes.
-
-For PostgreSQL, configure the connection check separately:
-
-```dotenv
-PGHOST=
-PGPORT=5432
-PGDATABASE=
-PGUSER=
-PGPASSWORD=
-PGSSLMODE=disable
-```
-
-Set `PGSSLMODE=verify-full` when the server has a trusted certificate that
-matches its host. Exported environment variables take precedence over
-`.env`.
 
 <a id="verify-sql-execution"></a>
 <a id="check-the-zetaris-connection"></a>
@@ -168,13 +154,12 @@ next run. Check the verbose plan when adding statement types.
 
 <a id="running-the-denotypescript-scripts"></a>
 <a id="running-the-python-scripts"></a>
-<a id="check-a-postgresql-connection"></a>
+<a id="use-the-deno-and-python-helpers"></a>
 ## Use the Deno and Python helpers
 
-Deno 2.9 or later is required for TypeScript helpers; `deno.lock` pins their
-dependencies. Python 3.9 or later is required for the Zetaris and PostgreSQL
-helpers. Use Python 3.8 or later for the local file downloaders. Use a virtual
-environment if system Python blocks package installation.
+Deno 2.9 or later is required for TypeScript helpers. Python 3.9 or later is
+required for the Zetaris helpers. Use Python 3.8 or later for the local file
+downloaders. Use a virtual environment if system Python blocks package installation.
 
 ```sh
 deno --version
@@ -190,15 +175,6 @@ available, run a script with its needed flags, for example:
 
 ```sh
 deno run --no-config --allow-net --allow-env='ZETARIS*' --allow-read scripts/check_zetaris.ts
-```
-
-The PostgreSQL check authenticates, runs `SELECT 1`, reports elapsed time,
-and closes the connection. It checks database access, not ICMP ping. Both
-versions use 10-second connection and query timeouts.
-
-```sh
-deno task ping:postgres
-python3 scripts/ping_postgres.py
 ```
 
 <a id="fetch-local-data-files-for-the-parquetcsv-package"></a>

@@ -5,7 +5,8 @@ import {
   normalizeDamageInputs,
   exactDamageRef,
 } from '../../app/capabilities/damage-account/inputs.js';
-import { WorldModelDamageInputAdapter } from '../../app/capabilities/damage-account/world-input-adapter.js';
+import { WorldModelDamageInputAdapter } from '../../app/adapters/damage-input-adapter/index.js';
+import { damageWorldInputPolicy } from '../../app/capabilities/damage-account/world-input-policy.js';
 import {
   DAMAGE_WORLD_ADAPTER_ID,
   DAMAGE_WORLD_TOOL_ID,
@@ -79,10 +80,11 @@ function resolveRequest(
     outputs: [],
     peers: [],
   };
-  const result = new WorldModelDamageInputAdapter(store, 'fixture').resolve(
-    query,
-    context,
-  );
+  const result = new WorldModelDamageInputAdapter(
+    store,
+    'fixture',
+    damageWorldInputPolicy,
+  ).resolve(query, context);
   // A model's proposed ID cannot bypass discovery or reach candidate reuse
   // after the user's scope is rejected, even if a later check would also fail.
   expect(worldContext).toHaveBeenCalledTimes(0);
@@ -298,10 +300,11 @@ describe('World Model request scope boundaries', () => {
       ],
     };
 
-    const result = new WorldModelDamageInputAdapter(store, 'fixture').resolve(
-      { selection_ref: exactDamageRef(selection) },
-      context,
-    );
+    const result = new WorldModelDamageInputAdapter(
+      store,
+      'fixture',
+      damageWorldInputPolicy,
+    ).resolve({ selection_ref: exactDamageRef(selection) }, context);
 
     expect(result.status).toBe('scope_required');
     expect(pinWorldContext).not.toHaveBeenCalled();

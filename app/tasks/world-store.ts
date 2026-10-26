@@ -567,8 +567,39 @@ export class WorldModelStore {
   context(scope: WorldScope, recordId: string): WorldContextOutput | undefined {
     const record = this.record(scope, recordId);
     if (!record) return undefined;
-    const relationships = this.relationships(scope, recordId);
-    // Artifact-reference records must enforce access to their own payload too.
+    const supportLinks = this.relationships(scope, recordId, {
+      kind: 'supported_by',
+      outgoingOnly: true,
+      newestFirst: true,
+      limit: 64,
+    });
+    const recentLinks = this.relationships(scope, recordId, {
+      newestFirst: true,
+      limit: 100,
+    });
+    const relationships = [
+      ...new Map(
+        [...supportLinks, ...recentLinks].map((link) => [link.id, link]),
+      ).values(),
+    ].slice(0, 100);
+    return {
+      schema_version: 'haze.world.context.v1',
+      record,
+      relationships,
+      acceptances: this.acceptancesForRecord(scope, recordId, 50),
+      support_artifacts: this.supportArtifacts(scope, recordId, 64),
+      payload: record.payload,
+    };
+  }
+
+  /** All direct supports remain available for access checks; context shows 64. */
+  supportArtifacts(
+    scope: WorldScope,
+    recordId: string,
+    limit?: number,
+  ): ArtifactRef[] {
+    const record = this.record(scope, recordId);
+    if (!record) return [];
     const ownArtifact =
       record.kind === 'artifact_reference' &&
       typeof record.payload === 'object' &&
@@ -576,14 +607,13 @@ export class WorldModelStore {
       !Array.isArray(record.payload)
         ? artifactRefSchema.safeParse(record.payload.artifact)
         : undefined;
-    const support_artifacts = [
+    const refs = [
       ...(ownArtifact?.success ? [ownArtifact.data] : []),
-      ...relationships.flatMap((relationship) => {
-        if (
-          relationship.kind !== 'supported_by' ||
-          relationship.from.id !== recordId
-        )
-          return [];
+      ...this.relationships(scope, recordId, {
+        kind: 'supported_by',
+        outgoingOnly: true,
+        ...(limit === undefined ? {} : { newestFirst: true, limit }),
+      }).flatMap((relationship) => {
         const support = this.record(scope, relationship.to.id);
         if (!support || support.kind !== 'artifact_reference') return [];
         if (
@@ -596,21 +626,12 @@ export class WorldModelStore {
         return parsed.success ? [parsed.data] : [];
       }),
     ];
-    return {
-      schema_version: 'haze.world.context.v1',
-      record,
-      relationships,
-      acceptances: this.acceptancesForRecord(scope, recordId),
-      support_artifacts: [
-        ...new Map(
-          support_artifacts.map((ref) => [
-            `${ref.id}:${ref.version}:${ref.sha256}`,
-            ref,
-          ]),
-        ).values(),
-      ],
-      payload: record.payload,
-    };
+    const unique = [
+      ...new Map(
+        refs.map((ref) => [`${ref.id}:${ref.version}:${ref.sha256}`, ref]),
+      ).values(),
+    ];
+    return limit === undefined ? unique : unique.slice(0, limit);
   }
 
   lineage(scope: WorldScope, input: WorldLineageInput) {
@@ -742,7 +763,28 @@ export class WorldModelStore {
     }
   }
 
-  relationships(scope: WorldScope, recordId: string): WorldRelationship[] {
+  relationships(
+    scope: WorldScope,
+    recordId: string,
+    options: {
+      limit?: number;
+      kind?: string;
+      outgoingOnly?: boolean;
+      newestFirst?: boolean;
+    } = {},
+  ): WorldRelationship[] {
+    const params: (string | number)[] = [
+      scope.principal,
+      scope.workspace,
+      scope.mode,
+      scope.principal,
+      scope.workspace,
+      scope.mode,
+      recordId,
+    ];
+    if (!options.outgoingOnly) params.push(recordId);
+    if (options.kind) params.push(options.kind);
+    if (options.limit !== undefined) params.push(options.limit);
     const rows = this.db
       .prepare(
         `SELECT body FROM world_projection_relationships
@@ -750,20 +792,13 @@ export class WorldModelStore {
          AND relationship_id IN (
            SELECT relationship_id FROM world_relationships
            WHERE principal=? AND workspace=? AND mode=?
-           AND (from_record_id=? OR to_record_id=?)
+           AND ${options.outgoingOnly ? 'from_record_id=?' : '(from_record_id=? OR to_record_id=?)'}
+           ${options.kind ? 'AND kind=?' : ''}
          )
-         ORDER BY last_sequence,relationship_id`,
+         ORDER BY last_sequence ${options.newestFirst ? 'DESC' : 'ASC'},relationship_id
+         ${options.limit === undefined ? '' : 'LIMIT ?'}`,
       )
-      .all(
-        scope.principal,
-        scope.workspace,
-        scope.mode,
-        scope.principal,
-        scope.workspace,
-        scope.mode,
-        recordId,
-        recordId,
-      ) as Row[];
+      .all(...params) as Row[];
     return rows.map((row) =>
       worldRelationshipSchema.parse(JSON.parse(row.body)),
     );
@@ -919,6 +954,7 @@ export class WorldModelStore {
   acceptancesForRecord(
     scope: WorldScope,
     recordId: string,
+    limit?: number,
   ): WorldAcceptanceOutcome[] {
     const rows = this.db
       .prepare(
@@ -929,9 +965,16 @@ export class WorldModelStore {
            AND current.workspace=world_acceptances.workspace
            AND current.mode=world_acceptances.mode
            AND current.acceptance_id=world_acceptances.acceptance_id)
-         ORDER BY stated_use,acceptance_id`,
+         ORDER BY stated_use,acceptance_id
+         ${limit === undefined ? '' : 'LIMIT ?'}`,
       )
-      .all(scope.principal, scope.workspace, scope.mode, recordId) as Row[];
+      .all(
+        scope.principal,
+        scope.workspace,
+        scope.mode,
+        recordId,
+        ...(limit === undefined ? [] : [limit]),
+      ) as Row[];
     return rows.map((row) =>
       worldAcceptanceOutcomeSchema.parse(JSON.parse(row.body)),
     );

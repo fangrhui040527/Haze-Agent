@@ -27,6 +27,76 @@ import { boundedExecution } from './ports.js';
 
 export const SPECIALIST_TOPOLOGY_VERSION = 'specialist.v1';
 
+/**
+ * How many malformed responses a specialist may correct before the assignment
+ * fails. This is self-correction against a strict schema, not a provider retry:
+ * the rejected action is never dispatched and its charged attempt is retained.
+ */
+const MAX_CORRECTIONS = 2;
+
+/**
+ * Retained evidence stays out of the model context. A specialist needs to
+ * know that a method returned and what it concluded, not the rows it
+ * returned: tools read pinned artifacts server-side, and evidence is
+ * persisted by reference. Short scalar and string fields survive so a
+ * reviewer can still read a verdict and its stated limitations.
+ */
+function digest(value: unknown): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return { items: value.length };
+  const summary: Record<string, unknown> = {};
+  for (const [field, item] of Object.entries(value)) {
+    if (item === null || typeof item === 'boolean' || typeof item === 'number')
+      summary[field] = item;
+    else if (typeof item === 'string')
+      summary[field] = item.length <= 200 ? item : { characters: item.length };
+    else if (Array.isArray(item)) {
+      const text = item.filter((entry) => typeof entry === 'string');
+      summary[field] =
+        text.length === item.length &&
+        text.reduce((total, entry) => total + entry.length, 0) <= 1_200
+          ? item
+          : { items: item.length };
+    } else summary[field] = { fields: Object.keys(item as object).length };
+  }
+  return summary;
+}
+
+/**
+ * A retrieval method states where its bytes came from. Fixture output stays
+ * labelled as a fixture; anything else a method retrieved is external. Absent
+ * provenance is left absent rather than guessed, and it is never read from the
+ * model: a live external selection must not be filed as derived work simply
+ * because an agent chose to persist it.
+ */
+function originOf(
+  result: unknown,
+): 'external_source' | 'synthetic_fixture' | undefined {
+  if (typeof result !== 'object' || result === null) return undefined;
+  const declared = (result as { evidence_origin?: unknown }).evidence_origin;
+  if (declared === 'synthetic_fixture') return 'synthetic_fixture';
+  return typeof declared === 'string' ? 'external_source' : undefined;
+}
+
+/**
+ * Validator codes are precise but not actionable. A specialist corrects a
+ * malformed action far more reliably when told what to do differently than
+ * when handed the parser's own vocabulary.
+ */
+function remedyFor(reason: string): string {
+  if (reason.includes('duplicate_json_key'))
+    return 'The response repeated an object key. Write every key exactly once, and send only one action.';
+  if (reason.includes('unexpected_json_suffix'))
+    return 'The response carried text after the JSON object. Send the object alone, with no prose and no code fences.';
+  if (reason.includes('No matching discriminator') || reason.includes('type'))
+    return 'The "type" field must be exactly one of tool, save, save_tool_result, question, message, wait or finish, at the top level of the object.';
+  if (reason.includes('unrecognized_keys') || reason.includes('Unrecognized'))
+    return 'The response carried keys the chosen variant does not define. Include only that variant’s keys.';
+  if (reason.includes('Invalid option') || reason.includes('invalid_value'))
+    return 'A field used a value outside its allowed set. Re-read the allowed values and choose one of them.';
+  return 'Re-read the action variants and return exactly one well-formed action.';
+}
+
 export type SpecialistGraphIdentity = Pick<
   ToolContext,
   | 'taskId'
@@ -69,6 +139,24 @@ const specialistState = Annotation.Root({
   modelContext: Annotation<unknown>(),
   response: Annotation<AgentModelCompletion>(),
   action: Annotation<AgentAction>(),
+  corrections: Annotation<number>({
+    default: () => 0,
+    reducer: (_old, next) => next,
+  }),
+  /** Set when the last response was refused, routing one more model turn. */
+  correction: Annotation<{ reason: string; remedy: string } | null>({
+    default: () => null,
+    reducer: (_old, next) => next,
+  }),
+  /**
+   * Exact tool output by dispatched tool-action id. Kept out of the model
+   * context and out of history, so save_tool_result can persist the bytes a
+   * method actually returned rather than anything the model retyped.
+   */
+  retained: Annotation<Record<string, unknown>>({
+    default: () => ({}),
+    reducer: (old, next) => ({ ...old, ...next }),
+  }),
   output: Annotation<AssignmentOutput | null>({
     default: () => null,
     reducer: (_old, next) => next,
@@ -126,6 +214,7 @@ function controlledServices(
     },
     model: (context) => next('model').model(context),
     accept: (response, action) => next('accept').accept(response, action),
+    reject: (response, reason) => next('reject').reject(response, reason),
     tool: (id, input) => next('tool').tool(id, input),
     save: (kind, content, metadata) =>
       next('save').save(kind, content, metadata),
@@ -206,7 +295,22 @@ export function createSpecialistGraph(
           purpose: 'specialist',
           brief: services.brief,
           definition: services.instructions,
-          inputs: services.context.inputs,
+          // The pinned assignment input carries the admitted scope. A
+          // deterministic executor reads it directly; a model-driven
+          // specialist is blind to its own place and period without it.
+          input: services.input,
+          // References only. A tool reads the pinned content server-side, so
+          // whole captures never enter the prompt: that is both the point of
+          // save_tool_result and what keeps the input inside its byte budget.
+          inputs: services.context.inputs.map((artifact) => ({
+            id: artifact.id,
+            version: artifact.version,
+            sha256: artifact.sha256,
+            kind: artifact.kind,
+          })),
+          // Named peer instances: a message recipient is an assignment id,
+          // never an agent role, so the context must disclose them.
+          peers: services.context.peers,
           inbox: services.inbox(),
           outputs: services.context.outputs,
           history: state.history,
@@ -226,25 +330,71 @@ export function createSpecialistGraph(
     })
     .addNode('validate', (state) => {
       const services = enter('validate', state);
-      const action = (hooks.schema ?? agentActionSchema).parse(
-        parseContractJson(state.response.text),
-      );
+      let action: AgentAction;
+      try {
+        action = (hooks.schema ?? agentActionSchema).parse(
+          parseContractJson(state.response.text),
+        );
+      } catch (error) {
+        // A rejected response is never accepted and never dispatched, and its
+        // attempt stays charged and recorded. The specialist is told exactly
+        // what failed and may correct it within the turns it already holds; a
+        // persistently malformed one still fails fast.
+        const reason = (error instanceof Error ? error.message : String(error))
+          .replaceAll(/\s+/gu, ' ')
+          .slice(0, 400);
+        // Consume the response either way: an unconsumed one is replayed, so
+        // without this the next turn re-parses the same malformed text and
+        // every correction is spent on a single model call.
+        services.reject(state.response, reason);
+        if (state.corrections >= MAX_CORRECTIONS) throw error;
+        const correction = { reason, remedy: remedyFor(reason) };
+        return {
+          correction,
+          corrections: state.corrections + 1,
+          history: [...(state.history ?? []), { rejected_action: correction }],
+          turn: state.turn + 1,
+        };
+      }
       if (!services.accept(state.response, action))
         throw new TaskError(
           409,
           'duplicate_action',
           'This validated action was already dispatched.',
         );
-      return { action };
+      return { action, correction: null };
     })
     .addNode('tool', async (state) => {
       const services = enter('tool', state);
       const action = state.action;
       if (action.type !== 'tool') throw new Error('Invalid tool graph route.');
-      return next(state, {
-        action,
-        output: await services.tool(action.tool, action.input),
-      });
+      const output = await services.tool(action.tool, action.input);
+      return {
+        // The model is told what the method concluded, never handed its rows.
+        ...next(state, { action, output: digest(output) }),
+        retained: { [action.id]: output },
+      };
+    })
+    .addNode('save_tool_result', (state) => {
+      const services = enter('save_tool_result', state);
+      const action = state.action;
+      if (action.type !== 'save_tool_result')
+        throw new Error('Invalid save_tool_result graph route.');
+      if (!(action.tool_action_id in state.retained))
+        throw new TaskError(
+          422,
+          'unknown_tool_action',
+          'No dispatched tool action produced that result.',
+        );
+      const result = state.retained[action.tool_action_id];
+      // Provenance comes from the method that produced the bytes.
+      const origin = originOf(result);
+      const { id, version, sha256 } = services.save(
+        action.kind,
+        result,
+        origin ? { evidence_origin: origin } : undefined,
+      );
+      return next(state, { action, artifact: { id, version, sha256 } });
     })
     .addNode('save', (state) => {
       const services = enter('save', state);
@@ -370,11 +520,15 @@ export function createSpecialistGraph(
     )
     .addEdge('model', 'validate')
     .addConditionalEdges('validate', (state) => {
+      // A refused response routes one more model turn carrying its remedy,
+      // rather than failing the assignment on the first malformed action.
+      if (state.correction) return 'context';
       const type = state.action.type;
       return type === 'wait' ? 'peer_wait' : type;
     })
     .addEdge('tool', 'context')
     .addEdge('save', 'context')
+    .addEdge('save_tool_result', 'context')
     .addEdge('message', 'context')
     .addEdge('escalate', 'prepare_wait')
     .addEdge('question', 'prepare_wait')

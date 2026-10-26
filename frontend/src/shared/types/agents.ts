@@ -128,7 +128,7 @@ export const AGENT_INFO: Record<AgentId, { name: string; role: string }> = {
   hazeops: { name: 'HazeOps', role: 'Gathers data from sources' },
   worldmodel: {
     name: 'World Model',
-    role: 'Disabled in the general task service',
+    role: 'Stores scoped evidence and lineage for dashboard and tasks',
   },
   hmem: { name: 'H-Mem', role: 'Disabled in the general task service' },
   evidencecritic: {

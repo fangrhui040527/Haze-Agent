@@ -1,72 +1,44 @@
 import { z } from 'zod';
 import {
   artifactRefSchema,
-  boundedJsonSchema,
   type Artifact,
   type ArtifactRef,
 } from '../../contracts/artifacts.js';
 import {
   damageInputsSchema,
-  damageScopeSchema,
   type DamageInputs,
 } from '../../contracts/damage-account.js';
 import {
-  DAMAGE_WORLD_ADAPTER_ID,
-  DAMAGE_WORLD_TOOL_ID,
   damageWorldLinkSchema,
-  damageWorldQuerySchema,
-  damageWorldResolutionSchema,
-  damageWorldSelectionSchema,
-  damageWorldScopeQuerySchema,
   type DamageWorldQuery,
   type DamageWorldResolution,
-  type DamageWorldSelection,
 } from '../../contracts/damage-world.js';
 import { canonicalJson, contractHash } from '../../contracts/json.js';
 import type {
   ToolContext,
-  ToolDefinition,
   ExecutionMode,
   StatefulToolStore,
 } from '../../orchestration/ports.js';
-import type { WorldRecord } from '../../contracts/world.js';
+import type {
+  DamageWorldCandidate as Candidate,
+  DamageWorldInputPolicy,
+  DamageWorldScope,
+} from './ports.js';
 import {
-  exactDamageRef,
-  damageRefKey,
-  normalizeDamageInputs,
-} from './inputs.js';
-import { validateDamageInputs } from './scope.js';
-import { worldContextSnapshotSchema } from '../../contracts/world-services.js';
+  exactRef,
+  sameRef,
+  readDamageWorldSelection,
+  saveDamageWorldSelection,
+} from './selection.js';
 
-type Candidate = {
-  record: WorldRecord;
-  capture: Artifact;
-  inputs: DamageInputs;
-};
-type ExpectedScope = NonNullable<DamageWorldQuery['expected_scope']>;
 type Store = StatefulToolStore;
-const sameRef = (a: ArtifactRef, b: ArtifactRef) =>
-  damageRefKey(a) === damageRefKey(b);
-const months = [
-  'january',
-  'february',
-  'march',
-  'april',
-  'may',
-  'june',
-  'july',
-  'august',
-  'september',
-  'october',
-  'november',
-  'december',
-];
 
 /** Read canonical accounting evidence through the task's governed World Model boundary. */
 export class WorldModelDamageInputAdapter {
   constructor(
     private readonly store: Store,
     private readonly mode: ExecutionMode,
+    private readonly policy: DamageWorldInputPolicy,
   ) {}
 
   resolve(
@@ -74,40 +46,8 @@ export class WorldModelDamageInputAdapter {
     context: ToolContext,
   ): DamageWorldResolution {
     const task = this.store.read(context.taskId, context.identity);
-    const latestCorrection = task.corrections.at(-1);
-    // A later prose correction may change any boundary. Earlier structured scope
-    // cannot silently override it, including during receipt reuse.
-    const declared = latestCorrection
-      ? latestCorrection.scope
-      : task.original_request.scope;
-    const scope =
-      declared === undefined
-        ? undefined
-        : damageWorldScopeQuerySchema.parse(declared);
-    if (
-      query.expected_scope_sha256 &&
-      (declared === undefined ||
-        contractHash(damageScopeSchema.parse(declared)) !==
-          query.expected_scope_sha256)
-    )
-      throw new Error(
-        'World Model scope binding differs from the current requested scope.',
-      );
-    if (
-      declared !== undefined &&
-      query.expected_scope &&
-      !this.matchesScope(scope!, query.expected_scope)
-    )
-      throw new Error(
-        'The World Model selection conflicts with the current requested scope.',
-      );
-    // Do not silently discard an unsupported correction or mix old dates and
-    // record IDs with the user's latest selection. Ask when it is incomplete.
-    const objective =
-      latestCorrection?.passage ?? task.original_request.objective;
-    const userRecordIds = [
-      ...new Set(objective.match(/\bwm:[a-f0-9]{64}\b/gu) ?? []),
-    ];
+    const { scope, objective, declaredScope, userRecordIds } =
+      this.policy.request(task, query);
     if (userRecordIds.length > 1)
       return this.gap(
         'scope_required',
@@ -118,10 +58,6 @@ export class WorldModelDamageInputAdapter {
       throw new Error(
         'World Model query differs from the user-selected record.',
       );
-    const declaredScope =
-      declared !== undefined &&
-      (damageScopeSchema.safeParse(scope).success ||
-        (!!scope?.countries?.length && !!scope.effect_period));
     if (query.selection_ref)
       return this.reuse(
         query.selection_ref,
@@ -177,8 +113,9 @@ export class WorldModelDamageInputAdapter {
       );
       const parsed = damageInputsSchema.safeParse(capture.content);
       if (!parsed.success) continue;
-      if (scope && !this.matchesScope(parsed.data.scope, scope)) continue;
-      const objectiveMatch = this.matchesObjective(
+      if (scope && !this.policy.matchesScope(parsed.data.scope, scope))
+        continue;
+      const objectiveMatch = this.policy.matchesObjective(
         parsed.data.scope,
         objective,
         !!userRecordId || declaredScope,
@@ -232,7 +169,7 @@ export class WorldModelDamageInputAdapter {
     if (
       (query.record_id && chosen.record.ref.id !== query.record_id) ||
       (query.expected_scope &&
-        !this.matchesScope(chosen.inputs.scope, query.expected_scope))
+        !this.policy.matchesScope(chosen.inputs.scope, query.expected_scope))
     )
       return this.gap(
         'gap',
@@ -243,73 +180,17 @@ export class WorldModelDamageInputAdapter {
       'Only already retained physical quantities and compatible unit values are reused; no exposure-to-health calculation or external acquisition is performed by this adapter.',
     ];
     this.pin(chosen, context);
-    const current = this.store.worldContext(
-      context.taskId,
-      context.identity,
+    const selection = saveDamageWorldSelection(
+      this.store,
       this.mode,
-      chosen.record.ref.id,
-    );
-    const snapshot = this.store.saveArtifact(context.taskId, context.identity, {
-      kind: 'world.context.snapshot',
-      content: boundedJsonSchema.parse(
-        worldContextSnapshotSchema.parse({
-          schema_version: 'haze.world.context-snapshot.v1',
-          stated_use: 'damage-account-inputs',
-          record: chosen.record.ref,
-          acceptances: current.acceptances,
-          support_artifacts: [
-            exactDamageRef(chosen.capture),
-            ...chosen.inputs.source_refs,
-          ],
-          relationships: [],
-        }),
-      ),
-      producer: { kind: 'assignment', id: context.assignmentId },
-      dependencies: [
-        exactDamageRef(chosen.capture),
-        ...chosen.inputs.source_refs,
-      ],
-      generation: context.generation,
-      assignment_revision: context.assignmentRevision,
-    });
-    const receipt = damageWorldSelectionSchema.parse({
-      schema_version: 'haze.damage.world-selection.v1',
-      adapter: DAMAGE_WORLD_ADAPTER_ID,
-      version: '1',
-      record: chosen.record.ref,
-      capture: exactDamageRef(chosen.capture),
-      snapshot: exactDamageRef(snapshot),
-      source_refs: chosen.inputs.source_refs,
-      scope_sha256: contractHash(chosen.inputs.scope),
+      chosen,
       limitations,
-    });
-    const selection = this.store.saveArtifact(
-      context.taskId,
-      context.identity,
-      {
-        kind: 'damage.world-selection',
-        content: receipt,
-        producer: { kind: 'service', id: DAMAGE_WORLD_ADAPTER_ID },
-        dependencies: [
-          receipt.capture,
-          ...receipt.source_refs,
-          receipt.snapshot,
-        ],
-        required_tools: [DAMAGE_WORLD_TOOL_ID],
-        generation: context.generation,
-        evidence_origin: 'derived',
-      },
-    );
-    this.store.pinAssignmentInput(
-      context.taskId,
-      context.assignmentId,
-      context.generation,
-      exactDamageRef(selection),
+      context,
     );
     return {
       status: 'ready',
       inputs: this.reconstruct(chosen, context),
-      selection: exactDamageRef(selection),
+      selection,
       limitations,
     };
   }
@@ -317,7 +198,7 @@ export class WorldModelDamageInputAdapter {
   private reuse(
     ref: ArtifactRef,
     context: ToolContext,
-    scope: ExpectedScope | undefined,
+    scope: DamageWorldScope | undefined,
     objective: string,
     declaredScope: boolean,
     userRecordId?: string,
@@ -361,11 +242,11 @@ export class WorldModelDamageInputAdapter {
       capture,
       inputs: damageInputsSchema.parse(capture.content),
     };
-    if (scope && !this.matchesScope(candidate.inputs.scope, scope))
+    if (scope && !this.policy.matchesScope(candidate.inputs.scope, scope))
       throw new Error(
         'World Model evidence conflicts with corrected account scope.',
       );
-    const objectiveMatch = this.matchesObjective(
+    const objectiveMatch = this.policy.matchesObjective(
       candidate.inputs.scope,
       objective,
       !!userRecordId || declaredScope,
@@ -498,15 +379,7 @@ export class WorldModelDamageInputAdapter {
         );
       return this.store.artifact(ref.id, context.identity, ref);
     });
-    const rebuilt = validateDamageInputs(normalizeDamageInputs(sources));
-    if (
-      canonicalJson(rebuilt) !==
-      canonicalJson(validateDamageInputs(candidate.inputs))
-    )
-      throw new Error(
-        'World Model input capture disagrees with reconstruction from original evidence.',
-      );
-    return rebuilt;
+    return this.policy.reconstruct(candidate.inputs, sources);
   }
 
   private pin(candidate: Candidate, context: ToolContext): void {
@@ -515,7 +388,7 @@ export class WorldModelDamageInputAdapter {
       context.identity,
       context.assignmentId,
       context.generation,
-      this.evidence(candidate, context).map(exactDamageRef),
+      this.evidence(candidate, context).map(exactRef),
       'damage-account-inputs',
       candidate.record.ref.id,
     );
@@ -524,7 +397,7 @@ export class WorldModelDamageInputAdapter {
   private evidence(candidate: Candidate, context: ToolContext): Artifact[] {
     const found = new Map<string, Artifact>();
     const pending = [
-      exactDamageRef(candidate.capture),
+      exactRef(candidate.capture),
       ...candidate.inputs.source_refs,
     ];
     while (pending.length) {
@@ -548,160 +421,10 @@ export class WorldModelDamageInputAdapter {
     return [...found.values()];
   }
 
-  private matchesScope(
-    actual: ExpectedScope,
-    expected: ExpectedScope,
-  ): boolean {
-    return Object.entries(expected).every(
-      ([key, value]) =>
-        Object.hasOwn(actual, key) &&
-        canonicalJson(actual[key as keyof typeof actual]) ===
-          canonicalJson(value),
-    );
-  }
-
-  private matchesObjective(
-    scope: DamageInputs['scope'],
-    objective: string,
-    structured: boolean,
-  ): 'match' | 'mismatch' | 'scope_required' {
-    const text = objective.toLowerCase();
-    if (structured) return 'match';
-    // Resolve only unambiguous location + complete calendar windows. This is a
-    // conservative parser, not a semantic model that can silently narrow scope.
-    const timeToken =
-      '(?:\\d{4}-\\d{2}-\\d{2}|(?:19|20|21)\\d{2}|' + months.join('|') + ')\\b';
-    const markers = [
-      ...text.matchAll(
-        new RegExp(
-          '\\b(?:for|in|during|from|between|on)\\s+(?=' + timeToken + ')',
-          'gu',
-        ),
-      ),
-    ];
-    if (markers.length !== 1) return 'scope_required';
-    const prefix = text.slice(0, markers[0]!.index).trim();
-    const locationMarkers = [...prefix.matchAll(/\b(?:for|in)\s+/gu)];
-    const locationStart = locationMarkers.at(-1);
-    const location = locationStart
-      ? prefix.slice(locationStart.index + locationStart[0].length)
-      : prefix;
-    const requestedCountries = location
-      .split(/\s*(?:,|\band\b|&)\s*/u)
-      .filter(Boolean)
-      .sort();
-    const actualCountries = scope.countries
-      .map((country) => country.toLowerCase())
-      .sort();
-    if (canonicalJson(requestedCountries) !== canonicalJson(actualCountries))
-      return 'mismatch';
-    const periodText = text.slice(markers[0]!.index + markers[0]![0].length);
-    const dates = text.match(/\b\d{4}-\d{2}-\d{2}\b/g) ?? [];
-    // Only the supported period grammar and an optional World Model suffix are
-    // accepted. Extra day, currency or population constraints need clarification.
-    const suffix =
-      '(?:\\s+(?:using|from)\\s+(?:the\\s+)?world\\s+model(?:\\s+evidence)?)?[.!?]?\\s*$';
-    let expected: { start: string; end: string };
-    if (dates.length) {
-      if (
-        !new RegExp(
-          '^\\d{4}-\\d{2}-\\d{2}\\s+(?:to|through|and|–|—)\\s+\\d{4}-\\d{2}-\\d{2}' +
-            suffix,
-          'u',
-        ).test(periodText)
-      )
-        return 'scope_required';
-      expected = { start: dates[0]!, end: dates[1]! };
-    } else {
-      const monthPattern = '(' + months.join('|') + ')';
-      const monthWindow = periodText.match(
-        new RegExp(
-          '^' +
-            monthPattern +
-            '(?:\\s+(?:to|through|and|–|—)\\s+' +
-            monthPattern +
-            ')?\\s+((?:19|20|21)\\d{2})' +
-            suffix,
-          'u',
-        ),
-      );
-      if (monthWindow) {
-        const startMonth = months.indexOf(monthWindow[1]!) + 1;
-        const endMonth = months.indexOf(monthWindow[2] ?? monthWindow[1]!) + 1;
-        if (endMonth < startMonth) return 'scope_required';
-        const year = Number(monthWindow[3]);
-        expected = {
-          start: `${year}-${String(startMonth).padStart(2, '0')}-01`,
-          end: `${year}-${String(endMonth).padStart(2, '0')}-${new Date(Date.UTC(year, endMonth, 0)).getUTCDate()}`,
-        };
-      } else {
-        const yearWindow = periodText.match(
-          new RegExp(
-            '^((?:19|20|21)\\d{2})(?:\\s+(?:to|through|and|–|—)\\s+((?:19|20|21)\\d{2}))?' +
-              suffix,
-            'u',
-          ),
-        );
-        if (!yearWindow) return 'scope_required';
-        expected = {
-          start: `${yearWindow[1]}-01-01`,
-          end: `${yearWindow[2] ?? yearWindow[1]}-12-31`,
-        };
-      }
-    }
-    return canonicalJson(expected) === canonicalJson(scope.effect_period)
-      ? 'match'
-      : 'mismatch';
-  }
-
   private gap(
     status: 'gap' | 'scope_required',
     reason: string,
   ): DamageWorldResolution {
     return { status, reasons: [reason], candidates: [] };
   }
-}
-
-export function readDamageWorldSelection(
-  artifact: Artifact,
-): DamageWorldSelection {
-  if (
-    artifact.kind !== 'damage.world-selection' ||
-    artifact.producer.kind !== 'service' ||
-    artifact.producer.id !== DAMAGE_WORLD_ADAPTER_ID ||
-    contractHash(artifact.content) !== artifact.sha256 ||
-    !artifact.required_tools.includes(DAMAGE_WORLD_TOOL_ID)
-  )
-    throw new Error(
-      'Accounting requires an authentic World Model adapter selection.',
-    );
-  const selection = damageWorldSelectionSchema.parse(artifact.content);
-  if (
-    [selection.capture, selection.snapshot, ...selection.source_refs].some(
-      (ref) =>
-        !artifact.dependencies.some((dependency) => sameRef(dependency, ref)),
-    )
-  )
-    throw new Error(
-      'World Model adapter selection has an incomplete evidence closure.',
-    );
-  return selection;
-}
-
-export function createWorldModelDamageInputTool(
-  store: Store,
-  mode: ExecutionMode,
-): ToolDefinition<DamageWorldQuery, DamageWorldResolution> {
-  const adapter = new WorldModelDamageInputAdapter(store, mode);
-  return {
-    id: DAMAGE_WORLD_TOOL_ID,
-    version: '1',
-    mode,
-    description:
-      'Select compatible World Model accounting evidence, recheck access and currency, pin exact originals and reconstruct deterministic damage inputs. Missing evidence stays unestimated.',
-    inputSchema: damageWorldQuerySchema,
-    outputSchema: damageWorldResolutionSchema,
-    execute: (query, context) =>
-      Promise.resolve(adapter.resolve(query, context)),
-  };
 }
