@@ -73,9 +73,17 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
 
   const eRun = await evidence(`SELECT run_id, kind, town, center_utc, params FROM {src}.runs WHERE run_id = '${run}'`);
   // Without a map, zero detections inside concessions or on peat means "not assessed", never 0%.
-  const eMaps = await evidence(`SELECT COUNT(*) AS concession_polygons FROM {src}.concessions`);
-  const concessionMap = Number(eMaps.rows[0]?.[0] ?? 0) > 0;
-  const peatMap = fs.existsSync(path.join(CONFIG.geoDir, "peat.geojson"));
+  // The run row records which maps existed for this run, so "not assessed" lines cite real evidence.
+  const runParams = (() => {
+    const raw = eRun.rows[0]?.[4];
+    try {
+      return (typeof raw === "string" ? JSON.parse(raw) : raw) as { inputMaps?: { concessionPolygons?: number; peatPolygons?: number } };
+    } catch {
+      return {};
+    }
+  })();
+  const concessionMap = (runParams.inputMaps?.concessionPolygons ?? 0) > 0;
+  const peatMap = (runParams.inputMaps?.peatPolygons ?? 0) > 0;
   const eAir = await evidence(
     `SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(pm25) AS max_pm25 FROM {src}.pm25
       WHERE town = '${town}' AND valid_utc > ${ts(from)} AND valid_utc <= ${ts(r.centerMs)} GROUP BY kind ORDER BY kind`,
@@ -151,24 +159,24 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
       `Air quality: ${airModel[0]} PM2.5 at ${r.town.town} averaged ${num(airModel[2]).toFixed(1)} ug/m3 with a peak of ${num(airModel[3]).toFixed(1)} ug/m3 ${id(eAir)}.`,
     );
   L.push(
-    `Method: the air arriving at ${r.town.town} was traced backwards with an ensemble of ${r.members} trajectories, and each satellite fire was weighted by its fire radiative power, peat status and closeness to that air in space and time ${id(eRun)}.`,
+    `Method: the air arriving at ${r.town.town} was traced backwards with an ensemble of ${r.members} trajectories, and each satellite fire was weighted by fire radiative power (FRP), a peat emission factor and its closeness to that air in space and time ${id(eRun)}.`,
   );
   L.push("");
   L.push("## Findings");
   L.push(
     concessionMap
       ? `- Fires inside mapped concessions: ${range(concShare)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`
-      : `- Fires inside mapped concessions: not assessed, because no concession map is loaded; this is not evidence that the fires were outside concessions ${id(eMaps)}.`,
+      : `- Fires inside mapped concessions: not assessed, because no concession map is loaded; this is not evidence that the fires were outside concessions ${id(eRun)}.`,
   );
   L.push(
     peatMap
       ? `- Fires on peat: ${range(peatShare)} of the smoke signal, from ${peatShare.fires} detections ${id(eSplit)}.`
-      : `- Fires on peat: not assessed, because no peat map is loaded; this is not evidence that the fires were off peat ${id(eSplit)}.`,
+      : `- Fires on peat: not assessed, because no peat map is loaded; this is not evidence that the fires were off peat ${id(eRun)}.`,
   );
   L.push(
     concessionMap
       ? `- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} when the wind speed is varied ${id(eSplit)}.`
-      : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eMaps)}.`,
+      : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eRun)}.`,
   );
   if (holders.length) {
     L.push("");
@@ -201,7 +209,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   L.push("- Every cited query can be re-run with: npm run sl -- verify <evidence id>.");
   const text = L.join("\n");
 
-  const all = [eRun, eAir, eMaps, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
+  const all = [eRun, eAir, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
   const findingsOnly = text.split("## What this does and does not show")[0];
   const det = await judge(findingsOnly, all, { useModel: false });
   if (!det.ok) throw new Error(`Template failed its own citation check: ${det.problems.join("; ")}`);

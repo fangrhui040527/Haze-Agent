@@ -1,7 +1,9 @@
 // Orchestrates the physics: read wind + fires from the store, run trajectories,
 // write runs / points / attribution / projections back so Zetaris can query them.
 
-import { HOUR, PARAMS } from "./config.ts";
+import fs from "node:fs";
+import path from "node:path";
+import { CONFIG, HOUR, PARAMS } from "./config.ts";
 import { db, insertMany } from "./db.ts";
 import { haversineKm } from "./geo.ts";
 import { attribute, clusterFires, smokeIndex, type Cluster, type Fire, type SmokeHour } from "./plume.ts";
@@ -70,6 +72,14 @@ export async function loadFireRows(fromMs: number, toMs: number): Promise<Fire[]
   }));
 }
 
+/** Map polygons available to this run; 0 means the share cannot be assessed, not that it is zero. */
+async function inputMaps(): Promise<{ concessionPolygons: number; peatPolygons: number }> {
+  const c = await db().query("SELECT COUNT(*) AS n FROM concessions");
+  const peatFile = path.join(CONFIG.geoDir, "peat.geojson");
+  const peat = fs.existsSync(peatFile) ? (JSON.parse(fs.readFileSync(peatFile, "utf8")) as { features?: unknown[] }).features?.length ?? 0 : 0;
+  return { concessionPolygons: Number(c.rows[0]?.n ?? 0), peatPolygons: peat };
+}
+
 async function saveRun(runId: string, kind: string, town: string | null, centerMs: number, params: object) {
   for (const t of ["runs", "trajectory_points", "attribution", "projections"])
     await db().query(`DELETE FROM ${t} WHERE run_id = $1`, [runId]);
@@ -111,6 +121,9 @@ export async function runBackward(townName: string, centerMs: number, windowHour
     members: paths.length,
     backHours: PARAMS.backHours,
     levels: fields.map((f) => f.level),
+    // Recorded so cited run evidence shows the weighting and which maps existed for this run.
+    fireWeighting: "fire radiative power (FRP) x peat emission factor x space-time kernel",
+    inputMaps: await inputMaps(),
     PARAMS,
   });
   await savePoints(runId, paths);

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { deterministicCheck, splitSentences } from "../src/judge.ts";
+import { citedSentences, deterministicCheck, parseJudgeReply, splitSentences } from "../src/judge.ts";
 import type { Evidence } from "../src/query.ts";
 
 const ev = (id: string): Evidence => ({ evidence_id: id, backend: "postgres", sql: "SELECT 1", executed_utc: "", row_count: 1, sha256: "", rows: [[1]] });
@@ -26,4 +26,28 @@ test("company abbreviations do not split sentences", () => {
   const s = splitSentences("Holder: Contoh Sdn. Bhd. had 12 detections [E-0123456789]. Next line.");
   assert.equal(s.length, 2);
   assert.equal(deterministicCheck("Holder: Contoh Sdn. Bhd. had 12 detections [E-0123456789].", E).ok, true);
+});
+
+const S = citedSentences("Mean was 83.5 [E-0123456789]. Peak was 118 [E-0123456789]. No numbers here.");
+
+test("judge: only explicit supported=false verdicts are problems, reasons included", () => {
+  assert.deepEqual(S.length, 2);
+  const ok = parseJudgeReply('{"verdicts":[{"id":"S1","supported":true,"reason":"rounds to 83.5"},{"id":"S2","supported":true,"reason":"max is 118"}]}', S);
+  assert.deepEqual(ok, { ok: true, problems: [] });
+  const bad = parseJudgeReply('{"verdicts":[{"id":"S1","supported":false,"reason":"mean is 83.49, not 25"},{"id":"S2","supported":true}]}', S);
+  assert.equal(bad.ok, false);
+  assert.deepEqual(bad.problems, ["Mean was 83.5 [E-0123456789].: mean is 83.49, not 25"]);
+});
+
+test("judge: tolerates reasoning text around the JSON (Nemotron style)", () => {
+  const reply = 'The user wants me to check two sentences. S1 rounds fine.\n```json\n{"verdicts":[{"id":"S1","supported":true},{"id":"S2","supported":true}]}\n```';
+  assert.equal(parseJudgeReply(reply, S).ok, true);
+});
+
+test("judge: fails closed on unreadable output, missing verdicts and non-boolean verdicts", () => {
+  assert.deepEqual(parseJudgeReply("I think it is all fine.", S).problems, ["Judge returned unreadable output"]);
+  assert.deepEqual(parseJudgeReply('{"unsupported": []}', S).problems, ["Judge returned unreadable output"]);
+  const missing = parseJudgeReply('{"verdicts":[{"id":"S1","supported":true}]}', S);
+  assert.deepEqual(missing.problems, ['No judge verdict for: "Peak was 118 [E-0123456789]."']);
+  assert.equal(parseJudgeReply('{"verdicts":[{"id":"S1","supported":"yes"},{"id":"S2","supported":true}]}', S).ok, false);
 });

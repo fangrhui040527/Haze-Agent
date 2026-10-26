@@ -56,6 +56,8 @@ export async function judge(
   const memories = opts.memories ?? [];
   const det = deterministicCheck(text, evidence, memories);
   if (!det.ok || opts.useModel === false) return det;
+  const cited = citedSentences(text);
+  if (!cited.length) return det;
   const ev = [
     ...evidence.map((e) => `${e.evidence_id}\nSQL: ${e.sql}\nROWS: ${JSON.stringify(e.rows.slice(0, 40))}`),
     ...memories.map((m) => `M:${m.id}\nMEMORY: ${m.content}`),
@@ -65,18 +67,45 @@ export async function judge(
       {
         role: "system",
         content:
-          "You are a strict fact-checker. For each sentence that cites [E-...], check the cited rows support it " +
-          "(allow rounding). Columns ending in _epoch are seconds since 1970-01-01 UTC. Reply ONLY with JSON: {\"unsupported\": [\"<sentence>: <reason>\", ...]}. Empty list if all supported.",
+          "You are a strict fact-checker. For each numbered sentence, check that the rows it cites support it " +
+          "(allow rounding). Columns ending in _epoch are seconds since 1970-01-01 UTC. Reply ONLY with JSON, one verdict per sentence: " +
+          '{"verdicts": [{"id": "S1", "supported": true, "reason": "<short reason>"}]}. "supported" must be true or false.',
       },
-      { role: "user", content: `EVIDENCE:\n${ev}\n\nTEXT:\n${text}` },
+      { role: "user", content: `EVIDENCE:\n${ev}\n\nSENTENCES:\n${cited.map((s, i) => `S${i + 1}: ${s}`).join("\n")}` },
     ],
     { model: CONFIG.llm.modelJudge, temperature: 0, json: true },
   );
+  return { ...parseJudgeReply(message.content ?? "", cited), judgeModel: model };
+}
+
+/** Sentences the model lane checks: those citing evidence or memory. */
+export function citedSentences(text: string): string[] {
+  return splitSentences(text).filter((s) => [...s.matchAll(CITE)].length > 0);
+}
+
+/**
+ * Reads per-sentence verdicts. Fails closed: unreadable output, a missing verdict
+ * or anything other than an explicit `supported: true` is a problem. A model that
+ * also writes reasoning around the JSON is tolerated; only the JSON object counts.
+ */
+export function parseJudgeReply(content: string, sentences: string[]): Verdict {
+  const raw = content.replace(/```(?:json)?/g, "");
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  let verdicts: unknown;
   try {
-    const parsed = JSON.parse((message.content ?? "{}").replace(/^```(json)?|```$/g, "").trim());
-    const unsupported: string[] = parsed.unsupported ?? [];
-    return { ok: unsupported.length === 0, problems: unsupported, judgeModel: model };
+    verdicts = (JSON.parse(raw.slice(start, end + 1)) as { verdicts?: unknown }).verdicts;
   } catch {
-    return { ok: false, problems: ["Judge returned unreadable output"], judgeModel: model };
+    return { ok: false, problems: ["Judge returned unreadable output"] };
   }
+  if (!Array.isArray(verdicts)) return { ok: false, problems: ["Judge returned unreadable output"] };
+  const byId = new Map<string, { supported?: unknown; reason?: unknown }>();
+  for (const v of verdicts) if (v && typeof v === "object" && typeof (v as { id?: unknown }).id === "string") byId.set((v as { id: string }).id, v);
+  const problems: string[] = [];
+  sentences.forEach((s, i) => {
+    const v = byId.get(`S${i + 1}`);
+    if (!v) problems.push(`No judge verdict for: "${s}"`);
+    else if (v.supported !== true) problems.push(`${s}: ${typeof v.reason === "string" ? v.reason : "not supported by the cited rows"}`);
+  });
+  return { ok: problems.length === 0, problems };
 }
