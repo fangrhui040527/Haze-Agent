@@ -24,6 +24,10 @@ It defines units, scope, temporal/geographic coverage, comparison baselines,
 source types, and proposed pilot minimums, and distinguishes required model
 inputs from supporting context.
 
+For a concise current-status summary, remaining limitations, and the exact
+role and constraints of the NVIDIA Nemotron API integration, see
+[CRAWLER_STATUS_AND_AI_SUMMARY.md](./CRAWLER_STATUS_AND_AI_SUMMARY.md).
+
 The task-three acquisition pilot is implemented in
 [pilot_pm25.py](./pilot_pm25.py). It retrieves and validates only a bounded
 three-row monthly PM2.5 API sample, preserves raw and normalized artifacts
@@ -127,12 +131,14 @@ acquisition, method review, and any later accounting import.
 
 ### Remaining readiness tasks
 
-1. **Approve pilot scope and readiness criteria.** Fill the scope and approval
-   record in [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md): event,
-   source boundary, Malaysian study area, population/outcomes, periods,
-   counterfactual, economic perspective, and acceptable coverage/exclusions.
-   Name the project and domain reviewers. This is the current task; values
-   requiring project or scientific judgment are intentionally left pending.
+1. **Approve pilot scope and readiness criteria.** Partially started in
+   [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md): the current
+   direction is a recent fire-attributable haze episode in Klang, all
+   residents regardless of ethnicity, with intervention evaluation included.
+   The exact event/date range, boundary version, outcomes, intervention and
+   comparator, periods, counterfactual, economic perspective, acceptable
+   coverage/exclusions, and domain approvals remain pending. Do not begin
+   event-specific acquisition or claim approval until these are resolved.
 2. **Verify sources and acquisition paths.** For every required input, confirm
    dataset identity/version, fields/units, terms, spatial/temporal coverage,
    and repeatable access with the provider's official documentation. Mark
