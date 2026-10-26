@@ -330,6 +330,79 @@ describe('authorized World Model reuse services', () => {
     ).toThrow('intended use is required');
   });
 
+  it('blocks context disclosure when the requesting task lacks a required source grant', () => {
+    const store = createStore();
+    const owner = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Produce a restricted source.',
+        context_refs: [],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'restricted-owner',
+      { mode: 'fixture', tools: ['world.context'] },
+    ).task;
+    const ownerAssignment = store.createAssignments(
+      owner.id,
+      owner.current_run_id,
+      owner.objective_revision,
+      [
+        {
+          role: 'HazeOps',
+          definition_id: 'restricted.producer',
+          capability: 'evidence-synthesis',
+          definition_version: '1',
+          brief: 'Produce restricted evidence.',
+          tools: ['world.context'],
+        },
+      ],
+    )[0]!;
+    store.acquireAssignment(owner.id, ownerAssignment.id);
+    const restricted = store.saveArtifact(owner.id, identity, {
+      kind: 'restricted-source',
+      content: { detail: 'must not be disclosed' },
+      producer: { kind: 'assignment', id: ownerAssignment.id },
+      generation: 1,
+    });
+    const artifactRecord = store.world.projectArtifact(
+      restricted,
+      'fixture',
+    ).value;
+    const note = store.world.putRecord({
+      scope: { ...identity, mode: 'fixture' },
+      operation_key: 'restricted-note',
+      kind: 'research_note',
+      external_id: 'note:restricted',
+      payload: { title: 'Restricted note' },
+      producer: { kind: 'service', id: 'test' },
+    }).value;
+    store.world.relate({
+      scope: { ...identity, mode: 'fixture' },
+      operation_key: 'restricted-note-support',
+      kind: 'supported_by',
+      from: note.ref,
+      to: artifactRecord.ref,
+    });
+    const consumer = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Read the restricted note.',
+        context_refs: [],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'restricted-consumer',
+      { mode: 'fixture', tools: [] },
+    ).task;
+
+    expect(() =>
+      store.worldContext(consumer.id, identity, 'fixture', note.ref.id),
+    ).toThrow('Current source access prevents World Model context disclosure.');
+  });
+
   it('keeps record lookups scoped to the requesting identity', () => {
     const store = createStore();
     store.world.putRecord({
