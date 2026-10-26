@@ -38,6 +38,29 @@ non-approved host is blocked by the route guard.
 The output directory `run-output/` is local and ignored by Git. It contains a
 compact JSON/Markdown discovery report, not a mirror of page contents.
 
+## Bounded PM2.5 acquisition pilot
+
+The separate `pilot_pm25.py` script makes one fixed, bounded HTTPS GET to the
+reviewed Data.gov.my PM2.5 sample endpoint (maximum three records). It does not
+use the LLM, follow links, or write into Zetaris. Run:
+
+```powershell
+& 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' tools\damage_data_discovery\pilot_pm25.py
+& 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' tools\damage_data_discovery\test_pilot_pm25.py
+```
+
+The script preserves the exact response under `run-output\pilot\raw\`, writes
+a separate normalized sample under `run-output\pilot\normalized\`, and writes
+validation results under `run-output\pilot\reports\`. Reports include a
+SHA-256 reference to the raw response and checks for row shape/count, required
+fields, dates/order, missing values, duplicates, and numeric PM2.5 values.
+The sample response does not provide a verified unit or row-level geography,
+and this smoke test performs no independent monitor comparison. These are
+reported as unresolved; the pilot will not claim readiness for exposure
+modeling or a DamageAccountant estimate. A passing process exit means the
+bounded sample passed its available structural/value checks, not that the
+source is scientifically validated.
+
 ## Optional AI API credentials
 
 For local experiments, copy `.env.example` in this folder to `.env` and put

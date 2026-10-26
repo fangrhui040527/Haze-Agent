@@ -24,6 +24,13 @@ It defines units, scope, temporal/geographic coverage, comparison baselines,
 source types, and proposed pilot minimums, and distinguishes required model
 inputs from supporting context.
 
+The task-three acquisition pilot is implemented in
+[pilot_pm25.py](./pilot_pm25.py). It retrieves and validates only a bounded
+three-row monthly PM2.5 API sample, preserves raw and normalized artifacts
+separately, and records unresolved unit, geography, and independent-comparison
+gaps. It is an acquisition smoke test, not an event-level exposure or damage
+pilot.
+
 ## What the current tool can do
 
 The current implementation can:
