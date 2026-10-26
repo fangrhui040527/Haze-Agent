@@ -15,9 +15,9 @@ npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 ```
 
 Review the plan before rerunning without `--dry-run`. This publishes air-quality
-and wind FileStore snapshots plus the FIRMS source, without PostgreSQL. Existing
-SmokeLedger rows are retained under `legacy/smokeledger/` and are not migrated
-automatically.
+and wind FileStore snapshots plus the FIRMS source, without a separate ingestion
+database. The legacy SmokeLedger tooling has been removed. Existing database
+volumes and registered objects are not deleted or migrated automatically.
 
 The broader environmental and law models have their own lifecycle. When
 setting up those models on a fresh environment:

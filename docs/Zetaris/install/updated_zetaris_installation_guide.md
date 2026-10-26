@@ -1,7 +1,9 @@
 # Install Zetaris locally
 
-This guide covers a local Docker Compose installation. The local path was
-tested on a fresh install; see the [test record](zetaris-installation-test-record.md).
+This guide covers the local Docker Compose installation through the Haze
+repository-root `compose.yaml` and shared root `.env`. Deployment assets remain
+under `app/adapters/zetaris/zetaris-platform/`. The original standalone bundle
+was tested on a fresh install; see the [test record](zetaris-installation-test-record.md).
 For a managed compute cluster in your AWS account, use [Managed AWS cluster](managed-aws-cluster-guide.md).
 
 ## 1. Obtain the distribution and access
@@ -16,7 +18,6 @@ The bundle includes:
 | `driver`            | Query engine                                   |
 | `api`, `ui`         | API and browser interface                      |
 | `init`, `bootstrap` | Initialise volumes, keys, accounts and samples |
-| `ai-datasteward`    | AI data service                                |
 
 ### Download and licensing
 
@@ -29,7 +30,8 @@ You need the platform archive, its matching `.env`, registry credentials and a Z
 If your organisation has already arranged access, use the supplied archive and registry credentials. The Apache licence in the `getting-started` repository covers the data recipes only, not the platform images.
 
 The `getting-started` repository contains recipes and guides, not the platform
-images. Keep the supplied bundle files together and use its matching `.env`.
+images. Keep the supplied deployment assets together and merge its matching `.env` settings
+into the Haze root `.env` without replacing existing Haze settings.
 Some older bundle comments refer to `.env.example` or `env/make-env.sh`; those
 files are absent from this distribution. Ask the distributor for a matching
 `.env` if it is missing, and keep the supplied image references as a set.
@@ -54,24 +56,26 @@ On Docker Desktop, the memory allocation to Docker matters, not just the laptop'
 
 ### 2.2 Extract the bundle and authenticate
 
-From the directory containing the downloaded archive:
+From the Haze repository root, after placing the bundle assets in
+`app/adapters/zetaris/zetaris-platform/`:
 
 ```bash
-unzip zetaris-platform.zip
-cd zetaris-platform
 docker version
 docker compose version
 docker login zetarishackathon.azurecr.io
-./preflight.sh
+bash app/adapters/zetaris/zetaris-platform/preflight.sh
 ```
 
-Enter the registry credentials issued by Zetaris at the prompts. Run subsequent platform commands from this directory, which contains `docker-compose.yml`.
+Enter the registry credentials issued by Zetaris at the prompts. Run all subsequent
+platform commands from the Haze repository root, which contains `compose.yaml`.
 
 Resolve every preflight failure before proceeding. The registry check detects a stored login configuration; `docker compose pull` is the definitive check that the credentials can access the required images. Check free space in Docker Desktop's disk image as well as on the host.
 
 ### 2.3 Configure before first startup
 
-Edit the supplied `.env` in an editor. Keep the issued image settings and other supplied values. Set or confirm:
+For a new checkout, copy root `.env.example` to root `.env` without overwriting an
+existing file. Merge the matching deployment settings from the supplied bundle
+into root `.env`; keep its issued image references and existing credentials. Set or confirm:
 
 | Variable                 | Local value or action                                      |
 | ------------------------ | ---------------------------------------------------------- |
@@ -112,18 +116,18 @@ Use service readiness rather than elapsed time to decide when startup is complet
 
 ```bash
 docker compose logs --tail=80 driver api bootstrap
-./verify.sh
+bash app/adapters/zetaris/zetaris-platform/verify.sh
 ```
 
 Expected results:
 
-- `postgres`, `driver`, `api`, `ui` and `ai-datasteward` are running; check their health in `docker compose ps --all`.
+- `postgres`, `driver`, `api` and `ui` are running; check their health in `docker compose ps --all`.
 - `init` and `bootstrap` show `Exited (0)`. They are successful one-time setup jobs.
 - `verify.sh` passes all nine checks, including login and a query through the UI, API and query engine.
 
 If bootstrap is still running, wait for it to finish and rerun the verifier. If
 `ui` checks fail immediately after bootstrap finishes, wait a minute and run
-`./verify.sh` again before troubleshooting. Continue with section 3.
+`bash app/adapters/zetaris/zetaris-platform/verify.sh` again before troubleshooting. Continue with section 3.
 
 ## 3. First login and initial verification
 

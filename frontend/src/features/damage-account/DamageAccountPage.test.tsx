@@ -24,6 +24,7 @@ function accountRun(saved = true): AgentRun {
     serviceLabel: 'Fixture',
     ask: vi.fn(),
     cancel: vi.fn(),
+    reset: vi.fn(),
     task: saved
       ? {
           id: taskId,

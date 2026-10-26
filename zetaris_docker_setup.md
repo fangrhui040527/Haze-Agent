@@ -1,80 +1,68 @@
-# Zetaris Platform — Ubuntu commands
+# Run Zetaris from Haze Agent
 
-Run these commands from inside the `zetaris-platform` folder.
+Run all Docker Compose commands from the Haze repository root. The root
+`compose.yaml` starts Zetaris's PostgreSQL metastore, init job, driver, API,
+UI and sample-data bootstrap. Platform assets remain in
+`app/adapters/zetaris/zetaris-platform/`.
 
-## Step 0 — Unzip and Configure Environment
+## Configure
 
-1. Unzip your `zetaris-platform.zip` into `app/adapters/zetaris/zetaris-platform`.
-2. Ensure `.env` and `.env.server.example` are present in the current `zetaris-platform` folder (copy `.env.server.example` to `.env`).
-3. In `.env`, configure the administrator credentials before proceeding to the next steps:
-   ```env
-   ZETARIS_ADMIN_PASSWORD=<your_secure_password>
-   ZETARIS_ADMIN_EMAIL=<your_admin_email>
-   ZETARIS_ADMIN_ORG=hack4hire
-   ```
-   > **Note:** The admin account is created during the initial setup. Configure these values before starting the platform for the first time. The password must be at least 8 characters containing lowercase, uppercase, a digit, and one of: `$ @ ! % * ? &`.
+Start Docker Desktop. For a new checkout, copy `.env.example` to root `.env`
+without replacing an existing file. Set the matching `DRIVER_IMAGE`,
+`API_IMAGE` and `UI_IMAGE` references issued with your Zetaris download, plus
+`POSTGRES_PASSWORD`, `ZETARIS_ADMIN_EMAIL`, `ZETARIS_ADMIN_PASSWORD` and
+`ZETARIS_ADMIN_ORG`. Retain the supplied settings for any existing install.
+Haze model credentials, Zetaris client credentials and deployment settings all
+use this root `.env`.
 
-## Step 1 — Preflight
+The administrator password must be at least eight characters and contain a
+lowercase letter, an uppercase letter, a digit and one of `$ @ ! % * ? &`.
+Existing accounts are not reset by changing bootstrap settings.
 
-```bash
-./preflight.sh
+Sign in to `zetarishackathon.azurecr.io` using the registry credentials issued
+by Zetaris, then validate the deployment without printing resolved secrets:
+
+```sh
+docker login zetarishackathon.azurecr.io
+docker compose config --quiet
+docker compose config --services
 ```
 
-## Step 2 — Pull the images
+On WSL, Linux or macOS, check Docker resources and registry access with:
 
-```bash
+```sh
+bash app/adapters/zetaris/zetaris-platform/preflight.sh
+```
+
+## Start and inspect
+
+```sh
 docker compose pull
-```
-
-## Step 3 — Start Zetaris
-
-```bash
 docker compose up -d
-```
-
-## Step 4 — Check the containers
-
-```bash
-docker compose ps
-```
-
-## Step 5 — View driver logs
-
-```bash
+docker compose ps --all
 docker compose logs -f driver
 ```
 
-Press `Ctrl+C` to stop viewing logs.
+The first startup can take several minutes. `init` and `bootstrap` finishing
+with `Exited (0)` is expected. Open <http://localhost:3000> after the services
+are ready, and sign in with the configured administrator account.
 
-## Step 6 — Verify the installation
+On WSL, Linux or macOS, run the read-only platform verifier:
 
-```bash
-./verify.sh
+```sh
+bash app/adapters/zetaris/zetaris-platform/verify.sh
 ```
 
-## Step 7 — Open Zetaris
+## Stop
 
-Open:
-
-```text
-http://localhost:3000
-```
-
-## Step 8 — Sign in
-
-```text
-Username: admin@zetaris.com
-Password: Zetaris1@
-```
-
-## Step 9 — Stop Zetaris when needed
-
-```bash
+```sh
 docker compose down
 ```
 
-To stop and delete all Zetaris data:
+The Compose project remains named `zetaris`, so it reuses existing Zetaris
+containers and named volumes after this move. The legacy SmokeLedger service,
+fetchers and USL bootstrap have been removed. Existing SmokeLedger volumes and
+registered objects are not deleted or migrated by this repository change.
 
-```bash
-docker compose down -v
-```
+See the [platform guide](app/adapters/zetaris/zetaris-platform/README.md) for
+HTTPS, sizing, JDBC and troubleshooting.

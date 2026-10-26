@@ -13,13 +13,42 @@ Use Node **24.22.1** and npm **11.8.0**, as pinned in [.nvmrc](.nvmrc) and [pack
 ```sh
 npm ci
 npm --prefix frontend ci
-npm run build
-npm --prefix frontend run dev
+npm run dev
 ```
 
+`npm run dev` builds the backend, then starts Vite with the frontend and the shared
+dashboard, task and World Model APIs, usually at `http://localhost:5173`. Keep this
+terminal running; stop it with `Ctrl+C`. Run the command again after backend changes
+to rebuild them. The standalone `tasks:serve` command is an alternative API entry
+point and must not run alongside Vite using the same state directory.
+
+The root dev command shows a compact Haze Agent banner with the actual app URL
+and total startup time, including the backend build. Build failures and runtime
+warnings remain visible. Edit `frontend/scripts/dev-display-plugin.ts` to customize
+the banner text. Use `npm run --silent dev` to also hide npm's initial script header;
+`npm run build` and `npm --prefix frontend run dev` retain their detailed output.
+Vite options still work, for example `npm run dev -- --port 5174`.
+
+Zetaris is a separate service for external evidence retrieval. If you use the
+included local platform, configure root `.env` as described below, start Docker
+Desktop and then run:
+
+```sh
+docker compose up -d
+```
+
+Allow Zetaris to finish starting before making requests that use it. See the
+[platform setup guide](app/adapters/zetaris/zetaris-platform/README.md) for its
+first-time image registry and configuration requirements. The root
+[compose.yaml](compose.yaml) starts Zetaris, including its metastore database.
+The separate legacy SmokeLedger database and its tooling have been removed.
+
 Copy [.env.example](.env.example) to root `.env`. This gitignored file holds
-the server-side Haze, PostgreSQL, Zetaris and ingestion settings. For live
-agent requests, set your own `NVIDIA_API_KEY` (or use
+the server-side Haze, Zetaris deployment and ingestion settings. For a local
+Zetaris deployment, fill in the issued image references, `POSTGRES_PASSWORD` and
+`ZETARIS_ADMIN_PASSWORD` before running Compose. Retain existing values when
+moving an installation; the `zetaris` project name reuses its existing volumes.
+For live agent requests, set your own `NVIDIA_API_KEY` (or use
 `HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
 `HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
 requires an existing Zetaris instance and your own `ZETARIS_API_KEY`; configure
@@ -35,8 +64,8 @@ require keys.
 The examples provide configuration names and local development defaults, not
 hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
 Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
-have their own source folders alongside air quality. PostgreSQL is no longer
-required for these source-ingestion commands or the PM2.5 task. Preview a bounded
+have their own source folders alongside air quality. These commands publish
+directly to Zetaris without a separate ingestion database. Preview a bounded
 setup from the repository root before applying it:
 
 ```sh
@@ -47,9 +76,9 @@ npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 
 After reviewing the plan, rerun the selected command without `--dry-run` to
 fetch and register the source snapshots. A task reads the published snapshot;
-it does not refresh it. Existing SmokeLedger PostgreSQL data and its optional
-USL remain under [legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md).
-No existing database rows or saved task captures are migrated automatically.
+it does not refresh it. Removing the old SmokeLedger tooling does not delete
+existing Docker volumes or registered Zetaris objects. Historical database rows
+are not migrated automatically; saved task captures remain readable.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris

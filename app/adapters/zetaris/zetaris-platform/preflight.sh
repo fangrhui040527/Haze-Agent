@@ -7,10 +7,13 @@
 # 4GB VM fails after the download finishes, with an out-of-memory kill that says nothing
 # about which setting to change.
 #
-# Usage: ./preflight.sh
+# Usage from the Haze repository root: bash app/adapters/zetaris/zetaris-platform/preflight.sh
 # Exits non-zero if a required check fails. Warnings do not.
 
 set -uo pipefail
+
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$HERE/../../../.."
 
 MIN_MEM_GB=6        # ~3GB measured idle; rest is headroom for queries
 REC_MEM_GB=8
@@ -173,7 +176,7 @@ else
 fi
 
 # --- leftover volumes ---------------------------------------------------------------------
-# docker-compose.yml pins `name: zetaris`, so a second install on the same machine adopts the
+# Root compose.yaml pins `name: zetaris`, so a second install on the same machine adopts the
 # volumes of the first. That is usually what you want -- until the earlier one was created
 # with a different POSTGRES_PASSWORD, because Postgres only applies that password when it
 # initialises an empty data directory. The stack then fails deep inside the query engine with
@@ -209,7 +212,7 @@ fi
 printf '\n'
 if [ "$fail" -gt 0 ]; then
     printf '%d check(s) failed, %d warning(s).\n' "$fail" "$warn"
-    printf 'Fix the failures above, then run ./preflight.sh again before downloading.\n'
+    printf 'Fix the failures above, then run bash app/adapters/zetaris/zetaris-platform/preflight.sh again before downloading.\n'
     exit 1
 fi
 if [ "$warn" -gt 0 ]; then
