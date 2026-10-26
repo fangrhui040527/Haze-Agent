@@ -421,6 +421,14 @@ describe('general runtime', () => {
         affected_assignment_ids: [extractor.id],
       },
     );
+    expect(() =>
+      instance.store.saveResult(
+        task.id,
+        task.current_run_id,
+        task.generation,
+        task.result!,
+      ),
+    ).toThrow('fenced');
     expect(
       instance.store.world.currentAcceptance(
         { ...localTaskIdentity, mode: task.mode },

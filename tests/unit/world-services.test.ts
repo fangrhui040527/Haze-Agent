@@ -27,10 +27,13 @@ afterEach(() => {
   }
 });
 
-function createStore() {
+function createStore(acceptancePolicy?: 'research-v1') {
   const directory = mkdtempSync(join(tmpdir(), 'haze-world-services-'));
   directories.push(directory);
-  const store = new TaskStore(directory, { recover: false });
+  const store = new TaskStore(directory, {
+    recover: false,
+    ...(acceptancePolicy ? { acceptancePolicy } : {}),
+  });
   stores.push(store);
   return store;
 }
@@ -83,7 +86,7 @@ describe('authorized World Model reuse services', () => {
   });
 
   it('returns bounded lookup, current lineage, and saves exact retrieved context references', async () => {
-    const store = createStore();
+    const store = createStore('research-v1');
     const source = store.importArtifact(
       {
         schema_version: 'haze.artifact.import.v3',
@@ -105,7 +108,7 @@ describe('authorized World Model reuse services', () => {
       identity,
       'source-adoption',
       { mode: 'fixture' },
-    );
+    ).task;
     const artifactReference = store.world.projectArtifact(
       source,
       'fixture',
@@ -124,6 +127,34 @@ describe('authorized World Model reuse services', () => {
       kind: 'supported_by',
       from: sourceWorldRecord.ref,
       to: artifactReference.ref,
+    });
+    const accepted = store.world.evaluateAcceptance({
+      scope: { ...identity, mode: 'fixture' },
+      subject: sourceWorldRecord.ref,
+      stated_use: 'Summarize this note for the current investigation.',
+      status: 'accepted',
+      policy: {
+        id: store.worldAcceptancePolicy.id,
+        version: store.worldAcceptancePolicy.version,
+        sha256: store.worldAcceptancePolicy.sha256,
+      },
+      support_revisions: [
+        {
+          schema_version: 'haze.world.support-revision.v1',
+          id: 'source-support',
+          scope: { ...identity, mode: 'fixture' },
+          revision: 1,
+          kind: 'artifact',
+          sha256: source.sha256,
+          artifact: {
+            id: source.id,
+            version: source.version,
+            sha256: source.sha256,
+          },
+          recorded_at: source.created_at,
+        },
+      ],
+      actor: { kind: 'service', id: 'test-policy' },
     });
     const consumer = store.admit(
       {
@@ -149,7 +180,7 @@ describe('authorized World Model reuse services', () => {
     expect(detail.status).toMatchObject({
       schema_version: 'haze.world.current-status.v1',
       record_id: sourceWorldRecord.ref.id,
-      acceptances: [],
+      acceptances: [expect.objectContaining({ status: 'accepted' })],
     });
     expect(() =>
       store.worldRecordDetail(
@@ -224,20 +255,48 @@ describe('authorized World Model reuse services', () => {
     expect(history.entries.map((entry) => entry.event_kind)).toContain(
       'record_created',
     );
-    const pinnedHold = store.world.hold(
+    const pinnedHold = store.world.holdForSupportArtifact(
       { ...identity, mode: 'fixture' },
-      sourceWorldRecord.ref,
+      source.id,
       'The pinned World Model record changed.',
       'correction',
-    );
+      { kind: 'user', id: identity.principal },
+    )[0]!;
+    expect(pinnedHold.subject).toEqual(sourceWorldRecord.ref);
+    expect(
+      store.world.currentAcceptance(
+        { ...identity, mode: 'fixture' },
+        accepted.id,
+        { policyHash: accepted.policy.sha256 },
+      )?.status,
+    ).toBe('held');
+    expect(
+      store.world.acceptancesForRecord(
+        { ...identity, mode: 'fixture' },
+        sourceWorldRecord.ref.id,
+      )[0]?.status,
+    ).toBe('held');
     const lifecycleEvents = store
       .events(consumer.id, identity)
       .events.filter((event) => event.type === 'world_lifecycle_changed');
-    expect(lifecycleEvents).toHaveLength(1);
-    expect(lifecycleEvents[0]?.data).toMatchObject({
-      event_kind: 'hold_created',
-      record_ids: [sourceWorldRecord.ref.id],
-    });
+    expect(lifecycleEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          data: {
+            event_kind: 'hold_created',
+            record_ids: [sourceWorldRecord.ref.id],
+            world_event_id: expect.any(String),
+            world_sequence: expect.any(Number),
+          },
+        }),
+        expect.objectContaining({
+          data: expect.objectContaining({
+            event_kind: 'acceptance_evaluated',
+            record_ids: [sourceWorldRecord.ref.id],
+          }),
+        }),
+      ]),
+    );
     const worldEventCount = store.world.events({
       ...identity,
       mode: 'fixture',
@@ -273,7 +332,7 @@ describe('authorized World Model reuse services', () => {
       reopened
         .events(consumer.id, identity)
         .events.filter((event) => event.type === 'world_lifecycle_changed'),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it('rejects mode crossover and requires an explicit intended use', () => {

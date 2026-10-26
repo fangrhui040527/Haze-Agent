@@ -673,4 +673,125 @@ describe('transactional World Model writes', () => {
         .filter((event) => event.event_kind === 'acceptance_evaluated'),
     ).toHaveLength(1);
   });
+
+  it('holds transitive artifact support while leaving unrelated accepted records usable', () => {
+    const store = createStore();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'source.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Original support.').toString('base64'),
+      },
+      identity,
+      'support-source',
+    ).artifact;
+    const task = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Create work derived from the source.',
+        context_refs: [artifactRef(source)],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'support-task',
+      { mode: 'fixture' },
+    ).task;
+    const assignment = store.createAssignments(
+      task.id,
+      task.current_run_id,
+      task.objective_revision,
+      [
+        {
+          role: 'HazeOps',
+          definition_id: 'test.derived-work',
+          capability: 'test',
+          definition_version: '1',
+          brief: 'Create a derived artifact.',
+          inputs: [artifactRef(source)],
+        },
+      ],
+    )[0]!;
+    store.acquireAssignment(task.id, assignment.id);
+    const derived = store.saveArtifact(task.id, identity, {
+      kind: 'test.derived-work',
+      content: { summary: 'Derived from the source.' },
+      producer: { kind: 'assignment', id: assignment.id },
+      dependencies: [artifactRef(source)],
+      generation: task.generation,
+    });
+
+    const acceptedRecord = store.world.putRecord(
+      put(
+        'transitive-accepted',
+        'evidence_synthesis_bundle',
+        'bundle:derived',
+        {
+          summary: 'Uses derived support.',
+        },
+      ),
+    ).value;
+    const unrelatedRecord = store.world.putRecord(
+      put('unrelated-accepted', 'research_note', 'note:independent', {
+        summary: 'Independent evidence.',
+      }),
+    ).value;
+    const policy = {
+      id: 'research-v1',
+      version: '1',
+      sha256: 'd'.repeat(64),
+    };
+    const support = {
+      schema_version: 'haze.world.support-revision.v1' as const,
+      id: 'derived-support',
+      scope,
+      revision: 1,
+      kind: 'artifact' as const,
+      sha256: derived.sha256,
+      artifact: artifactRef(derived),
+      recorded_at: at,
+    };
+    const accepted = store.world.evaluateAcceptance({
+      scope,
+      subject: acceptedRecord.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy,
+      support_revisions: [support],
+      actor: { kind: 'service', id: 'test-policy' },
+      evaluated_at: at,
+    });
+    const unrelated = store.world.evaluateAcceptance({
+      scope,
+      subject: unrelatedRecord.ref,
+      stated_use: 'evidence-synthesis',
+      status: 'accepted',
+      policy,
+      support_revisions: [],
+      actor: { kind: 'service', id: 'test-policy' },
+      evaluated_at: at,
+    });
+
+    const holds = store.world.holdForSupportArtifact(
+      scope,
+      source.id,
+      'The original source changed.',
+      'correction',
+    );
+
+    expect(holds).toEqual([
+      expect.objectContaining({ subject: acceptedRecord.ref }),
+    ]);
+    expect(
+      store.world.currentAcceptance(scope, accepted.id, {
+        policyHash: policy.sha256,
+      })?.status,
+    ).toBe('held');
+    expect(
+      store.world.currentAcceptance(scope, unrelated.id, {
+        policyHash: policy.sha256,
+      })?.status,
+    ).toBe('accepted');
+  });
 });
