@@ -404,7 +404,9 @@ export function WorldModelPage() {
                             ? 'Try another record kind or ID.'
                             : 'Run an evidence task to retain records here. Explore the reference sandbox to try Meterless with sample data.'}
                         </p>
-                        {!kind && !query && <Link to="/dashboard">Start a task</Link>}
+                        {!kind && !query && (
+                          <Link to="/dashboard">Start a task</Link>
+                        )}
                       </div>
                     )}
                     <ul className={styles.recordList}>
