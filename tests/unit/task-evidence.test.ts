@@ -3,6 +3,7 @@ import {
   PM25_SOURCE_ID,
   resolveEvidenceSource,
 } from '../../app/capabilities/pm25/evidence.js';
+import { analyzePm25 } from '../../app/capabilities/pm25/methods.js';
 
 const env = {
   ZETARIS_API_KEY: 'test-secret-not-in-artifacts',
@@ -71,6 +72,41 @@ describe('Zetaris SmokeLedger PM2.5 evidence boundary', () => {
     expect(body.sql).toContain("'2026-10-24 03:00:00.000'");
     expect(body.sql).toContain("p.`source` = 'open-meteo-air-quality'");
   });
+
+  it('normalizes numeric strings returned by the Zetaris SQL API', async () => {
+    const stringNumbers = [...row];
+    stringNumbers[4] = '18.5';
+    stringNumbers[7] = '3.04';
+    stringNumbers[8] = '101.44';
+    const capture = await resolveEvidenceSource(
+      env,
+      vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(Response.json({ data: [stringNumbers] })),
+    ).retrieve(scope, signal());
+    expect(capture.rows[0]).toMatchObject({
+      value: 18.5,
+      latitude: 3.04,
+      longitude: 101.44,
+    });
+    expect(analyzePm25(capture, scope).coverage.usable_row_count).toBe(1);
+  });
+
+  it.each(['', '18.5µg/m3', 'NaN', 'Infinity'])(
+    'rejects malformed string concentrations: %s',
+    async (value) => {
+      const malformed = [...row];
+      malformed[4] = value;
+      await expect(
+        resolveEvidenceSource(
+          env,
+          vi
+            .fn<typeof fetch>()
+            .mockResolvedValue(Response.json({ data: [malformed] })),
+        ).retrieve(scope, signal()),
+      ).rejects.toMatchObject({ code: 'invalid_evidence' });
+    },
+  );
 
   it('selects latest ingestion per sample and preserves null values as unknown', async () => {
     const newest = [...row];
