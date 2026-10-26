@@ -59,6 +59,7 @@ import {
   type WorldLineageInput,
   type WorldLookupInput,
 } from '../contracts/world-services.js';
+import { worldRecordDetailResponseSchema } from '../contracts/world-api.js';
 import { migrateWorldSchema } from './world-schema.js';
 import { WorldModelStore } from './world-store.js';
 import {
@@ -397,6 +398,22 @@ export class TaskStore {
       acceptances: current.filter(
         (value): value is WorldAcceptanceOutcome => value !== undefined,
       ),
+    });
+  }
+  worldRecordDetail(taskId: string, identity: TaskIdentity, recordId: string) {
+    const task = this.core(taskId, identity);
+    const context = this.worldContext(taskId, identity, task.mode, recordId);
+    return worldRecordDetailResponseSchema.parse({
+      schema_version: 'haze.world.record-detail.v1',
+      record: context.record,
+      relationships: context.relationships,
+      support_artifacts: context.support_artifacts,
+      payload: context.payload,
+      status: {
+        schema_version: 'haze.world.current-status.v1',
+        record_id: recordId,
+        acceptances: context.acceptances,
+      },
     });
   }
   worldLineage(

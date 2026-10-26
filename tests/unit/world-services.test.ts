@@ -3,6 +3,11 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ToolContext } from '../../app/orchestration/ports.js';
+import {
+  worldApiPageQuerySchema,
+  worldRecordDetailResponseSchema,
+  worldRecordNotFoundSchema,
+} from '../../app/contracts/world-api.js';
 import { TaskStore } from '../../app/tasks/store.js';
 import { createWorldModelTools } from '../../app/tasks/world-tools.js';
 
@@ -51,6 +56,32 @@ function createToolContext(
 }
 
 describe('authorized World Model reuse services', () => {
+  it('validates versioned API detail, status, pagination, and not-found contracts', () => {
+    expect(
+      worldApiPageQuerySchema.parse({ limit: '25', cursor: '10' }),
+    ).toEqual({ limit: 25, cursor: '10' });
+    expect(() => worldApiPageQuerySchema.parse({ limit: '101' })).toThrow();
+    expect(() => worldApiPageQuerySchema.parse({ cursor: '-1' })).toThrow();
+    expect(
+      worldRecordDetailResponseSchema.shape.schema_version.parse(
+        'haze.world.record-detail.v1',
+      ),
+    ).toBe('haze.world.record-detail.v1');
+    expect(
+      worldRecordNotFoundSchema.parse({
+        error: {
+          code: 'world_record_not_found',
+          message: 'World Model record not found.',
+        },
+      }).error.code,
+    ).toBe('world_record_not_found');
+    expect(() =>
+      worldRecordNotFoundSchema.parse({
+        error: { code: 'world_record_not_found', message: 'Not found' },
+      }),
+    ).toThrow();
+  });
+
   it('returns bounded lookup, current lineage, and saves exact retrieved context references', async () => {
     const store = createStore();
     const source = store.importArtifact(
@@ -109,6 +140,24 @@ describe('authorized World Model reuse services', () => {
         tools: ['world.lookup', 'world.context', 'world.lineage'],
       },
     ).task;
+    const detail = store.worldRecordDetail(
+      consumer.id,
+      identity,
+      sourceWorldRecord.ref.id,
+    );
+    expect(detail.record.ref).toEqual(sourceWorldRecord.ref);
+    expect(detail.status).toMatchObject({
+      schema_version: 'haze.world.current-status.v1',
+      record_id: sourceWorldRecord.ref.id,
+      acceptances: [],
+    });
+    expect(() =>
+      store.worldRecordDetail(
+        consumer.id,
+        { principal: 'other-user', workspace: 'shared-space' },
+        sourceWorldRecord.ref.id,
+      ),
+    ).toThrow('Task not found');
     const assignment = store.createAssignments(
       consumer.id,
       consumer.current_run_id,
