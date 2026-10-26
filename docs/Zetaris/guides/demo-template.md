@@ -12,9 +12,9 @@ Copy this into your project notes and fill in the sections that apply.
 
 ## What data did you use?
 
-| Source and version | Your tables or views | What each row means | Dates covered and limitations |
-|---|---|---|---|
-| Add the source link and required attribution | Use your team's names | Describe one row | Note missing data or uncertain matches |
+| Source and version                           | Your tables or views  | What each row means | Dates covered and limitations          |
+| -------------------------------------------- | --------------------- | ------------------- | -------------------------------------- |
+| Add the source link and required attribution | Use your team's names | Describe one row    | Note missing data or uncertain matches |
 
 ## How can someone run it?
 

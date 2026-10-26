@@ -64,10 +64,10 @@ FROM pokeapi.pikachu_abilities_table;
 
 The [recorded test](../install/zetaris-installation-test-record.md) returned:
 
-| Ability | Hidden? |
-|---|---|
-| static | No |
-| lightning-rod | Yes |
+| Ability       | Hidden? |
+| ------------- | ------- |
+| static        | No      |
+| lightning-rod | Yes     |
 
 If your result differs, inspect `pikachu_facts`. REST queries can fetch the API again; follow PokéAPI's fair-use guidance.
 

@@ -41,13 +41,13 @@ jobs:
         run: npm run verify:pins
       - name: Check types
         run: npm run typecheck
+      - name: Build
+        run: npm run build
       - name: Lint
         run: npm run lint
       - name: Check formatting
         run: npm run format:check
-      - name: Build
-        run: npm run build
-      - name: Build frontend and check browser/server integration types
+      - name: Build frontend and check browser/API integration types
         run: npm --prefix frontend run build
       - name: Test general frontend results, questions, controls and receipts
         run: npm --prefix frontend test
@@ -59,6 +59,7 @@ jobs:
         run: npm run test:integration
         env:
           STATE_DIR: ${{ runner.temp }}/haze-general-verification
+
   postgres:
     name: PostgreSQL saver integration
     runs-on: ubuntu-latest

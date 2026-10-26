@@ -310,7 +310,7 @@ export class TaskRuntime {
         deadline: new Date(
           Date.now() + (investigation ? 300000 : 90000),
         ).toISOString(),
-        max_model_input_bytes: 16384,
+        max_model_input_bytes: 24576,
         max_model_output_tokens: 1200,
         reserved_model_calls: 2,
         ...this.options.limits,

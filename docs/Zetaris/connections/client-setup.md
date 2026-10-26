@@ -20,12 +20,12 @@ without replacing its other values. Scripts also find the top-level checkout's
 Keep passwords and API keys in this local, gitignored file. Never put them in
 a prompt, source file, command output or URL.
 
-| Variable | Set it to |
-|---|---|
-| `ZETARIS_JDBC_URL` | `jdbc:zetaris:lightning@localhost:10000` locally, or the supplied JDBC URL |
-| `ZETARIS_JDBC_JAR` | Full path to the matching Zetaris driver JAR. If unset, provide the path when asked; scripts do not search for it. |
-| `ZETARIS_USERNAME` | Your Zetaris user ID |
-| `ZETARIS_PASSWORD` | Your Zetaris password |
+| Variable             | Set it to                                                                                                            |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `ZETARIS_JDBC_URL`   | `jdbc:zetaris:lightning@localhost:10000` locally, or the supplied JDBC URL                                           |
+| `ZETARIS_JDBC_JAR`   | Full path to the matching Zetaris driver JAR. If unset, provide the path when asked; scripts do not search for it.   |
+| `ZETARIS_USERNAME`   | Your Zetaris user ID                                                                                                 |
+| `ZETARIS_PASSWORD`   | Your Zetaris password                                                                                                |
 | `ZETARIS_USER_AGENT` | Your app name and contact email, only for create scripts that call external APIs. SEC EDGAR requires a real contact. |
 
 ## 4. Prepare JDBC
@@ -122,15 +122,15 @@ Lightning databases; an empty list is normal on a clean instance.
 
 ## 10. Troubleshooting
 
-| Symptom | Check |
-|---|---|
-| `Unable to locate a Java Runtime` | Find a JDK and set `JAVA_HOME`. Ask before installing one. |
-| Driver JAR missing or `ClassNotFoundException` | Set the full path to the matching driver JAR. Do not guess a path. |
-| `externally-managed-environment` from `pip` | Use the repository's `.venv`; do not install packages into system Python. |
-| REST checks fail during JDBC preflight | Read the JDBC result separately. A REST failure alone does not mean JDBC is unavailable. |
-| A source is missing from `SHOW DATASOURCES` | Check `SHOW LIGHTNING DATABASES`; REST and file registrations appear there. |
-| `Table not found` | Use the qualified name `<source>.<table>`. |
-| JDBC `mismatched input ... expecting` | Send one statement per call. The `run_sql.py` runner splits scripts and keeps `COMPILE USL` intact. |
+| Symptom                                        | Check                                                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Unable to locate a Java Runtime`              | Find a JDK and set `JAVA_HOME`. Ask before installing one.                                          |
+| Driver JAR missing or `ClassNotFoundException` | Set the full path to the matching driver JAR. Do not guess a path.                                  |
+| `externally-managed-environment` from `pip`    | Use the repository's `.venv`; do not install packages into system Python.                           |
+| REST checks fail during JDBC preflight         | Read the JDBC result separately. A REST failure alone does not mean JDBC is unavailable.            |
+| A source is missing from `SHOW DATASOURCES`    | Check `SHOW LIGHTNING DATABASES`; REST and file registrations appear there.                         |
+| `Table not found`                              | Use the qualified name `<source>.<table>`.                                                          |
+| JDBC `mismatched input ... expecting`          | Send one statement per call. The `run_sql.py` runner splits scripts and keeps `COMPILE USL` intact. |
 
 For JDBC script options, see [`scripts/HOWTO.md`](../../../app/adapters/zetaris/scripts/HOWTO.md).
 
@@ -139,10 +139,10 @@ For JDBC script options, see [`scripts/HOWTO.md`](../../../app/adapters/zetaris/
 Use REST to run SQL or call platform endpoints over HTTP. No Java runtime or
 JDBC driver is needed. Choose the route used by your client:
 
-| Route | Endpoint | Authentication |
-|---|---|---|
-| Direct REST API | API base at `/api/v1.0` | User-created API key, organisation ID and request ID |
-| UI proxy | Web UI origin, calls to `/api/proxy/...` | API key, or UI login with user ID and password |
+| Route           | Endpoint                                 | Authentication                                       |
+| --------------- | ---------------------------------------- | ---------------------------------------------------- |
+| Direct REST API | API base at `/api/v1.0`                  | User-created API key, organisation ID and request ID |
+| UI proxy        | Web UI origin, calls to `/api/proxy/...` | API key, or UI login with user ID and password       |
 
 For Zetaris Cloud or another remote instance, use the URLs supplied to you.
 The routes use separate addresses: put the API base in `ZETARIS_REST_URL` and
@@ -163,17 +163,17 @@ without replacing its other values. Scripts also find the top-level checkout's
 Keep passwords and API keys in this local, gitignored file. Never put them in
 a prompt, source file, command output or URL.
 
-| Variable | Used by | Set it to |
-|---|---|---|
-| `ZETARIS_REST_URL` | Direct REST | API base ending in `/api/v1.0`; local default is `http://localhost:8888/api/v1.0` |
-| `ZETARIS_ORG_ID` | Both routes | Numeric **ID** under **Management → Organisation**. See [Find your organisation ID](#3-find-your-organisation-id). |
-| `ZETARIS_API_KEY` | Both routes | API key you create in the Zetaris GUI |
-| `ZETARIS_BASE_URL` | UI-proxy helpers | Web UI origin, such as `http://localhost:3000`; no path after the origin |
-| `ZETARIS_USERNAME` | OpenAPI spec, optional UI-proxy login | Your Zetaris user ID |
-| `ZETARIS_PASSWORD` | OpenAPI spec, optional UI-proxy login | Your Zetaris password |
-| `ZETARIS_QUERY_LIMIT` | UI-proxy query helper | Positive row limit; defaults to `1000` |
-| `ZETARIS_ENGINE_ID` | UI-proxy query helper | Optional compute engine ID |
-| `ZETARIS_USER_AGENT` | Create scripts that call external APIs | Your app name and contact email. SEC EDGAR requires a real contact. |
+| Variable              | Used by                                | Set it to                                                                                                          |
+| --------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `ZETARIS_REST_URL`    | Direct REST                            | API base ending in `/api/v1.0`; local default is `http://localhost:8888/api/v1.0`                                  |
+| `ZETARIS_ORG_ID`      | Both routes                            | Numeric **ID** under **Management → Organisation**. See [Find your organisation ID](#3-find-your-organisation-id). |
+| `ZETARIS_API_KEY`     | Both routes                            | API key you create in the Zetaris GUI                                                                              |
+| `ZETARIS_BASE_URL`    | UI-proxy helpers                       | Web UI origin, such as `http://localhost:3000`; no path after the origin                                           |
+| `ZETARIS_USERNAME`    | OpenAPI spec, optional UI-proxy login  | Your Zetaris user ID                                                                                               |
+| `ZETARIS_PASSWORD`    | OpenAPI spec, optional UI-proxy login  | Your Zetaris password                                                                                              |
+| `ZETARIS_QUERY_LIMIT` | UI-proxy query helper                  | Positive row limit; defaults to `1000`                                                                             |
+| `ZETARIS_ENGINE_ID`   | UI-proxy query helper                  | Optional compute engine ID                                                                                         |
+| `ZETARIS_USER_AGENT`  | Create scripts that call external APIs | Your app name and contact email. SEC EDGAR requires a real contact.                                                |
 
 ### Create an API key
 
@@ -294,15 +294,15 @@ base. Do not print or echo the credentials.
 
 ## 10. Troubleshooting
 
-| Symptom | Check |
-|---|---|
-| REST `401` | For direct REST, create a new GUI API key and update `ZETARIS_API_KEY`. The spec route needs Basic auth, not the bearer key. |
-| REST `400 Not Allowed` | Check that `ZETARIS_ORG_ID` is the numeric ID for your account. |
-| REST `400` on a valid request | Check that `X-Request-ID` and `queryId` are UUIDs. |
+| Symptom                                                     | Check                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REST `401`                                                  | For direct REST, create a new GUI API key and update `ZETARIS_API_KEY`. The spec route needs Basic auth, not the bearer key.                                                                                                                                                                                                                                   |
+| REST `400 Not Allowed`                                      | Check that `ZETARIS_ORG_ID` is the numeric ID for your account.                                                                                                                                                                                                                                                                                                |
+| REST `400` on a valid request                               | Check that `X-Request-ID` and `queryId` are UUIDs.                                                                                                                                                                                                                                                                                                             |
 | REST preflight says `Operation not permitted` for localhost | The command environment may be blocking local network access before an HTTP response. In Codex, retry the read-only command with the requested network or elevated execution permission if offered. Do not change the API path or key based on this error. If permission cannot be granted, run the command in a terminal that can reach the Zetaris instance. |
-| UI-proxy helper cannot connect | Set `ZETARIS_BASE_URL` to the web UI origin, not the direct API address. |
-| A source is missing from `SHOW DATASOURCES` | Check `SHOW LIGHTNING DATABASES`; REST and file registrations appear there. |
-| `Table not found` | Use the qualified name `<source>.<table>`. |
+| UI-proxy helper cannot connect                              | Set `ZETARIS_BASE_URL` to the web UI origin, not the direct API address.                                                                                                                                                                                                                                                                                       |
+| A source is missing from `SHOW DATASOURCES`                 | Check `SHOW LIGHTNING DATABASES`; REST and file registrations appear there.                                                                                                                                                                                                                                                                                    |
+| `Table not found`                                           | Use the qualified name `<source>.<table>`.                                                                                                                                                                                                                                                                                                                     |
 
 For script-specific setup and the difference between one-request helpers and
 multi-statement runners, see [`scripts/HOWTO.md`](../../../app/adapters/zetaris/scripts/HOWTO.md).

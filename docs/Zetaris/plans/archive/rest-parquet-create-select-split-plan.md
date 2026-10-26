@@ -27,7 +27,7 @@ For each script currently at `sql/NN_<name>.sql`, split into two files sharing t
 - **`sql/NN_<name>_select.sql`** — every `SELECT` statement, in two clearly headed sections:
   - `-- === Verification ===` — the row-count/spot-check queries that confirm the create script worked (today's `-- Verify:` blocks, including any `curl`/`jq` cross-check commands given alongside them as comments).
   - `-- === Example queries ===` — the downstream/analytical queries, only present where they exist today (`rest_apis/sql/05`–`11`).
-  Starts with a one-line pointer back: `-- Assumes sql/NN_<name>_create.sql has already been run.`
+    Starts with a one-line pointer back: `-- Assumes sql/NN_<name>_create.sql has already been run.`
 
 **Why two files, not three:** the ask is CREATE vs. SELECT. A strict three-way split (`_create` / `_verify` / `_queries`) would leave most `parquet_csv` scripts with a one-line `_verify.sql` and an empty `_queries.sql` — file proliferation without a usability gain there. Labelled sections inside one `_select.sql` keep the split meaningful for the `rest_apis` scripts that actually have both kinds of `SELECT`, without junk files elsewhere.
 
@@ -35,7 +35,7 @@ For each script currently at `sql/NN_<name>.sql`, split into two files sharing t
 
 ## 3. Structural nuances to account for per-file (not uniform 1:1 create→verify)
 
-- **`rest_apis/sql/01` and `sql/11`** (EDGAR, 7 companies each) don't have one inline `-- Verify:` per company. Verification today is a *templated* diagnostic ("run this per company, swapping the CIK/table name") plus one literal `curl`-based verification block near the bottom, plus an optional cross-company `UNION ALL` view gated on "verify every individual view first." The `_select.sql` for these two needs to carry: the templated diagnostic, the literal verification block, and the downstream-note callouts — none of these map to a single object the way `sql/02`'s per-Pokémon `-- Verify:` blocks do.
+- **`rest_apis/sql/01` and `sql/11`** (EDGAR, 7 companies each) don't have one inline `-- Verify:` per company. Verification today is a _templated_ diagnostic ("run this per company, swapping the CIK/table name") plus one literal `curl`-based verification block near the bottom, plus an optional cross-company `UNION ALL` view gated on "verify every individual view first." The `_select.sql` for these two needs to carry: the templated diagnostic, the literal verification block, and the downstream-note callouts — none of these map to a single object the way `sql/02`'s per-Pokémon `-- Verify:` blocks do.
 - **The optional cross-company `UNION ALL` view** in `sql/01`/`sql/11` is itself a `CREATE SCHEMASTORE VIEW`, so it belongs in `_create.sql` by type — but its own comment says not to run it until the individual views have been verified via `_select.sql`. This is a real create-depends-on-verify ordering wrinkle; resolve it by keeping the comment/gate as-is in `_create.sql` rather than trying to encode run-order across files.
 - **`rest_apis/sql/08`** (StatCan) registers 5 dated raw REST tables (one per day) before a single unioning view — the CREATE section is one-to-many, not one-to-one with `parquet_csv`'s simpler pattern; inventory this explicitly so the split doesn't accidentally drop one of the five.
 - **`rest_apis/sql/10`** is the one script using `CACHE TABLE` as a documented workaround for re-fetch-per-query behavior. `CACHE TABLE`/`UNCACHE TABLE` are lifecycle statements on the raw table, not verification — keep them in `_create.sql`, immediately after the table they cache, and keep `HOWTO.md`'s troubleshooting note about caching intact (§5).
@@ -46,19 +46,19 @@ For each script currently at `sql/NN_<name>.sql`, split into two files sharing t
 
 ### 4.1 `open_data/rest_apis/sql/` (10 files) + 1 excluded failure case
 
-| File | Has example-query section beyond verify? | Notable structure |
-|---|---|---|
-| `01_edgar_company_facts.sql` | No (verify only) | 7 per-company CREATE pairs; templated diagnostic + curl verify; optional gated cross-company view |
-| `02_pokeapi.sql` | No | 2 pokémon, clean per-object `-- Verify:` blocks; one cross-pokémon union view |
-| `03_open_food_facts_live.sql` | No | 4 products, clean per-object `-- Verify:` blocks |
-| `05_nasa_neows.sql` | Yes | Clean verify block, then a full example-query section |
-| `06_nasa_donki.sql` | Yes | Same shape as `05` |
-| `07_eurostat.sql` | Yes | Verify block, then JSON-stat decode examples |
-| `08_statcan_wds.sql` | Yes | 5 dated raw tables → 1 union view; verify block; then examples incl. window-function rewrites |
-| `09_abs_data_api.sql` | Yes | Verify block, then SDMX examples |
-| `10_company_dns_sic.sql` | Yes | Includes `CACHE TABLE`; verify block with expected-count comment; then examples |
-| `11_edgar_company_profiles.sql` | Yes | Same per-company shape as `01`, plus a worked example section |
-| `failure_cases/singapore_pm25/04_singapore_pm25.sql` | Yes | Excluded from the main sequence, but same interleaved shape — split for consistency (§4.3) |
+| File                                                 | Has example-query section beyond verify? | Notable structure                                                                                 |
+| ---------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `01_edgar_company_facts.sql`                         | No (verify only)                         | 7 per-company CREATE pairs; templated diagnostic + curl verify; optional gated cross-company view |
+| `02_pokeapi.sql`                                     | No                                       | 2 pokémon, clean per-object `-- Verify:` blocks; one cross-pokémon union view                     |
+| `03_open_food_facts_live.sql`                        | No                                       | 4 products, clean per-object `-- Verify:` blocks                                                  |
+| `05_nasa_neows.sql`                                  | Yes                                      | Clean verify block, then a full example-query section                                             |
+| `06_nasa_donki.sql`                                  | Yes                                      | Same shape as `05`                                                                                |
+| `07_eurostat.sql`                                    | Yes                                      | Verify block, then JSON-stat decode examples                                                      |
+| `08_statcan_wds.sql`                                 | Yes                                      | 5 dated raw tables → 1 union view; verify block; then examples incl. window-function rewrites     |
+| `09_abs_data_api.sql`                                | Yes                                      | Verify block, then SDMX examples                                                                  |
+| `10_company_dns_sic.sql`                             | Yes                                      | Includes `CACHE TABLE`; verify block with expected-count comment; then examples                   |
+| `11_edgar_company_profiles.sql`                      | Yes                                      | Same per-company shape as `01`, plus a worked example section                                     |
+| `failure_cases/singapore_pm25/04_singapore_pm25.sql` | Yes                                      | Excluded from the main sequence, but same interleaved shape — split for consistency (§4.3)        |
 
 ### 4.2 `open_data/parquet_csv/sql/` (9 files)
 

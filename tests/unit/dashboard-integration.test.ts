@@ -139,7 +139,7 @@ it('shows task-collected evidence in dashboard, stream and World Model after res
     const chunk = await reader.read();
     if (chunk.done) break;
     if (!(chunk.value instanceof Uint8Array))
-      throw new Error('Dashboard stream returned non-byte content.');
+      throw new Error('Expected stream response bytes.');
     received += new TextDecoder().decode(chunk.value);
   }
   expect(received).toContain('shared-fixture-town');

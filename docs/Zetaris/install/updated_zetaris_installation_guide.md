@@ -10,13 +10,13 @@ For a managed compute cluster in your AWS account, use [Managed AWS cluster](man
 
 The bundle includes:
 
-| Service | Purpose |
-|---|---|
-| `postgres` | Metadata, audit and sample databases |
-| `driver` | Query engine |
-| `api`, `ui` | API and browser interface |
+| Service             | Purpose                                        |
+| ------------------- | ---------------------------------------------- |
+| `postgres`          | Metadata, audit and sample databases           |
+| `driver`            | Query engine                                   |
+| `api`, `ui`         | API and browser interface                      |
 | `init`, `bootstrap` | Initialise volumes, keys, accounts and samples |
-| `ai-datasteward` | AI data service |
+| `ai-datasteward`    | AI data service                                |
 
 ### Download and licensing
 
@@ -40,15 +40,15 @@ files are absent from this distribution. Ask the distributor for a matching
 
 Install [Docker Desktop](https://docs.docker.com/desktop/) on macOS/Windows, or [Docker Engine with the Compose plugin](https://docs.docker.com/engine/install/) on Linux. On Windows, run the shell commands from WSL2 with Docker Desktop integration enabled.
 
-| Requirement | Guidance for this bundle |
-| --- | --- |
-| Docker | Docker Engine 25 or later is recommended by the preflight script; daemon must be running |
-| Compose | Use the `docker compose` plugin; this guide was tested with Compose 5.5.1 |
-| Memory | 8 GB available to Docker recommended; preflight fails below 6 GB |
-| CPU | 4 CPUs available to Docker recommended |
-| Disk | At least 15 GB free for the installation; allow additional space for datasets and logs |
-| Architecture | The supplied Zetaris images are amd64; Apple Silicon requires emulation |
-| Network | Outbound access to the image registry and the data sources you will query |
+| Requirement  | Guidance for this bundle                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| Docker       | Docker Engine 25 or later is recommended by the preflight script; daemon must be running |
+| Compose      | Use the `docker compose` plugin; this guide was tested with Compose 5.5.1                |
+| Memory       | 8 GB available to Docker recommended; preflight fails below 6 GB                         |
+| CPU          | 4 CPUs available to Docker recommended                                                   |
+| Disk         | At least 15 GB free for the installation; allow additional space for datasets and logs   |
+| Architecture | The supplied Zetaris images are amd64; Apple Silicon requires emulation                  |
+| Network      | Outbound access to the image registry and the data sources you will query                |
 
 On Docker Desktop, the memory allocation to Docker matters, not just the laptop's installed RAM. Leave headroom for the operating system and other applications. On Apple Silicon, enable supported amd64 acceleration where available and allow extra startup time.
 
@@ -73,20 +73,20 @@ Resolve every preflight failure before proceeding. The registry check detects a 
 
 Edit the supplied `.env` in an editor. Keep the issued image settings and other supplied values. Set or confirm:
 
-| Variable | Local value or action |
-| --- | --- |
-| `ZETARIS_ADMIN_EMAIL` | Initial administrator email |
-| `ZETARIS_ADMIN_PASSWORD` | Your own strong password, following the policy below |
-| `ZETARIS_ADMIN_ORG` | Initial organisation name; choose before the first startup |
-| `ZSPARK_DRIVER_MEM` | `2g` |
-| `ZSPARK_DRIVER_CORES` | `2` |
-| `ZSPARK_MASTER_URL` | `local[2]` |
-| `ZETARIS_API_MAX_HEAP` | `1g` |
-| `UI_PORT` | `3000` |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` |
-| `GUI_URL` | `http://localhost:3000` |
-| `COMPOSE_PROFILES` | Empty/unset for this local path |
-| `ZETARIS_SEED_TPCH` | `true` to retain the supplied sample-data setup |
+| Variable                 | Local value or action                                      |
+| ------------------------ | ---------------------------------------------------------- |
+| `ZETARIS_ADMIN_EMAIL`    | Initial administrator email                                |
+| `ZETARIS_ADMIN_PASSWORD` | Your own strong password, following the policy below       |
+| `ZETARIS_ADMIN_ORG`      | Initial organisation name; choose before the first startup |
+| `ZSPARK_DRIVER_MEM`      | `2g`                                                       |
+| `ZSPARK_DRIVER_CORES`    | `2`                                                        |
+| `ZSPARK_MASTER_URL`      | `local[2]`                                                 |
+| `ZETARIS_API_MAX_HEAP`   | `1g`                                                       |
+| `UI_PORT`                | `3000`                                                     |
+| `ALLOWED_ORIGINS`        | `http://localhost:3000`                                    |
+| `GUI_URL`                | `http://localhost:3000`                                    |
+| `COMPOSE_PROFILES`       | Empty/unset for this local path                            |
+| `ZETARIS_SEED_TPCH`      | `true` to retain the supplied sample-data setup            |
 
 The administrator password must be at least eight characters and contain lowercase, uppercase, a digit and one of `$ @ ! % * ? &`. Other punctuation is rejected.
 
@@ -144,6 +144,7 @@ Changing `ZETARIS_ADMIN_PASSWORD` or the organisation in `.env` after bootstrap 
 <a id="4-verify-the-data-recipes"></a>
 <a id="parquetcsv"></a>
 <a id="rest"></a>
+
 ## 4. Next steps
 
 In the SQL Editor, start with [the supplied sample SQL](../connections/lightning-recipe-reference.md).

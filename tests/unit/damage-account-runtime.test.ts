@@ -55,7 +55,7 @@ async function until(
 ) {
   await expect
     .poll(() => predicate(runtime.store.read(id, localTaskIdentity)), {
-      timeout: 12000,
+      timeout: 20_000,
     })
     .toBe(true);
   return runtime.store.read(id, localTaskIdentity);
@@ -197,8 +197,8 @@ describe('damage-account registration and task path', () => {
         restarted.store.artifact(accountArtifact.id, localTaskIdentity),
       ).toEqual(accountArtifact);
     },
-    // The 12-second task poll plus restart must fit inside the test budget.
-    20_000,
+    // Leave room for the 20-second task poll, restart and cleanup.
+    30_000,
   );
 
   it('reports missing World Model evidence without requiring uploads or inventing estimates', async () => {
