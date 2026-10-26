@@ -43,8 +43,7 @@ CREATE TABLE wind (
     location_index int FOREIGN KEY REFERENCES locations(location_index),
     observation_time timestamp,
     level varchar(20),
-    wind_speed_ms double,
-    wind_direction_deg double,
     u_ms double,
-    v_ms double
+    v_ms double,
+    ingested_utc timestamp
 );

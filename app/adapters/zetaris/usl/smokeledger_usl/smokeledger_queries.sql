@@ -12,8 +12,8 @@ FROM lightning.metastore.smokeledger.smokeledger_usl.pm25
 ORDER BY observation_time DESC
 LIMIT 20;
 
--- Recent Open-Meteo wind values.
-SELECT location_index, level, observation_time, wind_speed_ms, wind_direction_deg, u_ms, v_ms
+-- Recent Open-Meteo wind-vector components.
+SELECT location_index, level, observation_time, u_ms, v_ms, ingested_utc
 FROM lightning.metastore.smokeledger.smokeledger_usl.wind
 WHERE level = '10m'
 ORDER BY observation_time DESC

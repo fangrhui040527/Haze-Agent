@@ -19,6 +19,7 @@ function taskRun(): AgentRun {
     serviceLabel: 'Fixture',
     ask: vi.fn(),
     cancel: vi.fn(),
+    reset: vi.fn(),
     task: {
       id: taskId,
       taskUrl: `/api/tasks/${taskId}`,

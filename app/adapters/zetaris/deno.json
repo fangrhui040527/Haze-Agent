@@ -1,10 +1,6 @@
 {
   "tasks": {
-    "check": "deno check scripts/ping_postgres.ts scripts/check_zetaris.ts scripts/query_zetaris.ts",
-    "lint": "deno lint scripts/",
-    "ping:postgres": "deno run --allow-net --allow-env=PG* --allow-read scripts/ping_postgres.ts"
-  },
-  "imports": {
-    "postgres": "npm:postgres@3.4.7"
+    "check": "deno check scripts/check_zetaris.ts scripts/query_zetaris.ts",
+    "lint": "deno lint scripts/"
   }
 }

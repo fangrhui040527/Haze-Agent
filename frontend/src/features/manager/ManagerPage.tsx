@@ -37,7 +37,7 @@ export function ManagerPage() {
           Start a task from the dashboard, then open its Manager workspace to
           follow the plan, assignments and decisions.
         </p>
-        <Link to="/" className={buttonClass('primary')}>
+        <Link to="/dashboard" className={buttonClass('primary')}>
           Start a task on the dashboard
         </Link>
       </section>

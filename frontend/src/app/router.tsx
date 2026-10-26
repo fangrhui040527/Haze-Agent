@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import { lazy, Suspense } from 'react';
 import { DashboardPage } from '../features/dashboard/DashboardPage.tsx';
 import { DemoDataPage } from '../features/demo-data/DemoDataPage.tsx';
+import { LandingPage } from '../features/landing/LandingPage.tsx';
 import { DetailPage } from '../features/detail/DetailPage.tsx';
 import { TaskPage } from '../features/task-report/TaskPage.tsx';
 import { AppLayout, NotFoundPage, RouteErrorPage } from './AppLayout.tsx';
@@ -35,11 +36,12 @@ const MemoryPage = lazy(() =>
  * (plus a NavLink in AppLayout.tsx if it belongs in the header).
  */
 export const router = createBrowserRouter([
+  { path: '/', element: <LandingPage />, errorElement: <RouteErrorPage /> },
   {
     element: <AppLayout />,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      { path: 'dashboard', element: <DashboardPage /> },
       { path: 'item/:id', element: <DetailPage /> },
       { path: 'demo-data', element: <DemoDataPage /> },
       {

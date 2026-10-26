@@ -13,13 +13,42 @@ Use Node **24.22.1** and npm **11.8.0**, as pinned in [.nvmrc](.nvmrc) and [pack
 ```sh
 npm ci
 npm --prefix frontend ci
-npm run build
-npm --prefix frontend run dev
+npm run dev
 ```
 
+`npm run dev` builds the backend, then starts Vite with the frontend and the shared
+dashboard, task and World Model APIs, usually at `http://localhost:5173`. Keep this
+terminal running; stop it with `Ctrl+C`. Run the command again after backend changes
+to rebuild them. The standalone `tasks:serve` command is an alternative API entry
+point and must not run alongside Vite using the same state directory.
+
+The root dev command shows a compact Haze Agent banner with the actual app URL
+and total startup time, including the backend build. Build failures and runtime
+warnings remain visible. Edit `frontend/scripts/dev-display-plugin.ts` to customize
+the banner text. Use `npm run --silent dev` to also hide npm's initial script header;
+`npm run build` and `npm --prefix frontend run dev` retain their detailed output.
+Vite options still work, for example `npm run dev -- --port 5174`.
+
+Zetaris is a separate service for external evidence retrieval. If you use the
+included local platform, configure root `.env` as described below, start Docker
+Desktop and then run:
+
+```sh
+docker compose up -d
+```
+
+Allow Zetaris to finish starting before making requests that use it. See the
+[platform setup guide](app/adapters/zetaris/zetaris-platform/README.md) for its
+first-time image registry and configuration requirements. The root
+[compose.yaml](compose.yaml) starts Zetaris, including its metastore database.
+The separate legacy SmokeLedger database and its tooling have been removed.
+
 Copy [.env.example](.env.example) to root `.env`. This gitignored file holds
-the server-side Haze, PostgreSQL, Zetaris and ingestion settings. For live
-agent requests, set your own `NVIDIA_API_KEY` (or use
+the server-side Haze, Zetaris deployment and ingestion settings. For a local
+Zetaris deployment, fill in the issued image references, `POSTGRES_PASSWORD` and
+`ZETARIS_ADMIN_PASSWORD` before running Compose. Retain existing values when
+moving an installation; the `zetaris` project name reuses its existing volumes.
+For live agent requests, set your own `NVIDIA_API_KEY` (or use
 `HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
 `HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
 requires an existing Zetaris instance and your own `ZETARIS_API_KEY`; configure
@@ -33,25 +62,27 @@ Open-Meteo and Data.gov.my fetchers do not
 require keys.
 
 The examples provide configuration names and local development defaults, not
-hosted-service credentials. Open-Meteo PM2.5 and wind are federated through
-per-location Zetaris REST tables and expose unified views; FIRMS has its own
-source folder. PostgreSQL is not required for these source-ingestion commands
-or the PM2.5 task. Preview a bounded setup from the repository root:
+hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
+Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
+have their own source folders alongside air quality. These commands publish
+directly to Zetaris without a separate ingestion database. Preview a bounded
+setup from the repository root before applying it:
 
 ```sh
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
 ```
 
-After reviewing the SQL, rerun the selected command without `--dry-run` to
-register the REST tables and views. Zetaris queries may contact Open-Meteo;
-start with `--test` or selected locations and verify provider usage before
-registering all 345 endpoints. The default USL bootstrap includes a read-only
-SmokeLedger view over the Environmental USL's current location, fire, PM2.5,
-and wind feeds; PostgreSQL is not required. Existing SmokeLedger PostgreSQL
-data and its legacy tooling remain under
-[legacy tooling](app/adapters/zetaris/legacy/smokeledger/README.md) and are not
-migrated automatically.
+After reviewing the plan, rerun the selected command without `--dry-run` to
+fetch and register the source snapshots. A task reads the published snapshot;
+it does not refresh it. Removing the old SmokeLedger tooling does not delete
+existing Docker volumes or registered Zetaris objects. Historical database rows
+are not migrated automatically; saved task captures remain readable.
+
+The USL bootstrap also supports a read-only SmokeLedger view over current
+Environmental locations, fire, PM2.5, and wind feeds. It does not require
+PostgreSQL; run `npm run zetaris:bootstrap:smokeledger` after publishing the
+Environmental sources and compiling the Environmental USL.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris
@@ -71,7 +102,7 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
 
-Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` retrieves compatible retained accounting captures and their exact original evidence. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
+Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
 
 Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/Testing/world-model-control-plane.md) for configuration and isolated checks.
 
@@ -103,21 +134,21 @@ The fixture verifier imports a source, completes a general explanation and a PM2
 
 Browse the [documentation index](docs/README.md) for guides grouped by topic.
 
-| Path                                                                | Purpose                                                                                    |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API         |
-| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries |
-| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                 |
-| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                               |
-| `app/adapters/`                                                     | Provider integrations, pinned Meterless facades and Zetaris deployment/data-source tooling |
-| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                            |
-| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                         |
-| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                            |
-| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                         |
-| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                        |
-| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                              |
-| `third_party/`                                                      | Pinned engine sources                                                                      |
-| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records           |
+| Path                                                                | Purpose                                                                                                                     |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API                                          |
+| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries                                  |
+| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                                                  |
+| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                                                                |
+| `app/adapters/`                                                     | Provider integrations, World Model damage-input bridge, pinned Meterless facades and Zetaris deployment/data-source tooling |
+| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                                                             |
+| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                                                          |
+| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                                                             |
+| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                                                          |
+| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                                                         |
+| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                                                               |
+| `third_party/`                                                      | Pinned engine sources                                                                                                       |
+| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records                                            |
 
 ## Offline infrastructure and engine pins
 

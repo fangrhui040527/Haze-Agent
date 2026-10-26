@@ -35,7 +35,13 @@ export interface AgentModel {
 
 const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
-const TIMEOUT_MS = 60_000;
+/**
+ * Warm configured routes answer in seconds, but a cold endpoint can take far
+ * longer, and a timeout here is charged as an unknown outcome that pauses the
+ * branch. The bound absorbs one cold start and still sits inside the
+ * investigation deadline.
+ */
+const TIMEOUT_MS = 120_000;
 const MAX_REQUEST_BYTES = 131_072;
 const MAX_RESPONSE_BYTES = 65_536;
 const MAX_TEXT_CHARACTERS = 12_000;
@@ -286,7 +292,10 @@ export function resolveAgentModel(
         ...(provider === 'nvidia'
           ? {
               max_tokens: outputTokens,
-              ...(model === NVIDIA_DEFAULT_MODEL
+              // Nemotron reasoning traces precede the answer and break the
+              // strict JSON action contract, so thinking stays off for every
+              // model in the family rather than only the pinned default.
+              ...(/nemotron/iu.test(model)
                 ? { chat_template_kwargs: { enable_thinking: false } }
                 : {}),
             }
@@ -340,8 +349,10 @@ export function resolveAgentModel(
         });
         if (!response.ok) {
           void response.body?.cancel().catch(() => undefined);
+          // The status is the only way to tell a rejected request from an
+          // overloaded route; it carries no credential material.
           throw new ModelError(
-            'Agent model provider request failed. Check the server provider configuration.',
+            `Agent model provider request failed (HTTP ${response.status}). Check the server provider configuration.`,
           );
         }
         const responseBody = await readCompletion(response, requestSignal);
@@ -387,7 +398,7 @@ export function resolveAgentModel(
       if (deadline.signal.aborted) {
         // Upstream causes may contain credentials; retain only the safe outcome classification.
         throw new AgentModelOutcomeUnknownError(
-          'Agent model request timed out after 60 seconds.',
+          `Agent model request timed out after ${TIMEOUT_MS / 1000} seconds.`,
         );
       }
       if (error instanceof ModelError) throw error;

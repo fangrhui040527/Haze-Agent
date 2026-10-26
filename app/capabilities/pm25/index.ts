@@ -1,6 +1,6 @@
+import { z } from 'zod';
 import type { Artifact } from '../../contracts/artifacts.js';
 import { artifactRefSchema } from '../../contracts/artifacts.js';
-import { z } from 'zod';
 import type {
   AssignmentDefinition,
   CapabilityDefinition,
@@ -26,6 +26,13 @@ import { pm25WorldModelAdapter } from './world.js';
 export { framePm25Scope } from './contracts.js';
 export { analyzePm25, independentlyCheckPm25 } from './methods.js';
 export { pm25WorldModelAdapter } from './world.js';
+
+/** Registered deterministic methods the specialists call rather than reason out. */
+export const PM25_COVERAGE_ID = 'pm25-coverage-range';
+export const PM25_CHECK_ID = 'pm25-independent-check';
+
+/** Both methods read their evidence from pinned inputs; only scope is supplied. */
+const scopedToolInput = z.strictObject({ scope: pm25ScopeSchema });
 
 export function createPm25Capability(): CapabilityDefinition {
   return {
@@ -80,7 +87,7 @@ export function createPm25Capability(): CapabilityDefinition {
         'review',
         'evidence.gap',
       ],
-      required_tools: [PM25_SOURCE_ID],
+      required_tools: [PM25_SOURCE_ID, PM25_COVERAGE_ID, PM25_CHECK_ID],
       roles: ['HazeOps', 'WorkerShield', 'EvidenceCritic'],
       readiness: 'implemented',
       limitations: [
@@ -122,8 +129,10 @@ export function createPm25Capability(): CapabilityDefinition {
           key: 'check',
           definition_id: 'pm25.check',
           brief:
-            'Independently check selection, counts, missingness, range and citations through a bounded peer exchange.',
-          depends_on: ['selection'],
+            'Independently check selection, counts, missingness, range and citations, then report the verdict to the producer.',
+          // The analysis is pinned as an input because a bounded local loop
+          // cannot dereference an artifact reference delivered by message.
+          depends_on: ['selection', 'analysis'],
           input,
         },
         {
@@ -178,6 +187,67 @@ export function createPm25Tools(
         return capture;
       },
     },
+    {
+      id: PM25_COVERAGE_ID,
+      version: '3',
+      mode,
+      description:
+        'Calculate reproducible coverage, missing sample slots and value range from the pinned PM2.5 capture. Numerical claims must come from this method, never from prose.',
+      inputSchema: scopedToolInput,
+      outputSchema: pm25AnalysisSchema,
+      execute(input, context) {
+        const { scope } = scopedToolInput.parse(input);
+        const capture = captureSchema.parse(
+          exact(context.inputs, 'pm25.capture').content,
+        );
+        return Promise.resolve(analyzePm25(capture, scope));
+      },
+    },
+    {
+      id: PM25_CHECK_ID,
+      version: '3',
+      mode,
+      description:
+        'Independently recompute counts, missingness, range and citation linkage from the raw capture and compare them against the pinned analysis. Returns valid=false with findings when any check fails.',
+      inputSchema: scopedToolInput,
+      outputSchema: z.strictObject({
+        checks: z.array(z.string().min(1).max(4096)).max(32),
+        findings: z.array(z.string().min(1).max(4096)).max(64),
+        valid: z.boolean(),
+        limitations: z.array(z.string().min(1).max(4096)).max(32),
+        // The saved review is this exact output, so the review envelope
+        // normalizeReview reads must come from the method that performed the
+        // check. A model never decides a verdict or which artifacts it read.
+        verdict: z.enum(['supported', 'rejected']),
+        reviewer_role: z.literal('EvidenceCritic'),
+        reviewed_artifacts: z.array(artifactRefSchema),
+      }),
+      execute(input, context) {
+        const { scope } = scopedToolInput.parse(input);
+        const capture = exact(context.inputs, 'pm25.capture');
+        const analysis = exact(context.inputs, 'pm25.analysis');
+        // Independence is enforced here, not left to a model's discretion.
+        if (analysis.assignment_id === context.assignmentId)
+          throw new Error(
+            'A producer cannot independently check its own analysis.',
+          );
+        const checked = independentlyCheckPm25(
+          capture.content,
+          analysis.content,
+          scope,
+        );
+        return Promise.resolve({
+          ...checked,
+          verdict: checked.valid
+            ? ('supported' as const)
+            : ('rejected' as const),
+          reviewer_role: 'EvidenceCritic' as const,
+          reviewed_artifacts: [capture, analysis].map(
+            ({ id, version, sha256 }) => ({ id, version, sha256 }),
+          ),
+        });
+      },
+    },
   ];
 }
 
@@ -197,233 +267,25 @@ export function createPm25Assignments(): AssignmentDefinition[] {
       agent: 'HazeOps',
       tools: [PM25_SOURCE_ID],
       instructions:
-        'Retrieve only the bounded authorized PM2.5 scope. Preserve raw selection and model semantics.',
-      async execute(services) {
-        const scope = pm25ScopeSchema.safeParse(services.input);
-        if (!scope.success) {
-          services.question(
-            'Which town and UTC start/end (end exclusive, at most 31 days) should the PM2.5 investigation cover? Provide them in the correction scope.',
-          );
-          return {
-            status: 'waiting_human',
-            summary: 'Waiting for an explicit PM2.5 scope.',
-            support: 'gap',
-            uncertainty: ['Location and period are missing or conflicting.'],
-            outputs: [],
-          };
-        }
-        try {
-          const capture = captureSchema.parse(
-            await services.tool(PM25_SOURCE_ID, scope.data),
-          );
-          const artifact = services.save('pm25.capture', capture, {
-            evidence_origin:
-              capture.evidence_origin === 'synthetic_fixture'
-                ? 'synthetic_fixture'
-                : 'external_source',
-          });
-          return {
-            status: 'completed',
-            summary:
-              'Retained exact modeled PM2.5 source selection; provider issuance and observation coverage are unknown.',
-            support: 'partial',
-            uncertainty: [
-              'This selection contains model output, not observations or hourly averages.',
-            ],
-            outputs: [artifact],
-          };
-        } catch (error) {
-          services.context.signal.throwIfAborted();
-          if (
-            error instanceof EvidenceSourceError &&
-            error.outcome === 'unknown'
-          )
-            throw error;
-          const message =
-            error instanceof Error ? error.message : 'Source unavailable.';
-          const gap = services.save('evidence.gap', {
-            source: PM25_SOURCE_ID,
-            reason: message,
-            available: false,
-          });
-          return {
-            status: 'completed',
-            summary:
-              'The modeled evidence source was unavailable; no substitute was queried.',
-            support: 'gap',
-            uncertainty: [message],
-            outputs: [gap],
-          };
-        }
-      },
+        'Retrieve the admitted modeled PM2.5 selection. Read the pinned input. When it carries a location and an explicit UTC period, call the registered source tool once with exactly that scope, then return one action whose "type" is "save_tool_result", whose "kind" is "pm25.capture" and whose "tool_action_id" is the id of that tool action, and finish citing the saved artifact. When the pinned input instead reports that scope is missing or conflicting, ask one question naming what is required (town, UTC start, UTC end, end exclusive, at most 31 days) and stop. Never widen, narrow or invent a scope. Never retype row values into a saved artifact. When the source is unavailable, say so and finish with support "gap"; never substitute another source.',
     },
     {
       id: 'pm25.analyze',
       version: '4',
       capability,
       agent: 'WorkerShield',
-      tools: [],
+      tools: [PM25_COVERAGE_ID],
       instructions:
-        'Use registered deterministic coverage calculation on exact pinned evidence. Never fabricate unavailable evidence.',
-      execute(services) {
-        if (
-          !services.context.inputs.some(
-            (input) => input.kind === 'pm25.capture',
-          )
-        )
-          return {
-            status: 'completed',
-            summary:
-              'Numerical analysis unavailable because no accepted source selection exists.',
-            support: 'gap',
-            uncertainty: ['No source capture to analyze.'],
-            outputs: [],
-          };
-        const reviewer = services.context.peers.find(
-          (peer) => peer.definition_id === 'pm25.check',
-        );
-        if (!reviewer)
-          throw new Error(
-            'A separate registered numerical reviewer is required.',
-          );
-        const saved = services.context.outputs
-          .map((ref) => services.read(ref))
-          .find((artifact) => artifact.kind === 'pm25.analysis');
-        if (saved) {
-          const reply = services
-            .inbox()
-            .find((message) => message.sender === reviewer.id);
-          if (!reply)
-            return {
-              status: 'waiting_peer',
-              summary: 'Waiting for the independent numerical review.',
-              support: 'partial',
-              uncertainty: [],
-              outputs: [saved],
-            };
-          const analysis = pm25AnalysisSchema.parse(saved.content);
-          return {
-            status: 'completed',
-            summary: analysis.findings[0]!.text,
-            support:
-              analysis.coverage.status === 'available'
-                ? 'supported'
-                : 'partial',
-            uncertainty: analysis.unresolved_gaps,
-            outputs: [saved],
-          };
-        }
-        const capture = captureSchema.parse(
-          exact(services.context.inputs, 'pm25.capture').content,
-        );
-        const analysis = analyzePm25(
-          capture,
-          pm25ScopeSchema.parse(services.input),
-        );
-        const artifact = services.save('pm25.analysis', analysis);
-        services.message(
-          reviewer.id,
-          'numerical-check',
-          JSON.stringify({
-            artifact: {
-              id: artifact.id,
-              version: artifact.version,
-              sha256: artifact.sha256,
-            },
-          }),
-        );
-        return {
-          status: 'waiting_peer',
-          summary:
-            'Analysis saved; waiting for independent numerical checking.',
-          support: 'partial',
-          uncertainty: [],
-          outputs: [artifact],
-        };
-      },
+        'Establish how far the retained evidence actually reaches, and refuse to let it be read as more than it is. Call the registered coverage tool once with the admitted scope, then return one action whose "type" is "save_tool_result", whose "kind" is "pm25.analysis" and whose "tool_action_id" is that tool action id, then finish citing that artifact. Every number you state must come from the tool output; calculate nothing yourself. Set support to "supported" only when the returned coverage status is available, otherwise "partial", and put the thin parts in uncertainty rather than withholding the result. If no capture is pinned, finish with support "gap" and state that no accepted selection exists. Never present modeled output as observation, never infer cause from correlation, and never give health or operational advice.',
     },
     {
       id: 'pm25.check',
       version: '4',
       capability,
       agent: 'EvidenceCritic',
-      tools: [],
+      tools: [PM25_CHECK_ID],
       instructions:
-        'Independently validate retained numerical work. A producer cannot approve its own work. Reject any failed check.',
-      execute(services) {
-        const inputs = services.context.inputs;
-        if (!inputs.some((input) => input.kind === 'pm25.capture'))
-          return {
-            status: 'completed',
-            summary: 'Independent review has no accepted analysis to check.',
-            support: 'gap',
-            uncertainty: ['No numerical analysis available.'],
-            outputs: [],
-          };
-        const producer = services.context.peers.find(
-          (peer) => peer.definition_id === 'pm25.analyze',
-        );
-        if (!producer)
-          throw new Error(
-            'A separate registered numerical producer is required.',
-          );
-        const request = services
-          .inbox()
-          .find((message) => message.sender === producer.id);
-        if (!request)
-          return {
-            status: 'waiting_peer',
-            summary:
-              'Waiting for an exact analysis reference from the producer.',
-            support: 'partial',
-            uncertainty: [],
-            outputs: [],
-          };
-        const shared = JSON.parse(request.text) as {
-          artifact: { id: string; version: number; sha256: string };
-        };
-        const capture = exact(inputs, 'pm25.capture');
-        const analysis = services.read(shared.artifact);
-        if (
-          analysis.kind !== 'pm25.analysis' ||
-          analysis.assignment_id !== producer.id
-        )
-          throw new Error(
-            'Peer reference does not name the expected producer analysis.',
-          );
-        const checked = independentlyCheckPm25(
-          capture.content,
-          analysis.content,
-          pm25ScopeSchema.parse(services.input),
-        );
-        // The target is a named persisted assignment instance, never an agent role.
-        if (analysis.assignment_id)
-          services.message(
-            analysis.assignment_id,
-            'numerical-check',
-            checked.valid
-              ? 'Independent counts, range, missingness and source-link checks passed. Observation and attribution evidence remain unavailable.'
-              : 'Independent numerical checks failed; exclude this analysis from synthesis.',
-          );
-        const artifact = services.save('review', {
-          ...checked,
-          verdict: checked.valid ? 'supported' : 'rejected',
-          reviewer_role: 'EvidenceCritic',
-          reviewed_artifacts: [capture, analysis].map(
-            ({ id, version, sha256 }) => ({ id, version, sha256 }),
-          ),
-        });
-        const parsed = pm25AnalysisSchema.parse(analysis.content);
-        return {
-          status: 'completed',
-          summary: checked.valid
-            ? `Independent numerical checks passed. ${parsed.findings[0]!.text}`
-            : 'Numerical work rejected by the independent checker.',
-          support: checked.valid ? 'supported' : 'gap',
-          uncertainty: [...checked.limitations, ...checked.findings],
-          outputs: [artifact],
-        };
-      },
+        'Independently check the numerical work produced by another assignment. Call the registered independent-check tool once with the admitted scope; it recomputes counts, missingness, range and citation linkage from the raw capture and compares them against the pinned analysis. Judge on its output alone and never on figures you read yourself. Persist the outcome by returning one action whose "type" is "save_tool_result", whose "kind" is "review" and whose "tool_action_id" is that tool action id. The verdict belongs in that saved review: the producing assignment has already completed, because its analysis is a pinned dependency, so do not message it. Finish with support "supported" when valid is true and "gap" when it is false, carrying the returned limitations into uncertainty. You cannot approve work you produced; the tool refuses that case. Keep numerical checking separate from judging whether prose is entailed, and claim no scientific review.',
     },
     {
       id: 'pm25.observation-gap',

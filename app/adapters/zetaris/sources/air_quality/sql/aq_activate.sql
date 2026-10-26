@@ -5,8 +5,8 @@
 -- Namespace: lightning.metastore.malaysia_env
 -- Target Table: air_quality_obs
 --
--- Source: live Open-Meteo REST federation through air_quality.hourly_observations.
--- Joins by stable location_id to attach the canonical location_index FK.
+-- Source: air_quality.hourly_observations (stored Open-Meteo FileStore snapshot)
+-- Joins with USL location_dim on location_name to attach canonical location_index FK.
 -- =============================================================================
 
 ACTIVATE USL TABLE lightning.metastore.malaysia_env.malaysia_env_usl.air_quality_obs AS
@@ -17,4 +17,4 @@ SELECT
     CAST(obs.pm10_ug_m3 AS DOUBLE) AS pm10_ug_m3
 FROM air_quality.hourly_observations obs
 JOIN lightning.metastore.malaysia_env.malaysia_env_usl.location_dim loc
-  ON obs.location_id = loc.location_id;
+  ON obs.location_name = loc.location_name;

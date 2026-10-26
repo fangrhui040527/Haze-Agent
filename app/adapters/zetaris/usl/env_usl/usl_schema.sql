@@ -7,8 +7,6 @@
 --   - location_code: 440 unique codes across 5 types: St, Rc, Ds, Tn, Dv
 --                   (PK: location_code, FK: location_index -> location_dim)
 --   - air_quality_obs : Open-Meteo hourly PM2.5 / PM10 (FK -> location_dim)
---   - open_meteo_pm25_obs : Open-Meteo hourly modeled PM2.5 (FK -> location_dim)
---   - open_meteo_wind_obs : Open-Meteo hourly 10 m / 850 hPa wind (FK -> location_dim)
 --   - active_fires    : NASA FIRMS satellite active-fires (FK -> location_dim)
 --   - power_daily     : NASA POWER 20 daily climate variables (FK -> location_dim)
 --   - windy_forecast_obs    : Windy (GFS) point weather forecast (FK -> location_dim)
@@ -16,7 +14,6 @@
 --   - weather_forecast: Data.gov.my forecasts across all 5 code types (FK -> location_code)
 -- =============================================================================
 
-CREATE NAMESPACE IF NOT EXISTS lightning.metastore;
 CREATE NAMESPACE IF NOT EXISTS lightning.metastore.malaysia_env;
 
 COMPILE USL IF NOT EXISTS malaysia_env_usl DEPLOY NAMESPACE lightning.metastore.malaysia_env DDL
@@ -38,20 +35,6 @@ CREATE TABLE air_quality_obs (
     observation_time timestamp,
     pm2_5_ug_m3 double,
     pm10_ug_m3 double
-);
-CREATE TABLE open_meteo_pm25_obs (
-    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
-    observation_time timestamp,
-    pm2_5_ug_m3 double
-);
-CREATE TABLE open_meteo_wind_obs (
-    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
-    observation_time timestamp,
-    level varchar(20),
-    wind_speed_ms double,
-    wind_direction_deg double,
-    u_ms double,
-    v_ms double
 );
 CREATE TABLE active_fires (
     location_index int FOREIGN KEY REFERENCES location_dim(location_index),

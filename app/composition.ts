@@ -36,7 +36,8 @@ import { loadDashboardConfig } from './dashboard/config.js';
 import { DashboardService } from './dashboard/http.js';
 import type { TaskStore } from './tasks/store.js';
 import type { TaskIdentity } from './contracts/tasks.js';
-import { createWorldModelDamageInputTool } from './capabilities/damage-account/world-input-adapter.js';
+import { createWorldModelDamageInputTool } from './adapters/damage-input-adapter/index.js';
+import { damageWorldInputPolicy } from './capabilities/damage-account/world-input-policy.js';
 import {
   createEvidenceCollectionAssignments,
   createEvidenceCollectionCapability,
@@ -76,7 +77,7 @@ export function createExecutionRegistry(options: {
 }): ExecutionRegistry {
   const registry = new ExecutionRegistry();
   registry.registerStoreTools((store, mode) => [
-    createWorldModelDamageInputTool(store, mode),
+    createWorldModelDamageInputTool(store, mode, damageWorldInputPolicy),
   ]);
   for (const agent of [
     managerAgent,

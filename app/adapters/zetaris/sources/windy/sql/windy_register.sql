@@ -14,10 +14,8 @@ DESCRIBE BY "Windy Point Forecast CSV files";
 
 CREATE SCHEMASTORE CONTAINER windy;
 
--- Use fresh table identifiers so earlier registrations made before the CSVs
--- existed cannot retain an empty inferred schema.
 -- 1. GFS Numerical Weather Forecast for Kuala Lumpur
-CREATE LIGHTNING FILESTORE TABLE windy_gfs_raw_v2
+CREATE LIGHTNING FILESTORE TABLE windy_gfs_raw
 FROM WINDY_FILES
 FORMAT CSV
 OPTIONS (
@@ -27,7 +25,7 @@ OPTIONS (
 );
 
 -- 2. CAMS Atmospheric Composition & Air Quality for Kuala Lumpur
-CREATE LIGHTNING FILESTORE TABLE windy_cams_raw_v2
+CREATE LIGHTNING FILESTORE TABLE windy_cams_raw
 FROM WINDY_FILES
 FORMAT CSV
 OPTIONS (

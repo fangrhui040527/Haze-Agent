@@ -31,6 +31,14 @@ export const agentActionSchema = z.discriminatedUnion('type', [
     kind: z.string().min(1).max(128),
     content: z.unknown(),
   }),
+  // Evidence is persisted by reference to the dispatched tool action that
+  // produced it, so a specialist never retypes retained rows into an artifact.
+  z.strictObject({
+    id: z.string().min(1).max(128),
+    type: z.literal('save_tool_result'),
+    kind: z.string().min(1).max(128),
+    tool_action_id: z.string().min(1).max(128),
+  }),
   z.strictObject({
     id: z.string().min(1).max(128),
     type: z.literal('question'),

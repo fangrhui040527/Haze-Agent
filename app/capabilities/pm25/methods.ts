@@ -9,7 +9,6 @@ import {
   EvidenceSourceError,
   PM25_SOURCE_ID,
   LEGACY_PM25_SOURCE_ID,
-  parseFiniteNumber,
   type EvidenceCapture,
   type EvidenceRow,
   type EvidenceScope,
@@ -98,6 +97,27 @@ function rawInstant(value: unknown, nullable = false): string | null {
   return new Date(milliseconds).toISOString();
 }
 
+/**
+ * The raw SQL schema permits numeric strings: Zetaris serializes DOUBLE
+ * PRECISION that way. Only the JSON number grammar is accepted, so empty,
+ * padded, hexadecimal, Infinity and NaN text stay invalid rather than zero.
+ * Checked here independently of the retrieval adapter's own parsing.
+ */
+function rawNumber(value: unknown): number | null {
+  const message = 'The raw evidence contains an invalid number.';
+  if (value === null) return null;
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : invalid(message);
+  if (
+    typeof value !== 'string' ||
+    value.length > 40 ||
+    !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u.test(value)
+  )
+    return invalid(message);
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : invalid(message);
+}
+
 function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   const columns = [
     'town',
@@ -127,19 +147,15 @@ function rawRow(value: unknown, scope: EvidenceScope): EvidenceRow {
       'The raw evidence does not match the authorized source selection.',
     );
   const start = rawInstant(row['valid_utc']) as string;
-  const normalizedValue =
-    row['pm25'] === null ? null : parseFiniteNumber(row['pm25']);
-  const latitude = row['lat'] === null ? null : parseFiniteNumber(row['lat']);
-  const longitude = row['lon'] === null ? null : parseFiniteNumber(row['lon']);
   const parsed = captureSchema.shape.rows.element.safeParse({
     start,
     end: start,
-    value: normalizedValue,
+    value: rawNumber(row['pm25']),
     issued_at: null,
     location: row['town'],
     ingested_at: rawInstant(row['ingested_utc'], true),
-    latitude,
-    longitude,
+    latitude: rawNumber(row['lat']),
+    longitude: rawNumber(row['lon']),
   });
   if (
     !parsed.success ||

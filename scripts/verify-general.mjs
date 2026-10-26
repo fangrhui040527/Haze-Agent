@@ -35,9 +35,11 @@ async function boot() {
     },
   );
   return new Promise((ready, reject) => {
+    // Opening the state database and vendored engines competes with whatever
+    // else the machine is running, and a slow start is not a failed start.
     const timeout = setTimeout(
       () => reject(new Error('General task server startup timed out.')),
-      10_000,
+      45_000,
     );
     child.once('message', (message) => {
       clearTimeout(timeout);

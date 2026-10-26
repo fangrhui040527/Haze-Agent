@@ -15,13 +15,6 @@ node --experimental-strip-types sources/windy/fetch_windy.ts
 node --experimental-strip-types sources/windy/fetch_windy.ts --all
 ```
 
-The environmental bootstrap fetches both families and stages their CSVs before
-registering the FileStore tables and views. Its internal `--prepare-only` mode
-stops after the files are copied and verified; normal manual runs continue to
-register the tables and views. The bootstrap registers versioned raw table
-names (`windy_gfs_raw_v2`, `windy_cams_raw_v2`) so earlier empty-schema table
-definitions created before the CSV files existed are not reused.
-
 ## Pick a location or custom coordinate
 
 ```powershell

@@ -132,26 +132,35 @@ function requestInstant(value: string): string {
   return normalized;
 }
 
-function coordinate(value: unknown, maximum: number): number | null {
+/**
+ * The numeric columns have a numeric schema contract, but Zetaris serializes
+ * SQL DOUBLE PRECISION as a JSON string ("29.8"); a JSON number stays valid.
+ * Only the JSON number grammar is accepted, so empty, padded, hexadecimal,
+ * Infinity and NaN text remain invalid evidence rather than becoming zero.
+ */
+function numeric(value: unknown, message: string): number | null {
   if (value === null) return null;
-  const parsed = parseFiniteNumber(value);
-  if (parsed === undefined || Math.abs(parsed) > maximum) {
-    return invalid('Zetaris returned invalid town coordinates.');
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : invalid(message);
   }
-  return parsed;
-}
-
-/** The direct REST API may encode SQL numeric cells as decimal strings. */
-export function parseFiniteNumber(value: unknown): number | undefined {
-  if (typeof value === 'number')
-    return Number.isFinite(value) ? value : undefined;
   if (
     typeof value !== 'string' ||
-    !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u.test(value.trim())
-  )
-    return undefined;
+    value.length > 40 ||
+    !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/u.test(value)
+  ) {
+    return invalid(message);
+  }
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return Number.isFinite(parsed) ? parsed : invalid(message);
+}
+
+function coordinate(value: unknown, maximum: number): number | null {
+  const message = 'Zetaris returned invalid town coordinates.';
+  const parsed = numeric(value, message);
+  if (parsed !== null && Math.abs(parsed) > maximum) {
+    return invalid(message);
+  }
+  return parsed;
 }
 
 function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
@@ -191,15 +200,14 @@ function parseRow(value: unknown, scope: EvidenceScope): EvidenceRow {
   if (start < scope.period.start || start >= scope.period.end) {
     return invalid('Zetaris returned a sample outside the requested period.');
   }
-  const rawConcentration = row['pm25'];
-  const concentration =
-    rawConcentration === null ? null : parseFiniteNumber(rawConcentration);
-  if (
-    concentration === undefined ||
-    (concentration !== null && concentration < 0)
-  )
-    return invalid('Zetaris returned an invalid PM2.5 concentration.');
-  // The live REST source has no provider issuance or durable ingestion time.
+  const concentrationMessage =
+    'Zetaris returned an invalid PM2.5 concentration.';
+  const concentration = numeric(row['pm25'], concentrationMessage);
+  if (concentration !== null && concentration < 0) {
+    return invalid(concentrationMessage);
+  }
+  // Snapshot receipt and historical collection times never establish provider
+  // model issuance, even when retained in the raw issued_utc field.
   return {
     start,
     end: start,

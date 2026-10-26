@@ -23,11 +23,8 @@ import { Badge } from '../../shared/ui/Badge.tsx';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import type { AgentRun } from '../dashboard/useAgentRun.ts';
-import type { Artifact } from '../../../../app/contracts/artifacts.ts';
 import { TaskResult } from './TaskResult.tsx';
-import { TaskQuestions } from './TaskQuestions.tsx';
 import { TaskControls } from './TaskControls.tsx';
-import { SourceImport, sourceReferences } from './SourceImport.tsx';
 import styles from './ChatPanel.module.css';
 
 interface ChatMessage {
@@ -61,7 +58,7 @@ interface ChatMessage {
 }
 
 const EXAMPLE_PROMPTS = [
-  'Explain the main conclusions in my attached sources and identify what remains uncertain.',
+  'Explain the difference between modeled PM2.5 estimates and sensor observations.',
   'Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24, distinguish modeled values from observations, and identify coverage gaps.',
 ];
 
@@ -99,9 +96,6 @@ export function ChatPanel({
     readLocal<ChatMessage[]>('hazewatch.chat.v1', []),
   );
   const [draft, setDraft] = useState('');
-  const [sources, setSources] = useState<Artifact[]>([]);
-  const [scope, setScope] = useState('');
-  const [inputError, setInputError] = useState<string | null>(null);
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -201,15 +195,6 @@ export function ChatPanel({
     const trimmed = question.trim();
     if (!trimmed || ['running', 'waiting', 'paused'].includes(run.status))
       return;
-    let parsedScope;
-    try {
-      if (savedContext?.scope !== undefined) parsedScope = savedContext.scope;
-      else if (scope.trim()) parsedScope = JSON.parse(scope);
-    } catch {
-      setInputError('Scope must be valid JSON. Correct it or leave it empty.');
-      return;
-    }
-    setInputError(null);
     const pendingId = newId();
     const idempotencyKey = submissionKey ?? crypto.randomUUID();
     save([
@@ -229,8 +214,8 @@ export function ChatPanel({
         question: trimmed,
         focusItemId: focus,
         idempotencyKey,
-        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
-        scope: parsedScope,
+        contextRefs: savedContext?.contextRefs,
+        scope: savedContext?.scope,
       },
     ]);
     setDraft('');
@@ -248,8 +233,12 @@ export function ChatPanel({
         question: trimmed,
         focusItemId: focus,
         idempotencyKey,
-        contextRefs: savedContext?.contextRefs ?? sourceReferences(sources),
-        ...(parsedScope !== undefined ? { scope: parsedScope } : {}),
+        ...(savedContext?.contextRefs !== undefined
+          ? { contextRefs: savedContext.contextRefs }
+          : {}),
+        ...(savedContext?.scope !== undefined
+          ? { scope: savedContext.scope }
+          : {}),
       });
       finish({
         state: 'done',
@@ -288,6 +277,14 @@ export function ChatPanel({
   };
 
   const running = ['running', 'waiting', 'paused'].includes(run.status);
+  const showWelcome = messages.length === 0 && !run.task;
+  const clearChat = () => {
+    run.reset();
+    save([]);
+    setDraft('');
+    setFocusItemId(null);
+    inputRef.current?.focus();
+  };
   const currentRecord = run.task?.record;
   const currentResultInHistory = Boolean(
     currentRecord &&
@@ -305,23 +302,23 @@ export function ChatPanel({
     <section className={styles.chat} aria-labelledby="chat-title">
       <div className={styles.header}>
         <h2 id="chat-title">Ask the agents</h2>
-        {messages.length > 0 && (
+        {(messages.length > 0 || run.task) && (
           <Button
             size="small"
             variant="ghost"
-            onClick={() => save([])}
-            disabled={running}
+            onClick={clearChat}
+            disabled={running || run.operationPending}
           >
             Clear chat
           </Button>
         )}
       </div>
 
-      {messages.length === 0 ? (
+      {showWelcome ? (
         <div className={styles.empty}>
           <p>
-            Describe what you need to understand or investigate. Attach source
-            material when useful; the agents will ask for missing information.
+            Describe what you need to understand or investigate. The agents will
+            ask for missing information.
           </p>
           <ul className={styles.prompts}>
             {EXAMPLE_PROMPTS.map((p) => (
@@ -342,7 +339,7 @@ export function ChatPanel({
             ))}
           </ul>
         </div>
-      ) : (
+      ) : messages.length > 0 ? (
         <ol
           ref={listRef}
           className={styles.messages}
@@ -387,15 +384,28 @@ export function ChatPanel({
             </li>
           ))}
         </ol>
-      )}
+      ) : null}
 
       {run.task?.record && (
         <div className={styles.currentTask}>
           <TaskControls run={run} />
-          <TaskQuestions run={run} />
-          <Link to={`/manager/${encodeURIComponent(run.task.id)}`}>
-            Open Manager workspace
-          </Link>
+          {run.task.record.questions.some(
+            (question) => question.status === 'open',
+          ) && (
+            <section aria-label="Questions awaiting an answer">
+              <h3>Clarification needed</h3>
+              <ul>
+                {run.task.record.questions
+                  .filter((question) => question.status === 'open')
+                  .map((question) => (
+                    <li key={question.id}>{question.question}</li>
+                  ))}
+              </ul>
+              <Link to={`/task/${encodeURIComponent(run.task.id)}`}>
+                Answer in task report
+              </Link>
+            </section>
+          )}
           {run.task.record.result &&
             !currentResultInHistory &&
             (run.task.record.result.currency === 'current' ||
@@ -411,30 +421,6 @@ export function ChatPanel({
               />
             )}
         </div>
-      )}
-      <SourceImport
-        sources={sources}
-        onChange={setSources}
-        importSource={run.importSource}
-        disabled={running}
-      />
-      <details className={styles.scopeInput}>
-        <summary>Optional task scope</summary>
-        <label htmlFor="task-scope">
-          Scope as JSON, interpreted by the selected capability
-        </label>
-        <textarea
-          id="task-scope"
-          rows={2}
-          value={scope}
-          onChange={(event) => setScope(event.target.value)}
-          disabled={running}
-        />
-      </details>
-      {inputError && (
-        <p role="alert" className={styles.cancellationError}>
-          {inputError}
-        </p>
       )}
       <form className={styles.form} onSubmit={onSubmit}>
         <label htmlFor="chat-input" className="visually-hidden">

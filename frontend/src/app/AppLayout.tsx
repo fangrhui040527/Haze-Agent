@@ -37,7 +37,7 @@ function Header() {
         {live.fictional && (
           <Badge
             tone="warn"
-            title="Dashboard table items are fictional. Evidence chat uses its separately labeled task API."
+            title="These dashboard items are fictional fixtures or demo samples. Task answers label their source and execution mode."
           >
             TABLE · fictional sample
           </Badge>
@@ -58,7 +58,7 @@ function Header() {
         </span>
         <nav className={styles.nav} aria-label="Main">
           <NavLink
-            to="/"
+            to="/dashboard"
             end
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`
@@ -100,8 +100,8 @@ function Footer() {
   return (
     <footer className={styles.footer}>
       Not medical advice. Follow your local authorities. Sources are listed on
-      each item. Fictional samples are labeled as demo data; evidence answers
-      identify their source and execution mode.
+      each item. Fictional samples are labeled; evidence answers identify their
+      source and execution mode.
     </footer>
   );
 }

@@ -1,32 +1,35 @@
 # SmokeLedger USL
 
-The current SmokeLedger USL is a read-only smoke-evidence view over the
-Environmental USL. It exposes source-backed `locations`, `fires`, `pm25`, and
-`wind` entities. It uses Zetaris' existing feeds and does not require or start
-PostgreSQL.
+The current SmokeLedger USL is a read-only smoke-evidence view over current
+Zetaris sources. It exposes `locations`, `fires`, `pm25`, and `wind`, using
+Environmental USL records for locations, fires, and PM2.5, plus the published
+`wind.hourly_observations` feed. It does not require or start PostgreSQL.
 
-The normal initializer bootstraps Environmental, Law, and SmokeLedger together:
+Publish the source snapshots first, including wind:
+
+```powershell
+npm run zetaris:bootstrap:sources -- --location kuala-lumpur
+```
+
+The normal USL initializer bootstraps Environmental, Law, and SmokeLedger
+together:
 
 ```powershell
 node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts
 ```
 
-To add SmokeLedger while bootstrapping only one other layer, pass
-`--with-smokeledger`, for example `--env-only --with-smokeledger`. To activate
-SmokeLedger by itself, the Environmental USL must already be bootstrapped:
+To activate SmokeLedger by itself, the Environmental USL must already be
+bootstrapped and the source snapshots must already be published:
 
 ```powershell
-node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --smokeledger-only
+npm run zetaris:bootstrap:smokeledger
 ```
 
 Use `--dry-run` to preview the SQL without connecting to Zetaris.
 
 This source-backed USL does not include the old PostgreSQL-only tables for
 cases, trajectories, attribution, projections, guidance, evidence, or agent
-runs. The retained PostgreSQL schema and data are legacy tooling and are not
-migrated or modified by this bootstrap.
-
-If the old PostgreSQL-backed `smokeledger_usl` was already deployed to an
-instance, this bootstrap does not drop or replace that existing model. Have an
-administrator explicitly remove or migrate the old USL before deploying this
-definition; its PostgreSQL data is left untouched.
+runs. The retained database objects are not dropped or modified by this
+bootstrap. If the old PostgreSQL-backed `smokeledger_usl` was already deployed,
+an administrator must explicitly remove or migrate that model before deploying
+this definition.

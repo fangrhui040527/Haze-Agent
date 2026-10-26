@@ -1,6 +1,8 @@
 # Zetaris platform
 
-The platform as seven containers on one machine, managed with Docker Compose. No cluster, no build step.
+The platform runs on one machine through the Haze repository-root `compose.yaml`.
+Run Docker Compose commands from the Haze repository root. Settings live in the
+shared root `.env`; this folder holds deployment assets and diagnostic scripts.
 
 ```
 postgres --(healthy)--> driver --(healthy)--> api --(healthy)--> ui
@@ -20,89 +22,52 @@ postgres --(healthy)--> driver --(healthy)--> api --(healthy)--> ui
 
 ## Install
 
-Ten minutes of work, plus twenty waiting for a download and a first start.
+See the [root setup guide](../../../../zetaris_docker_setup.md) for the full
+configuration steps. For a new checkout, copy root `.env.example` to root `.env`
+without overwriting an existing file, then fill in the image references and
+credentials issued with your Zetaris download. Keep the issued driver, API and
+UI image references together. For an existing install, retain its deployment
+credentials and settings in root `.env`.
 
-**1. Install Docker.** Docker Desktop on macOS or Windows, `docker-ce` on Linux. In its settings give Docker **8 GB of memory** and 4 CPUs -- the default is usually less, and the query engine will not start without it.
+Start Docker Desktop with 8 GB of memory and 4 CPUs available, sign in to the
+issued image registry, then run these commands from the Haze repository root:
 
-**2. Unzip the download.**
-
-```bash
-unzip zetaris-platform.zip
-cd zetaris-platform
-```
-
-**3. Sign in to the image registry.** Paste the command from the Zetaris Cloud download page — it carries your username and password, so there is nothing to type.
-
-```bash
+```sh
 docker login zetarishackathon.azurecr.io
-```
-
-**4. Check the machine can run it.**
-
-```bash
-./preflight.sh
-```
-
-Fix anything it reports as FAIL before going on — it is checking the things that otherwise fail twenty minutes later with an error that does not mention them, the registry sign-in above among them.
-
-**5. Nothing to configure.** `.env` is already in the folder, already filled in. Sign in later as `admin@zetaris.com` / `Zetaris1@` and change the password from the user menu, top right.
-
-If you would rather set your own password before the first start, edit `ZETARIS_ADMIN_PASSWORD` in `.env` now — at least 8 characters with a lower case letter, an upper case letter, a digit, and one of `$ @ ! % * ? &`. Other punctuation is rejected, and the rejection does not appear until several minutes into the first start.
-
-**6. Download the images.** About 4 GB, so 5-15 minutes:
-
-```bash
-docker compose pull
-```
-
-**7. Start it.**
-
-```bash
-docker compose up -d
-```
-
-The first start takes 5-10 minutes. `init` and `bootstrap` ending as `Exited (0)` is success -- they are setup jobs, not services.
-
-**8. Check it worked.**
-
-```bash
-./verify.sh
-```
-
-Nine checks, ending with a query that travels the whole stack. It also tells you when the slow first-start step has finished.
-
-**9. Open <http://localhost:3000>** and sign in as `admin@zetaris.com` / `Zetaris1@`. Change the password from the user menu, top right, next to Sign out.
-
-### On a server instead
-
-A machine other than your own needs HTTPS: the interface uses browser APIs that exist only in a secure context, and `localhost` is the sole exception. Over plain HTTP anywhere else, sign-in fails with `crypto.randomUUID is not a function`.
-
-Steps 1-4 are the same. Then:
-
-```bash
-cp .env.server.example .env
-# set ZETARIS_ADMIN_PASSWORD -- there is no default in this file, because it puts the
-#   platform on a public address -- and replace <public-ip> in the three addresses with
-# this machine's public IP, hyphenated: 54.1.2.3 becomes 54-1-2-3
+bash app/adapters/zetaris/zetaris-platform/preflight.sh
+docker compose config --quiet
 docker compose pull
 docker compose up -d
+docker compose ps --all
 ```
 
-Open 80 and 443 to the internet. Any name ending `.<ip>.sslip.io` resolves through public DNS with no record to create, so Caddy obtains a real certificate on first start, and the platform is at `https://lightning.<public-ip>.sslip.io`.
+The shell scripts run in WSL, Linux or macOS. PowerShell can run the Docker
+commands directly. The first startup may take several minutes; `init` and
+`bootstrap` ending as `Exited (0)` is expected.
 
-For a private address that no certificate authority can validate, set `CADDY_GLOBAL_OPTIONS=local_certs`. Caddy signs its own and the browser warns once.
+```sh
+bash app/adapters/zetaris/zetaris-platform/verify.sh
+```
+
+Open <http://localhost:3000> and sign in with the configured administrator email
+and password. The administrator is created on first startup; changing the
+bootstrap variables later does not reset an existing account.
+
+### On a server
+
+Configure HTTPS in root `.env` by setting `COMPOSE_PROFILES=tls`,
+`ZETARIS_PUBLIC_HOST` to the public hostname, and `ALLOWED_ORIGINS` and `GUI_URL`
+to its HTTPS origin. Then run `docker compose up -d` from the repository root.
+The optional Caddy service serves ports 80 and 443. For a private address that
+cannot receive a public certificate, set `CADDY_GLOBAL_OPTIONS=local_certs` and
+trust the generated certificate on your client.
 
 ### If something fails
 
-`./verify.sh` names the component. The usual causes:
-
-| What you see | Cause |
-|---|---|
-| `pull access denied` | step 4 was skipped |
-| driver never becomes healthy | Docker has too little memory -- run `./preflight.sh` |
-| `crypto.randomUUID is not a function` | reached over plain HTTP at something other than localhost |
-| `bootstrap: still running` | not finished yet; it loads the sample data |
-| no `NY_TAXI` or `TPCDS_DB` | the machine could not reach S3 -- see `sample-data-seed.log` in the `driver-logs` volume |
+Run the verifier above. Check logs with `docker compose logs --tail=50 driver api`.
+A registry access error requires the issued registry login; a driver that never
+becomes healthy often needs more Docker memory. The browser interface requires
+HTTPS when accessed through a hostname or address other than localhost.
 
 ## Sample data
 
@@ -119,14 +84,14 @@ Try `SELECT * FROM NY_TAXI.customers LIMIT 10`.
 
 | | Query engine | For |
 |---|---|---|
-| `.env` | 2 GB, 2 cores | a laptop |
-| `.env.server.example` | 4 GB, 4 cores | an instance with room |
+| root `.env` example | 2 GB, 2 cores | a laptop |
+| server tuning in root `.env` | 4 GB, 4 cores | an instance with room |
 
-The query engine uses exactly the heap it is given, so this is the one choice that decides how fast queries run. **Do not use the server file on a laptop** -- it asks for 6 GB of heap across the driver and API, and on a smaller machine the driver never starts, with a Spark error that says nothing about memory.
+The query engine uses exactly the heap it is given, so this is the one choice that decides how fast queries run. Leave room for both the driver and API heaps when increasing these settings.
 
 ## Tuning the query engine
 
-Heap and cores come from `.env`:
+Heap and cores come from root `.env`:
 
 | | |
 |---|---|
@@ -134,10 +99,10 @@ Heap and cores come from `.env`:
 | `ZSPARK_DRIVER_CORES` | cores it may use |
 | `ZSPARK_MASTER_URL` | `local[2]` runs Spark in-process with two threads |
 
-Everything else is in `conf/spark-defaults.conf`, which the driver reads at startup. It ships with the useful settings commented out beside their defaults, so you can see what is available without reading Spark's documentation:
+Other Spark settings are in `app/adapters/zetaris/zetaris-platform/conf/spark-defaults.conf`, which the driver reads at startup. It ships with the useful settings commented out beside their defaults, so you can see what is available without reading Spark's documentation:
 
 ```bash
-vi conf/spark-defaults.conf
+vi app/adapters/zetaris/zetaris-platform/conf/spark-defaults.conf
 docker compose restart driver
 ```
 
@@ -147,11 +112,11 @@ Heap and cores cannot be set in that file. The driver is launched with them on t
 
 ## Connecting over JDBC
 
-The query engine listens on port 10000 on this machine. Tools that speak JDBC -- DBeaver, DataGrip, Tableau, your own Java or Python code -- connect to it through the driver in `jdbc/`.
+The query engine listens on port 10000 on this machine. Tools that speak JDBC -- DBeaver, DataGrip, Tableau, your own Java or Python code -- connect to it through the driver in this folder's `jdbc/` directory.
 
 | | |
 |---|---|
-| Driver file | `jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` |
+| Driver file | `app/adapters/zetaris/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` |
 | Driver class | `com.zetaris.lightning.jdbc.LightningDriver` |
 | URL | `jdbc:zetaris:lightning@localhost:10000` |
 | User / password | the account you sign in to the web interface with |
@@ -160,7 +125,7 @@ The query engine listens on port 10000 on this machine. Tools that speak JDBC --
 - **In DBeaver:** Database -> Driver Manager -> New, add the jar under Libraries, set the class and URL above, then create a connection with that driver.
 - **Only from this machine.** Port 10000 is bound to `127.0.0.1` because the connection is unencrypted. To reach it from elsewhere, tunnel it: `ssh -L 10000:localhost:10000 <server>`, then connect to `localhost:10000` as above.
 - **Port 10000 already taken?** Set `DRIVER_PORT` in `.env`, run `docker compose up -d`, and use that port in the URL.
-- **Nothing answers until the driver is healthy.** `./verify.sh` tells you when it is.
+- **Nothing answers until the driver is healthy.** `bash app/adapters/zetaris/zetaris-platform/verify.sh` tells you when it is.
 
 ## Day to day
 
@@ -171,7 +136,7 @@ docker compose down          # stop, keep the data
 docker compose down -v       # stop and delete everything, including the metastore
 ```
 
-**Back up `.env`.** It holds the field-encryption keypair's password. Without it, stored datasource credentials cannot be recovered.
+**Back up root `.env` and the Zetaris data volumes.** The volumes contain the metastore and the encryption keypair used for stored datasource credentials.
 
 ## Two things worth knowing
 

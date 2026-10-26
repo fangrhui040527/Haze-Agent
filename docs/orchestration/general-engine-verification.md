@@ -42,7 +42,7 @@ npm run tasks:verify -- --fixture
 npm run tasks:verify -- --live Klang 2026-10-24T00:00:00Z 2026-10-25T00:00:00Z
 ```
 
-`check` includes pin verification, formatting, root and SmokeLedger type checks, lint, build, backend unit tests, pinned engine conformance, frontend build/tests and explicit fixture process/restart verification. PostgreSQL saver tests require their separately configured disposable database and are run separately in CI.
+`check` includes pin verification, formatting, root and Zetaris source type checks, lint, build, backend unit tests, pinned engine conformance, frontend build/tests and explicit fixture process/restart verification. PostgreSQL saver tests require their separately configured disposable database and are run separately in CI.
 
 The browser source file chooser required an extension setting unavailable in the test session. The source paste alternative completed the same real import API flow; file encoding, UTF-8 validation and the full decoded 1 MiB boundary are tested. Desktop/mobile screenshots are retained locally under `tmp/general-ui-evidence/`.
 

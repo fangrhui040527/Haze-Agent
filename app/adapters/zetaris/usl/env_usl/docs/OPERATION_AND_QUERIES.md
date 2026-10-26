@@ -14,10 +14,19 @@ npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
 ```
 
-Review the generated SQL before rerunning without `--dry-run`. These commands
-register direct Open-Meteo REST tables and unified views. Use `--test` instead
-to register Kuala Lumpur only; neither command writes local snapshots or
-requires PostgreSQL.
+Review the plan before rerunning without `--dry-run`. This publishes air-quality
+and wind FileStore snapshots plus the FIRMS source, without a separate ingestion
+database. The optional SmokeLedger USL is a read-only semantic view over the
+Environmental sources; it does not require PostgreSQL. Existing database
+volumes and registered objects are not deleted or migrated automatically.
+
+After publishing the source snapshots and compiling the Environmental USL,
+bootstrap its SmokeLedger view:
+
+```powershell
+npm run zetaris:bootstrap:smokeledger -- --dry-run
+npm run zetaris:bootstrap:smokeledger
+```
 
 The broader environmental and law models have their own lifecycle. When
 setting up those models on a fresh environment:

@@ -1,10 +1,27 @@
 {
-  "extends": "./tsconfig.smokeledger.json",
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ES2024", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true
+  },
   "include": [
+    "app/adapters/zetaris/sources/shared/**/*.ts",
     "app/adapters/zetaris/sources/air_quality/**/*.ts",
-    "app/adapters/zetaris/sources/open_meteo_pm25/**/*.ts",
-    "app/adapters/zetaris/sources/open_meteo_wind/**/*.ts",
+    "app/adapters/zetaris/sources/wind/**/*.ts",
     "app/adapters/zetaris/sources/nasa_firms/**/*.ts",
-    "app/adapters/zetaris/usl/bootstrap_usl.ts"
+    "app/adapters/zetaris/usl/bootstrap_sources.ts"
   ]
 }

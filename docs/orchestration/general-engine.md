@@ -9,7 +9,7 @@ The task API retains TypeScript, LangGraph, SQLite and the existing application.
 - `app/capabilities/`: applicability, input parsing, retrieval guidance, deterministic methods, checks, artifact schemas and optional assignment templates.
 - `app/tasks/`: authoritative row persistence, atomic reservations, task lifecycle, execution services and HTTP.
 - `app/orchestration/`: executable registry, strict action protocol and independent LangGraph workflows.
-- `app/adapters/`: provider and authenticated transport; models never submit SQL or executable code.
+- `app/adapters/`: provider and authenticated transport plus service bridges such as `damage-input-adapter`; domain policies are supplied through composition, and models never submit SQL or executable code.
 - `app/composition.ts`: the single registration point. Core-to-domain imports are prohibited by lint and architecture tests.
 
 PM2.5 scope, SQL construction, retained-source semantics, producer calculations and the separate independent checker live in `app/capabilities/pm25`. Numerical availability is a PM2.5 artifact, not a required global result field.
