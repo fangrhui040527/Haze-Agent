@@ -1,0 +1,181 @@
+# DamageAccountant pilot readiness matrix
+
+## Purpose and status
+
+Use this matrix to decide whether a bounded pilot is ready to proceed through
+each workflow stage. It translates the input requirements in
+[DAMAGE_ACCOUNTANT_INPUT_SPECIFICATION.md](./DAMAGE_ACCOUNTANT_INPUT_SPECIFICATION.md)
+into evidence, coverage, blocker, and review fields. Update it from verified
+source documentation, retained data, reproducible checks, and named reviewer
+decisions—not from crawler or model-generated claims alone.
+
+This initial snapshot is deliberately conservative. It records the user's
+preliminary direction for a recent fire-attributable haze pilot in Klang,
+covering all residents regardless of ethnicity and including an intervention
+evaluation. The exact event/dates, boundary, outcomes, intervention, sources,
+and scientific method are not yet selected or approved. `Not assessed` means
+no evidence was evaluated; it does not mean the input is available or
+acceptable.
+
+## Status definitions
+
+| Status | Meaning |
+|---|---|
+| `NOT ASSESSED` | No adequate evidence has been examined against the stated acceptance criterion. |
+| `PARTIAL` | Some evidence exists, but coverage, metadata, validation, or review is incomplete. |
+| `BLOCKED` | A required decision, input, or dependency is missing, so the downstream stage cannot proceed. |
+| `READY` | Acceptance criterion is met with retained evidence and the required review recorded. |
+| `NOT IN SCOPE` | The approved analysis does not require this conditional input; record the rationale and approver. |
+
+Do not mark an item `READY` based only on a crawler result, a small sample,
+an undocumented API response, or a passing software test. A test establishes
+software behavior, not scientific suitability of real-world inputs.
+
+## Pilot scope and approval record
+
+Complete and approve this record before treating the matrix as a project
+readiness assessment. Current status is **BLOCKED: scope is only partially
+specified; event, endpoints, intervention, and reviews remain unresolved**.
+
+| Scope decision | Current value | Evidence / rationale | Decision owner | Approval status |
+|---|---|---|---|---|
+| Stable event ID and haze episode definition | Recent episode requested; 15 Oct 2026 is an unverified single-day lead, not an approved event window | Obtain and verify an authoritative Klang-area station series or event notice, define a reviewed episode rule and complete dates, and record evidence. | Project lead + atmospheric-science reviewer | Pending |
+| Source boundary and included pollution sources | Fire-attributable smoke | Define target fires/source buffer and other included sources; document the attribution counterfactual. | Atmospheric-science reviewer | Pending |
+| Malaysian study boundary and boundary version | Klang; exact administrative boundary/version not selected | Name the Klang boundary dataset/version and spatial reference system. | Project lead + geospatial reviewer | Pending |
+| Population and strata | All residents in Klang, regardless of ethnicity | Define exposed/resident denominator, age/sex strata, exclusions, and population reference year. | Epidemiology reviewer | Pending |
+| Event, exposure, health, baseline, and valuation periods | Not selected | Specify time zone, averaging window, lags, baseline years, and valuation horizon. | Project lead + domain reviewers | Pending |
+| Counterfactual | Not selected | Define the comparison and how it will be estimated; do not assume a historical average is causal. | Atmospheric-science + epidemiology reviewers | Pending |
+| Health outcomes and endpoints | Pending expert selection | List outcomes and case definitions; designate unestimated endpoints explicitly. | Epidemiology reviewer | Pending |
+| Economic perspective and included costs | Not selected | Define payer/recipient boundary, transfers, currency, price year, and double-counting policy. | Health-economics reviewer | Pending |
+| Intervention evaluation | Included; targeted open-burning prevention/enforcement is a candidate category only | Confirm eligible source fires are under the relevant authority; name the incremental activity, agency, schedule, costs, causal pathway, and no-additional-intervention comparator. | Project lead + evaluation reviewer | Pending |
+| Pilot minimum coverage and acceptable exclusions | Proposed criteria in input specification; not approved | Confirm or revise proposed minimums before acquisition and analysis. | Project lead + relevant domain reviewers | Pending |
+
+## Input readiness
+
+The acceptance criteria refer to the corresponding input row and proposed
+minimum coverage in the input specification. Add links to exact source
+versions, retained artifact paths/checksums, quality reports, and review
+records as evidence becomes available. `Not assessed` is the starting status
+for inputs where the current pilot has no adequate evidence.
+
+## Task 2 — Official-source and access-path screening
+
+Documentation was checked on **2026-10-27**. These checks establish candidate
+products and documented access routes, not pilot suitability, completed
+downloads, or domain approval. The latest pilot event remains unspecified;
+coverage must be rechecked against its dates after scope approval.
+
+| Need | Official documentation checked | What the documentation establishes | Remaining verification / decision |
+|---|---|---|---|
+| Fire detections | [NASA FIRMS Area API](https://firms.modaps.eosdis.nasa.gov/api/area/) | Supports bounding-box area requests, dates, and selected MODIS/VIIRS near-real-time or standard products. The documented API requests use a free MAP_KEY; each date-range request is limited to 1–5 days. | Choose sensor/product and QA policy with the event dates; acquire the whole selected period in bounded chunks; retain the key outside source/reports; document overpass/cloud omissions and terms. |
+| Fire activity and emissions | [CAMS GFAS product](https://ads.atmosphere.copernicus.eu/datasets/cams-global-fire-emissions-gfas?tab=overview); [CAMS API instructions](https://ads.atmosphere.copernicus.eu/how-to-api) | GFAS derives FRP-based fire activity and estimated emissions with emission factors; the catalogue lists PM2.5 and other species at 0.1-degree global grid. Version 1.2 is daily for 2003–2025; version 1.4.2 provides hourly estimates and daily averages from 2026 onward. API access requires a Copernicus account/token and manual agreement to the dataset terms before retrieval. | Select version matching event dates; inspect requested variables, units, temporal convention, uncertainty, and source coverage; test retrieval and terms acceptance. GFAS estimates do not by themselves prove smoke reached Klang. |
+| Meteorology | [ERA5 single-level product](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview); [CAMS/CDS API instructions](https://ads.atmosphere.copernicus.eu/how-to-api) | Hourly global estimates from 1940 onward are documented for the regridded single-level product at 0.25-degree resolution; uncertainty estimates are available from an ensemble at coarser resolution/interval. API access uses an account/token and requires agreement to dataset terms. | Transport-model reviewer must specify the exact fields, levels, domain, resolution, temporal window, and uncertainty product. ERA5 is a candidate input, not a selected or validated transport configuration. |
+| Ambient PM2.5 context / validation | [DOSM monthly air-pollution dataset](https://open.dosm.gov.my/data-catalogue/air_pollution); [Data.gov.my API guide](https://developer.data.gov.my/static-api/data-catalogue); [DOE MyEQMS / APIMS](https://eqms.doe.gov.my/APIMS/main) | DOSM metadata describes monthly averages from hourly monitoring-station observations, PM2.5 in µg/m³, dataset through 2024, CC BY 4.0, and a public API/download route. DOE MyEQMS identifies APIMS as DOE's network of ambient-air monitoring stations. | The monthly aggregate is not an event-hour/day station series or population-weighted grid. The public dashboard snapshot observed during this review does not identify a Klang event or verify a historical extraction route. Confirm the PM2.5 sample metadata correspondence and obtain appropriate station-level observations and event coverage. |
+| Population grid | [WorldPop population catalogue](https://www.worldpop.org/rest/data/pop); [WorldPop methods](https://www.worldpop.org/methods/populations/) | The catalogue lists 2015–2030 R25A population products at 100 m and 1 km. WorldPop describes annual gridded estimates and age/sex breakdowns for its top-down products, with model/census limitations. | Confirm the exact Malaysia product alias, strata, download format, license/terms, and grid before choosing it. Select year and validate totals. A catalogue listing is not an acquired Klang grid. |
+| Population cross-check | [DOSM district population table](https://open.dosm.gov.my/data-catalogue/population_district) | Official annual district estimates for 2020–2026 include sex, age group, and ethnicity; values are in thousands, source is DOSM, and license is CC BY 4.0. `overall` is available for all ethnic groups. | District totals can help validate/describe a population denominator but are not a spatial grid. Verify the Klang administrative district mapping and version, and do not substitute district totals for cell-level population allocation. |
+| Health baseline discovery | [DOSM annual deaths by district and sex](https://data.gov.my/data-catalogue/deaths_district_sex); [WHO GHO OData guide](https://www.who.int/data/gho/info/gho-odata-api) | DOSM documents annual all-cause district deaths/rates by sex and an open API/download path; WHO documents an indicator API with filters for dimensions and time. DOSM deaths data are CC BY 4.0. | Neither source is yet shown to provide the selected cause-specific, event-compatible Klang baseline. Select endpoints first, then verify authoritative local cause, age/sex, denominator, case-definition, and geography coverage. WHO country-level indicators are not a substitute without explicit justification. |
+| Health risk function | [WHO air-quality guideline seed](https://www.who.int/publications/i/item/9789240034228) and WHO GHO metadata/API are discovery references only. | These pages can help identify guidance or health indicators. They do not by themselves establish a selected quantitative PM2.5 risk function applicable to the chosen Malaysian population/outcomes. | Epidemiology review is required after outcomes and exposure metric are set; source and assess an applicable function and its uncertainty, or leave the outcome not estimated. |
+| Treatment costs and work disruption | Data.gov.my/DOSM catalogue seeds include healthcare capacity, labour, and wage context. | Catalogue/API routes can expose relevant context datasets. Official all-cause deaths, staffing, hospital beds, wages, and general labour indicators are not event-attributable admissions, treatment costs, or lost work. | No accepted source path for the required outcome-linked costs or haze-attributable absence has been verified. Decide economic endpoints and perspective, then locate and review appropriate local data. |
+| Intervention evidence | Candidate legal basis: [DOE open-burning provisions and investigating agencies](https://www.doe.gov.my/en/open-burning/) | DOE documents statutory prohibition provisions and roles for agencies investigating open-burning incidents. This supports screening targeted prevention/enforcement as a candidate intervention category, not the existence, cost, or effectiveness of a specific project. | Name a defined intervention and eligible source area, establish that relevant fires are within its jurisdiction, obtain implementation/intensity and cost records, and design a credible no-intervention comparison. Transboundary sources cannot be assumed controllable by a Klang-area enforcement program. |
+
+**Task 2 result:** candidate discovery/access routes are verified for NASA
+FIRMS, CAMS GFAS, ERA5, public Data.gov.my/DOSM tables, and the WorldPop
+catalogue. The source-path gate remains **PARTIAL / BLOCKED for pilot use**:
+none of these checks is an event-specific acquisition or scientific
+acceptance, and health, economic, and intervention inputs remain unresolved.
+
+## Preliminary event and intervention candidates for approval
+
+The user requested a recent episode and an intervention evaluation, while
+leaving outcomes pending expert selection. This screening is for choosing a
+scope only; no candidate is approved and no event-specific data has been
+acquired.
+
+### Recent Klang episode
+
+DOE's [MyEQMS APIMS dashboard](https://eqms.doe.gov.my/APIMS/main) describes
+the national ambient-air monitoring network and current air-quality display.
+Its observed station trend was limited to the preceding 24 hours; a historical
+Klang extraction path was not verified. The official
+[DOSM monthly air-pollution series](https://open.dosm.gov.my/data-catalogue/air_pollution)
+is available through 2024, aggregated monthly.
+
+A [Bernama search-index result](https://www.bernama.com/en/general/news.php?id=2620903)
+for a 15 Oct 2026 report titled “Unhealthy API Readings Recorded In 34 Areas,
+Highest ...” mentions Klang, Selangor and says 34 areas recorded unhealthy
+readings as of 5 pm. The article returned HTTP 500 when opened, so its full
+details could not be checked against the source or underlying station records.
+Treat **15 Oct 2026 only as a lead to verify**, not as a defined haze episode,
+confirmed PM2.5 event, or fire-attributed event.
+
+To nominate an event, retrieve historical Klang-area station series from DOE
+or obtain a complete authoritative event notice, verify the 15 Oct lead and
+neighboring dates, specify an objective episode rule (for example, consecutive
+dates meeting a reviewed PM2.5/API threshold), and cross-check the period
+against available fire/hotspot and meteorological records. The rule and dates
+require project and atmospheric-science review. No event period should be
+inferred from the current dashboard view or headline alone.
+
+### Intervention option
+
+**Candidate for review: targeted open-burning prevention and enforcement**
+in a source area shown by the later attribution analysis to contribute smoke
+to Klang. DOE's [open-burning guidance](https://www.doe.gov.my/en/open-burning/)
+documents legal prohibition provisions and agency investigation
+responsibilities; it does not establish a costed intervention or its
+effectiveness. A testable intervention would need a named implementing
+agency, target locations and period, defined additional activity (rather than
+the law's mere existence), implementation and enforcement records, costs, and
+a credible no-additional-intervention comparison.
+
+This option is conditional on the source-area evidence. If relevant fires are
+outside the implementing authority's jurisdiction, or no source-to-Klang
+contribution is established, local enforcement is not an appropriate
+counterfactual intervention for that event. No health/economic endpoint or
+effectiveness estimate is selected; expert review remains required.
+
+| Workflow input | Requirement | Acceptance criterion | Evidence currently available | Coverage / known gap | Blocker or next action | Status |
+|---|---|---|---|---|---|---|
+| Fire detections | Conditional on fire attribution | Official/validated detections cover the event and transport source buffer; retain observation time, QA, and sensor metadata. | NASA FIRMS official Area API path and query constraints reviewed; no event data acquired. | Exact recent episode/dates and source buffer are not selected. | Identify and approve event dates, then select product/QA policy and acquire/validate the full period. | PARTIAL |
+| Fire radiative power / activity | Conditional on emissions method | Required temporal and spatial fire activity is covered with product QA, units, and uncertainty. | GFAS documentation describes FRP-derived activity; no pilot data acquired. | Method dependency, event, and product version not chosen. | Select emissions method; mark `NOT IN SCOPE` only if approved method does not require it. | PARTIAL |
+| Fire emissions | Required for emissions-based attribution | Emissions by species, time, source, and model domain are complete or gaps are reviewed; version/factors and uncertainty retained. | GFAS documentation lists FRP-based emissions including PM2.5; no pilot data acquired. | No attribution method or event scope; product estimates do not establish receptor attribution. | Choose reviewed attribution path and acquire complete emissions or approved alternative. | PARTIAL |
+| Meteorology | Required for transport-based attribution | Model-required fields cover the complete source-to-receptor domain and simulation period, with no unreviewed gaps. | ERA5 product and CDS API documentation reviewed; no pilot fields acquired. | Domain and model requirements unknown. | Atmospheric reviewer selects model and required fields; then acquire and validate the domain/window. | PARTIAL |
+| Transport / dispersion model | Required method when attributing transport | Reproducible version/configuration; matched historical and counterfactual runs; appropriate independent validation and expert review. | Arithmetic source-removal prototype only; no transport model execution. | Prototype is not a transport or attribution model. | Select, configure, run, validate, and review an appropriate model. | BLOCKED |
+| Ambient PM2.5 field | Required exposure input | Verified concentration unit; declared event-relevant temporal and spatial coverage; QA and measurement/model distinction; gaps quantified. | Three-row monthly Data.gov.my API smoke sample, retained with raw/normalized hashes. DOSM metadata specifies monthly PM2.5 in µg/m³. | The sample response itself carries no unit or row-level geography; metadata describes monthly station-observation aggregates, not an event-period gridded exposure field. | Confirm metadata-to-sample correspondence; acquire a suitable event-period field and station-level validation observations. | PARTIAL (not acceptable as required exposure input) |
+| Population grid | Required for population weighting / burden | Compatible grid and strata cover the study area; reference year/method documented; totals reconciled to authoritative totals within a declared tolerance. | WorldPop catalogue/method documentation reviewed; DOSM district population metadata provides annual age/sex/ethnicity denominator context. No grid acquired. | Klang boundary version and detailed strata/reference year are not selected; district tables are not grids. | Define boundary/strata, verify exact WorldPop release terms/alias, then acquire and reconcile the raster. | PARTIAL |
+| Exposure aggregation | Required derived quantity | Reproducible aggregation from compatible PM2.5/population inputs; exact mask, denominator, period, missingness, and sensitivity documented. | Population-weighted arithmetic prototype and unit tests only. | No compatible real-world inputs or grid processing/validation. | Obtain approved source inputs; implement alignment and coverage checks; independently verify calculation. | BLOCKED |
+| Baseline outcome rates | Required for attributable health outcomes | Outcome-specific rates/denominators match geography, period, case definition, population strata, and chosen method. | DOSM annual all-cause district deaths documentation and WHO indicator API documentation reviewed. | Neither establishes selected outcome-specific event-compatible Klang baseline; outcomes remain unselected. | Select outcomes, then verify a compatible authoritative baseline; do not use all-cause annual rates as a substitute. | BLOCKED |
+| Risk function | Required for health-effect calculation | Versioned function matches exposure metric, outcome, lag, and strata; transfer/applicability and uncertainty reviewed. | Arithmetic prototype accepts a supplied relative risk; no function selected or approved. | No applicability assessment or scientific review. | Obtain epidemiological review and document function or do not estimate that outcome. | BLOCKED |
+| Attributable health outcomes | Required output if health effects are reported | Reproducible estimates from accepted exposure, baseline, and risk inputs; uncertainty and independent numerical check included. | Formula prototype tests only; no empirical calculation. | Required upstream inputs are blocked. | Complete upstream evidence and method review; otherwise mark outcome not estimated. | BLOCKED |
+| Treatment/resource use and unit costs | Conditional on treatment-cost valuation | Compatible outcome-linked quantities and local/justified unit costs; perspective, price year, components, and exclusions documented. | No pilot data acquired. | No monetization scope or outcome data. | Decide if included; acquire and review sources or record approved exclusion. | NOT ASSESSED |
+| Work disruption and valuation | Conditional on productivity valuation | Event-attributable lost time/output and compatible valuation for declared worker strata; method accounts for causal attribution and exclusions. | Labour-market/wage context seeds only. | No haze-attributable disruption data; wages alone are not lost work. | Decide if included; obtain event-linked evidence and justify valuation or exclude. | NOT ASSESSED |
+| Mortality valuation | Conditional on monetizing mortality | Explicit valuation method, population applicability, transfer assumptions, currency/year, and uncertainty reviewed. | No value selected or acquired. | No mortality valuation decision or applicability review. | Decide whether mortality will be monetized; otherwise report physical outcomes only. | NOT ASSESSED |
+| Coverage, incidence, and transfers | Required for account completeness; incidence conditional on payer analysis | Every target endpoint has availability status/reason; account boundary and payer/recipient entries reconcile without double counting. | Accounting contract mapping documented; no empirical account assembled. | Scope, endpoints, and financing evidence not selected. | Approve account boundary and document included/excluded categories and rationale. | BLOCKED |
+| Intervention definition | Conditional on prevention evaluation | One feasible intervention, implementing body, schedule, target, causal path, and no-project comparator are documented. | DOE open-burning legal framework reviewed; targeted prevention/enforcement is only a candidate category. | No additional program, implementing body commitment, eligible source area, cost, schedule, or comparator selected. | Decide whether to pursue targeted enforcement after source attribution and verify implementability with the responsible agency. | PARTIAL |
+| Effectiveness / exposure reduction | Conditional on avoided-harm claims | Measured or modeled intervention effect covers domain/population/horizon, with spillovers, adoption, durability, and uncertainty reviewed. | No intervention effect acquired or estimated. | Depends on intervention selection and verified source contribution. | Obtain applicable empirical/model evidence and reviewer approval. | NOT ASSESSED |
+| Provenance and transformations | Required for every input | Source/product/version, retrieval, license/terms, checksums, transformations, validation, exclusions, and retained artifacts recorded. | Task-five manifest covers the bounded PM2.5 sample; official docs for several candidates now document product and access details, but have not been captured as acquired inputs. | Provenance exists for one small sample only; product terms and input versions must be recorded per actual acquisition. | Generate and verify a manifest for each acquired source and derived artifact; record terms/versions and transformations. | PARTIAL |
+| Uncertainty and sensitivity | Required before decision-grade conclusions | Evidence-supported uncertainty is characterized for material inputs/methods; sensitivity covers material assumptions; outputs are not misrepresented as confidence limits. | One-way sensitivity helper tested; no empirical pilot ranges justified or evaluated. | No parameter ranges/distributions reviewed. | Obtain evidence-backed ranges and domain review; document unquantified uncertainty where evidence is absent. | PARTIAL |
+| Independent review | Required before decision use | Atmospheric, epidemiological, economic, and numerical reviews are recorded for applicable stages. | No pilot result or expert review record. | No reviewers or results designated. | Assign reviewers and require documented review before decision use. | BLOCKED |
+
+## Stage gates
+
+| Gate | Pass condition | Current result |
+|---|---|---|
+| G0 — Scope approved | All required scope decisions above have values, evidence/rationale, and named approvals. | BLOCKED |
+| G1 — Source access verified | Each required input has an acceptable source, documented access path/terms, and acquisition test. | BLOCKED |
+| G2 — Data coverage accepted | Required space/time/population coverage, units, quality, gaps, and exclusions are reviewed against approved criteria. | BLOCKED |
+| G3 — Processing reproducible | Versioned transforms and calculations reproduce from retained inputs and pass quality checks. | BLOCKED |
+| G4 — Methods reviewed | Applicable scientific and valuation methods, assumptions, counterfactuals, and limitations are approved. | BLOCKED |
+| G5 — Uncertainty and independent check | Material uncertainties are treated appropriately and a separate reviewer reconstructs/checks results. | BLOCKED |
+| G6 — Accounting import accepted | Only reviewed quantities/values are mapped to the accounting contract with coverage, incidence, and provenance. | BLOCKED |
+
+Passing a gate applies only to the declared event, geography, population,
+period, endpoints, and method. It does not establish readiness for other
+events or broader coverage.
+
+## Update protocol
+
+For each matrix update, record the date, editor, evidence references, changed
+status, and rationale in the project’s normal review record. Keep source
+artifacts and detailed quality outputs outside this summary matrix, and link
+them rather than copying large datasets or sensitive data into this document.

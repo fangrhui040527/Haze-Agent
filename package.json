@@ -22,6 +22,7 @@
     "zetaris:fetch:firms": "node --experimental-strip-types app/adapters/zetaris/sources/nasa_firms/fetch_nasa_firms.ts",
     "zetaris:fetch:wind": "node --experimental-strip-types app/adapters/zetaris/sources/wind/fetch_wind.ts",
     "zetaris:fetch:pm25": "node --experimental-strip-types app/adapters/zetaris/sources/air_quality/fetch_air_quality.ts",
+    "zetaris:bootstrap:smokeledger": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --smokeledger-only",
     "zetaris:bootstrap:sources": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_sources.ts",
     "build": "npm run vendor:engines && node scripts/build.mjs",
     "vendor:engines": "node scripts/vendor-engines.mjs",

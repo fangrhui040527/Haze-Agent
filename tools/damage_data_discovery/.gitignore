@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+run-output/
+__pycache__/
+*.py[cod]

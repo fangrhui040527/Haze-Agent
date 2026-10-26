@@ -71,7 +71,6 @@ curl -s "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=3.14&lon
 
 ## Integration Topology in Zetaris
 
-- **345 Endpoints**: Because Open-Meteo does not accept a nationwide bounding box in a single GET request, 345 individual REST tables (`aq_{safe_id}_raw`) are registered in database `OPEN_METEO_AIR_QUALITY` and container `air_quality`.
-- **Unified View**: Combined via SQL `UNION ALL` into `air_quality.hourly_observations` linking each point to its canonical `location_index`.
-- **Semantic Entity**: Activated as USL entity `air_quality_obs` in `lightning.metastore.malaysia_env_usl`.
-
+- **Collection**: The fetcher requests each selected location, merges validated rows into a local snapshot, and publishes the complete snapshot to Zetaris FileStore. It does not create one live REST table per location.
+- **Unified View**: `air_quality.hourly_observations` reads the FileStore snapshot and exposes location name, requested coordinates, observation time, PM2.5/PM10, and ingestion metadata.
+- **Semantic Entity**: The Environmental USL can activate these records as `air_quality_obs`, joining them to the canonical location dimension.

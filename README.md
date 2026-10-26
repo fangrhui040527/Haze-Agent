@@ -71,7 +71,6 @@ setup from the repository root before applying it:
 ```sh
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
-npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 ```
 
 After reviewing the plan, rerun the selected command without `--dry-run` to
@@ -79,6 +78,11 @@ fetch and register the source snapshots. A task reads the published snapshot;
 it does not refresh it. Removing the old SmokeLedger tooling does not delete
 existing Docker volumes or registered Zetaris objects. Historical database rows
 are not migrated automatically; saved task captures remain readable.
+
+The USL bootstrap also supports a read-only SmokeLedger view over current
+Environmental locations, fire, PM2.5, and wind feeds. It does not require
+PostgreSQL; run `npm run zetaris:bootstrap:smokeledger` after publishing the
+Environmental sources and compiling the Environmental USL.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris
