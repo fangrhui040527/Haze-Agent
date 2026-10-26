@@ -45,6 +45,7 @@ import {
   type TaskRequest,
   type TaskResult,
 } from '../contracts/tasks.js';
+import { migrateWorldSchema } from './world-schema.js';
 
 export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v1';
 export const STORAGE_MARKER = 'storage-format.json';
@@ -236,6 +237,12 @@ export class TaskStore {
       CREATE TABLE IF NOT EXISTS channel_history(run_id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(run_id,revision));
       CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL,key TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,UNIQUE(channel_id,key));
       CREATE TABLE IF NOT EXISTS checkpoints(run_id TEXT PRIMARY KEY,body TEXT NOT NULL);`);
+    try {
+      migrateWorldSchema(this.db);
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
     if (options.recover !== false) this.recover();
   }
   configureDefinitions(definitions: StoreDefinitions) {
