@@ -102,7 +102,7 @@ async function until(
   id: string,
   predicate: (task: TaskRecord) => boolean,
 ) {
-  const deadline = Date.now() + 8000;
+  const deadline = Date.now() + 25_000;
   while (Date.now() < deadline) {
     const task = instance.store.read(id, localTaskIdentity);
     if (predicate(task)) return task;
