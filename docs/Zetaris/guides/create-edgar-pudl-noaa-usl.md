@@ -2,7 +2,6 @@
 
 **Current prerequisite warning:** PUDL registration is [known to fail](../../open_data/parquet_csv/sql/known_to_fail/ISSUE-03-pudl.md). The successful run below is historical and conflicts with that result. Verify PUDL registration on your instance before using this example.
 
-
 This guide records a model created and queried over JDBC on 2026-10-01. Treat its outputs as historical examples.
 
 Start with [Connecting Codex to Zetaris](../connections/codex-connection.md). Connect and get a row containing `1` from `SELECT 1;` before registering sources or compiling the USL. The connection check does not depend on a sample database already existing.
@@ -24,12 +23,12 @@ Follow these steps in order:
 
 ## What you will create
 
-| USL table | Row grain | Source | Relationships |
-|---|---|---|---|
-| `company` | One SEC CIK | EDGAR REST | Parent of revenue and utility rows |
-| `revenue_year` | CIK and report year | EDGAR REST | `cik` references `company` |
-| `weather_period` | One selected station/state for the observed 2025 period | NOAA station CSVs | Referenced by 2025 utility rows |
-| `utility_state_year` | Matched CIK, state, and report year | PUDL Parquet | References company, revenue year, and weather period |
+| USL table            | Row grain                                               | Source            | Relationships                                        |
+| -------------------- | ------------------------------------------------------- | ----------------- | ---------------------------------------------------- |
+| `company`            | One SEC CIK                                             | EDGAR REST        | Parent of revenue and utility rows                   |
+| `revenue_year`       | CIK and report year                                     | EDGAR REST        | `cik` references `company`                           |
+| `weather_period`     | One selected station/state for the observed 2025 period | NOAA station CSVs | Referenced by 2025 utility rows                      |
+| `utility_state_year` | Matched CIK, state, and report year                     | PUDL Parquet      | References company, revenue year, and weather period |
 
 ```mermaid
 flowchart LR
@@ -51,12 +50,12 @@ The recorded run had 37 observed days per station, **2025-01-01 through 2025-02-
 
 Follow the [connection guide](../connections/codex-connection.md). The driver included in `zetaris-platform` uses these local defaults:
 
-| Setting | Local default |
-|---|---|
+| Setting                                    | Local default                                     |
+| ------------------------------------------ | ------------------------------------------------- |
 | Driver JAR, relative to `zetaris-platform` | `jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` |
-| Driver class | `com.zetaris.lightning.jdbc.LightningDriver` |
-| JDBC URL | `jdbc:zetaris:lightning@localhost:10000` |
-| Credentials | Your assigned Zetaris user ID and password |
+| Driver class                               | `com.zetaris.lightning.jdbc.LightningDriver`      |
+| JDBC URL                                   | `jdbc:zetaris:lightning@localhost:10000`          |
+| Credentials                                | Your assigned Zetaris user ID and password        |
 
 Use your instance's host and port if they differ. `localhost` is the JDBC client's machine, which may not be the agent's host.
 
@@ -196,11 +195,11 @@ CREATE LIGHTNING FILESTORE TABLE noaa_sc_airport FROM NOAA_GHCN_S3 FORMAT CSV OP
 );
 ```
 
-| State context | Station ID | Station name |
-|---|---|---|
-| VA | `USW00013740` | Richmond International Airport |
-| NC | `USW00013722` | Raleigh Airport |
-| SC | `USW00013880` | Charleston International Airport |
+| State context | Station ID    | Station name                     |
+| ------------- | ------------- | -------------------------------- |
+| VA            | `USW00013740` | Richmond International Airport   |
+| NC            | `USW00013722` | Raleigh Airport                  |
+| SC            | `USW00013880` | Charleston International Airport |
 
 These are one-station series per state, not weather at every PUDL plant. The original run checked station IDs and names against the [NOAA inventory](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily).
 
@@ -304,10 +303,10 @@ The query divides temperatures and precipitation by 10 because NOAA stores tenth
 Observed results from the cached aggregation:
 
 | State | Days | Through date | Mean TMAX °C | Mean TMIN °C | Mean daily precipitation mm |
-|---|---:|---|---:|---:|---:|
-| NC | 37 | 2025-02-06 | 10.722 | -0.611 | 1.338 |
-| SC | 37 | 2025-02-06 | 14.351 | 1.441 | 0.978 |
-| VA | 37 | 2025-02-06 | 7.557 | -3.741 | 2.492 |
+| ----- | ---: | ------------ | -----------: | -----------: | --------------------------: |
+| NC    |   37 | 2025-02-06   |       10.722 |       -0.611 |                       1.338 |
+| SC    |   37 | 2025-02-06   |       14.351 |        1.441 |                       0.978 |
+| VA    |   37 | 2025-02-06   |        7.557 |       -3.741 |                       2.492 |
 
 Check current dates before using `_2025_JANFEB`. If the files cover another period, update the identifier in both weather and utility activations. Do not label a partial period as annual weather.
 
@@ -509,10 +508,10 @@ ORDER BY u.report_year, u.state;
 The recorded join returned **nine rows**: NC, SC, and VA for 2023–2025. Weather columns were null for 2023–2024 and populated for 2025.
 
 | 2025 state | Generators | Generation MWh | Capacity MW | SEC company revenue USD | Weather station |
-|---|---:|---:|---:|---:|---|
-| NC | 1 | 147,803 | 79.9 | 16,506,000,000 | `USW00013722` |
-| SC | 2 | 108,737 | 79.7 | 16,506,000,000 | `USW00013880` |
-| VA | 27 | 1,883,021 | 4,210.4 | 16,506,000,000 | `USW00013740` |
+| ---------- | ---------: | -------------: | ----------: | ----------------------: | --------------- |
+| NC         |          1 |        147,803 |        79.9 |          16,506,000,000 | `USW00013722`   |
+| SC         |          2 |        108,737 |        79.7 |          16,506,000,000 | `USW00013880`   |
+| VA         |         27 |      1,883,021 |     4,210.4 |          16,506,000,000 | `USW00013740`   |
 
 SEC company revenue repeats on every state row; do not sum it across states. The run returned USD 14,393,000,000 for 2023 and USD 14,459,000,000 for 2024. Keep company/year and utility/state/year at separate grains.
 
@@ -532,20 +531,20 @@ Use a bounded wait. If you cancel, check whether the server operation stopped; d
 
 ## Troubleshooting and reruns
 
-| Symptom | What to do |
-|---|---|
-| Symptom | Action |
-|---|---|
-| `No suitable driver` for `jdbc:hive2://...` | Use the Zetaris driver class and URL from the connection guide. |
-| `Connection refused` | Check the instance and port 10000 from the JDBC client's host. |
-| Database or table already exists | Inspect and reuse the object. A slow registration may finish after the client stops waiting. |
-| NOAA column not found | Describe the current schema; `_c0`–`_c7` are from the recorded run. |
-| NOAA query is slow | Wait for cache completion, use the three station files, and check connection/cache scope. Avoid a full annual scan. |
-| `nullable -> NOT NULL` during activation | Check source keys and align the projection with the declared schema; `COALESCE` does not validate them. |
-| Activation has an extra or missing column | Match the projection to the DDL. Removing undeclared `utility_name_eia` fixed an earlier mismatch. |
-| Raw SEC/PUDL join raises an internal planning error | Use separate source activations and the USL foreign keys shown here. |
+| Symptom                                              | What to do                                                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Symptom                                              | Action                                                                                                                              |
+| ---                                                  | ---                                                                                                                                 |
+| `No suitable driver` for `jdbc:hive2://...`          | Use the Zetaris driver class and URL from the connection guide.                                                                     |
+| `Connection refused`                                 | Check the instance and port 10000 from the JDBC client's host.                                                                      |
+| Database or table already exists                     | Inspect and reuse the object. A slow registration may finish after the client stops waiting.                                        |
+| NOAA column not found                                | Describe the current schema; `_c0`–`_c7` are from the recorded run.                                                                 |
+| NOAA query is slow                                   | Wait for cache completion, use the three station files, and check connection/cache scope. Avoid a full annual scan.                 |
+| `nullable -> NOT NULL` during activation             | Check source keys and align the projection with the declared schema; `COALESCE` does not validate them.                             |
+| Activation has an extra or missing column            | Match the projection to the DDL. Removing undeclared `utility_name_eia` fixed an earlier mismatch.                                  |
+| Raw SEC/PUDL join raises an internal planning error  | Use separate source activations and the USL foreign keys shown here.                                                                |
 | `NoClassDefFoundError` for `USLTable` or `RemoveUSL` | Record the server error and ask the operator. This occurred in the earlier attempt; the later successful read does not explain why. |
-| DQ does not return within the wait | Keep the result unverified, record elapsed time, and check whether the operation stopped before retrying. |
+| DQ does not return within the wait                   | Keep the result unverified, record elapsed time, and check whether the operation stopped before retrying.                           |
 
 This exercise created no USL materialization or durable cache. The earlier `edgar_pudl_energy_usl` remained because its removal command failed in that attempt. Reuse or version existing models; do not remove another user's objects.
 

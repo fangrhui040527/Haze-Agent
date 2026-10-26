@@ -4,6 +4,7 @@ Open this repository as the Codex workspace. Codex reads the root `AGENTS.md`,
 which sets the connection, SQL, and permission rules for this repository.
 
 <a id="contents"></a>
+
 ## 1. Purpose
 
 Use Codex to inspect a Zetaris instance, run Lightning SQL, or work through a

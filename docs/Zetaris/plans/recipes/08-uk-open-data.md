@@ -10,7 +10,7 @@
 - 🟢 **Open Government Licence v3.0 (OGL)** — the umbrella license for almost all of it; permissive, attribution required, standard exclusions (personal data, crests/insignia, third-party rights, IP).
 - 🟢 **data.gov.uk** — CKAN-based catalog, OGL by default, no key for the catalog itself.
 - 🟢 **ONS** — OGL-licensed; a few product lines (NI postcode data, Royal Mail postcode notices, UPRN/GeoPlace attribution) carry extra conditions — check per resource.
-- 🟡 **Companies House API** — permissive but *not* OGL (Companies Act 2006 / Copyright, Designs and Patents Act 1988 basis instead); free API key via the Developer Hub. Strong relational SQL-recipe candidate alongside USAspending.gov.
+- 🟡 **Companies House API** — permissive but _not_ OGL (Companies Act 2006 / Copyright, Designs and Patents Act 1988 basis instead); free API key via the Developer Hub. Strong relational SQL-recipe candidate alongside USAspending.gov.
 - 🟢 **Transport for London (TfL) Unified API** — OGL v2.0 + TfL amendments, commercial use/redistribution permitted, specific attribution string required. Free `app_key`, 500 req/min/feed. Good Kafka-replay candidate later (same pattern as DONKI and LTA DataMall).
 
 ## Goal
