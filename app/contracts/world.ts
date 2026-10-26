@@ -25,6 +25,29 @@ const actorSchema = z.strictObject({
   id: identifierSchema,
 });
 
+export const worldEventSchema = z.discriminatedUnion('event_kind', [
+  z.strictObject({
+    schema_version: z.literal('haze.world.event.v1'),
+    event_id: identifierSchema,
+    scope: worldScopeSchema,
+    sequence: revision,
+    event_kind: z.enum(['record_created', 'record_revised']),
+    value: z.lazy(() => worldRecordSchema),
+    actor: actorSchema,
+    recorded_at: timestampSchema,
+  }),
+  z.strictObject({
+    schema_version: z.literal('haze.world.event.v1'),
+    event_id: identifierSchema,
+    scope: worldScopeSchema,
+    sequence: revision,
+    event_kind: z.literal('relationship_created'),
+    value: z.lazy(() => worldRelationshipSchema),
+    actor: actorSchema,
+    recorded_at: timestampSchema,
+  }),
+]);
+
 export const worldRecordSchema = z.strictObject({
   schema_version: z.literal('haze.world.record.v1'),
   ref: worldRecordRefSchema,
@@ -243,6 +266,7 @@ export const worldOperationReceiptSchema = z.strictObject({
 });
 
 export type WorldRecord = z.infer<typeof worldRecordSchema>;
+export type WorldEvent = z.infer<typeof worldEventSchema>;
 export type WorldRelationship = z.infer<typeof worldRelationshipSchema>;
 export type WorldSupportRevision = z.infer<typeof worldSupportRevisionSchema>;
 export type WorldAssessment = z.infer<typeof worldAssessmentSchema>;

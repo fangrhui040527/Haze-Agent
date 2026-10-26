@@ -55,6 +55,9 @@ describe('World Model SQLite schema', () => {
       'world_dependencies',
       'world_holds',
       'world_operation_receipts',
+      'world_projection_entities',
+      'world_projection_relationships',
+      'world_projection_cursors',
     ]) {
       expect(
         db
@@ -66,7 +69,11 @@ describe('World Model SQLite schema', () => {
     migrateWorldSchema(db);
     expect(
       db.prepare('SELECT version FROM world_schema_migrations').all(),
-    ).toEqual([{ version: WORLD_SCHEMA_VERSION }]);
+    ).toEqual(
+      Array.from({ length: WORLD_SCHEMA_VERSION }, (_, index) => ({
+        version: index + 1,
+      })),
+    );
   });
 
   it('rolls back every schema object when a migration statement fails', () => {
@@ -90,6 +97,9 @@ describe('World Model SQLite schema', () => {
       'world_dependencies',
       'world_holds',
       'world_operation_receipts',
+      'world_projection_entities',
+      'world_projection_relationships',
+      'world_projection_cursors',
     ]) {
       expect(
         db
@@ -120,5 +130,93 @@ describe('World Model SQLite schema', () => {
         .prepare('SELECT name FROM sqlite_master WHERE type=? AND name=?')
         .get('table', 'tasks'),
     ).toEqual({ name: 'tasks' });
+  });
+
+  it('upgrades an existing version-one database without losing its events', () => {
+    const db = memoryDatabase();
+    migrateWorldSchema(db);
+    db.prepare(
+      `INSERT INTO world_events
+       (event_id,principal,workspace,mode,sequence,event_kind,body,recorded_at)
+       VALUES(?,?,?,?,?,?,?,?)`,
+    ).run(
+      'event:legacy',
+      'test-user',
+      'test-workspace',
+      'fixture',
+      1,
+      'record_created',
+      '{"archival":"event"}',
+      '2026-10-26T00:00:00Z',
+    );
+    db.exec(`DROP TABLE world_projection_entities;
+      DROP TABLE world_projection_relationships;
+      DROP TABLE world_projection_cursors;
+      DELETE FROM world_schema_migrations WHERE version=2;`);
+
+    migrateWorldSchema(db);
+
+    expect(
+      db
+        .prepare('SELECT body FROM world_events WHERE event_id=?')
+        .get('event:legacy'),
+    ).toEqual({ body: '{"archival":"event"}' });
+    expect(
+      db
+        .prepare('SELECT MAX(version) AS version FROM world_schema_migrations')
+        .get(),
+    ).toEqual({ version: WORLD_SCHEMA_VERSION });
+    expect(
+      db
+        .prepare('SELECT name FROM sqlite_master WHERE type=? AND name=?')
+        .get('table', 'world_projection_entities'),
+    ).toEqual({ name: 'world_projection_entities' });
+  });
+
+  it('rolls back a failed version-two upgrade while preserving version-one data', () => {
+    const db = memoryDatabase();
+    migrateWorldSchema(db);
+    db.prepare(
+      `INSERT INTO world_events
+       (event_id,principal,workspace,mode,sequence,event_kind,body,recorded_at)
+       VALUES(?,?,?,?,?,?,?,?)`,
+    ).run(
+      'event:version-one',
+      'test-user',
+      'test-workspace',
+      'fixture',
+      1,
+      'record_created',
+      '{"retained":true}',
+      '2026-10-26T00:00:00Z',
+    );
+    db.exec(`DROP TABLE world_projection_entities;
+      DROP TABLE world_projection_relationships;
+      DROP TABLE world_projection_cursors;
+      DELETE FROM world_schema_migrations WHERE version=2;
+      CREATE TABLE preserved_projection_name(id TEXT PRIMARY KEY);
+      CREATE INDEX world_projection_relationships
+        ON preserved_projection_name(id);`);
+
+    expect(() => migrateWorldSchema(db)).toThrow();
+
+    expect(
+      db.prepare('SELECT version FROM world_schema_migrations').all(),
+    ).toEqual([{ version: 1 }]);
+    expect(
+      db
+        .prepare('SELECT body FROM world_events WHERE event_id=?')
+        .get('event:version-one'),
+    ).toEqual({ body: '{"retained":true}' });
+    expect(
+      db
+        .prepare('SELECT name FROM sqlite_master WHERE type=? AND name=?')
+        .get('table', 'world_projection_entities'),
+    ).toBeUndefined();
+    expect(
+      db
+        .prepare('SELECT name FROM sqlite_master WHERE type=? AND name=?')
+        .get('index', 'world_projection_relationships'),
+    ).toEqual({ name: 'world_projection_relationships' });
   });
 });

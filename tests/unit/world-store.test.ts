@@ -87,6 +87,8 @@ describe('transactional World Model writes', () => {
     expect(
       firstStore.db.prepare('SELECT COUNT(*) AS count FROM world_events').get(),
     ).toEqual({ count: 1 });
+    expect(firstStore.world.events(scope)).toHaveLength(1);
+    expect(firstStore.world.projectionCursor(scope)).toBe(1);
   });
 
   it('rejects conflicting operation-key reuse without persisting a second revision', () => {
@@ -194,5 +196,79 @@ describe('transactional World Model writes', () => {
         recorded_at: at,
       }),
     ).toThrow('endpoint is not available in this scope');
+  });
+
+  it('rebuilds projections from verified events and restores them on restart', () => {
+    const store = createStore();
+    const location = store.world.putRecord(
+      put('location', 'location', 'geo:klang', { name: 'Klang' }),
+    ).value;
+    const source = store.world.putRecord(
+      put('source', 'source', 'source:openaq', { name: 'OpenAQ' }),
+    ).value;
+    store.world.relate(
+      relate('published-by', 'supported_by', location.ref, source.ref),
+    );
+    const before = store.world.events(scope);
+    expect(before.map((event) => event.sequence)).toEqual([1, 2, 3]);
+
+    store.db
+      .prepare(
+        `DELETE FROM world_projection_entities
+         WHERE principal=? AND workspace=? AND mode=? AND record_id=?`,
+      )
+      .run(scope.principal, scope.workspace, scope.mode, location.ref.id);
+    expect(store.world.record(scope, location.ref.id)).toBeUndefined();
+    expect(store.world.rebuildProjections(scope)).toBe(3);
+    expect(store.world.record(scope, location.ref.id)).toEqual(location);
+    expect(store.world.relationships(scope, location.ref.id)).toHaveLength(1);
+    expect(store.world.events(scope)).toEqual(before);
+    expect(store.world.events(scope, 1).map((event) => event.sequence)).toEqual(
+      [2, 3],
+    );
+
+    const directory = directories.at(-1)!;
+    store.db
+      .prepare(
+        `DELETE FROM world_projection_entities
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .run(scope.principal, scope.workspace, scope.mode);
+    store.db
+      .prepare(
+        `DELETE FROM world_projection_relationships
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .run(scope.principal, scope.workspace, scope.mode);
+    store.db
+      .prepare(
+        `DELETE FROM world_projection_cursors
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .run(scope.principal, scope.workspace, scope.mode);
+    store.close();
+    const index = stores.indexOf(store);
+    if (index >= 0) stores.splice(index, 1);
+    const restarted = new TaskStore(directory, { recover: false });
+    stores.push(restarted);
+    expect(restarted.world.record(scope, location.ref.id)).toEqual(location);
+    expect(restarted.world.projectionCursor(scope)).toBe(3);
+    expect(restarted.world.relationships(scope, location.ref.id)).toHaveLength(
+      1,
+    );
+  });
+
+  it('rejects tampered event payloads and rolls back a projection rebuild', () => {
+    const store = createStore();
+    const location = store.world.putRecord(
+      put('location', 'location', 'geo:klang', { name: 'Klang' }),
+    ).value;
+    store.db
+      .prepare('UPDATE world_events SET body=? WHERE sequence=?')
+      .run('{"invalid":true}', 1);
+
+    expect(() => store.world.rebuildProjections(scope)).toThrow();
+    expect(store.world.record(scope, location.ref.id)).toEqual(location);
+    expect(store.world.projectionCursor(scope)).toBe(1);
   });
 });

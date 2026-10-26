@@ -1,8 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-export const WORLD_SCHEMA_VERSION = 1;
+export const WORLD_SCHEMA_VERSION = 2;
 
-const migrationStatements = [
+const versionOneStatements = [
   `CREATE TABLE world_events(
     event_id TEXT PRIMARY KEY,
     principal TEXT NOT NULL,
@@ -116,6 +116,39 @@ const migrationStatements = [
   )`,
 ];
 
+const versionTwoStatements = [
+  `CREATE TABLE world_projection_entities(
+    principal TEXT NOT NULL,
+    workspace TEXT NOT NULL,
+    mode TEXT NOT NULL CHECK(mode IN ('live','fixture','replay')),
+    record_id TEXT NOT NULL,
+    revision INTEGER NOT NULL CHECK(revision > 0),
+    record_hash TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    body TEXT NOT NULL,
+    last_sequence INTEGER NOT NULL CHECK(last_sequence > 0),
+    PRIMARY KEY(principal,workspace,mode,record_id)
+  )`,
+  `CREATE TABLE world_projection_relationships(
+    principal TEXT NOT NULL,
+    workspace TEXT NOT NULL,
+    mode TEXT NOT NULL CHECK(mode IN ('live','fixture','replay')),
+    relationship_id TEXT NOT NULL,
+    body TEXT NOT NULL,
+    last_sequence INTEGER NOT NULL CHECK(last_sequence > 0),
+    PRIMARY KEY(principal,workspace,mode,relationship_id)
+  )`,
+  `CREATE INDEX world_projection_relationships_from
+    ON world_projection_relationships(principal,workspace,mode,last_sequence)`,
+  `CREATE TABLE world_projection_cursors(
+    principal TEXT NOT NULL,
+    workspace TEXT NOT NULL,
+    mode TEXT NOT NULL CHECK(mode IN ('live','fixture','replay')),
+    sequence INTEGER NOT NULL CHECK(sequence >= 0),
+    PRIMARY KEY(principal,workspace,mode)
+  )`,
+];
+
 /** Apply additive World Model schema changes as one SQLite transaction. */
 export function migrateWorldSchema(db: DatabaseSync): void {
   db.exec('BEGIN IMMEDIATE');
@@ -133,11 +166,22 @@ export function migrateWorldSchema(db: DatabaseSync): void {
       throw new Error(
         `World Model schema ${row.version} is newer than supported schema ${WORLD_SCHEMA_VERSION}.`,
       );
-    if (row.version === 0) {
-      for (const statement of migrationStatements) db.exec(statement);
+    const migrations = new Map([
+      [1, versionOneStatements],
+      [2, versionTwoStatements],
+    ]);
+    for (
+      let version = row.version + 1;
+      version <= WORLD_SCHEMA_VERSION;
+      version++
+    ) {
+      const statements = migrations.get(version);
+      if (!statements)
+        throw new Error(`Missing World Model migration ${version}.`);
+      for (const statement of statements) db.exec(statement);
       db.prepare(
         'INSERT INTO world_schema_migrations(version,applied_at) VALUES(?,?)',
-      ).run(WORLD_SCHEMA_VERSION, new Date().toISOString());
+      ).run(version, new Date().toISOString());
     }
     db.exec('COMMIT');
   } catch (error) {

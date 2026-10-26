@@ -1,9 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { contractHash } from '../contracts/json.js';
 import {
+  worldEventSchema,
   worldOperationReceiptSchema,
   worldRecordSchema,
   worldRelationshipSchema,
+  type WorldEvent,
   type WorldOperationReceipt,
   type WorldRecord,
   type WorldRelationship,
@@ -63,7 +65,9 @@ export class WorldModelStore {
     private readonly db: DatabaseSync,
     private readonly transaction: Transaction,
     private readonly clock: () => string = () => new Date().toISOString(),
-  ) {}
+  ) {
+    this.replayPendingProjections();
+  }
 
   putRecord(input: PutWorldRecordInput): WorldWriteResult<WorldRecord> {
     const recordedAt = input.recorded_at ?? this.clock();
@@ -293,9 +297,8 @@ export class WorldModelStore {
       revision === undefined
         ? (this.db
             .prepare(
-              `SELECT body FROM world_entities
-             WHERE principal=? AND workspace=? AND mode=? AND record_id=?
-             ORDER BY revision DESC LIMIT 1`,
+              `SELECT body FROM world_projection_entities
+             WHERE principal=? AND workspace=? AND mode=? AND record_id=?`,
             )
             .get(scope.principal, scope.workspace, scope.mode, recordId) as
             Row | undefined)
@@ -314,15 +317,108 @@ export class WorldModelStore {
     return row ? worldRecordSchema.parse(JSON.parse(row.body)) : undefined;
   }
 
+  events(scope: WorldScope, afterSequence = 0): WorldEvent[] {
+    if (!Number.isSafeInteger(afterSequence) || afterSequence < 0)
+      throw new Error(
+        'World Model event cursor must be a nonnegative integer.',
+      );
+    const rows = this.db
+      .prepare(
+        `SELECT event_id,sequence,event_kind,body FROM world_events
+         WHERE principal=? AND workspace=? AND mode=? AND sequence>?
+         ORDER BY sequence`,
+      )
+      .all(
+        scope.principal,
+        scope.workspace,
+        scope.mode,
+        afterSequence,
+      ) as (Row & {
+      event_id: string;
+      sequence: number;
+      event_kind: string;
+    })[];
+    return rows.map((row) => this.parseEventRow(row, scope));
+  }
+
+  projectionCursor(scope: WorldScope): number {
+    const row = this.db
+      .prepare(
+        `SELECT sequence FROM world_projection_cursors
+         WHERE principal=? AND workspace=? AND mode=?`,
+      )
+      .get(scope.principal, scope.workspace, scope.mode) as
+      { sequence: number } | undefined;
+    return row?.sequence ?? 0;
+  }
+
+  rebuildProjections(scope: WorldScope): number {
+    return this.transaction(() => {
+      this.db
+        .prepare(
+          `DELETE FROM world_projection_entities
+           WHERE principal=? AND workspace=? AND mode=?`,
+        )
+        .run(scope.principal, scope.workspace, scope.mode);
+      this.db
+        .prepare(
+          `DELETE FROM world_projection_relationships
+           WHERE principal=? AND workspace=? AND mode=?`,
+        )
+        .run(scope.principal, scope.workspace, scope.mode);
+      this.db
+        .prepare(
+          `DELETE FROM world_projection_cursors
+           WHERE principal=? AND workspace=? AND mode=?`,
+        )
+        .run(scope.principal, scope.workspace, scope.mode);
+
+      let cursor = 0;
+      for (const event of this.events(scope)) {
+        if (event.sequence !== cursor + 1)
+          throw new Error('World Model event sequence contains a gap.');
+        this.applyProjection(event);
+        cursor = event.sequence;
+      }
+      return cursor;
+    });
+  }
+
+  private replayPendingProjections(): void {
+    const scopes = this.db
+      .prepare(
+        `SELECT DISTINCT principal,workspace,mode FROM world_events
+         ORDER BY principal,workspace,mode`,
+      )
+      .all() as Pick<WorldScope, 'principal' | 'workspace' | 'mode'>[];
+    for (const scope of scopes) {
+      this.transaction(() => {
+        const cursor = this.projectionCursor(scope);
+        for (const event of this.events(scope, cursor)) {
+          if (event.sequence !== this.projectionCursor(scope) + 1)
+            throw new Error('World Model event sequence contains a gap.');
+          this.applyProjection(event);
+        }
+      });
+    }
+  }
+
   relationships(scope: WorldScope, recordId: string): WorldRelationship[] {
     const rows = this.db
       .prepare(
-        `SELECT body FROM world_relationships
+        `SELECT body FROM world_projection_relationships
          WHERE principal=? AND workspace=? AND mode=?
-         AND (from_record_id=? OR to_record_id=?)
-         ORDER BY recorded_at,relationship_id,revision`,
+         AND relationship_id IN (
+           SELECT relationship_id FROM world_relationships
+           WHERE principal=? AND workspace=? AND mode=?
+           AND (from_record_id=? OR to_record_id=?)
+         )
+         ORDER BY last_sequence,relationship_id`,
       )
       .all(
+        scope.principal,
+        scope.workspace,
+        scope.mode,
         scope.principal,
         scope.workspace,
         scope.mode,
@@ -404,20 +500,16 @@ export class WorldModelStore {
       sequence: number;
     };
     const sequence = row.sequence + 1;
-    const event = {
-      event_id: `wme:${contractHash({
-        scope,
-        sequence,
-        event_kind: eventKind,
-        value,
-      })}`,
+    const event = worldEventSchema.parse({
+      schema_version: 'haze.world.event.v1',
+      event_id: `wme:${contractHash({ scope, sequence, event_kind: eventKind, value })}`,
       scope,
       sequence,
       event_kind: eventKind,
       value,
       actor,
       recorded_at: recordedAt,
-    };
+    });
     const stored: StoredEvent = {
       event_id: event.event_id,
       principal: scope.principal,
@@ -444,6 +536,97 @@ export class WorldModelStore {
         stored.body,
         stored.recorded_at,
       );
+    this.applyProjection(event);
+  }
+
+  private parseEventRow(
+    row: {
+      event_id: string;
+      sequence: number;
+      event_kind: string;
+      body: string;
+    },
+    scope: WorldScope,
+  ): WorldEvent {
+    const event = worldEventSchema.parse(JSON.parse(row.body));
+    const expectedId = `wme:${contractHash({
+      scope,
+      sequence: event.sequence,
+      event_kind: event.event_kind,
+      value: event.value,
+    })}`;
+    if (
+      event.scope.principal !== scope.principal ||
+      event.scope.workspace !== scope.workspace ||
+      event.scope.mode !== scope.mode ||
+      event.sequence !== row.sequence ||
+      event.event_kind !== row.event_kind ||
+      event.event_id !== row.event_id ||
+      event.event_id !== expectedId ||
+      (event.event_kind === 'relationship_created') !== 'id' in event.value
+    )
+      throw new Error('World Model event integrity check failed.');
+    return event;
+  }
+
+  private applyProjection(event: WorldEvent): void {
+    const { principal, workspace, mode } = event.scope;
+    const cursor = this.projectionCursor(event.scope);
+    if (event.sequence !== cursor + 1)
+      throw new Error('World Model projection cursor is out of sequence.');
+
+    if ('ref' in event.value) {
+      const record = event.value;
+      this.db
+        .prepare(
+          `INSERT INTO world_projection_entities
+           (principal,workspace,mode,record_id,revision,record_hash,kind,body,last_sequence)
+           VALUES(?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(principal,workspace,mode,record_id) DO UPDATE SET
+             revision=excluded.revision,
+             record_hash=excluded.record_hash,
+             kind=excluded.kind,
+             body=excluded.body,
+             last_sequence=excluded.last_sequence
+           WHERE excluded.last_sequence>world_projection_entities.last_sequence`,
+        )
+        .run(
+          principal,
+          workspace,
+          mode,
+          record.ref.id,
+          record.ref.revision,
+          record.ref.sha256,
+          record.kind,
+          JSON.stringify(record),
+          event.sequence,
+        );
+    } else {
+      const relationship = event.value;
+      this.db
+        .prepare(
+          `INSERT INTO world_projection_relationships
+           (principal,workspace,mode,relationship_id,body,last_sequence)
+           VALUES(?,?,?,?,?,?)
+           ON CONFLICT(principal,workspace,mode,relationship_id) DO NOTHING`,
+        )
+        .run(
+          principal,
+          workspace,
+          mode,
+          relationship.id,
+          JSON.stringify(relationship),
+          event.sequence,
+        );
+    }
+
+    this.db
+      .prepare(
+        `INSERT INTO world_projection_cursors(principal,workspace,mode,sequence)
+         VALUES(?,?,?,?)
+         ON CONFLICT(principal,workspace,mode) DO UPDATE SET sequence=excluded.sequence`,
+      )
+      .run(principal, workspace, mode, event.sequence);
   }
 
   private replay<T extends WorldRecord | WorldRelationship>(
