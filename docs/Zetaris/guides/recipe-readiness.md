@@ -4,10 +4,10 @@ Choose a task and follow its cookbook. Verified means it worked in a recorded ru
 
 ## Start small
 
-| Task | Cookbook | What you need |
-|---|---|---|
-| Query the supplied NY Taxi and TPCDS tables | [First SQL commands](../connections/lightning-recipe-reference.md) | Login and query permission |
-| Connect PokéAPI and find Pikachu's abilities | [PokéAPI cookbook](first-dataset.md) | Creation permission, team names and API access from Zetaris |
+| Task                                         | Cookbook                                                           | What you need                                               |
+| -------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| Query the supplied NY Taxi and TPCDS tables  | [First SQL commands](../connections/lightning-recipe-reference.md) | Login and query permission                                  |
+| Connect PokéAPI and find Pikachu's abilities | [PokéAPI cookbook](first-dataset.md)                               | Creation permission, team names and API access from Zetaris |
 
 Use your assigned team names on the shared instance.
 
@@ -23,15 +23,15 @@ Using scripts? See [client scripts](../../../app/adapters/zetaris/scripts/HOWTO.
 
 ## Leave these for later
 
-| Recipe | Current limit |
-|---|---|
-| PUDL, Foursquare, Overture, Ookla and GBIF | Known registration or query failures. See the file catalog's issue links. |
-| Singapore PM2.5 | Known to fail |
-| NASA DONKI | Connector and response format still need checking |
+| Recipe                                               | Current limit                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| PUDL, Foursquare, Overture, Ookla and GBIF           | Known registration or query failures. See the file catalog's issue links.                               |
+| Singapore PM2.5                                      | Known to fail                                                                                           |
+| NASA DONKI                                           | Connector and response format still need checking                                                       |
 | Singapore housing and Open Food Facts bulk downloads | Fetchers only. Put the files where Zetaris can reach them; bulk delimiter support still needs checking. |
-| Large tables and full-dataset scans | Check size and permissions first |
-| Kafka | Ingestion still needs checking |
-| SQL databases, logs, PDFs and other planned recipes | Not ready for onboarding |
+| Large tables and full-dataset scans                  | Check size and permissions first                                                                        |
+| Kafka                                                | Ingestion still needs checking                                                                          |
+| SQL databases, logs, PDFs and other planned recipes  | Not ready for onboarding                                                                                |
 
 Known-to-fail recipes require an explicit runner override; they remain failures. See the [roadmap](../plans/FUTURES.md) for planned work.
 

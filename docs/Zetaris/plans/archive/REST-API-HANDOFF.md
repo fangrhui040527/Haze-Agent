@@ -14,18 +14,18 @@ Scoped context for picking up `open_data/rest_apis/` work without re-deriving wh
 
 ## Status as of 2026-09-19
 
-| # | Source | Status |
-|---|---|---|
-| 1 | SEC EDGAR XBRL Company Facts | ✅ Live-tested — 7 companies working |
-| 2 | PokéAPI | ✅ Live-tested — Pikachu + Charizard, cross-Pokémon views, 6 example queries all working |
-| 3 | Open Food Facts (live API) | 📋 Scripted, real JSON shape investigated, not yet run against Zetaris |
-| 4 | Singapore data.gov.sg PM2.5 | 📋 Scripted, not yet tested |
-| 5 | NASA NeoWs (`/neo/browse`) | 📋 Scripted, not yet tested |
-| 6 | NASA DONKI (CME) | ⚠️ Scripted, high risk — top-level JSON **array**, not object; unverified whether `CREATE LIGHTNING REST TABLE` accepts that at all |
-| 7 | Eurostat REST API | ⚠️ Scripted, high risk — JSON-stat 2.0 format, no array-of-structs anywhere to flatten; likely drop candidate |
-| 8 | Statistics Canada WDS (`getChangedCubeList`) | 📋 Scripted, not yet tested — simplest shape of the whole batch, good smoke test |
-| 9 | Australian ABS Data API (CPI) | ⚠️ Scripted, high risk — SDMX-JSON 2.0.0, same risk class as Eurostat plus an extra layer of compound dynamic keys; likely drop candidate |
-| — | JSONPlaceholder | 🔴 Not scripted at all yet — wasn't part of the 2026-09-19 investigation batch |
+| #   | Source                                       | Status                                                                                                                                    |
+| --- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | SEC EDGAR XBRL Company Facts                 | ✅ Live-tested — 7 companies working                                                                                                      |
+| 2   | PokéAPI                                      | ✅ Live-tested — Pikachu + Charizard, cross-Pokémon views, 6 example queries all working                                                  |
+| 3   | Open Food Facts (live API)                   | 📋 Scripted, real JSON shape investigated, not yet run against Zetaris                                                                    |
+| 4   | Singapore data.gov.sg PM2.5                  | 📋 Scripted, not yet tested                                                                                                               |
+| 5   | NASA NeoWs (`/neo/browse`)                   | 📋 Scripted, not yet tested                                                                                                               |
+| 6   | NASA DONKI (CME)                             | ⚠️ Scripted, high risk — top-level JSON **array**, not object; unverified whether `CREATE LIGHTNING REST TABLE` accepts that at all       |
+| 7   | Eurostat REST API                            | ⚠️ Scripted, high risk — JSON-stat 2.0 format, no array-of-structs anywhere to flatten; likely drop candidate                             |
+| 8   | Statistics Canada WDS (`getChangedCubeList`) | 📋 Scripted, not yet tested — simplest shape of the whole batch, good smoke test                                                          |
+| 9   | Australian ABS Data API (CPI)                | ⚠️ Scripted, high risk — SDMX-JSON 2.0.0, same risk class as Eurostat plus an extra layer of compound dynamic keys; likely drop candidate |
+| —   | JSONPlaceholder                              | 🔴 Not scripted at all yet — wasn't part of the 2026-09-19 investigation batch                                                            |
 
 **Next concrete step:** test sources 3–9 one at a time in the order `HOWTO.md` §3 suggests (lowest-risk/simplest shape first: 8 → 3 → 4 → 5 → 6 → 7 → 9), fix what breaks, drop what can't be fixed, update `rest-api-sources.md` and the recipe plan's status as each one resolves — same loop already used successfully for EDGAR and PokéAPI.
 

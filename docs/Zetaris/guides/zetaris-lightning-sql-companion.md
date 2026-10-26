@@ -24,13 +24,13 @@ Use this beside the [Zetaris SQL Guide](https://kbase.zetaris.com/knowledge/sql-
 
 Use the Kbase for full syntax and options. This guide adds repo examples and tested behaviour.
 
-| Topic | Kbase reference | Scope here |
-|---|---|---|
-| Registration and REST/file tables | [SQL Guide](https://kbase.zetaris.com/knowledge/sql-guide), [Data source overview](https://kbase.zetaris.com/knowledge/connect) | The two patterns and source-specific behaviour |
-| REST shapes, views and SQL workarounds | [SQL Guide](https://kbase.zetaris.com/knowledge/sql-guide), [SQL Manual](https://kbase.zetaris.com/knowledge/sql-manual) | JSON decoding, quoting and self-join limits |
-| Cache and data checks | [SQL Manual](https://kbase.zetaris.com/knowledge/sql-manual), [SQL Editor overview](https://kbase.zetaris.com/knowledge/sql-editor-overview) | Cache behaviour and independent verification |
-| Virtual Data Marts | [Virtual Data Mart overview](https://kbase.zetaris.com/knowledge/virtual-data-mart-overview), [Virtual Pipeline guide](https://kbase.zetaris.com/knowledge/virtual-pipeline-guide) | SQL commands and the tested query path |
-| USL and data quality | Supplied USL User Guide | Guide-only claims and the live-tested limits below |
+| Topic                                  | Kbase reference                                                                                                                                                                    | Scope here                                         |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Registration and REST/file tables      | [SQL Guide](https://kbase.zetaris.com/knowledge/sql-guide), [Data source overview](https://kbase.zetaris.com/knowledge/connect)                                                    | The two patterns and source-specific behaviour     |
+| REST shapes, views and SQL workarounds | [SQL Guide](https://kbase.zetaris.com/knowledge/sql-guide), [SQL Manual](https://kbase.zetaris.com/knowledge/sql-manual)                                                           | JSON decoding, quoting and self-join limits        |
+| Cache and data checks                  | [SQL Manual](https://kbase.zetaris.com/knowledge/sql-manual), [SQL Editor overview](https://kbase.zetaris.com/knowledge/sql-editor-overview)                                       | Cache behaviour and independent verification       |
+| Virtual Data Marts                     | [Virtual Data Mart overview](https://kbase.zetaris.com/knowledge/virtual-data-mart-overview), [Virtual Pipeline guide](https://kbase.zetaris.com/knowledge/virtual-pipeline-guide) | SQL commands and the tested query path             |
+| USL and data quality                   | Supplied USL User Guide                                                                                                                                                            | Guide-only claims and the live-tested limits below |
 
 The supplied USL guide is the source used here for USL syntax. The SQL Guide and SQL Manual do not document the `REGISTER DQ` commands described in section 8.6.
 
@@ -38,10 +38,10 @@ The supplied USL guide is the source used here for USL syntax. The SQL Guide and
 
 ## 1. The two onboarding patterns this repo has proven
 
-| Data shape | SQL entry point | Walkthrough |
-|---|---|---|
+| Data shape                                 | SQL entry point                                                                       | Walkthrough                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Parquet or CSV on S3/S3-compatible storage | `CREATE LIGHTNING FILESTORE TABLE ... FROM <db> FORMAT <fmt> OPTIONS (PATH ..., ...)` | [Parquet/CSV HOWTO](../../open_data/parquet_csv/HOWTO.md) |
-| REST/JSON API | `CREATE LIGHTNING REST TABLE ...` then a `CREATE SCHEMASTORE VIEW` to flatten it | [REST API HOWTO](../../open_data/rest_apis/HOWTO.md) |
+| REST/JSON API                              | `CREATE LIGHTNING REST TABLE ...` then a `CREATE SCHEMASTORE VIEW` to flatten it      | [REST API HOWTO](../../open_data/rest_apis/HOWTO.md)      |
 
 Create the logical database before its first table. A `FROM <name>` reference fails if `CREATE LIGHTNING DATABASE <name>` has not run.
 
@@ -147,9 +147,10 @@ For versioned files, rerun the listing command in the SQL header before use. A v
 ---
 
 <a id="7-virtual-data-marts-vdm--the-sql-free-consumption-layer-and-where-usl-changes-this"></a>
+
 ## 7. Virtual Data Marts (VDM): SQL commands and tested limits
 
-*Kbase: [Virtual Data Mart overview](https://kbase.zetaris.com/knowledge/virtual-data-mart-overview), [Virtual Pipeline guide](https://kbase.zetaris.com/knowledge/virtual-pipeline-guide).*
+_Kbase: [Virtual Data Mart overview](https://kbase.zetaris.com/knowledge/virtual-data-mart-overview), [Virtual Pipeline guide](https://kbase.zetaris.com/knowledge/virtual-pipeline-guide)._
 
 The SQL command reference documents a native Virtual Data Mart lifecycle. On 12 October 2026, a fixture on Zetaris 2.4.3.1 passed the tested create, add, show, describe, update, rename and drop forms. This corrects the blanket claim that VDMs have no SQL controls. The run does not prove every canvas operation, option or permission has an equivalent SQL command. See [Virtual Data Marts in the SQL command reference](zetaris-lightning-sql-commands.md#17-virtual-data-marts).
 
@@ -210,12 +211,12 @@ The JSON conversion and `LATERAL VIEW explode()` still do the flattening. USL ch
 
 The supplied USL guide describes these capabilities. The table is a guide summary, not confirmation of every option.
 
-| Capability | SchemaStore view | USL table |
-|---|---|---|
-| Types and constraints | Inferred output columns | Declared types, keys and checks |
-| Relationships | Written as joins | Foreign keys shown in the ERD |
-| Data quality | Separate queries | Constraint-generated and custom rules |
-| Materialization | Separate pipeline | Export to configured storage |
+| Capability              | SchemaStore view                    | USL table                                           |
+| ----------------------- | ----------------------------------- | --------------------------------------------------- |
+| Types and constraints   | Inferred output columns             | Declared types, keys and checks                     |
+| Relationships           | Written as joins                    | Foreign keys shown in the ERD                       |
+| Data quality            | Separate queries                    | Constraint-generated and custom rules               |
+| Materialization         | Separate pipeline                   | Export to configured storage                        |
 | Descriptions and access | SQL comments and source permissions | Model/table/column descriptions and access controls |
 
 ### 8.3 Practical implications for this repo's REST sources
@@ -226,6 +227,7 @@ The supplied USL guide describes these capabilities. The table is a guide summar
 - Activation queries are ordinary `SELECT` statements. The self-join workaround in section 4 may apply, but the USL-specific case has not been tested.
 
 <a id="84-usl-quirks-worth-flagging-per-the-guide-not-yet-live-tested"></a>
+
 ### 8.4 USL quirks and validation limits
 
 Some items below come from the supplied guide; others were checked live on 12 October 2026, Zetaris 2.4.3.1.
@@ -267,10 +269,10 @@ Use the [archived USL build record](../plans/archive/usl-build-plan.md) for the 
 
 ## 10. Related documents in this repo
 
-| Document | Use it for |
-|---|---|
-| [EDGAR/SIC archived record](../plans/archive/edgar-sic-enrichment-plan.md) | REST/SchemaStore/VDM example and its source-data caveats |
-| [USL archived build record](../plans/archive/usl-build-plan.md) | USL verification checklist and outcomes |
-| [`open_data/usl/`](../../open_data/usl/) | USL SQL and per-model status |
-| [REST API HOWTO](../../open_data/rest_apis/HOWTO.md), [Parquet/CSV HOWTO](../../open_data/parquet_csv/HOWTO.md) | Source setup and verification steps |
-| [SQL command reference](zetaris-lightning-sql-commands.md) | Command syntax and examples |
+| Document                                                                                                        | Use it for                                               |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [EDGAR/SIC archived record](../plans/archive/edgar-sic-enrichment-plan.md)                                      | REST/SchemaStore/VDM example and its source-data caveats |
+| [USL archived build record](../plans/archive/usl-build-plan.md)                                                 | USL verification checklist and outcomes                  |
+| [`open_data/usl/`](../../open_data/usl/)                                                                        | USL SQL and per-model status                             |
+| [REST API HOWTO](../../open_data/rest_apis/HOWTO.md), [Parquet/CSV HOWTO](../../open_data/parquet_csv/HOWTO.md) | Source setup and verification steps                      |
+| [SQL command reference](zetaris-lightning-sql-commands.md)                                                      | Command syntax and examples                              |

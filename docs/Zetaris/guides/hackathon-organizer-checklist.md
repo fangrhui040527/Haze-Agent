@@ -17,13 +17,13 @@ This repo supplies a participant path through [Start here](../../START-HERE.md).
 
 ## Unresolved event details
 
-| Decision | Current state |
-|---|---|
-| Support destination | The [event page](https://hackathon.genai.works/event/open-agent-hackathon-2026) links Discord for announcements and post-event activities. Confirm the technical-support destination separately. |
-| Submission destination and deadline | The event page lists 27 October 2026, 23:45 UTC as the submission deadline. Follow its current submission instructions. |
-| Judging criteria / required deliverables | The event page publishes scoring and official rules. [Demo template](demo-template.md) summarises scoring and provides a reproducibility record; it is not an event rule. |
-| Actual access/driver distribution details | Must be supplied for the event; not embedded in this repo |
-| Per-team prefixes, permissions, and shared source ownership | Must be assigned and verified by the administrator |
+| Decision                                                    | Current state                                                                                                                                                                                    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Support destination                                         | The [event page](https://hackathon.genai.works/event/open-agent-hackathon-2026) links Discord for announcements and post-event activities. Confirm the technical-support destination separately. |
+| Submission destination and deadline                         | The event page lists 27 October 2026, 23:45 UTC as the submission deadline. Follow its current submission instructions.                                                                          |
+| Judging criteria / required deliverables                    | The event page publishes scoring and official rules. [Demo template](demo-template.md) summarises scoring and provides a reproducibility record; it is not an event rule.                        |
+| Actual access/driver distribution details                   | Must be supplied for the event; not embedded in this repo                                                                                                                                        |
+| Per-team prefixes, permissions, and shared source ownership | Must be assigned and verified by the administrator                                                                                                                                               |
 
 ## Verify the handout
 
