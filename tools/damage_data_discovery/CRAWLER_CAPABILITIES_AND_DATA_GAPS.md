@@ -135,14 +135,23 @@ acquisition, method review, and any later accounting import.
    [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md): the current
    direction is a recent fire-attributable haze episode in Klang, all
    residents regardless of ethnicity, with intervention evaluation included.
-   The exact event/date range, boundary version, outcomes, intervention and
-   comparator, periods, counterfactual, economic perspective, acceptable
+   A Bernama-indexed report provides an unverified 15 Oct 2026 Klang unhealthy
+   API signal, but its page could not be retrieved and a single-day report is
+   not a defined event. Targeted open-burning prevention/enforcement is only a
+   candidate intervention category, not an approved project. The exact
+   event/date range, boundary version, outcomes, intervention and comparator,
+   periods, counterfactual, economic perspective, acceptable
    coverage/exclusions, and domain approvals remain pending. Do not begin
    event-specific acquisition or claim approval until these are resolved.
-2. **Verify sources and acquisition paths.** For every required input, confirm
-   dataset identity/version, fields/units, terms, spatial/temporal coverage,
-   and repeatable access with the provider's official documentation. Mark
-   conditional inputs not in scope only with an approved rationale.
+2. **Verify sources and acquisition paths.** Partially completed in the
+   source-screening section of
+   [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md): official access
+   documentation has been checked for FIRMS, GFAS, ERA5, WorldPop, and selected
+   DOSM/Data.gov.my context datasets. Event-specific coverage, exact product
+   versions/terms, actual acquisition, and the health/economic/intervention
+   source paths remain open. After scope and endpoints are approved, confirm
+   each source's exact fields, units, terms, coverage, and repeatable access;
+   mark conditional inputs not in scope only with a reviewed rationale.
 3. **Acquire and quality-check the scoped data.** Build source-specific,
    bounded acquisition for the selected pilot. Preserve raw evidence, validate
    schema/units/coverage/missingness, quantify exclusions, compare appropriate
