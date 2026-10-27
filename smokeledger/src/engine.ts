@@ -109,7 +109,12 @@ export interface BackwardResult {
   firesWithWeight: number;
 }
 
-export async function runBackward(townName: string, centerMs: number, windowHours = 24): Promise<BackwardResult> {
+/**
+ * `tag` gives the run its own id. Task traces pass one, so a run is written once and never
+ * rewritten: concurrent traces of one town and window cannot interleave rows, and a
+ * critic re-running cited queries later reads exactly the rows that were cited.
+ */
+export async function runBackward(townName: string, centerMs: number, windowHours = 24, tag?: string): Promise<BackwardResult> {
   const town = await getTown(townName);
   const fromMs = centerMs - (windowHours + PARAMS.backHours + 1) * HOUR;
   const fields = await loadWindFields(fromMs, centerMs + HOUR);
@@ -117,7 +122,7 @@ export async function runBackward(townName: string, centerMs: number, windowHour
   const paths = backwardFromTown(fields, town, centerMs, windowHours);
   const weights = attribute(fires, paths);
 
-  const runId = `bw-${slug(town.town)}-${stamp(centerMs)}`;
+  const runId = `bw-${slug(town.town)}-${stamp(centerMs)}${tag ? `-${tag}` : ""}`;
   await saveRun(runId, "backward", town.town, centerMs, {
     windowHours,
     members: paths.length,

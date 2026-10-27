@@ -111,7 +111,13 @@ export async function runSql(sql: string, limit = 500): Promise<Row[]> {
 }
 
 /** Run a query and store it as evidence with a hash. Returns the evidence record. */
-export async function evidence(sql: string, limit = 500): Promise<Evidence> {
+/**
+ * Rows an evidence query keeps, both when cited and when re-run by the critic: the two
+ * must match or a truncated result can never reproduce its own hash.
+ */
+export const EVIDENCE_ROW_LIMIT = 5000;
+
+export async function evidence(sql: string, limit = EVIDENCE_ROW_LIMIT): Promise<Evidence> {
   const resolved = assertReadOnly(resolveSql(sql));
   const backend = activeBackend();
   const rows = (backend === "zetaris" ? await runZetaris(resolved, limit) : await runPostgres(resolved, limit)).map(
@@ -162,7 +168,7 @@ export async function verifyEvidence(evidenceId: string): Promise<{ ok: boolean;
   const res = await db().query("SELECT sql_text, sha256 FROM evidence WHERE evidence_id = $1", [evidenceId]);
   if (!res.rows.length) throw new Error(`No evidence ${evidenceId}`);
   const { sql_text, sha256 } = res.rows[0];
-  const rows = activeBackend() === "zetaris" && sql_text.includes(`${CONFIG.zetaris.source}.`) ? await runZetaris(sql_text, 100_000) : await runPostgres(sql_text, 100_000);
+  const rows = activeBackend() === "zetaris" && sql_text.includes(`${CONFIG.zetaris.source}.`) ? await runZetaris(sql_text, EVIDENCE_ROW_LIMIT) : await runPostgres(sql_text, EVIDENCE_ROW_LIMIT);
   const now = hashRows(rows);
   return { ok: now === sha256, stored: sha256, now, sql: sql_text };
 }

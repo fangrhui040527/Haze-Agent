@@ -77,7 +77,7 @@ export async function ask(question: string, maxSteps = 8): Promise<{ answer: str
 
   const runTool = async (name: string, args: Record<string, unknown>): Promise<unknown> => {
     if (name === "run_sql") {
-      const e = await evidence(String(args.sql), 200);
+      const e = await evidence(String(args.sql));
       ev.push(e);
       return { evidence_id: e.evidence_id, rows: e.rows.slice(0, 50) };
     }
