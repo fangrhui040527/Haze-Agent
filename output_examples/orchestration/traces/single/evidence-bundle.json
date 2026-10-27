@@ -2,8 +2,8 @@
   "schema_version": "haze.evidence-bundle.v1",
   "manifest": {
     "schema_version": "haze.trace.manifest.v1",
-    "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-    "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+    "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+    "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
     "snapshot_cursor": 54,
     "active_snapshot": false,
     "status": "completed",
@@ -16,16 +16,16 @@
       }
     ],
     "sanitization": "haze.trace.sanitization.v1; exported_sha256 hashes UTF-8 JSON plus newline, independently of original_ref.sha256",
-    "created_at": "2026-10-27T19:36:50.809Z"
+    "created_at": "2026-10-27T20:36:56.978Z"
   },
   "records": [
     {
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:1",
       "cursor": 1,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:48.873Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:50.700Z",
       "action": "task_admitted",
       "actor": "Manager",
       "status": "admitted",
@@ -44,9 +44,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:2",
       "cursor": 2,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:48.984Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.067Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -61,7 +61,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "hydrate_authority",
           "topology": "manager.v3.automatic-chains"
         }
@@ -71,9 +71,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:3",
       "cursor": 3,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:48.999Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.110Z",
       "action": "assignments_created",
       "actor": "Manager",
       "status": "created",
@@ -88,7 +88,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "assignment_ids": ["abebc349-f1d4-4eac-aadc-a8afc438d59a"]
+          "assignment_ids": ["bc44c21a-ec4a-485b-b820-e5b1e21660aa"]
         }
       }
     },
@@ -96,9 +96,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:4",
       "cursor": 4,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.002Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.121Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -113,10 +113,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "hydrate_authority",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 12.304799999999886,
+          "duration_ms": 37.44260000000031,
           "outcome": "ok"
         }
       }
@@ -125,9 +125,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:5",
       "cursor": 5,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.016Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.156Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -142,7 +142,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains"
         }
@@ -152,9 +152,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:6",
       "cursor": 6,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.025Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.170Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -169,10 +169,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 5.285200000000032,
+          "duration_ms": 8.95430000000033,
           "outcome": "ok"
         }
       }
@@ -181,9 +181,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:7",
       "cursor": 7,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.040Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.202Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -198,7 +198,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "assemble_context",
           "topology": "manager.v3.automatic-chains"
         }
@@ -208,14 +208,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:8",
       "cursor": 8,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.051Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.225Z",
       "action": "assignment_started",
       "actor": "Manager",
       "status": "started",
       "summary": "Exact inputs pinned and revised brief acknowledged.",
-      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -231,9 +231,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:9",
       "cursor": 9,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.070Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.322Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -248,10 +248,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "assemble_context",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 25.842899999999872,
+          "duration_ms": 114.58040000000074,
           "outcome": "ok"
         }
       }
@@ -260,9 +260,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:10",
       "cursor": 10,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.081Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.380Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -277,7 +277,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "model_decision",
           "topology": "manager.v3.automatic-chains"
         }
@@ -287,16 +287,16 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:11",
       "cursor": 11,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.111Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.489Z",
       "action": "attempt_charged",
       "actor": "Manager",
       "status": "started",
       "summary": "model attempt charged before dispatch.",
-      "input_summary": "model attempt 9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+      "input_summary": "model attempt 711abbeb-c87d-410e-b139-55261ccc7620",
       "output_summary": "Receipt not accepted.",
-      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -308,13 +308,13 @@
       "manager_consumed_event_cursor": 0,
       "artifacts": [],
       "causes": {
-        "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+        "attempt_id": "711abbeb-c87d-410e-b139-55261ccc7620",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "attempt_id": "711abbeb-c87d-410e-b139-55261ccc7620",
           "kind": "model"
         },
         "attempt": {
@@ -341,16 +341,16 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:12",
       "cursor": 12,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.124Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.588Z",
       "action": "attempt_completed",
       "actor": "Manager",
       "status": "completed",
       "summary": "Current attempt receipt persisted.",
-      "input_summary": "model attempt 9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+      "input_summary": "model attempt 711abbeb-c87d-410e-b139-55261ccc7620",
       "output_summary": "Receipt accepted by execution fence.",
-      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -362,19 +362,19 @@
       "manager_consumed_event_cursor": 0,
       "artifacts": [],
       "causes": {
-        "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+        "attempt_id": "711abbeb-c87d-410e-b139-55261ccc7620",
         "event_ids": ["trace:11"]
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "attempt_id": "711abbeb-c87d-410e-b139-55261ccc7620",
           "accepted": true,
           "kind": "model",
           "status": "completed",
-          "started_at": "2026-10-27T19:36:49.110Z",
-          "completed_at": "2026-10-27T19:36:49.124Z",
-          "duration_ms": 14
+          "started_at": "2026-10-27T20:36:51.486Z",
+          "completed_at": "2026-10-27T20:36:51.587Z",
+          "duration_ms": 101
         },
         "attempt": {
           "kind": "model",
@@ -407,9 +407,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:13",
       "cursor": 13,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.151Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.662Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -424,10 +424,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "model_decision",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 64.47939999999994,
+          "duration_ms": 266.4886000000006,
           "outcome": "ok"
         }
       }
@@ -436,9 +436,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:14",
       "cursor": 14,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.165Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.700Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -453,7 +453,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "validate_decision",
           "topology": "manager.v3.automatic-chains"
         }
@@ -463,9 +463,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:15",
       "cursor": 15,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.179Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.738Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -480,10 +480,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "validate_decision",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 9.462199999999939,
+          "duration_ms": 21.39549999999963,
           "outcome": "ok"
         }
       }
@@ -492,9 +492,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:16",
       "cursor": 16,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.195Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.769Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -509,7 +509,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "lookup_action",
           "topology": "manager.v3.automatic-chains"
         }
@@ -519,9 +519,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:17",
       "cursor": 17,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.205Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.790Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -536,10 +536,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "lookup_action",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 5.677999999999884,
+          "duration_ms": 7.7524999999996,
           "outcome": "ok"
         }
       }
@@ -548,9 +548,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:18",
       "cursor": 18,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.227Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.822Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -565,7 +565,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "execute_action",
           "topology": "manager.v3.automatic-chains"
         }
@@ -575,9 +575,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:19",
       "cursor": 19,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.268Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.880Z",
       "action": "assignments_created",
       "actor": "Manager",
       "status": "created",
@@ -589,17 +589,17 @@
       "manager_consumed_event_cursor": 0,
       "artifacts": [],
       "causes": {
-        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "assignment_ids": ["650c6446-4ed7-49e7-b228-3a15327ef3a8"]
+          "assignment_ids": ["d70a8134-2f84-4deb-aa2e-3d79dc144148"]
         },
         "decision": {
-          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "generation": 1,
           "objective_revision": 1,
           "plan_revision": 0,
@@ -634,9 +634,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:20",
       "cursor": 20,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.275Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.889Z",
       "action": "manager_plan_revised",
       "actor": "Manager",
       "status": "revised",
@@ -648,19 +648,19 @@
       "manager_consumed_event_cursor": 0,
       "artifacts": [],
       "causes": {
-        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
           "plan_revision": 1,
-          "created": ["650c6446-4ed7-49e7-b228-3a15327ef3a8"],
+          "created": ["d70a8134-2f84-4deb-aa2e-3d79dc144148"],
           "revised": []
         },
         "decision": {
-          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "generation": 1,
           "objective_revision": 1,
           "plan_revision": 0,
@@ -695,9 +695,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:21",
       "cursor": 21,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.282Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.921Z",
       "action": "manager_decision_applied",
       "actor": "Manager",
       "status": "applied",
@@ -709,20 +709,20 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [],
       "causes": {
-        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
           "action": "apply_plan",
           "plan_revision": 1,
           "manager_consumed_event_cursor": 1
         },
         "decision": {
-          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "generation": 1,
           "objective_revision": 1,
           "plan_revision": 0,
@@ -757,9 +757,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:22",
       "cursor": 22,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.296Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:51.964Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -774,10 +774,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "execute_action",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 64.27819999999997,
+          "duration_ms": 132.95580000000064,
           "outcome": "ok"
         }
       }
@@ -786,9 +786,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:23",
       "cursor": 23,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.308Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.010Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -803,7 +803,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains"
         }
@@ -813,14 +813,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:24",
       "cursor": 24,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.344Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.212Z",
       "action": "assignment_started",
       "actor": "HazeOps",
       "status": "started",
       "summary": "Exact inputs pinned and revised brief acknowledged.",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -836,9 +836,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:25",
       "cursor": 25,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.354Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.239Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -853,10 +853,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 42.787500000000136,
+          "duration_ms": 180.98210000000017,
           "outcome": "ok"
         }
       }
@@ -865,9 +865,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:26",
       "cursor": 26,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.381Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.340Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -882,7 +882,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "persist_wait",
           "topology": "manager.v3.automatic-chains"
         }
@@ -892,9 +892,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:27",
       "cursor": 27,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.396Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.401Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -909,10 +909,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "persist_wait",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 10.834900000000061,
+          "duration_ms": 46.15650000000005,
           "outcome": "ok"
         }
       }
@@ -921,14 +921,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:28",
       "cursor": 28,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.419Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.446Z",
       "action": "graph_node",
       "actor": "HazeOps",
       "status": "node",
       "summary": "Specialist graph: hydrate",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -941,7 +941,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1:d70a8134-2f84-4deb-aa2e-3d79dc144148:r1",
           "node": "hydrate",
           "topology": "specialist.v3.automatic-chains"
         }
@@ -951,14 +951,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:29",
       "cursor": 29,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.451Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.530Z",
       "action": "graph_node",
       "actor": "HazeOps",
       "status": "node",
       "summary": "Specialist graph: context",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -971,7 +971,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1:d70a8134-2f84-4deb-aa2e-3d79dc144148:r1",
           "node": "context",
           "topology": "specialist.v3.automatic-chains"
         }
@@ -981,14 +981,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:30",
       "cursor": 30,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.490Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.672Z",
       "action": "graph_node",
       "actor": "HazeOps",
       "status": "node",
       "summary": "Specialist graph: deterministic",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1001,7 +1001,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1:d70a8134-2f84-4deb-aa2e-3d79dc144148:r1",
           "node": "deterministic",
           "topology": "specialist.v3.automatic-chains"
         }
@@ -1011,9 +1011,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:31",
       "cursor": 31,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.577Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.789Z",
       "action": "artifact_applicability_checked",
       "actor": "Runtime",
       "status": "checked",
@@ -1028,7 +1028,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "artifact_id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "artifact_id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
           "current": true
         }
       }
@@ -1037,14 +1037,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:32",
       "cursor": 32,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.580Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.792Z",
       "action": "artifact_saved",
       "actor": "HazeOps",
       "status": "saved",
       "summary": "Saved immutable evaluation.finding.",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1054,7 +1054,7 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [
         {
-          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
           "version": 1,
           "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
         }
@@ -1063,7 +1063,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
           "version": 1,
           "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844",
           "kind": "evaluation.finding"
@@ -1074,14 +1074,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:33",
       "cursor": 33,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.714Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:52.964Z",
       "action": "graph_node",
       "actor": "HazeOps",
       "status": "node",
       "summary": "Specialist graph: completion",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1094,7 +1094,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1:d70a8134-2f84-4deb-aa2e-3d79dc144148:r1",
           "node": "completion",
           "topology": "specialist.v3.automatic-chains"
         }
@@ -1104,9 +1104,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:34",
       "cursor": 34,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.792Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.018Z",
       "action": "artifact_applicability_checked",
       "actor": "Runtime",
       "status": "checked",
@@ -1121,7 +1121,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "artifact_id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "artifact_id": "c61d062a-3e16-471e-bff1-18d6d8ae8fac",
           "current": true
         }
       }
@@ -1130,14 +1130,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:35",
       "cursor": 35,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.796Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.020Z",
       "action": "artifact_saved",
       "actor": "HazeOps",
       "status": "saved",
       "summary": "Saved immutable assignment.summary.",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1147,18 +1147,18 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [
         {
-          "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "id": "c61d062a-3e16-471e-bff1-18d6d8ae8fac",
           "version": 1,
-          "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+          "sha256": "e561062c4f55999479106bb9d57b00e930780ffcf9b05ab00518bf948172653e"
         }
       ],
       "causes": { "event_ids": [] },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "id": "c61d062a-3e16-471e-bff1-18d6d8ae8fac",
           "version": 1,
-          "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c",
+          "sha256": "e561062c4f55999479106bb9d57b00e930780ffcf9b05ab00518bf948172653e",
           "kind": "assignment.summary"
         }
       }
@@ -1167,14 +1167,14 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:36",
       "cursor": 36,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.804Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.031Z",
       "action": "assignment_completed",
       "actor": "HazeOps",
       "status": "completed",
       "summary": "Execution state persisted independently of evidence support.",
-      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1190,9 +1190,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:37",
       "cursor": 37,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.863Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.151Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1207,7 +1207,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "hydrate_authority",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1217,9 +1217,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:38",
       "cursor": 38,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.892Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.196Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1234,10 +1234,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "hydrate_authority",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 23.33640000000014,
+          "duration_ms": 35.78870000000006,
           "outcome": "ok"
         }
       }
@@ -1246,9 +1246,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:39",
       "cursor": 39,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.907Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.223Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1263,7 +1263,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1273,9 +1273,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:40",
       "cursor": 40,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.921Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.270Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1290,10 +1290,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "dispatch_assignments",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 9.969499999999698,
+          "duration_ms": 37.324499999999716,
           "outcome": "ok"
         }
       }
@@ -1302,9 +1302,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:41",
       "cursor": 41,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:49.942Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.288Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1319,7 +1319,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "assemble_context",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1329,9 +1329,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:42",
       "cursor": 42,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.028Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.361Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1346,10 +1346,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "assemble_context",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 80.04889999999978,
+          "duration_ms": 67.74279999999999,
           "outcome": "ok"
         }
       }
@@ -1358,9 +1358,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:43",
       "cursor": 43,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.043Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.387Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1375,7 +1375,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "model_decision",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1385,16 +1385,16 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:44",
       "cursor": 44,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.099Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.462Z",
       "action": "attempt_charged",
       "actor": "Manager",
       "status": "started",
       "summary": "model attempt charged before dispatch.",
-      "input_summary": "model attempt 5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+      "input_summary": "model attempt eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
       "output_summary": "Receipt not accepted.",
-      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1406,13 +1406,13 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [],
       "causes": {
-        "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+        "attempt_id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "attempt_id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
           "kind": "model"
         },
         "attempt": {
@@ -1439,16 +1439,16 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:45",
       "cursor": 45,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.118Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.483Z",
       "action": "attempt_completed",
       "actor": "Manager",
       "status": "completed",
       "summary": "Current attempt receipt persisted.",
-      "input_summary": "model attempt 5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+      "input_summary": "model attempt eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
       "output_summary": "Receipt accepted by execution fence.",
-      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "assignment_revision": 1,
       "objective_revision": 1,
       "generation": 1,
@@ -1460,19 +1460,19 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [],
       "causes": {
-        "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+        "attempt_id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
         "event_ids": ["trace:44"]
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "attempt_id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
           "accepted": true,
           "kind": "model",
           "status": "completed",
-          "started_at": "2026-10-27T19:36:50.098Z",
-          "completed_at": "2026-10-27T19:36:50.117Z",
-          "duration_ms": 19
+          "started_at": "2026-10-27T20:36:53.460Z",
+          "completed_at": "2026-10-27T20:36:53.483Z",
+          "duration_ms": 23
         },
         "attempt": {
           "kind": "model",
@@ -1505,9 +1505,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:46",
       "cursor": 46,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.140Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.511Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1522,10 +1522,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "model_decision",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 92.59479999999985,
+          "duration_ms": 118.2464,
           "outcome": "ok"
         }
       }
@@ -1534,9 +1534,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:47",
       "cursor": 47,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.155Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.545Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1551,7 +1551,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "validate_decision",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1561,9 +1561,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:48",
       "cursor": 48,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.171Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.582Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1578,10 +1578,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "validate_decision",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 11.316800000000057,
+          "duration_ms": 27.871499999999287,
           "outcome": "ok"
         }
       }
@@ -1590,9 +1590,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:49",
       "cursor": 49,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.187Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.613Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1607,7 +1607,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "lookup_action",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1617,9 +1617,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:50",
       "cursor": 50,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.201Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.637Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1634,10 +1634,10 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "lookup_action",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 8.864000000000033,
+          "duration_ms": 13.493800000000192,
           "outcome": "ok"
         }
       }
@@ -1646,9 +1646,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:51",
       "cursor": 51,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.215Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.690Z",
       "action": "graph_node",
       "actor": "Runtime",
       "status": "node",
@@ -1663,7 +1663,7 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "finalize",
           "topology": "manager.v3.automatic-chains"
         }
@@ -1673,9 +1673,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:52",
       "cursor": 52,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.297Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.899Z",
       "action": "task_completed",
       "actor": "Manager",
       "status": "completed",
@@ -1689,21 +1689,21 @@
       "manager_consumed_event_cursor": 1,
       "artifacts": [
         {
-          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
           "version": 1,
           "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
         }
       ],
       "reviews": [],
       "causes": {
-        "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+        "decision_id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "decision": {
-          "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "generation": 1,
           "objective_revision": 1,
           "plan_revision": 1,
@@ -1722,7 +1722,7 @@
             "answer": "The retained evaluation finding is supported within the synthetic test scope.",
             "work_products": [
               {
-                "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
                 "version": 1,
                 "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
               }
@@ -1738,9 +1738,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:53",
       "cursor": 53,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.320Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:53.926Z",
       "action": "manager_decision_applied",
       "actor": "Manager",
       "status": "applied",
@@ -1752,20 +1752,20 @@
       "manager_consumed_event_cursor": 36,
       "artifacts": [],
       "causes": {
-        "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+        "decision_id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
         "event_ids": []
       },
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+          "decision_id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
           "action": "finalize",
           "plan_revision": 1,
           "manager_consumed_event_cursor": 36
         },
         "decision": {
-          "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "generation": 1,
           "objective_revision": 1,
           "plan_revision": 1,
@@ -1784,7 +1784,7 @@
             "answer": "The retained evaluation finding is supported within the synthetic test scope.",
             "work_products": [
               {
-                "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
                 "version": 1,
                 "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
               }
@@ -1800,9 +1800,9 @@
       "schema_version": "haze.trace.record.v1",
       "event_id": "trace:54",
       "cursor": 54,
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "at": "2026-10-27T19:36:50.349Z",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "at": "2026-10-27T20:36:54.007Z",
       "action": "manager.graph.completed",
       "actor": "Runtime",
       "status": "manager.graph.completed",
@@ -1817,16 +1817,16 @@
       "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
       "details": {
         "event_data": {
-          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:b01b617d-669c-4a82-9694-1c189a8eb282:g1",
           "node": "finalize",
           "topology": "manager.v3.automatic-chains",
-          "duration_ms": 130.29390000000012,
+          "duration_ms": 297.4490000000005,
           "outcome": "ok"
         }
       }
     }
   ],
-  "summary": "# Execution trace\n\nTask: 7a63bc8a-6801-4772-9ee8-f752f39371b1\nRun: acc90748-2b5c-4d59-8ce5-785c6eefb15a\nCaptured records: 54; snapshot cursor: 54.\nEvidence mode: replay.\n\n## Highlights\n\n- 2026-10-27T19:36:48.873Z [trace:1] Manager: General objective admitted with bounded resources. (admitted)\n- 2026-10-27T19:36:48.999Z [trace:3] Manager: Admitted 1 assignments. (created)\n- 2026-10-27T19:36:49.051Z [trace:8] Manager: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T19:36:49.268Z [trace:19] Manager: Admitted 1 assignments. (created); causes: 9c5fc0cb-99a7-480a-b17a-a72432b516b2\n- 2026-10-27T19:36:49.282Z [trace:21] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: 9c5fc0cb-99a7-480a-b17a-a72432b516b2\n- 2026-10-27T19:36:49.344Z [trace:24] HazeOps: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T19:36:49.804Z [trace:36] HazeOps: Execution state persisted independently of evidence support. (completed)\n- 2026-10-27T19:36:50.297Z [trace:52] Manager: General result committed with exact sources/work products. (completed); evidence: not_required; artifacts: eb784225-4d0d-465b-b503-703adf9364c9@1 sha256:b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844; causes: 3e3c28a7-fe25-4415-b600-f39902ff94a2\n- 2026-10-27T19:36:50.320Z [trace:53] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: 3e3c28a7-fe25-4415-b600-f39902ff94a2\n\n## Provenance and limitations\n\n- Only saved facts are shown. Missing causal links, confidence, and provider metadata are not inferred.\n- Execution acceptance, evidence verdicts, and task outcomes describe separate facts.\n- Exported content is sanitized; original artifact references identify the saved evidence, not redacted bytes.\n",
+  "summary": "# Execution trace\n\nTask: ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26\nRun: b01b617d-669c-4a82-9694-1c189a8eb282\nCaptured records: 54; snapshot cursor: 54.\nEvidence mode: replay.\n\n## Highlights\n\n- 2026-10-27T20:36:50.700Z [trace:1] Manager: General objective admitted with bounded resources. (admitted)\n- 2026-10-27T20:36:51.110Z [trace:3] Manager: Admitted 1 assignments. (created)\n- 2026-10-27T20:36:51.225Z [trace:8] Manager: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T20:36:51.880Z [trace:19] Manager: Admitted 1 assignments. (created); causes: be76a3f3-cbd6-4152-9083-57a9b2158545\n- 2026-10-27T20:36:51.921Z [trace:21] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: be76a3f3-cbd6-4152-9083-57a9b2158545\n- 2026-10-27T20:36:52.212Z [trace:24] HazeOps: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T20:36:53.031Z [trace:36] HazeOps: Execution state persisted independently of evidence support. (completed)\n- 2026-10-27T20:36:53.899Z [trace:52] Manager: General result committed with exact sources/work products. (completed); evidence: not_required; artifacts: bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea@1 sha256:b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844; causes: 7fdf443e-ebd5-407f-9ed9-ab104081acb8\n- 2026-10-27T20:36:53.926Z [trace:53] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: 7fdf443e-ebd5-407f-9ed9-ab104081acb8\n\n## Provenance and limitations\n\n- Only saved facts are shown. Missing causal links, confidence, and provider metadata are not inferred.\n- Execution acceptance, evidence verdicts, and task outcomes describe separate facts.\n- Exported content is sanitized; original artifact references identify the saved evidence, not redacted bytes.\n",
   "input": {
     "schema_version": "haze.task.request.v3",
     "objective": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
@@ -1840,7 +1840,7 @@
     "completion": "full",
     "work_products": [
       {
-        "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+        "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
         "version": 1,
         "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
       }
@@ -1867,7 +1867,7 @@
       "capabilities": [{ "id": "evaluation", "version": "1" }],
       "receipts": [
         {
-          "id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "id": "711abbeb-c87d-410e-b139-55261ccc7620",
           "kind": "model",
           "status": "completed",
           "accepted": true,
@@ -1893,7 +1893,7 @@
           }
         },
         {
-          "id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
           "kind": "model",
           "status": "completed",
           "accepted": true,
@@ -1924,7 +1924,7 @@
   "artifacts": [
     {
       "original_ref": {
-        "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+        "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
         "version": 1,
         "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
       },
@@ -1935,22 +1935,22 @@
         "kind": "evaluation.finding",
         "producer": {
           "kind": "assignment",
-          "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8"
+          "id": "d70a8134-2f84-4deb-aa2e-3d79dc144148"
         },
         "mode": "replay",
         "evidence_origin": "derived",
         "dependencies": [],
-        "created_at": "2026-10-27T19:36:49.548Z"
+        "created_at": "2026-10-27T20:36:52.765Z"
       }
     },
     {
       "original_ref": {
-        "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+        "id": "c61d062a-3e16-471e-bff1-18d6d8ae8fac",
         "version": 1,
-        "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+        "sha256": "e561062c4f55999479106bb9d57b00e930780ffcf9b05ab00518bf948172653e"
       },
       "filename": "artifact-0002.json",
-      "exported_sha256": "ac534c292414f7760775df0cdef70ea3bead1656c9577844066a65b104e49bc2",
+      "exported_sha256": "b802eee12e73294c61dc6976c5608584e5c788c30f04c9789a22e816fba20aae",
       "content": {
         "status": "completed",
         "summary": "A synthetic finding is retained; it is not an observation.",
@@ -1958,7 +1958,7 @@
         "uncertainty": [],
         "outputs": [
           {
-            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
             "version": 1,
             "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
           }
@@ -1968,25 +1968,25 @@
         "kind": "assignment.summary",
         "producer": {
           "kind": "assignment",
-          "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8"
+          "id": "d70a8134-2f84-4deb-aa2e-3d79dc144148"
         },
         "mode": "replay",
         "evidence_origin": "derived",
         "dependencies": [],
-        "created_at": "2026-10-27T19:36:49.772Z"
+        "created_at": "2026-10-27T20:36:53.012Z"
       }
     }
   ],
   "context": {
     "run": {
-      "id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+      "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
       "objective_revision": 1,
       "generation": 1,
       "state_revision": 12,
       "status": "completed",
       "limits": {
-        "deadline": "2026-10-27T19:38:18.691Z",
+        "deadline": "2026-10-27T20:38:20.377Z",
         "max_model_calls": 20,
         "max_tool_calls": 6,
         "max_assignments": 16,
@@ -2001,15 +2001,15 @@
         "artifacts": 2,
         "assignments": 2
       },
-      "created_at": "2026-10-27T19:36:48.858Z",
-      "updated_at": "2026-10-27T19:36:50.296Z"
+      "created_at": "2026-10-27T20:36:50.675Z",
+      "updated_at": "2026-10-27T20:36:53.897Z"
     },
     "corrections": [],
     "assignments": [
       {
-        "id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
-        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
+        "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+        "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
         "role": "Manager",
         "definition_id": "core.manager.coordinator",
         "definition_version": "4",
@@ -2025,7 +2025,7 @@
         "inputs": [],
         "tools": ["world.lookup", "world.context", "world.lineage"],
         "status": "completed",
-        "deadline": "2026-10-27T19:38:18.691Z",
+        "deadline": "2026-10-27T20:38:20.377Z",
         "max_model_calls": 20,
         "usage": { "model_calls": 2, "tool_calls": 0 },
         "outputs": [],
@@ -2035,9 +2035,9 @@
         "usability": "needs_review"
       },
       {
-        "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
-        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
+        "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+        "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
         "role": "HazeOps",
         "definition_id": "eval.produce",
         "definition_version": "1",
@@ -2054,19 +2054,19 @@
         "inputs": [],
         "tools": ["world.lookup", "world.context", "world.lineage"],
         "status": "completed",
-        "deadline": "2026-10-27T19:38:18.691Z",
+        "deadline": "2026-10-27T20:38:20.377Z",
         "max_model_calls": 8,
         "usage": { "model_calls": 0, "tool_calls": 0 },
         "outputs": [
           {
-            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
             "version": 1,
             "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
           },
           {
-            "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+            "id": "c61d062a-3e16-471e-bff1-18d6d8ae8fac",
             "version": 1,
-            "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+            "sha256": "e561062c4f55999479106bb9d57b00e930780ffcf9b05ab00518bf948172653e"
           }
         ],
         "assumptions": [],
@@ -2078,17 +2078,17 @@
     "assignment_history": [],
     "attempts": [
       {
-        "id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
-        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-        "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+        "id": "711abbeb-c87d-410e-b139-55261ccc7620",
+        "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+        "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+        "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
         "objective_revision": 1,
         "assignment_revision": 1,
         "generation": 1,
         "lease_token": "[redacted]",
         "kind": "model",
         "status": "completed",
-        "charged_at": "2026-10-27T19:36:49.110Z",
+        "charged_at": "2026-10-27T20:36:51.486Z",
         "details": {
           "max_output_tokens": 1200,
           "requested_route": {
@@ -2112,17 +2112,17 @@
         }
       },
       {
-        "id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
-        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
-        "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+        "id": "eef2afa0-fbe8-4337-8680-f7f27bd7fa2f",
+        "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+        "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
+        "assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
         "objective_revision": 1,
         "assignment_revision": 1,
         "generation": 1,
         "lease_token": "[redacted]",
         "kind": "model",
         "status": "completed",
-        "charged_at": "2026-10-27T19:36:50.098Z",
+        "charged_at": "2026-10-27T20:36:53.460Z",
         "details": {
           "max_output_tokens": 1200,
           "requested_route": {
@@ -2151,10 +2151,10 @@
     "peer_messages": [],
     "manager": {
       "version": "manager.v4",
-      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
       "plan_revision": 1,
       "last_handled_event_cursor": 36,
-      "coordinator_assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "coordinator_assignment_id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa",
       "interpretation": {
         "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
         "deliverables": ["The frozen case outcome."],
@@ -2166,20 +2166,20 @@
         {
           "revision": 1,
           "objective_revision": 1,
-          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
           "reason": "Follow the frozen scripted case and exact retained evidence.",
           "assignment_revisions": [
-            { "id": "abebc349-f1d4-4eac-aadc-a8afc438d59a", "revision": 1 },
-            { "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8", "revision": 1 }
+            { "id": "bc44c21a-ec4a-485b-b820-e5b1e21660aa", "revision": 1 },
+            { "id": "d70a8134-2f84-4deb-aa2e-3d79dc144148", "revision": 1 }
           ],
-          "created_at": "2026-10-27T19:36:49.273Z"
+          "created_at": "2026-10-27T20:36:51.885Z"
         }
       ],
       "decisions": [
         {
           "decision": {
-            "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
-            "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+            "id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
+            "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
             "generation": 1,
             "objective_revision": 1,
             "plan_revision": 0,
@@ -2208,12 +2208,12 @@
               "reason": "Execute the frozen custom plan."
             }
           },
-          "created_at": "2026-10-27T19:36:49.240Z"
+          "created_at": "2026-10-27T20:36:51.844Z"
         },
         {
           "decision": {
-            "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
-            "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+            "id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
+            "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
             "generation": 1,
             "objective_revision": 1,
             "plan_revision": 1,
@@ -2232,7 +2232,7 @@
               "answer": "The retained evaluation finding is supported within the synthetic test scope.",
               "work_products": [
                 {
-                  "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                  "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
                   "version": 1,
                   "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
                 }
@@ -2242,64 +2242,64 @@
               "unfinished": []
             }
           },
-          "created_at": "2026-10-27T19:36:50.230Z"
+          "created_at": "2026-10-27T20:36:53.740Z"
         }
       ],
       "inspections": [],
       "pending_events": [
         {
           "schema_version": "haze.task.event.v3",
-          "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "objective_revision": 1,
           "generation": 1,
-          "at": "2026-10-27T19:36:49.580Z",
+          "at": "2026-10-27T20:36:52.792Z",
           "type": "artifact_saved",
           "actor": "HazeOps",
           "message": "Saved immutable evaluation.finding.",
           "data": {
-            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "id": "bda6078c-9f38-4aa8-a4dc-8cb2dc6f2dea",
             "version": 1,
             "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844",
             "kind": "evaluation.finding"
           },
-          "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+          "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
           "cursor": 32
         },
         {
           "schema_version": "haze.task.event.v3",
-          "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "task_id": "ff30343e-4b2a-46ba-a5b4-0d1d8ab2fc26",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "objective_revision": 1,
           "generation": 1,
-          "at": "2026-10-27T19:36:49.804Z",
+          "at": "2026-10-27T20:36:53.031Z",
           "type": "assignment_completed",
           "actor": "HazeOps",
           "message": "Execution state persisted independently of evidence support.",
-          "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+          "assignment_id": "d70a8134-2f84-4deb-aa2e-3d79dc144148",
           "cursor": 36
         }
       ],
       "dispatch_receipts": [
         {
-          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "decision_id": "be76a3f3-cbd6-4152-9083-57a9b2158545",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "objective_revision": 1,
           "plan_revision": 0,
           "applied_plan_revision": 1,
           "status": "applied",
           "result": { "action": "apply_plan" },
-          "created_at": "2026-10-27T19:36:49.280Z"
+          "created_at": "2026-10-27T20:36:51.916Z"
         },
         {
-          "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
-          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "decision_id": "7fdf443e-ebd5-407f-9ed9-ab104081acb8",
+          "run_id": "b01b617d-669c-4a82-9694-1c189a8eb282",
           "objective_revision": 1,
           "plan_revision": 1,
           "applied_plan_revision": 1,
           "status": "applied",
           "result": { "action": "finalize" },
-          "created_at": "2026-10-27T19:36:50.318Z"
+          "created_at": "2026-10-27T20:36:53.924Z"
         }
       ]
     },

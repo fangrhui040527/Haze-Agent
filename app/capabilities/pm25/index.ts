@@ -183,6 +183,7 @@ export function createPm25Tools(
       manager_read_only: true,
       output_artifact_kind: 'pm25.capture',
       description:
+        source.description ??
         'Read bounded modeled PM2.5 evidence for a town and UTC interval; SQL is constructed by this capability.',
       inputSchema: pm25ScopeSchema,
       outputSchema: captureSchema,

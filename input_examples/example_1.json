@@ -1,0 +1,15 @@
+{
+  "schema_version": "haze.sample.request.v1",
+  "scenario_id": "evidence-investigation",
+  "request": {
+    "schema_version": "haze.task.request.v3",
+    "objective": "Investigate PM2.5 evidence for Sample Coastal District during 2026-10-01T00:00:00Z to 2026-10-01T06:00:00Z. Use the registered pm25-evidence-summary workflow to retrieve the available synthetic modeled samples, calculate coverage, distinguish missing values from zero and model output from observations, retain exact evidence and obtain an independent numerical review. Explain the limits before drawing conclusions.",
+    "scope": {
+      "location": "Sample Coastal District",
+      "period": {
+        "start": "2026-10-01T00:00:00Z",
+        "end": "2026-10-01T06:00:00Z"
+      }
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schema_version": "haze.reduction.physical-import.v1",
+  "origin": "synthetic",
+  "records": [
+    {
+      "row_id": "baseline-coastal",
+      "role": "baseline",
+      "scenario": "Ordinary management with existing protections",
+      "evidence_basis": "prospective",
+      "scope": {
+        "endpoint": "synthetic lost workdays",
+        "unit": "person-days",
+        "population": "Invented outdoor workforce",
+        "geography": "Sample Coastal District",
+        "pollutant": "Invented episode-related PM2.5 boundary",
+        "period": {
+          "start": "2026-10-01",
+          "end": "2026-10-07"
+        },
+        "coverage": "Two non-overlapping synthetic workforce strata with supplied prospective point estimates.",
+        "missingness": "All four declared residual quantities are supplied; no statistical uncertainty or actual delivery evidence is supplied.",
+        "exclusions": [
+          "Other health endpoints, monetary benefits, costs, delivered effects and real-world effectiveness."
+        ]
+      },
+      "stratum_id": "coastal-workers",
+      "support_ids": ["synthetic-population-coastal-workers"],
+      "quantity": "600",
+      "original_method": {
+        "id": "synthetic-supplied-residual",
+        "version": "1"
+      },
+      "applicability": "Hand-authored prospective sample input only; no real exposure-response calculation or efficacy evidence."
+    },
+    {
+      "row_id": "baseline-inland",
+      "role": "baseline",
+      "scenario": "Ordinary management with existing protections",
+      "evidence_basis": "prospective",
+      "scope": {
+        "endpoint": "synthetic lost workdays",
+        "unit": "person-days",
+        "population": "Invented outdoor workforce",
+        "geography": "Sample Coastal District",
+        "pollutant": "Invented episode-related PM2.5 boundary",
+        "period": {
+          "start": "2026-10-01",
+          "end": "2026-10-07"
+        },
+        "coverage": "Two non-overlapping synthetic workforce strata with supplied prospective point estimates.",
+        "missingness": "All four declared residual quantities are supplied; no statistical uncertainty or actual delivery evidence is supplied.",
+        "exclusions": [
+          "Other health endpoints, monetary benefits, costs, delivered effects and real-world effectiveness."
+        ]
+      },
+      "stratum_id": "inland-workers",
+      "support_ids": ["synthetic-population-inland-workers"],
+      "quantity": "400",
+      "original_method": {
+        "id": "synthetic-supplied-residual",
+        "version": "1"
+      },
+      "applicability": "Hand-authored prospective sample input only; no real exposure-response calculation or efficacy evidence."
+    },
+    {
+      "row_id": "intervention-coastal",
+      "role": "intervention",
+      "scenario": "Proposed exposure-alert and work-schedule service",
+      "evidence_basis": "prospective",
+      "scope": {
+        "endpoint": "synthetic lost workdays",
+        "unit": "person-days",
+        "population": "Invented outdoor workforce",
+        "geography": "Sample Coastal District",
+        "pollutant": "Invented episode-related PM2.5 boundary",
+        "period": {
+          "start": "2026-10-01",
+          "end": "2026-10-07"
+        },
+        "coverage": "Two non-overlapping synthetic workforce strata with supplied prospective point estimates.",
+        "missingness": "All four declared residual quantities are supplied; no statistical uncertainty or actual delivery evidence is supplied.",
+        "exclusions": [
+          "Other health endpoints, monetary benefits, costs, delivered effects and real-world effectiveness."
+        ]
+      },
+      "stratum_id": "coastal-workers",
+      "support_ids": ["synthetic-population-coastal-workers"],
+      "quantity": "510",
+      "original_method": {
+        "id": "synthetic-supplied-residual",
+        "version": "1"
+      },
+      "applicability": "Hand-authored prospective sample input only; no real exposure-response calculation or efficacy evidence."
+    },
+    {
+      "row_id": "intervention-inland",
+      "role": "intervention",
+      "scenario": "Proposed exposure-alert and work-schedule service",
+      "evidence_basis": "prospective",
+      "scope": {
+        "endpoint": "synthetic lost workdays",
+        "unit": "person-days",
+        "population": "Invented outdoor workforce",
+        "geography": "Sample Coastal District",
+        "pollutant": "Invented episode-related PM2.5 boundary",
+        "period": {
+          "start": "2026-10-01",
+          "end": "2026-10-07"
+        },
+        "coverage": "Two non-overlapping synthetic workforce strata with supplied prospective point estimates.",
+        "missingness": "All four declared residual quantities are supplied; no statistical uncertainty or actual delivery evidence is supplied.",
+        "exclusions": [
+          "Other health endpoints, monetary benefits, costs, delivered effects and real-world effectiveness."
+        ]
+      },
+      "stratum_id": "inland-workers",
+      "support_ids": ["synthetic-population-inland-workers"],
+      "quantity": "380",
+      "original_method": {
+        "id": "synthetic-supplied-residual",
+        "version": "1"
+      },
+      "applicability": "Hand-authored prospective sample input only; no real exposure-response calculation or efficacy evidence."
+    }
+  ]
+}

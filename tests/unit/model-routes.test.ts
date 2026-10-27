@@ -55,6 +55,100 @@ function requestUrl(value: Parameters<typeof fetch>[0] | undefined): string {
       : (value?.url ?? '');
 }
 describe('admitted model route registry', () => {
+  it('pins credential-free local sample routes and dispatches an actual provider request', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation((url) =>
+        Promise.resolve(
+          new URL(String(url)).pathname === '/api/show'
+            ? Response.json({ parameters: 'num_ctx 16384' })
+            : response('qwen2.5:7b'),
+        ),
+      );
+    const registry = new ModelRouteRegistry({ SAMPLE_MODE: 'true' }, fetcher);
+    const route = registry.snapshot().routes.Manager;
+    expect(route).toMatchObject({
+      provider: 'openai-compatible',
+      requested_model: 'haze-sample-qwen2.5-7b-16k-v1:latest',
+      base_url: 'http://127.0.0.1:11434/v1',
+      credential_ref: null,
+      capability_contract: { id: 'ollama-sample-chat-v1' },
+    });
+    const readiness = await registry.readiness();
+    expect(
+      readiness.routes.every(
+        (entry) =>
+          entry.configured &&
+          entry.schema_compatible &&
+          entry.reachability === 'unchecked' &&
+          !entry.live_verified,
+      ),
+    ).toBe(true);
+    const model = await registry.prepare(route, new AbortController().signal);
+    expect(
+      await model.completeWithReceipt!(input, new AbortController().signal),
+    ).toMatchObject({
+      text: '{"type":"finish"}',
+      receipt: { response_model: 'qwen2.5:7b', response_id: 'response-1' },
+    });
+    expect(fetcher.mock.calls[0]?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+    expect(() => new ModelRouteRegistry({}).resolve(route)).toThrow(
+      'incompatible',
+    );
+  });
+
+  it('retains explicit hosted profile credentials while the inherited sample route uses a local fallback', async () => {
+    const env = configured({ SAMPLE_MODE: 'true', HAZE_PROVIDER: 'offline' });
+    const registry = new ModelRouteRegistry(env);
+    expect(registry.snapshot().routes.Manager.credential_ref).toBeNull();
+    expect(registry.snapshot().routes.HazeOps).toMatchObject({
+      provider: 'openai-compatible',
+      credential_ref: 'env:SPECIALIST_KEY',
+      base_url: 'https://specialist.example/v1',
+    });
+    expect(
+      (await registry.readiness()).routes.every(
+        (entry) => entry.reachability === 'unchecked',
+      ),
+    ).toBe(true);
+  });
+  it('preserves configured role inference and readiness when sample evidence is enabled', async () => {
+    const env = configured({ SAMPLE_MODE: 'true' });
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(response()));
+    const registry = new ModelRouteRegistry(env, fetcher);
+    expect(registry.snapshot()).toEqual(
+      new ModelRouteRegistry(configured()).snapshot(),
+    );
+    const readiness = await registry.readiness();
+    expect(
+      readiness.routes.every((route) => route.reachability === 'unchecked'),
+    ).toBe(true);
+    expect(readiness.routes.every((route) => route.schema_compatible)).toBe(
+      true,
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+    const completion = await (
+      await registry.prepare(
+        registry.snapshot().routes.HazeOps,
+        new AbortController().signal,
+      )
+    ).completeWithReceipt!(input, new AbortController().signal);
+    expect(completion.receipt.response_model).toBe('actual-v2');
+    expect(completion.receipt.synthetic).toBeUndefined();
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+      new URL('https://specialist.example/v1/chat/completions'),
+      expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer special-secret',
+        },
+      }),
+    );
+  });
   it('freezes independent role routes and inherited defaults without retaining secret values', () => {
     const env = configured();
     const registry = new ModelRouteRegistry(env);

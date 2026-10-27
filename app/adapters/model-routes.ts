@@ -16,6 +16,9 @@ import type {
 } from '../contracts/model-routes.js';
 import { resolveAgentModel } from './agent-model.js';
 import type { AgentModel } from './agent-model.js';
+import { withCachedAgentModel } from './model-cache.js';
+import { modelCacheConfiguration } from './model-cache-config.js';
+import { managerModelCacheNormalizer } from '../orchestration/model-cache-bindings.js';
 import {
   NIGHTSHIFT_BASE_URL,
   NIGHTSHIFT_CONTRACT,
@@ -25,6 +28,13 @@ import {
   resolveRouteCredential,
 } from './nightshift/runtime.js';
 import { resolveStrictNightshiftModel } from './nightshift/strict-model.js';
+import {
+  sampleModelAllowsNoCredential,
+  sampleModelEnvironment,
+  sampleModelUsesBuiltinFallback,
+  isBuiltinSampleModelRoute,
+  prepareSampleModel,
+} from './sample-model.js';
 export {
   createInjectedRouteSnapshot,
   createOfflineRouteSnapshot,
@@ -49,16 +59,21 @@ function hash(value: unknown): string {
 }
 function contract(
   provider: EffectiveModelRoute['provider'],
+  localSampleDefault = false,
 ): EffectiveModelRoute['capability_contract'] {
   if (provider === 'nightshift') return NIGHTSHIFT_CONTRACT;
-  const id = `${provider}-chat-v1`;
+  const id = localSampleDefault
+    ? 'ollama-sample-chat-v1'
+    : `${provider}-chat-v1`;
   return Object.freeze({
     version: 1,
     id,
     hash: hash({
       id,
       token_limit_field:
-        provider === 'nvidia' ? 'max_tokens' : 'max_completion_tokens',
+        provider === 'nvidia' || localSampleDefault
+          ? 'max_tokens'
+          : 'max_completion_tokens',
       max_output_tokens: 16_384,
       strict_actions: 'local-validation',
       reasoning:
@@ -113,11 +128,12 @@ function freezeRoute(
     EffectiveModelRoute,
     'version' | 'route_id' | 'capability_contract'
   >,
+  localSampleDefault = false,
 ): EffectiveModelRoute {
   const data = {
     version: 1 as const,
     ...values,
-    capability_contract: contract(values.provider),
+    capability_contract: contract(values.provider, localSampleDefault),
   };
   return Object.freeze({ ...data, route_id: `route-${hash(data)}` });
 }
@@ -139,14 +155,10 @@ function hasControlCharacters(value: string): boolean {
 export class ModelRouteRegistry implements ModelRouteService {
   readonly #snapshot: ModelRouteSnapshot;
   readonly #models = new Map<string, AgentModel>();
-  readonly #sampleMode: boolean;
   constructor(
     private readonly env: NodeJS.ProcessEnv,
     private readonly fetcher: typeof fetch = fetch,
   ) {
-    this.#sampleMode = !['', '0', 'false'].includes(
-      env.SAMPLE_MODE?.trim().toLowerCase() ?? '',
-    );
     let profiles: ReturnType<
       typeof modelRoutesConfigurationSchema.parse
     >['profiles'];
@@ -165,7 +177,8 @@ export class ModelRouteRegistry implements ModelRouteService {
         'Invalid model route configuration: check the versioned profiles and registered role mappings.',
       );
     }
-    const provider = env.HAZE_PROVIDER?.trim() || 'offline';
+    const inheritedEnv = sampleModelEnvironment(env);
+    const provider = inheritedEnv.HAZE_PROVIDER?.trim() || 'offline';
     if (
       !['offline', 'nvidia', 'openai-compatible', 'nightshift'].includes(
         provider,
@@ -174,27 +187,37 @@ export class ModelRouteRegistry implements ModelRouteService {
       throw new Error('Invalid inherited model route provider.');
     const defaultProvider = provider as EffectiveModelRoute['provider'];
     const model =
-      env.HAZE_MODEL?.trim() || (provider === 'nvidia' ? NVIDIA_MODEL : null);
+      inheritedEnv.HAZE_MODEL?.trim() ||
+      (provider === 'nvidia' ? NVIDIA_MODEL : null);
     if (provider !== 'offline' && !model)
       throw new Error('Inherited model route requires HAZE_MODEL.');
     if (model && (model.length > 256 || hasControlCharacters(model)))
       throw new Error('Invalid inherited model route model.');
-    const inherited = freezeRoute({
-      profile: 'inherited',
-      provider: defaultProvider,
-      requested_model: model,
-      base_url: normalizeBase(
-        env.HAZE_PROVIDER_BASE_URL?.trim(),
-        defaultProvider,
-      ),
-      credential_ref:
-        provider === 'offline'
-          ? null
-          : provider === 'nightshift'
-            ? nightshiftCredentialReference(env)
-            : `env:${provider === 'nvidia' && !env.HAZE_PROVIDER_API_KEY?.trim() ? 'NVIDIA_API_KEY' : 'HAZE_PROVIDER_API_KEY'}`,
-      policy: 'provider-default',
-    });
+    const inherited = freezeRoute(
+      {
+        profile: 'inherited',
+        provider: defaultProvider,
+        requested_model: model,
+        base_url: normalizeBase(
+          inheritedEnv.HAZE_PROVIDER_BASE_URL?.trim(),
+          defaultProvider,
+        ),
+        credential_ref:
+          provider === 'offline' ||
+          (sampleModelAllowsNoCredential(
+            inheritedEnv,
+            provider,
+            inheritedEnv.HAZE_PROVIDER_BASE_URL,
+          ) &&
+            !inheritedEnv.HAZE_PROVIDER_API_KEY?.trim())
+            ? null
+            : provider === 'nightshift'
+              ? nightshiftCredentialReference(env)
+              : `env:${provider === 'nvidia' && !inheritedEnv.HAZE_PROVIDER_API_KEY?.trim() ? 'NVIDIA_API_KEY' : 'HAZE_PROVIDER_API_KEY'}`,
+        policy: 'provider-default',
+      },
+      sampleModelUsesBuiltinFallback(env),
+    );
     const resolved = new Map<string, EffectiveModelRoute>();
     for (const [name, profile] of Object.entries(profiles)) {
       if (hasControlCharacters(profile.model))
@@ -203,7 +226,13 @@ export class ModelRouteRegistry implements ModelRouteService {
         ? `env:${profile.credential_env}`
         : profile.provider === 'nightshift'
           ? nightshiftCredentialReference(env)
-          : `env:${profile.provider === 'nvidia' && !env.HAZE_PROVIDER_API_KEY?.trim() ? 'NVIDIA_API_KEY' : 'HAZE_PROVIDER_API_KEY'}`;
+          : sampleModelAllowsNoCredential(
+                env,
+                profile.provider,
+                profile.base_url,
+              ) && !env.HAZE_PROVIDER_API_KEY?.trim()
+            ? null
+            : `env:${profile.provider === 'nvidia' && !env.HAZE_PROVIDER_API_KEY?.trim() ? 'NVIDIA_API_KEY' : 'HAZE_PROVIDER_API_KEY'}`;
       resolved.set(
         name,
         freezeRoute({
@@ -241,7 +270,11 @@ export class ModelRouteRegistry implements ModelRouteService {
     generation: string;
   } {
     const route = effectiveModelRouteSchema.parse(value);
-    const expectedContract = contract(route.provider);
+    const expectedContract = contract(
+      route.provider,
+      isBuiltinSampleModelRoute(this.env, route) &&
+        route.capability_contract.id === 'ollama-sample-chat-v1',
+    );
     if (
       route.capability_contract.id !== expectedContract.id ||
       route.capability_contract.hash !== expectedContract.hash
@@ -253,16 +286,20 @@ export class ModelRouteRegistry implements ModelRouteService {
     const authority = { ...route, route_id: undefined };
     if (route.route_id !== `route-${hash(authority)}`)
       throw new Error('Admitted model route identity is invalid.');
-    if (this.#sampleMode)
-      throw new Error('SAMPLE_MODE disables model requests.');
     if (route.provider === 'offline' || route.provider === 'injected')
       throw new Error('The admitted route has no live inference provider.');
     if (route.policy === 'local-only')
       throw new Error(
         'The admitted direct inference route cannot enforce local-only compute.',
       );
-    const key = resolveRouteCredential(route.credential_ref, this.env);
-    if (!key)
+    const key = resolveRouteCredential(route.credential_ref, this.env) ?? '';
+    if (
+      !key &&
+      !(
+        route.credential_ref === null &&
+        sampleModelAllowsNoCredential(this.env, route.provider, route.base_url)
+      )
+    )
       throw new Error(
         'The admitted model route has no available server credential.',
       );
@@ -285,6 +322,11 @@ export class ModelRouteRegistry implements ModelRouteService {
   ): Promise<AgentModel> {
     signal.throwIfAborted();
     const { route, key, generation } = this.validatedRoute(value);
+    if (
+      isBuiltinSampleModelRoute(this.env, route) &&
+      !modelCacheConfiguration(this.env, route)
+    )
+      await prepareSampleModel(this.env, this.fetcher, signal);
     if (route.provider === 'nightshift') {
       const inspection = await inspectNightshiftContract(
         route.base_url!,
@@ -307,7 +349,7 @@ export class ModelRouteRegistry implements ModelRouteService {
   ): AgentModel {
     const cached = this.#models.get(generation);
     if (cached) return cached;
-    const adapter =
+    const baseAdapter =
       route.provider === 'nightshift'
         ? resolveStrictNightshiftModel(
             route.base_url!,
@@ -316,14 +358,27 @@ export class ModelRouteRegistry implements ModelRouteService {
             this.fetcher,
           )
         : resolveAgentModel(
-            {
-              HAZE_PROVIDER: route.provider,
-              HAZE_MODEL: route.requested_model ?? '',
-              HAZE_PROVIDER_BASE_URL: route.base_url ?? '',
-              HAZE_PROVIDER_API_KEY: key,
-            },
+            isBuiltinSampleModelRoute(this.env, route)
+              ? this.env
+              : {
+                  HAZE_PROVIDER: route.provider,
+                  HAZE_MODEL: route.requested_model ?? '',
+                  HAZE_PROVIDER_BASE_URL: route.base_url ?? '',
+                  HAZE_PROVIDER_API_KEY: key,
+                  SAMPLE_MODE: this.env.SAMPLE_MODE,
+                },
             this.fetcher,
           );
+    const cacheOptions = modelCacheConfiguration(this.env, route);
+    const adapter = cacheOptions
+      ? withCachedAgentModel(baseAdapter, {
+          ...cacheOptions,
+          normalizer: managerModelCacheNormalizer,
+          onEvent: ({ type, key: cacheKey }) => {
+            console.log(`[model-cache] ${type} ${cacheKey.slice(0, 16)}`);
+          },
+        })
+      : baseAdapter;
     for (const cacheKey of this.#models.keys())
       if (cacheKey.startsWith(`${route.route_id}:`))
         this.#models.delete(cacheKey);
@@ -345,11 +400,6 @@ export class ModelRouteRegistry implements ModelRouteService {
       checks.set(
         route.route_id,
         (async () => {
-          if (this.#sampleMode)
-            return {
-              reachability: 'blocked' as const,
-              reason: 'Sample mode disables inference and network inspection.',
-            };
           if (route.provider === 'offline')
             return {
               reachability: 'blocked' as const,
@@ -359,7 +409,17 @@ export class ModelRouteRegistry implements ModelRouteService {
             route.credential_ref,
             this.env,
           );
-          if (!credential)
+          if (
+            !credential &&
+            !(
+              route.credential_ref === null &&
+              sampleModelAllowsNoCredential(
+                this.env,
+                route.provider,
+                route.base_url,
+              )
+            )
+          )
             return {
               reachability: 'blocked' as const,
               reason: 'Server credential is unavailable.',
@@ -367,7 +427,7 @@ export class ModelRouteRegistry implements ModelRouteService {
           if (route.provider === 'nightshift') {
             const inspection = await inspectNightshiftContract(
               route.base_url!,
-              credential,
+              credential!,
               route.requested_model,
               this.fetcher,
             );
