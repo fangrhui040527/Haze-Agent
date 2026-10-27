@@ -139,9 +139,9 @@ export class MockAgentService implements AgentService {
         emit({
           type: 'handoff',
           from: 'hazeops',
-          to: ['worldmodel', 'hmem'],
+          to: ['worldmodel'],
           payloadLabel: 'records',
-          message: 'HazeOps passed the records to World Model and H-Mem.',
+          message: 'HazeOps passed the records to World Model.',
         });
         await wait(500);
         emit({
@@ -149,22 +149,11 @@ export class MockAgentService implements AgentService {
           agent: 'worldmodel',
           message: 'World Model is looking up stored records…',
         });
-        emit({
-          type: 'agent_working',
-          agent: 'hmem',
-          message:
-            'World Model and H-Mem are looking up records and past episodes…',
-        });
         await wait(1600);
         emit({
           type: 'agent_completed',
           agent: 'worldmodel',
           message: 'World Model returned the stored records.',
-        });
-        emit({
-          type: 'agent_completed',
-          agent: 'hmem',
-          message: 'H-Mem returned similar past episodes.',
         });
         await wait(300);
         emit({
@@ -253,7 +242,6 @@ const NAMES: Record<AgentId, string> = {
   manager: 'Manager',
   hazeops: 'HazeOps',
   worldmodel: 'World Model',
-  hmem: 'H-Mem',
   evidencecritic: 'EvidenceCritic',
   workershield: 'WorkerShield',
 };

@@ -103,9 +103,11 @@ export type AgentId =
   | 'manager'
   | 'hazeops'
   | 'worldmodel'
-  | 'hmem'
   | 'evidencecritic'
   | 'workershield';
+
+/** Active agents plus the retired H-MEM, which only historical records may carry. */
+export type RecordedAgentId = AgentId | 'hmem';
 
 export interface AgentResult {
   agent: AgentId;

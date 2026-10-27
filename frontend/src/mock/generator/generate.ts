@@ -576,7 +576,6 @@ function agentResultsFor(
             durationMs: ctx.rng.int(300, 1500),
           };
 
-  const pastYear = ctx.rng.int(2015, 2025);
   return [
     {
       agent: 'hazeops',
@@ -593,19 +592,6 @@ function agentResultsFor(
           : 'Stored as a new record (revision 1).',
       durationMs: ctx.rng.int(50, 400),
     },
-    ctx.rng.chance(0.55)
-      ? {
-          agent: 'hmem',
-          outcome: 'ok',
-          summary: `Similar episode recalled: ${f.seed.location.name}, ${pastYear} season (fictional).`,
-          durationMs: ctx.rng.int(100, 900),
-        }
-      : {
-          agent: 'hmem',
-          outcome: 'skipped',
-          summary: 'No similar past episode in memory.',
-          durationMs: ctx.rng.int(50, 300),
-        },
     {
       agent: 'evidencecritic',
       outcome: failed > 0 ? 'warning' : 'ok',

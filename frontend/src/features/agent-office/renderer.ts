@@ -808,7 +808,6 @@ function drawStatusBubble(ctx: Ctx, a: Actor, now: number, reduced: boolean) {
 function drawPacketIcon(ctx: Ctx, p: Packet, x: number, y: number) {
   switch (p.toAgent) {
     case 'worldmodel':
-    case 'hmem':
       rect(ctx, C.outline, x - 4, y - 3, 9, 7);
       rect(ctx, '#e8c37a', x - 3, y - 2, 7, 5);
       rect(ctx, '#d9a94e', x - 3, y - 3, 3, 1);

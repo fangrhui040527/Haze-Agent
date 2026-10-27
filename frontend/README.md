@@ -1,6 +1,6 @@
 # Haze frontend
 
-A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World Model, H-Mem,
+A live haze-information dashboard with an AI-agent team (Manager, HazeOps, World Model,
 EvidenceCritic, WorkerShield) shown as a pixel-art office.
 
 > **Status: read-only evidence chat plus a live dashboard with fictional fallback.** General chat uses the
