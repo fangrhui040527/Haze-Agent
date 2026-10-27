@@ -68,9 +68,44 @@ really execute. Zetaris and hosted inference are reported as **skipped**, never 
 
 1. Start Zetaris and Nightshift (see the hackathon setup guide). `cp .env.example .env` and fill in the keys.
 2. `docker compose up -d` (evidence store on port 5433), then `npm run sl -- db:init`.
-3. In the Zetaris SQL Editor, run `sql/02_zetaris_register.sql` one statement at a time.
+3. In the Zetaris SQL Editor, run `sql/02_zetaris_register.sql` one statement at a time. From the Haze root, `npm run dev` does steps 2 and 3 for you: it registers `sl_pg` once the sidecar is healthy.
 4. Load your data (see **DATA.md**), then run `npm run sl -- check`. Every line should say PASS.
 5. `npm start`. Every claim-bearing query now goes through Zetaris; every narrative and judge call goes through Nightshift.
+
+### `.env`: what you need and where to get it
+
+`cp .env.example .env`, then fill in the values below. Never commit `.env`. With `SAMPLE_MODE=true`, none of the
+keys are needed.
+
+**Keys you have to get yourself**
+
+| Variable | What it is | Where to get it |
+|---|---|---|
+| `ZETARIS_API_KEY` | Bearer key for the Zetaris REST API (every evidence query) | Zetaris web UI → **Management → API Tokens** → **+**. Copy the key when it is shown, because it is displayed only once. See `docs/zetaris/connections/client-setup.md`. If you get REST `401`, create a new key. |
+| `METERLESS_RUNTIME_TOKEN` | Token for hosted reasoning (Nemotron narratives, judge lane, `ask`) | Meterless Nightshift → **Console**. Copy the runtime token from the same page as `METERLESS_BASE_URL`. |
+| `FIRMS_MAP_KEY` | NASA FIRMS MAP_KEY for downloading fire hotspots (see **DATA.md** §4) | Free at https://firms.modaps.eosdis.nasa.gov/api/map_key (enter your email, and the key arrives by mail). Limit: 5,000 transactions per 10 minutes. SmokeLedger itself does not read it. The FIRMS adapters in `app/` read it, and you need it for the download URLs printed by `npm run sl -- urls`. |
+| `GFW_API_KEY` | Global Forest Watch Data API key, for fetching concession boundaries (**DATA.md** §1) | Sign up at https://www.globalforestwatch.org/my-gfw/, then create a key via the GFW Data API (https://data-api.globalforestwatch.org, `POST /auth/apikey`). No code reads it yet. It is only for your own GFW downloads. |
+| `SANDBOX_RECIPIENT` | The only address that receives case notices while `DEMO_MODE=true` | Your own email address |
+
+**Settings with working defaults**
+
+| Variable | Default | Change it when |
+|---|---|---|
+| `SAMPLE_MODE` | `false` | Set it to `true` to run offline on the fictional sample (no Zetaris and no Nightshift) |
+| `STATE_DIR`, `LOG_DIR`, `PORT` | `.state`, `logs`, `8000` | You need different paths or a different port |
+| `DB_MODE` | `postgres` | Use `pglite` to run on the embedded DB instead of Docker Postgres |
+| `PG_URL` | `postgres://smokeledger:smokeledger@localhost:5433/smokeledger` | You changed `docker-compose.yml` |
+| `ZETARIS_REST_URL` | `http://localhost:8888/api/v1.0` | Zetaris runs on another host or port |
+| `ZETARIS_ORG_ID` | `1` | Your Zetaris organisation has a different ID |
+| `ZETARIS_SOURCE` | `sl_pg` | You named the datasource differently in `sql/02_zetaris_register.sql` |
+| `QUERY_BACKEND` | `zetaris` | Use `postgres` only during development, before Zetaris is wired |
+| `METERLESS_BASE_URL` | `http://127.0.0.1:8088/v1` | Nightshift → **Console** shows a different URL |
+| `METERLESS_APP` | `smokeledger` | Rarely |
+| `MODEL_DEEP`, `MODEL_JUDGE` | `meterless/auto` | You want to pin specific Nemotron routes from `GET /v1/models` |
+| `DEMO_MODE` | `true` | Keep it `true` for the hackathon, so every notice goes to `SANDBOX_RECIPIENT` |
+| `WIND_GRID_STEP` | `1.0` | You fetched the Open-Meteo wind grid at a different spacing, for example `0.5` |
+
+Open-Meteo (wind and PM2.5) needs no key.
 
 ## Judge interface
 

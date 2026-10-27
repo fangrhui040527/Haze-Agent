@@ -64,6 +64,30 @@ Configure the Zetaris image references, `POSTGRES_PASSWORD` and `ZETARIS_ADMIN_P
 
 Live PM2.5 retrieval also needs `ZETARIS_API_KEY` and published evidence snapshots; follow the [source guide](docs/evidence/pm25-evidence-source.md) or [historical comparison workflow](docs/guides/historical-haze-comparison.md). Tasks read published data rather than refreshing it automatically.
 
+#### Keys and credentials in the root `.env`
+
+Everything else in [.env.example](.env.example) has a working default, documented next to it. SmokeLedger's keys go in a separate file, `smokeledger/.env` (see [smokeledger/README.md](smokeledger/README.md)), not here.
+
+| Variable | Needed for | Where to get it |
+|---|---|---|
+| `DRIVER_IMAGE`, `API_IMAGE`, `UI_IMAGE` | Starting Zetaris (`npm run dev`) | Copy them from the `.env` issued with your Zetaris download ([platform guide](app/adapters/zetaris/zetaris-platform/README.md)) |
+| `POSTGRES_PASSWORD`, `ZETARIS_ADMIN_PASSWORD`, `ZETARIS_ADMIN_EMAIL` | Zetaris first start | Pick your own. When moving an existing install, keep its values. |
+| `ZETARIS_API_KEY` | Live evidence queries (REST) | Zetaris web UI → **Management → API Tokens** → **+**. The key is shown once ([client setup](docs/zetaris/connections/client-setup.md)). |
+| `ZETARIS_USERNAME`, `ZETARIS_PASSWORD` | UI-proxy helpers and dashboard source queries | Your Zetaris login |
+| `ZETARIS_JDBC_JAR` | JDBC only | Full path to the Zetaris JDBC driver JAR |
+| `METERLESS_RUNTIME_TOKEN` | Model calls through local Nightshift (default `HAZE_PROVIDER`) | Nightshift → **Console**. Nightshift also holds your NVIDIA key. |
+| `NVIDIA_API_KEY` | Direct NVIDIA inference (`HAZE_PROVIDER=nvidia`), or routes using it as `credential_env` | https://build.nvidia.com → sign in → **Get API Key** |
+| `HAZE_PROVIDER_API_KEY` | Optional. Any other direct provider. It takes precedence over `NVIDIA_API_KEY`. | Your provider's console |
+| `FIRMS_MAP_KEY` | NASA FIRMS fire hotspots (dashboard, HazeOps, `zetaris:fetch` FIRMS) | Free at https://firms.modaps.eosdis.nasa.gov/api/map_key. It arrives by email. |
+| `OPEN_AQ_KEY` | OpenAQ PM2.5 stations (dashboard, HazeOps) | Free account at https://explore.openaq.org/register → account settings → API key |
+| `WINDY_API_KEY` | Windy point-forecast wind source ([windy source](app/adapters/zetaris/sources/windy/docs/RUN.md)) | https://api.windy.com/keys → Point Forecast API |
+| `TAVILY_API_KEY` | Optional HazeOps web search. Without it, only that tool reports unavailable. | https://app.tavily.com → API Keys |
+| `APIFY_API_TOKEN` | Optional. No code reads it yet. | https://console.apify.com → Settings → Integrations |
+| `PGPASSWORD` (and `PG*`) | Optional legacy PostgreSQL only | Your local database |
+| `HAZE_OPERATOR_TOKEN` | Optional. It protects manual heartbeat requests. | Any random string you choose |
+
+With `SAMPLE_MODE=true`, or for the `npm start` examples, no keys are needed.
+
 ```sh
 npm run dev
 ```
