@@ -1,0 +1,42 @@
+{
+  "probe": "F-03 peer byte budget",
+  "verdict": "F-03 RETRACTED: the === auto-close fires on true exhaustion; no exhausted-but-open state exists. Remains a style/fragility note only.",
+  "results": [
+    {
+      "name": "A: bytes land exactly on 12288 -> channel auto-closes",
+      "ok": true,
+      "bytes": 12288,
+      "status": "closed"
+    },
+    {
+      "name": "B1: at 12287 bytes the channel is still open (1 byte of real capacity remains)",
+      "ok": true,
+      "bytes": 12287,
+      "status": "open"
+    },
+    {
+      "name": "B2: the remaining 1 byte is accepted and THEN the channel closes",
+      "ok": true,
+      "accepted": true,
+      "error": null,
+      "bytes": 12288,
+      "status": "closed"
+    },
+    {
+      "name": "C: overshooting message refused and running total unchanged",
+      "ok": true,
+      "code": "peer_message_limit",
+      "before": 4096,
+      "after": 4096,
+      "status": "open"
+    },
+    {
+      "name": "D: no reachable state is byte-exhausted while still marked open",
+      "ok": true,
+      "bytes": 12288,
+      "status": "closed",
+      "exhausted": true,
+      "headroom": 0
+    }
+  ]
+}
