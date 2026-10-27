@@ -160,7 +160,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
        SELECT ${AREA_CASE} AS area, a.scale AS wind_speed_scale, COUNT(*) AS n_fires, SUM(a.weight) AS w
          FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
         WHERE a.run_id = '${run}' GROUP BY ${AREA_CASE}, a.scale) t
-      ORDER BY wind_speed_scale, pct_of_signal DESC`,
+      ORDER BY wind_speed_scale, pct_of_signal DESC, area`,
   );
   const cell = (col: string) => `FLOOR(${col} / ${CELL_DEG}) * ${CELL_DEG} + ${CELL_DEG / 2}`;
   const eHot = await evidence(
@@ -170,20 +170,22 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
               MIN(${epoch("f.acq_utc")}) AS first_seen_epoch, MAX(${epoch("f.acq_utc")}) AS last_seen_epoch
          FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
         WHERE a.run_id = '${run}' AND a.scale = 1 GROUP BY ${cell("f.lat")}, ${cell("f.lon")}) t
-      ORDER BY w DESC LIMIT 5`,
+      ORDER BY w DESC, cell_lat, cell_lon LIMIT 5`,
   );
   const eHolders = await evidence(
     `SELECT COALESCE(c.group_name, c.company, c.name, c.concession_id) AS holder, a.scale AS wind_speed_scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
        JOIN {src}.concessions c ON f.concession_id = c.concession_id
-      WHERE a.run_id = '${run}' GROUP BY COALESCE(c.group_name, c.company, c.name, c.concession_id), a.scale`,
+      WHERE a.run_id = '${run}' GROUP BY COALESCE(c.group_name, c.company, c.name, c.concession_id), a.scale
+      ORDER BY holder, wind_speed_scale`,
   );
   const eCountry = await evidence(
     `SELECT COALESCE(co.parent_country, 'not recorded') AS parent_country, a.scale AS wind_speed_scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
        JOIN {src}.concessions c ON f.concession_id = c.concession_id
        LEFT JOIN {src}.companies co ON co.group_name = c.group_name
-      WHERE a.run_id = '${run}' GROUP BY COALESCE(co.parent_country, 'not recorded'), a.scale`,
+      WHERE a.run_id = '${run}' GROUP BY COALESCE(co.parent_country, 'not recorded'), a.scale
+      ORDER BY parent_country, wind_speed_scale`,
   );
   const eTop = await evidence(
     `SELECT c.concession_id, c.name, c.company, c.group_name, c.map_source, c.map_date,
@@ -193,7 +195,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
        JOIN {src}.concessions c ON f.concession_id = c.concession_id
       WHERE a.run_id = '${run}' AND a.scale = 1
       GROUP BY c.concession_id, c.name, c.company, c.group_name, c.map_source, c.map_date
-      ORDER BY w DESC LIMIT 8`,
+      ORDER BY w DESC, c.concession_id LIMIT 8`,
   );
   const topIds = eTop.rows.map((x) => safeId(String(x[0])));
   const eHistory = topIds.length

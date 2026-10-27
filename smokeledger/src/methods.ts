@@ -11,6 +11,7 @@ import { synthesize } from "./agents/manager.ts";
 import { review } from "./agents/critic.ts";
 import { previews } from "./agents/communityalert.ts";
 import { hostedAvailable } from "./llm.ts";
+import { mapLayers } from "./mapdata.ts";
 import { InputError, validate } from "./run.ts";
 import { withRun, type RunCounters } from "./tracing/context.ts";
 import { logFile, trace } from "./tracing/trace.ts";
@@ -143,7 +144,18 @@ export async function traceMethod(b: Body) {
     const draft = await synthesize(scope, null, null, assessment, [], false);
     return { assessment, evidence, draft };
   });
-  return methodResponse(runId, result.draft, result.evidence, { sources: result.assessment }, provenance, {
+  // Map layers are display data; a failure to draw them never fails the cited trace.
+  const map = await mapLayers(
+    result.assessment.backward_run_id,
+    scope.town,
+    result.assessment.top_concessions.map((c) => c.concession_id),
+    {
+      // A share is shown only when its map was loaded for this run (the claims say "not assessed" otherwise).
+      concession: !result.assessment.claims.some((c) => /^Fires inside mapped concessions: not assessed/.test(c.text)),
+      peat: !result.assessment.claims.some((c) => /^Fires on peat: not assessed/.test(c.text)),
+    },
+  ).catch(() => null);
+  return methodResponse(runId, result.draft, result.evidence, { sources: result.assessment, map }, provenance, {
     start: new Date(scope.startMs).toISOString(),
     end: new Date(scope.endMs).toISOString(),
     unserved: [],

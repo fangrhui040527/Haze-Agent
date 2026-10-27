@@ -28,7 +28,8 @@ export async function investigate(scope: Scope, runId: string, recordConcessions
         evidence_ids: [...line.matchAll(/\[(E-[0-9a-f]{10})\]/g)].map((m) => m[1]),
       });
   // Concessions named in the dossier become World Model entities (held_by -> group).
-  const top = d.evidence.find((e) => /ORDER BY w DESC LIMIT 8/.test(e.sql));
+  // The top-concessions query: ordered by weight and limited to the first eight.
+  const top = d.evidence.find((e) => /ORDER BY w DESC\b[^]*\bLIMIT 8\b/.test(e.sql));
   const tops = (top?.rows ?? []).map((row) => ({ concession_id: String(row[0]), name: row[1] as string | null, group_name: row[3] as string | null }));
   for (const c of recordConcessions ? tops : []) {
     const info = await db().query("SELECT map_source, map_date FROM concessions WHERE concession_id = $1", [c.concession_id]);
