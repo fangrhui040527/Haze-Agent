@@ -52,7 +52,7 @@ export const CONFIG = {
     runSeconds: 300, // whole-run hard deadline
     taskSeconds: 120, // one specialist task
     sourceSeconds: 60, // one source request (Zetaris); a local Spark-backed engine can be slow under load
-    modelSeconds: 60, // one hosted model request
+    modelSeconds: 180, // one hosted model request; the judge on a reasoning model takes one to three minutes under load
     feedbackRounds: 2, // critic revision rounds
   },
 };

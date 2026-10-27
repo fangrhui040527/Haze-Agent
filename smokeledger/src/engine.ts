@@ -51,7 +51,7 @@ export async function loadWindFields(fromMs: number, toMs: number): Promise<Wind
     const s = byLevel.get(level);
     if (s && s.length) fields.push(new WindField(s, level));
   }
-  if (!fields.length) throw new Error(`No wind data between ${iso(fromMs)} and ${iso(toMs)}. Load Open-Meteo wind first.`);
+  if (!fields.length) throw new Error(`No wind data is loaded between ${iso(fromMs)} and ${iso(toMs)}, so this window cannot be traced.`);
   return fields;
 }
 

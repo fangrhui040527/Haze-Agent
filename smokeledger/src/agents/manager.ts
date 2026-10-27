@@ -87,7 +87,11 @@ export async function synthesize(
       : `No forecast covers the requested window for ${scope.town}.`;
     rationale = apis.length ? `Projected from hourly PM2.5 (observed where available, model otherwise) as a rolling 24-hour average [${projId}].` : "";
   } else if (src) {
-    summary = src.claims.filter((c) => c.kind === "inference").slice(0, 3).map((c) => c.text).join(" ");
+    // Where the weighted fires were and the strongest hotspot, then the map-based shares.
+    const inferences = src.claims.filter((c) => c.kind === "inference");
+    const hotspots = inferences.filter((c) => /^Fire hotspot/.test(c.text));
+    const rest = inferences.filter((c) => !/^Fire hotspot/.test(c.text));
+    summary = [...rest.slice(0, 1), ...hotspots.slice(0, 1), ...rest.slice(1, 4)].map((c) => c.text).join(" ");
     rationale = src.claims.find((c) => c.kind === "calculation")?.text ?? "";
   }
 

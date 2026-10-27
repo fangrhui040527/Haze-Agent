@@ -49,6 +49,54 @@ export function confidenceFromRange(low: number, high: number): "high" | "medium
   return width <= 10 ? "high" : width <= 25 ? "medium" : "low";
 }
 
+/**
+ * Approximate area boxes for where weighted fires were. The Strait of Malacca is
+ * approximated by a straight line, so these are not province or national boundaries.
+ */
+const AREA_CASE = `CASE
+  WHEN f.lat BETWEEN 1.2 AND 7.0 AND f.lon BETWEEN 99.5 AND 104.6 AND f.lat > 6.0 - (f.lon - 98.0) * 0.8333 THEN 'Peninsular Malaysia and Singapore'
+  WHEN f.lat BETWEEN -6.2 AND 6.0 AND f.lon BETWEEN 95.0 AND 106.8 THEN 'Sumatra and nearby islands'
+  WHEN f.lat BETWEEN -4.5 AND 7.5 AND f.lon BETWEEN 108.5 AND 119.5 THEN 'Borneo (Kalimantan, Sarawak, Sabah, Brunei)'
+  WHEN f.lat BETWEEN -9.0 AND -5.8 AND f.lon BETWEEN 105.0 AND 115.0 THEN 'Java'
+  ELSE 'elsewhere' END`;
+/** Hotspot grid cell size in degrees (about 28 km at the equator). */
+const CELL_DEG = 0.25;
+
+export interface AreaShare {
+  area: string;
+  central: number;
+  low: number;
+  high: number;
+  fires: number;
+}
+export interface Hotspot {
+  lat: number;
+  lon: number;
+  fires: number;
+  maxFrp: number;
+  pct: number;
+  firstSeen: number;
+  lastSeen: number;
+}
+
+/** Rows of [area, scale, n_fires, pct_of_signal] -> per-area central (scale 1) share and range across scales. */
+export function areaShares(rows: unknown[][]): AreaShare[] {
+  const by = new Map<string, AreaShare>();
+  for (const [area, scale, n, pctOf] of rows) {
+    const label = String(area);
+    const value = num(pctOf);
+    const e = by.get(label) ?? { area: label, central: 0, low: Infinity, high: -Infinity, fires: 0 };
+    e.low = Math.min(e.low, value);
+    e.high = Math.max(e.high, value);
+    if (num(scale) === 1) {
+      e.central = value;
+      e.fires = num(n);
+    }
+    by.set(label, e);
+  }
+  return [...by.values()].sort((a, b) => b.central - a.central);
+}
+
 export interface Dossier {
   run_id: string;
   town: string;
@@ -58,6 +106,8 @@ export interface Dossier {
     peat: Share;
     holders: Share[];
     countries: Share[];
+    areas: AreaShare[];
+    hotspots: Hotspot[];
     confidence: string;
     meanPm25: number | null;
   };
@@ -90,7 +140,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
       WHERE town = '${town}' AND valid_utc > ${ts(from)} AND valid_utc <= ${ts(r.centerMs)} GROUP BY kind ORDER BY kind`,
   );
   const eSplit = await evidence(
-    `SELECT a.scale, SUM(a.weight) AS w_total,
+    `SELECT a.scale AS wind_speed_scale, SUM(a.weight) AS w_total,
             SUM(CASE WHEN f.concession_id IS NOT NULL THEN a.weight ELSE 0 END) AS w_concession,
             SUM(CASE WHEN f.on_peat THEN a.weight ELSE 0 END) AS w_peat,
             COUNT(*) AS n_fires,
@@ -99,14 +149,32 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
       WHERE a.run_id = '${run}' GROUP BY a.scale ORDER BY a.scale`,
   );
+  // Shares are computed in SQL so every cited percentage is a value in the evidence rows.
+  const eArea = await evidence(
+    `SELECT area, wind_speed_scale, n_fires, CAST(100 * w / SUM(w) OVER (PARTITION BY wind_speed_scale) AS DECIMAL(6,1)) AS pct_of_signal FROM (
+       SELECT ${AREA_CASE} AS area, a.scale AS wind_speed_scale, COUNT(*) AS n_fires, SUM(a.weight) AS w
+         FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
+        WHERE a.run_id = '${run}' GROUP BY ${AREA_CASE}, a.scale) t
+      ORDER BY wind_speed_scale, pct_of_signal DESC`,
+  );
+  const cell = (col: string) => `FLOOR(${col} / ${CELL_DEG}) * ${CELL_DEG} + ${CELL_DEG / 2}`;
+  const eHot = await evidence(
+    `SELECT cell_lat, cell_lon, n_fires, max_frp, CAST(100 * w / total AS DECIMAL(6,1)) AS pct_of_signal, first_seen_epoch, last_seen_epoch FROM (
+       SELECT ${cell("f.lat")} AS cell_lat, ${cell("f.lon")} AS cell_lon, COUNT(*) AS n_fires, MAX(f.frp) AS max_frp,
+              SUM(a.weight) AS w, SUM(SUM(a.weight)) OVER () AS total,
+              MIN(${epoch("f.acq_utc")}) AS first_seen_epoch, MAX(${epoch("f.acq_utc")}) AS last_seen_epoch
+         FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
+        WHERE a.run_id = '${run}' AND a.scale = 1 GROUP BY ${cell("f.lat")}, ${cell("f.lon")}) t
+      ORDER BY w DESC LIMIT 5`,
+  );
   const eHolders = await evidence(
-    `SELECT COALESCE(c.group_name, c.company, c.concession_id) AS holder, a.scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
+    `SELECT COALESCE(c.group_name, c.company, c.name, c.concession_id) AS holder, a.scale AS wind_speed_scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
        JOIN {src}.concessions c ON f.concession_id = c.concession_id
-      WHERE a.run_id = '${run}' GROUP BY COALESCE(c.group_name, c.company, c.concession_id), a.scale`,
+      WHERE a.run_id = '${run}' GROUP BY COALESCE(c.group_name, c.company, c.name, c.concession_id), a.scale`,
   );
   const eCountry = await evidence(
-    `SELECT COALESCE(co.parent_country, 'not recorded') AS parent_country, a.scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
+    `SELECT COALESCE(co.parent_country, 'not recorded') AS parent_country, a.scale AS wind_speed_scale, SUM(a.weight) AS w, COUNT(*) AS n_fires
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
        JOIN {src}.concessions c ON f.concession_id = c.concession_id
        LEFT JOIN {src}.companies co ON co.group_name = c.group_name
@@ -146,6 +214,16 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   const holders = sharesFromRows(eHolders.rows.map(([h, s, w, n]) => ({ label: String(h), scale: num(s), w: num(w), fires: num(n) })), totals);
   const countries = sharesFromRows(eCountry.rows.map(([c, s, w, n]) => ({ label: String(c), scale: num(s), w: num(w), fires: num(n) })), totals);
   const confidence = confidenceFromRange(concShare.low, concShare.high);
+  const areas = areaShares(eArea.rows);
+  const hotspots: Hotspot[] = eHot.rows.map(([lat, lon, n, frp, p, first, last]) => ({
+    lat: num(lat),
+    lon: num(lon),
+    fires: num(n),
+    maxFrp: num(frp),
+    pct: num(p),
+    firstSeen: num(first),
+    lastSeen: num(last),
+  }));
   const airModel = eAir.rows.find((x) => x[0] === "observed") ?? eAir.rows.find((x) => x[0] === "model");
   const range = (s: Share) => `${pct(s.central)} (range ${pct(s.low)}-${pct(s.high)})`;
   const id = (e: Evidence) => `[${e.evidence_id}]`;
@@ -164,6 +242,17 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   );
   L.push("");
   L.push("## Findings");
+  if (areas.length)
+    L.push(
+      `- Where the smoke-relevant fires were (approximate area boxes, not province boundaries): ${areas
+        .slice(0, 4)
+        .map((a) => `${a.area} ${a.central.toFixed(1)}% of the smoke signal (range ${a.low.toFixed(1)}-${a.high.toFixed(1)}%), ${a.fires} detections`)
+        .join("; ")} ${id(eArea)}.`,
+    );
+  for (const h of hotspots)
+    L.push(
+      `- Fire hotspot centred at ${h.lat.toFixed(3)}, ${h.lon.toFixed(3)} (${CELL_DEG} degree cell): ${h.pct.toFixed(1)}% of the smoke signal, ${h.fires} detections, peak FRP ${h.maxFrp.toFixed(1)} MW, seen ${fmtUtc(h.firstSeen)} to ${fmtUtc(h.lastSeen)} ${id(eHot)}.`,
+    );
   L.push(
     concessionMap
       ? `- Fires inside mapped concessions: ${range(concShare)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`
@@ -176,7 +265,7 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   );
   L.push(
     concessionMap
-      ? `- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} when the wind speed is varied ${id(eSplit)}.`
+      ? `- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} across the wind_speed_scale values in the shares query, which are the run's ensemble windScales ${id(eSplit)} ${id(eRun)}.`
       : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eRun)}.`,
   );
   if (holders.length) {
@@ -184,7 +273,8 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
     L.push("## Concession holders whose land the smoke-relevant fires were on");
     for (const h of holders.slice(0, 6)) L.push(`- ${h.label}: ${range(h)}, ${h.fires} detections ${id(eHolders)}.`);
   }
-  if (countries.length) {
+  // Without a company-country table every row is "not recorded": nothing to report.
+  if (countries.some((c) => c.label !== "not recorded")) {
     L.push("");
     L.push("## By parent-company country");
     for (const c of countries.slice(0, 6)) L.push(`- ${c.label}: ${range(c)} ${id(eCountry)}.`);
@@ -206,11 +296,12 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   L.push("## What this does and does not show");
   L.push("- A fire inside a concession shows where land burned, not who started it. Treat names here as leads for investigation.");
   L.push("- Concession boundaries come from public compilations and may be outdated; the map source and date are listed with each concession.");
+  L.push("- Area names come from latitude/longitude boxes, not province or national boundaries; hotspot positions are grid-cell centres.");
   L.push("- Trajectories are approximate. The range shows how much the result depends on wind speed.");
   L.push("- Every cited query can be re-run with: npm run sl -- verify <evidence id>.");
   const text = L.join("\n");
 
-  const all = [eRun, eAir, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
+  const all = [eRun, eAir, eArea, eHot, eSplit, eHolders, eCountry, eTop, ...(eHistory ? [eHistory] : [])];
   const findingsOnly = text.split("## What this does and does not show")[0];
   const det = await judge(findingsOnly, all, { useModel: false });
   if (!det.ok) throw new Error(`Template failed its own citation check: ${det.problems.join("; ")}`);
@@ -265,6 +356,8 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
       peat: peatShare,
       holders,
       countries,
+      areas,
+      hotspots,
       confidence: concessionMap ? confidence : "not assessed",
       meanPm25: airModel ? num(airModel[2]) : null,
     },

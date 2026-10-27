@@ -58,9 +58,25 @@ export async function judge(
   if (!det.ok || opts.useModel === false) return det;
   const cited = citedSentences(text);
   if (!cited.length) return det;
+  // Small batches in parallel, each with only the evidence its sentences cite: a reasoning
+  // model takes minutes on one long request. Every sentence still needs its own verdict.
+  const batches: string[][] = [];
+  for (let i = 0; i < cited.length; i += JUDGE_BATCH) batches.push(cited.slice(i, i + JUDGE_BATCH));
+  const results = await Promise.all(batches.map((batch) => judgeBatch(batch, evidence, memories)));
+  return {
+    ok: results.every((r) => r.ok),
+    problems: results.flatMap((r) => r.problems),
+    judgeModel: results[0]?.judgeModel,
+  };
+}
+
+const JUDGE_BATCH = 2;
+
+async function judgeBatch(sentences: string[], evidence: Evidence[], memories: MemoryCite[]): Promise<Verdict> {
+  const ids = new Set(sentences.flatMap((s) => [...s.matchAll(CITE)].map((m) => m[1])));
   const ev = [
-    ...evidence.map((e) => `${e.evidence_id}\nSQL: ${e.sql}\n${judgeRows(e.rows)}`),
-    ...memories.map((m) => `M:${m.id}\nMEMORY: ${m.content}`),
+    ...evidence.filter((e) => ids.has(e.evidence_id)).map((e) => `${e.evidence_id}\nSQL: ${e.sql}\n${judgeRows(e.rows)}`),
+    ...memories.filter((m) => ids.has(`M:${m.id}`)).map((m) => `M:${m.id}\nMEMORY: ${m.content}`),
   ].join("\n\n");
   const { message, model } = await chat(
     [
@@ -71,11 +87,11 @@ export async function judge(
           "(allow rounding). Columns ending in _epoch are seconds since 1970-01-01 UTC. Reply ONLY with JSON, one verdict per sentence: " +
           '{"verdicts": [{"id": "S1", "supported": true, "reason": "<short reason>"}]}. "supported" must be true or false.',
       },
-      { role: "user", content: `EVIDENCE:\n${ev}\n\nSENTENCES:\n${cited.map((s, i) => `S${i + 1}: ${s}`).join("\n")}` },
+      { role: "user", content: `EVIDENCE:\n${ev}\n\nSENTENCES:\n${sentences.map((s, i) => `S${i + 1}: ${s}`).join("\n")}` },
     ],
     { model: CONFIG.llm.modelJudge, temperature: 0, json: true },
   );
-  return { ...parseJudgeReply(message.content ?? "", cited), judgeModel: model };
+  return { ...parseJudgeReply(message.content ?? "", sentences), judgeModel: model };
 }
 
 const JUDGE_ROW_LIMIT = 200;

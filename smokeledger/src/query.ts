@@ -118,7 +118,9 @@ export async function evidence(sql: string, limit = 500): Promise<Evidence> {
     (r) => r.map(canonical),
   );
   const sha = hashRows(rows);
-  const id = `E-${sha.slice(0, 10)}`;
+  // The id covers the query and its rows: the same rows from a different query (or a
+  // renamed column) are different evidence. The row hash alone still verifies a re-run.
+  const id = `E-${crypto.createHash("sha256").update(resolved).update("\n").update(sha).digest("hex").slice(0, 10)}`;
   const ev: Evidence = {
     evidence_id: id,
     backend,
