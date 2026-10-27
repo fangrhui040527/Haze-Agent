@@ -27,6 +27,10 @@ import {
 } from './runtime.js';
 import { browseWorldRecords } from './world-control-plane.js';
 import { handleNightshiftHttp } from './nightshift-http.js';
+import {
+  createNightshiftReleasePolicy,
+  currentReleaseBindings,
+} from './nightshift-release.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -124,22 +128,39 @@ export function createTaskHandler(
     registry?: TaskRuntimeOptions['registry'];
   },
 ) {
+  const modelRoutes =
+    options.modelRoutes ?? createModelRouteRegistry(options.env ?? process.env);
+  const nightshiftJobs =
+    options.nightshiftJobs ??
+    createNightshiftJobAdapter(options.env ?? process.env);
+  const registry =
+    options.registry ??
+    createExecutionRegistry({
+      mode: options.mode ?? 'live',
+      ...(options.env ? { env: options.env } : {}),
+    });
   const runtime = new TaskRuntime({
     ...options,
     conversationFactory:
       options.conversationFactory ?? createManagerConversation,
-    modelRoutes:
-      options.modelRoutes ??
-      createModelRouteRegistry(options.env ?? process.env),
-    nightshiftJobs:
-      options.nightshiftJobs ??
-      createNightshiftJobAdapter(options.env ?? process.env),
-    registry:
-      options.registry ??
-      createExecutionRegistry({
-        mode: options.mode ?? 'live',
-        ...(options.env ? { env: options.env } : {}),
-      }),
+    modelRoutes,
+    nightshiftJobs,
+    registry,
+    // Live servers load release evidence from their own state directory only.
+    ...(options.nightshiftAutomaticRelease || (options.mode ?? 'live') !== 'live'
+      ? {}
+      : {
+          nightshiftAutomaticRelease: createNightshiftReleasePolicy({
+            stateDirectory: options.stateDirectory,
+            bindings: () =>
+              currentReleaseBindings({
+                registry,
+                modelRoutes,
+                nightshiftJobs,
+                signal: AbortSignal.timeout(8_000),
+              }),
+          }),
+        }),
   });
   let dashboard: ReturnType<typeof createDashboardServices> | undefined;
   const applicationServices = (identity: TaskIdentity) => {

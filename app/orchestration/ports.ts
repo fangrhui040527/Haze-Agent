@@ -425,8 +425,44 @@ export interface AgentExecutionServices extends AssignmentServices {
   reject(response: AgentModelCompletion, reason: string): void;
 }
 
+/** One deterministic section of a saved quantitative answer. */
+export interface FinalAnswerSection {
+  heading: string;
+  lines: string[];
+}
+export interface FinalRendererInput {
+  task: TaskRecord;
+  /** Selected artifacts of this renderer's registered kinds, in selection order. */
+  artifacts: readonly Artifact[];
+  /** The validated exact dependency closure of the whole final selection. */
+  closure: readonly Artifact[];
+  reviews: readonly ArtifactReviewCheck[];
+  /** Read-only services. Renderers never call models or mutate state. */
+  services: {
+    store: StatefulToolStore;
+    mode: ExecutionMode;
+    read(ref: ArtifactRef): Artifact;
+  };
+}
+export interface FinalRenderer {
+  /** Selection is by registered kind and producing capability, never by model prose. */
+  artifact_kinds: string[];
+  render(input: FinalRendererInput): {
+    sections: FinalAnswerSection[];
+    limitations: string[];
+    /** Explicit outstanding items; they also become result next requirements. */
+    gaps: string[];
+  };
+}
+
 /** Registration describes implementations. Task grants are checked separately at every boundary. */
 export class ExecutionRegistry {
+  readonly finalRenderers = new Map<string, FinalRenderer>();
+  /** Quantitative capabilities own the factual text of their saved answers. */
+  registerFinalRenderer(capabilityId: string, renderer: FinalRenderer): this {
+    this.unique(this.finalRenderers, capabilityId, renderer);
+    return this;
+  }
   readonly extensionFactories: ((
     host: TaskRuntimeExtensionHost,
   ) => TaskRuntimeExtension)[] = [];

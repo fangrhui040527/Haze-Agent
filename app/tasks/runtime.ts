@@ -95,6 +95,7 @@ import {
   validateArtifactClosure,
   validateAssignmentPlan,
 } from '../orchestration/runtime.js';
+import { renderFinalAnswer } from '../orchestration/final-answer.js';
 import {
   boundedExecution,
   type AgentExecutionServices,
@@ -2308,13 +2309,38 @@ export class TaskRuntime {
         'invalid_citation',
         'Final synthesis must cite only exact selected source references.',
       );
+    // Quantitative workflows save only renderer sections. The Manager's own
+    // prose stays in the immutable decision audit, never in the factual answer.
+    const rendered = renderFinalAnswer({
+      task,
+      registry: this.options.registry,
+      selected,
+      closure,
+      reviews: checks,
+      citations,
+      store: this.store,
+      mode: task.mode,
+      read: (ref) => this.readExact(task, ref),
+    });
     const result = this.result(
       task,
-      action.answer,
+      rendered?.answer ?? action.answer,
       action.work_products,
       citations,
       action.uncertainty,
     );
+    if (rendered)
+      this.store.appendEvent(
+        task.id,
+        'final_answer_rendered',
+        'Runtime',
+        'The saved answer was rendered from independently reviewed work products.',
+        json({
+          capabilities: rendered.capabilities,
+          gaps: rendered.gaps,
+          manager_answer_sha256: contractHash(action.answer),
+        }),
+      );
     const requiredAssignments = new Set(
       task.manager?.plans.at(-1)?.assignment_revisions.map((item) => item.id) ??
         [],
@@ -2346,7 +2372,7 @@ export class TaskRuntime {
           ['partial', 'gap', 'unknown'].includes(item.support),
       );
     result.completion =
-      action.unfinished.length || incomplete
+      action.unfinished.length || incomplete || rendered?.gaps.length
         ? selected.length
           ? 'partial'
           : 'blocked'
@@ -2354,6 +2380,7 @@ export class TaskRuntime {
     result.next_requirements = [
       ...new Set([
         ...action.unfinished,
+        ...(rendered?.gaps ?? []),
         ...(action.nightshift_unresolved_jobs ?? []).map(
           (id) => `Required Nightshift job remains unresolved: ${id}.`,
         ),
