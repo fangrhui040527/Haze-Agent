@@ -73,11 +73,13 @@ export async function loadFireRows(fromMs: number, toMs: number): Promise<Fire[]
 }
 
 /** Map polygons available to this run; 0 means the share cannot be assessed, not that it is zero. */
-async function inputMaps(): Promise<{ concessionPolygons: number; peatPolygons: number }> {
+async function inputMaps(): Promise<{ concessionPolygons: number; peatPolygons: number; peatSource?: string }> {
   const c = await db().query("SELECT COUNT(*) AS n FROM concessions");
   const peatFile = path.join(CONFIG.geoDir, "peat.geojson");
   const peat = fs.existsSync(peatFile) ? (JSON.parse(fs.readFileSync(peatFile, "utf8")) as { features?: unknown[] }).features?.length ?? 0 : 0;
-  return { concessionPolygons: Number(c.rows[0]?.n ?? 0), peatPolygons: peat };
+  const sourceFile = path.join(CONFIG.geoDir, "peat.source.json");
+  const peatSource = fs.existsSync(sourceFile) ? (JSON.parse(fs.readFileSync(sourceFile, "utf8")) as { source?: string }).source : undefined;
+  return { concessionPolygons: Number(c.rows[0]?.n ?? 0), peatPolygons: peat, ...(peatSource ? { peatSource } : {}) };
 }
 
 async function saveRun(runId: string, kind: string, town: string | null, centerMs: number, params: object) {

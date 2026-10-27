@@ -176,7 +176,7 @@ test("missing concession and peat maps are reported as not assessed, never as 0%
       options: { sample_mode: true },
     });
   const mapped = out(await trace("maps-present"));
-  assert.match(mapped.summary, /Fires inside mapped concessions: \d+% \(range/);
+  assert.match(mapped.summary, /Fires inside mapped concessions: \d+\.\d% \(range/);
   // Where the fires were is cited from evidence rows, never left for a later writer to guess.
   assert.match(mapped.summary, /Where the smoke-relevant fires were \(approximate area boxes[^)]*\): Sumatra and nearby islands \d+\.\d% .*\[E-[0-9a-f]{10}\]/);
   assert.match(mapped.summary, /Fire hotspot centred at -?\d+\.\d{3}, \d+\.\d{3} .*\[E-[0-9a-f]{10}\]/);

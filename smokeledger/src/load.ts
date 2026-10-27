@@ -141,8 +141,10 @@ export async function loadConcessions(file: string, map: ConcessionFieldMap): Pr
   );
 }
 
-export function loadPeat(file: string): number {
+export function loadPeat(file: string, source?: string): number {
   const feats = readFeatures(file);
+  // The peat map's name and coverage travel with every run that uses it (run params).
+  if (source) fs.writeFileSync(path.join(CONFIG.geoDir, "peat.source.json"), JSON.stringify({ source }));
   const existing = fs.existsSync(geoPath("peat")) ? readFeatures(geoPath("peat")) : [];
   const all = [...existing, ...feats.map((f) => ({ type: "Feature" as const, geometry: f.geometry, properties: {} }))];
   writeFeatures("peat", all);

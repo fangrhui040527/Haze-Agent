@@ -152,7 +152,8 @@ async function main() {
             date: need(flags.date, "date"),
           })} (run \`overlay\` if fires are already loaded)`,
         );
-      else if (what === "peat") console.log(`peat polygons: ${load.loadPeat(files[0])} (run \`overlay\` if fires are already loaded)`);
+      else if (what === "peat")
+        console.log(`peat polygons: ${load.loadPeat(files[0], flags.source as string | undefined)} (run \`overlay\` if fires are already loaded)`);
       else if (what === "companies") console.log(`companies: ${await load.loadCompanies(files[0])}`);
       else if (what === "fires") console.log("fires:", await load.loadFires(files));
       else if (what === "wind") console.log(`wind rows: ${await load.loadWind(files)}`);

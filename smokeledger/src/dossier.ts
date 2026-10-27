@@ -11,7 +11,8 @@ import { judge, type Verdict } from "./judge.ts";
 import { epoch, evidence, fmtUtc, safeId, safeText, type Evidence } from "./query.ts";
 
 const ts = (ms: number) => `CAST('${new Date(ms).toISOString()}' AS TIMESTAMP)`;
-const pct = (x: number) => `${Math.round(x * 100)}%`;
+// One decimal: whole-percent rounding can move a range outside the rows it cites.
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const num = (v: unknown) => Number(v ?? 0);
 export const localTime = (ms: number) => {
   const d = new Date(ms + PARAMS.localUtcOffsetHours * HOUR);
@@ -128,7 +129,9 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   const runParams = (() => {
     const raw = eRun.rows[0]?.[4];
     try {
-      return (typeof raw === "string" ? JSON.parse(raw) : raw) as { inputMaps?: { concessionPolygons?: number; peatPolygons?: number } };
+      return (typeof raw === "string" ? JSON.parse(raw) : raw) as {
+        inputMaps?: { concessionPolygons?: number; peatPolygons?: number; peatSource?: string };
+      };
     } catch {
       return {};
     }
@@ -145,7 +148,9 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
             SUM(CASE WHEN f.on_peat THEN a.weight ELSE 0 END) AS w_peat,
             COUNT(*) AS n_fires,
             SUM(CASE WHEN f.concession_id IS NOT NULL THEN 1 ELSE 0 END) AS n_in_concession,
-            SUM(CASE WHEN f.on_peat THEN 1 ELSE 0 END) AS n_peat
+            SUM(CASE WHEN f.on_peat THEN 1 ELSE 0 END) AS n_peat,
+            CAST(100 * SUM(CASE WHEN f.concession_id IS NOT NULL THEN a.weight ELSE 0 END) / SUM(a.weight) AS DECIMAL(6,1)) AS pct_concession,
+            CAST(100 * SUM(CASE WHEN f.on_peat THEN a.weight ELSE 0 END) / SUM(a.weight) AS DECIMAL(6,1)) AS pct_peat
        FROM {src}.attribution a JOIN {src}.fires f ON a.fire_id = f.fire_id
       WHERE a.run_id = '${run}' GROUP BY a.scale ORDER BY a.scale`,
   );
@@ -226,6 +231,21 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   }));
   const airModel = eAir.rows.find((x) => x[0] === "observed") ?? eAir.rows.find((x) => x[0] === "model");
   const range = (s: Share) => `${pct(s.central)} (range ${pct(s.low)}-${pct(s.high)})`;
+  // Concession and peat percentages as the shares query states them (pct_* columns), so the
+  // judge compares numbers instead of dividing weights.
+  const stated = (column: number) => {
+    const values = eSplit.rows.map((row) => ({ scale: num(row[0]), pct: num(row[column]) }));
+    const all = values.map((v) => v.pct);
+    return {
+      central: values.find((v) => v.scale === 1)?.pct ?? all[0] ?? 0,
+      low: Math.min(...all),
+      high: Math.max(...all),
+    };
+  };
+  const statedRange = (column: number) => {
+    const v = stated(column);
+    return `${v.central.toFixed(1)}% (range ${v.low.toFixed(1)}%-${v.high.toFixed(1)}%)`;
+  };
   const id = (e: Evidence) => `[${e.evidence_id}]`;
 
   // ---- the dossier text: every line with a number cites its evidence ----
@@ -255,17 +275,19 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
     );
   L.push(
     concessionMap
-      ? `- Fires inside mapped concessions: ${range(concShare)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`
+      ? `- Fires inside mapped concessions: ${statedRange(7)} of the smoke signal, from ${concShare.fires} detections ${id(eSplit)}.`
       : `- Fires inside mapped concessions: not assessed, because no concession map is loaded; this is not evidence that the fires were outside concessions ${id(eRun)}.`,
   );
   L.push(
     peatMap
-      ? `- Fires on peat: ${range(peatShare)} of the smoke signal, from ${peatShare.fires} detections ${id(eSplit)}.`
+      ? `- Fires on peat: ${statedRange(8)} of the smoke signal, from ${peatShare.fires} detections ${id(eSplit)}.${
+          runParams.inputMaps?.peatSource ? ` Peat map used: ${runParams.inputMaps.peatSource} ${id(eRun)}.` : ""
+        }`
       : `- Fires on peat: not assessed, because no peat map is loaded; this is not evidence that the fires were off peat ${id(eRun)}.`,
   );
   L.push(
     concessionMap
-      ? `- Confidence: ${confidence}, because the concession share moves between ${pct(concShare.low)} and ${pct(concShare.high)} across the wind_speed_scale values in the shares query, which are the run's ensemble windScales ${id(eSplit)} ${id(eRun)}.`
+      ? `- Confidence: ${confidence} by SmokeLedger's rule (high when the concession share varies by 10 percentage points or less across wind speeds, medium up to 25), since pct_concession is ${stated(7).low.toFixed(1)}% to ${stated(7).high.toFixed(1)}% across the wind_speed_scale values, which are the run's ensemble windScales ${id(eSplit)} ${id(eRun)}.`
       : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eRun)}.`,
   );
   if (holders.length) {
