@@ -59,7 +59,7 @@ describe('general task reports', () => {
     record.result!.currency = 'stale';
     const markup = render(run);
     expect(markup).toContain('Explain the supplied evidence.');
-    expect(markup).toContain('Server task: completed');
+    expect(markup).toContain('>Completed</span>');
     expect(markup).toContain('The source supports a limited explanation. [E1]');
     expect(markup).toContain('needs review');
     expect(markup).toContain('Stale result');
@@ -68,12 +68,11 @@ describe('general task reports', () => {
     expect(markup).not.toContain('Continue in a new run');
     expect(markup).not.toContain('Filled in from a template');
     expect(markup).not.toContain('href="/task/');
-    expect(markup).toContain(
-      '<details><summary>Actual execution receipts (0)</summary>',
-    );
+    expect(markup).not.toContain('Actual execution receipts');
+    expect(markup).not.toContain('Next step');
   });
 
-  it('shows only actual receipts belonging to the requested task', () => {
+  it('leaves raw receipts to the trace timeline and hides an empty World Model panel', () => {
     const run = taskRun();
     const own = receipt(1, 'assignment.started', 'Manager');
     const unrelated = {
@@ -88,11 +87,9 @@ describe('general task reports', () => {
       receipt: item,
     }));
     const markup = render(run);
-    expect(markup).toContain('Actual assignment.started');
-    expect(markup).toContain('Manager');
+    expect(markup).not.toContain('Actual assignment.started');
     expect(markup).not.toContain('another-task-event');
     expect(markup).not.toContain('World Model');
-    expect(markup).not.toContain('No execution receipts loaded yet.');
   });
 
   it('keeps saved server failure and partial results visible after observation ends', () => {
@@ -105,8 +102,11 @@ describe('general task reports', () => {
       message: 'Source retrieval failed.',
     };
     const markup = render(run);
-    expect(markup).toContain('Server task: failed');
+    expect(markup).toContain('>Failed</span>');
     expect(markup).toContain('role="alert">Source retrieval failed.');
+    expect(markup.split('Source retrieval failed.').length).toBe(2);
+    expect(markup).toContain('Next step');
+    expect(markup).toContain('Continue in a new run');
     expect(markup).toContain('Saved result');
     expect(markup).toContain('aria-busy="false"');
     expect(markup).not.toContain('Stop waiting');
@@ -129,21 +129,21 @@ describe('general task reports', () => {
         created_at: run.task!.record!.created_at,
       },
     ];
-    expect(render(run)).toContain(
-      'Which supplied document should be analyzed?',
-    );
+    const waiting = render(run);
+    expect(waiting).toContain('Which supplied document should be analyzed?');
+    expect(waiting).toContain('Next step');
+    expect(waiting).toContain('Send answer');
+    expect(waiting).not.toContain('Continue in a new run');
     expect(render(run)).toContain('aria-busy="false"');
     run.status = 'paused';
     run.statusText = 'Task paused. Saved work is retained.';
     run.task!.record!.status = 'paused';
     const paused = render(run);
-    expect(paused).toContain('Server task: paused');
+    expect(paused).toContain('>Paused</span>');
     expect(paused).toContain('Open Manager workspace');
     expect(paused).not.toContain('Resume task');
     expect(paused).toContain('aria-busy="false"');
-    expect(paused).toContain(
-      '<details open=""><summary>Actual execution receipts (0)</summary>',
-    );
+    expect(paused).not.toContain('Continue in a new run');
   });
 
   it('distinguishes stopping observation from server cancellation', () => {
@@ -153,14 +153,14 @@ describe('general task reports', () => {
     run.statusText =
       'Stopped waiting. Check the saved task for its server status.';
     const stopped = render(run);
-    expect(stopped).toContain('Server task: running');
+    expect(stopped).toContain('>Running</span>');
     expect(stopped).toContain('Stopped waiting.');
     expect(stopped).not.toContain('Stop waiting</button>');
     run.status = 'task_cancelled';
     run.statusText =
       'The server cancelled this task. Saved artifacts remain available.';
     run.task!.record!.status = 'cancelled';
-    expect(render(run)).toContain('Server task: cancelled');
+    expect(render(run)).toContain('>Cancelled</span>');
   });
 
   it('shows transport/readback errors while retaining the last saved server status', () => {
@@ -169,7 +169,7 @@ describe('general task reports', () => {
     run.task!.record!.status = 'running';
     run.observationError = 'Task request failed (503).';
     const markup = render(run);
-    expect(markup).toContain('Server task: running');
+    expect(markup).toContain('>Running</span>');
     expect(markup).toContain('role="alert">Task request failed (503).');
     run.task = null;
     expect(render(run)).toContain('Task request failed (503).');

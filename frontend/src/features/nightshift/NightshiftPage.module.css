@@ -145,6 +145,21 @@
   border-radius: var(--radius-sm);
 }
 
+.ready,
+.blocked {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+}
+
+.ready {
+  background: var(--color-ok-bg);
+}
+
+.blocked {
+  background: var(--color-warn-bg);
+}
+
 .inlineForm {
   margin-top: var(--space-4);
 }

@@ -178,6 +178,28 @@ type Snapshot = {
 };
 type MutationRecord = NightshiftChain | NightshiftJob;
 
+const jobStatusWording: Record<
+  NightshiftJobSummary['execution_state'],
+  string
+> = {
+  submitting: 'Starting',
+  submission_unknown: 'Start not confirmed',
+  queued: 'Waiting to start',
+  running: 'Running',
+  completed: 'Finished',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+  unresolved: 'Needs attention',
+  rejected: 'Not accepted',
+};
+
+const judgeWording: Record<NightshiftJobSummary['judge_status'], string> = {
+  accepted: 'Passed',
+  rejected: 'Did not pass',
+  undecided: 'Not decided yet',
+  unknown: 'Not checked yet',
+};
+
 export function currentNightshiftAuthority(
   task: TaskRecord,
   assignmentId?: string,
@@ -310,7 +332,7 @@ export function NightshiftPage() {
         });
         setObservationError(
           jobId && !selected
-            ? 'This job is unavailable to the current local identity.'
+            ? "This job couldn't be found, or you don't have access to it."
             : null,
         );
         if (jobId && selected) {
@@ -334,7 +356,7 @@ export function NightshiftPage() {
       } catch {
         if (!controller.signal.aborted)
           setObservationError(
-            'Job observation is unavailable. Saved data remains visible; reconnect or refresh when the local server is running.',
+            "Can't reach the Haze server right now, so what you see may be out of date. Click Refresh once the server is running.",
           );
       } finally {
         if (!controller.signal.aborted)
@@ -395,9 +417,7 @@ export function NightshiftPage() {
       );
       if (!mounted.current) return;
       applyRecord(result);
-      setNotice(
-        'The server recorded the request. Repeating an unchanged request returns the same handle. Historical candidates remain unreviewed.',
-      );
+      setNotice('Done. Your request has been saved.');
       if ('execution_state' in result)
         void navigate(`/nightshift/${encodeURIComponent(result.id)}`);
       setRefresh((value) => value + 1);
@@ -405,7 +425,7 @@ export function NightshiftPage() {
       if (!mounted.current) return;
       setError(
         (failure instanceof Error ? failure.message : 'The request failed.') +
-          ' An unchanged retry keeps the original request and key. Refresh persisted state before authorizing additional work.',
+          " Trying again won't create a duplicate. Click Refresh before starting anything new.",
       );
     } finally {
       busyRef.current = false;
@@ -607,20 +627,20 @@ export function NightshiftPage() {
     );
   };
   const selected = jobId && data?.selected?.id === jobId ? data.selected : null;
+  const readiness = data?.readiness ?? null;
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Nightshift candidate jobs</h1>
+          <h1>Nightshift</h1>
           <p>
-            Bounded jobs under explicit grants and historical candidate results.
+            Run background jobs (for example, overnight) and check their results
+            when they finish.
           </p>
         </div>
         <div className={styles.actions}>
           <Button onClick={() => setObserving((value) => !value)}>
-            {observing
-              ? 'Stop browser observation'
-              : 'Resume browser observation'}
+            {observing ? 'Pause live updates' : 'Resume live updates'}
           </Button>
           <Button
             onClick={() => {
@@ -628,139 +648,85 @@ export function NightshiftPage() {
               setRefresh((value) => value + 1);
             }}
           >
-            Refresh saved state
+            Refresh
           </Button>
         </div>
       </header>
       <p>
         {observing
-          ? 'Observing persisted server state.'
-          : 'Browser observation stopped. Jobs and server monitoring continue.'}{' '}
-        Closing this page does not cancel remote work or start another Haze run.
+          ? 'This page updates automatically.'
+          : 'Live updates are paused. Your jobs keep running in the background.'}{' '}
+        Closing this page will not stop any jobs.
       </p>
       {error ? (
-        <StateMessage
-          kind="error"
-          title="Nightshift request or observation failed"
-        >
+        <StateMessage kind="error" title="That didn't work">
           {error}
         </StateMessage>
       ) : null}
       {observationError ? (
-        <StateMessage kind="error" title="Nightshift observation interrupted">
+        <StateMessage kind="error" title="Can't load the latest updates">
           {observationError}
         </StateMessage>
       ) : null}
       {notice ? <p role="status">{notice}</p> : null}
-      {!data ? <p role="status">Loading saved Nightshift jobs...</p> : null}
-      <section className={styles.panel} aria-label="Candidate job readiness">
-        <h2>Candidate job readiness</h2>
-        {readinessError ? <p role="status">{readinessError}</p> : null}
-        {data?.readiness ? (
-          <>
-            <p>
-              CLI: {data.readiness.cli_available ? 'available' : 'unavailable'}{' '}
-              · schema:{' '}
-              {data.readiness.schema_compatible ? 'compatible' : 'unsupported'}{' '}
-              · daemon:{' '}
-              {data.readiness.runtime_reachable ? 'reachable' : 'unavailable'} ·
-              local-only enforcement:{' '}
-              {data.readiness.local_only_enforced ? 'verified' : 'unverified'} ·
-              cloud generation:{' '}
-              {data.readiness.cloud_enforced ? 'verified' : 'unverified'}
-            </p>
-            <p>
-              Submission:{' '}
-              <strong>{data.readiness.ready ? 'available' : 'blocked'}</strong>.{' '}
-              {data.readiness.reason}
-            </p>
-            <p>
-              Runtime version: {data.readiness.runtime_version ?? 'unknown'} ·
-              adapter: {data.readiness.adapter_version}.
-            </p>
-          </>
+      {!data ? <p role="status">Loading your jobs...</p> : null}
+
+      <section className={styles.panel} aria-labelledby="nightshift-status">
+        <h2 id="nightshift-status">Can I start a new job?</h2>
+        {readiness ? (
+          <p className={readiness.ready ? styles.ready : styles.blocked}>
+            <strong>
+              {readiness.ready ? 'Yes, Nightshift is ready.' : 'Not right now.'}
+            </strong>{' '}
+            {readiness.ready ? null : readiness.reason}
+          </p>
+        ) : readinessError ? (
+          <p className={styles.blocked}>
+            <strong>Not right now.</strong> We couldn't check whether Nightshift
+            is ready. Your saved jobs are still shown below.
+          </p>
         ) : (
-          <p>Runtime readiness has not been established.</p>
+          <p role="status">Checking...</p>
         )}
-        <p>
-          New candidate chains default to cloud allowed with no cloud spend cap.
-          Each job keeps its admitted chain’s policy. Normal Haze agent calls
-          use their own model routes and Haze call/token limits.
-        </p>
       </section>
-      <AutomaticReleaseDetails data={automaticReadiness} />
-      <div className={styles.formGrid}>
-        <ChainAdmissionForm
-          busy={busy}
-          available={data?.readiness?.ready ?? false}
-          readiness={data?.readiness ?? null}
-          automaticAvailable={Boolean(
-            automaticReadiness?.ready && automaticReadiness.released,
-          )}
-          automaticReason={automaticReadiness?.reason ?? null}
-          onSubmit={admit}
-        />
-        <JobSubmissionForm
-          chains={data?.chains ?? []}
-          readiness={data?.readiness ?? null}
-          busy={busy}
-          onSubmit={submit}
-        />
-      </div>
-      <p className={styles.note}>
-        Failed or ambiguous mutations retain their exact request and idempotency
-        key for an unchanged retry.{' '}
-        <Button
-          size="small"
-          disabled={busy}
-          onClick={() => {
-            intent.current.clear();
-            setNotice(
-              'Saved request identity cleared. Read current state before submitting new authority.',
-            );
-          }}
-        >
-          Clear saved request identity
-        </Button>
-      </p>
-      <section aria-label="Persisted candidate jobs">
-        <h2>Saved jobs</h2>
+
+      <section aria-labelledby="nightshift-jobs">
+        <h2 id="nightshift-jobs">Your jobs</h2>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
                 <th scope="col">Job</th>
-                <th scope="col">Execution</th>
-                <th scope="col">Judge outcome</th>
-                <th scope="col">Receipt</th>
-                <th scope="col">Cancellation</th>
+                <th scope="col">Status</th>
+                <th scope="col">Quality check</th>
+                <th scope="col">Result</th>
+                <th scope="col">Stopped?</th>
               </tr>
             </thead>
             <tbody>
               {(data?.jobs ?? []).map((job) => (
                 <tr key={job.id}>
                   <th scope="row">
-                    <Link to={`/nightshift/${job.id}`}>{job.id}</Link>
+                    <Link to={`/nightshift/${job.id}`} title={job.id}>
+                      Job {job.id.slice(0, 8)}
+                    </Link>
                     <p>
-                      <Link to={`/task/${job.task_id}`}>Task</Link> · explicit
-                      grant
+                      <Link to={`/task/${job.task_id}`}>Open task</Link>
                     </p>
                   </th>
-                  <td>{job.execution_state}</td>
-                  <td>{job.judge_status}</td>
+                  <td>{jobStatusWording[job.execution_state]}</td>
+                  <td>{judgeWording[job.judge_status]}</td>
                   <td>
-                    {job.receipt_available
-                      ? 'Historical candidate retained'
-                      : 'Not available'}
+                    {job.receipt_available ? 'Ready to view' : 'None yet'}
                   </td>
                   <td>
                     {job.execution_state === 'rejected'
-                      ? 'Not dispatched; rejected before acceptance'
+                      ? 'Never started'
                       : job.cancellation.remote_termination_confirmed
-                        ? 'Termination confirmed'
+                        ? 'Yes'
                         : job.cancellation.requested
-                          ? 'Requested; termination unconfirmed'
-                          : 'Not requested; termination unconfirmed'}
+                          ? 'Stop requested'
+                          : 'No'}
                   </td>
                 </tr>
               ))}
@@ -768,9 +734,7 @@ export function NightshiftPage() {
           </table>
         </div>
         {data?.jobs.length === 0 ? (
-          <p>
-            No persisted jobs. Submit a bounded request under an admitted chain.
-          </p>
+          <p>No jobs yet. Use the forms below to start one.</p>
         ) : null}
       </section>
       {selected ? (
@@ -785,7 +749,7 @@ export function NightshiftPage() {
           job={selected}
           events={events.jobId === selected.id ? events.items : []}
           busy={busy}
-          canReconcile={canReconcileNightshiftJob(data?.readiness ?? null)}
+          canReconcile={canReconcileNightshiftJob(readiness)}
           onCancel={() => jobAction(selected, 'cancel')}
           onReconcile={(remoteId) => jobAction(selected, 'reconcile', remoteId)}
           onSelect={(assignmentId) =>
@@ -793,8 +757,36 @@ export function NightshiftPage() {
           }
         />
       ) : null}
-      <section aria-label="Chain grants">
-        <h2>Chain grants</h2>
+
+      <section aria-labelledby="nightshift-start">
+        <h2 id="nightshift-start">Start something new</h2>
+        <p>
+          First create a chain: it sets the limits jobs must stay within, such
+          as how many can run and whether cloud computers may be used. Then add
+          jobs to it.
+        </p>
+        <div className={styles.formGrid}>
+          <ChainAdmissionForm
+            busy={busy}
+            available={readiness?.ready ?? false}
+            readiness={readiness}
+            automaticAvailable={Boolean(
+              automaticReadiness?.ready && automaticReadiness.released,
+            )}
+            automaticReason={automaticReadiness?.reason ?? null}
+            onSubmit={admit}
+          />
+          <JobSubmissionForm
+            chains={data?.chains ?? []}
+            readiness={readiness}
+            busy={busy}
+            onSubmit={submit}
+          />
+        </div>
+      </section>
+
+      <section aria-labelledby="nightshift-chains">
+        <h2 id="nightshift-chains">Your chains</h2>
         {(data?.chains ?? []).map((chain) => (
           <ChainSummary
             key={chain.id}
@@ -815,9 +807,61 @@ export function NightshiftPage() {
             onControl={(action) => control(data.chain!, action)}
           />
         ) : null}
+        {data?.chains.length === 0 && !data.chain ? (
+          <p>No chains yet.</p>
+        ) : null}
       </section>
+
       <details className={styles.panel}>
-        <summary>Inspect agent provider routes</summary>
+        <summary>Technical details</summary>
+        <h2>System checks</h2>
+        {readinessError ? <p role="status">{readinessError}</p> : null}
+        {readiness ? (
+          <>
+            <p>
+              CLI: {readiness.cli_available ? 'available' : 'unavailable'} ·
+              schema:{' '}
+              {readiness.schema_compatible ? 'compatible' : 'unsupported'} ·
+              daemon:{' '}
+              {readiness.runtime_reachable ? 'reachable' : 'unavailable'} ·
+              local-only enforcement:{' '}
+              {readiness.local_only_enforced ? 'verified' : 'unverified'} ·
+              cloud generation:{' '}
+              {readiness.cloud_enforced ? 'verified' : 'unverified'}
+            </p>
+            <p>
+              Submission:{' '}
+              <strong>{readiness.ready ? 'available' : 'blocked'}</strong>.{' '}
+              {readiness.reason}
+            </p>
+            <p>
+              Runtime version: {readiness.runtime_version ?? 'unknown'} ·
+              adapter: {readiness.adapter_version}.
+            </p>
+          </>
+        ) : null}
+        <p className={styles.note}>
+          New candidate chains default to cloud allowed with no cloud spend cap.
+          Each job keeps its admitted chain’s policy. Normal Haze agent calls
+          use their own model routes and Haze call/token limits.
+        </p>
+        <AutomaticReleaseDetails data={automaticReadiness} />
+        <p className={styles.note}>
+          Failed or ambiguous mutations retain their exact request and
+          idempotency key for an unchanged retry.{' '}
+          <Button
+            size="small"
+            disabled={busy}
+            onClick={() => {
+              intent.current.clear();
+              setNotice(
+                'Saved request identity cleared. Read current state before submitting new authority.',
+              );
+            }}
+          >
+            Clear saved request identity
+          </Button>
+        </p>
         <AgentRoutesPanel />
       </details>
     </div>

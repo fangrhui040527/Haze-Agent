@@ -58,9 +58,12 @@ export async function readTracePage(
 export function TraceTimeline({
   record,
   service = agentService,
+  defaultCollapsed,
 }: {
   record: TaskRecord;
   service?: AgentService;
+  /** When set, the timeline sits in a disclosure, closed if true. */
+  defaultCollapsed?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const [selection, setSelection] = useState<{
@@ -179,15 +182,13 @@ export function TraceTimeline({
     (item) => showAll || isTraceHighlight(item),
   );
   const ids = new Set(shown?.map((item) => item.event_id));
-  return (
-    <section
-      className={styles.doc}
-      aria-labelledby="trace-title"
-      aria-busy={visible?.loading ?? true}
-    >
-      <h2 id="trace-title" className={styles.heading}>
-        Execution timeline
-      </h2>
+  const heading = (
+    <h2 id="trace-title" className={styles.heading}>
+      Execution timeline
+    </h2>
+  );
+  const body = (
+    <>
       <label>
         Trace run{' '}
         <select
@@ -374,6 +375,25 @@ export function TraceTimeline({
             </Button>
           )}
         </>
+      )}
+    </>
+  );
+  return (
+    <section
+      className={styles.doc}
+      aria-labelledby="trace-title"
+      aria-busy={visible?.loading ?? true}
+    >
+      {defaultCollapsed === undefined ? (
+        <>
+          {heading}
+          {body}
+        </>
+      ) : (
+        <details className={styles.collapsible} open={!defaultCollapsed}>
+          <summary>{heading}</summary>
+          <div className={styles.doc}>{body}</div>
+        </details>
       )}
     </section>
   );

@@ -193,9 +193,7 @@ describe('dedicated Manager page', () => {
     run.task!.id = taskId;
     run.task!.record!.manager!.run_id = artifactId;
     expect(renderView(run)).not.toContain('id="manager-workspace-title"');
-    expect(renderView(run)).toContain(
-      'No Manager workspace is saved for this run yet.',
-    );
+    expect(renderView(run)).toContain('started planning this task yet.');
     expect(renderView(run)).toContain(`href="/task/${taskId}"`);
   });
 
