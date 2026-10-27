@@ -15,6 +15,7 @@ import { approve, draftNotice, listCases } from "./cases.ts";
 import { ask } from "./agent.ts";
 import { loadEvidence, verifyEvidence } from "./query.ts";
 import { judge } from "./judge.ts";
+import { criticMethod, outlookMethod, previewsMethod, traceMethod } from "./methods.ts";
 import { withRun, type RunCounters } from "./tracing/context.ts";
 import { hmem, memoryStatus } from "./meterless/hmem.ts";
 import { worldModel, worldModelStatus } from "./meterless/worldModel.ts";
@@ -128,6 +129,11 @@ const routes: [string, RegExp, Handler][] = [
     return [200, { ...r, answer: r.verified ? r.answer : null, evidence: r.evidence.map(({ rows, ...e }) => e) }];
   }],
   ["GET", /^\/api\/evidence\/([^/]+)\/verify$/, async (_b, m) => [200, await counted("verify", () => verifyEvidence(m[1]))]],
+  // Method endpoints for an embedding app's own agents (no SmokeLedger graph or agents).
+  ["POST", /^\/api\/methods\/outlook$/, async (b) => [200, await outlookMethod(b)]],
+  ["POST", /^\/api\/methods\/trace$/, async (b) => [200, await traceMethod(b)]],
+  ["POST", /^\/api\/methods\/critic$/, async (b) => [200, await criticMethod(b)]],
+  ["POST", /^\/api\/methods\/previews$/, async (b) => [200, await previewsMethod(b)]],
   [
     "POST",
     /^\/api\/claims\/check$/,
