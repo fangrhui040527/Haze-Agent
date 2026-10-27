@@ -278,6 +278,33 @@ services:
       - customer-data:/home/zetaris/customer-data
       - ./app/adapters/zetaris/zetaris-platform/init:/init:ro
 
+  # ---------------------------------------------------------------------------
+  # SmokeLedger evidence store. The sidecar (started by npm run dev) creates its schema,
+  # towns and guidance on boot; Zetaris registers this database as the sl_pg datasource.
+  # Inside this project the Zetaris containers reach it as smokeledger-db:5432.
+  smokeledger-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: smokeledger
+      POSTGRES_PASSWORD: smokeledger
+      POSTGRES_DB: smokeledger
+    ports:
+      # Loopback, matching PG_URL in smokeledger/.env.
+      - '127.0.0.1:${SMOKELEDGER_PG_PORT:-5433}:5432'
+    volumes:
+      - smokeledger-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -h 127.0.0.1 -p 5432 -U smokeledger -d smokeledger',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
   # HTTPS front end, started only when COMPOSE_PROFILES=tls. A browser will not run the
   # interface over plain HTTP at anything but localhost, so any machine reached by name or
   # address needs this; a laptop reached at localhost does not.
@@ -308,3 +335,4 @@ volumes:
   driver-logs:
   customer-data:
   driver-data:
+  smokeledger-pgdata:
