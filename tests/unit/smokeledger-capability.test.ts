@@ -238,7 +238,33 @@ describe('smokeledger scope framing', () => {
       { needs_scope: true },
       { needs_scope: true },
       { needs_scope: true },
-      { needs_scope: true },
+    ]);
+  });
+
+  it('plans community message drafts only when the question asks for them', () => {
+    const plan = (objective: string) =>
+      createSmokeLedgerCapability()
+        .assignments({
+          schema_version: 'haze.task.request.v3',
+          objective,
+        } as never)
+        .map((p) => [p.key, p.depends_on]);
+    expect(
+      plan('Investigate the haze over Batu Pahat on 6–7 October 2026.'),
+    ).toEqual([
+      ['air-outlook', []],
+      ['trace-sources', []],
+      ['review', ['air-outlook', 'trace-sources']],
+    ]);
+    expect(
+      plan(
+        'Investigate the haze over Batu Pahat on 6–7 October 2026 and draft notices for parents.',
+      ),
+    ).toEqual([
+      ['air-outlook', []],
+      ['trace-sources', []],
+      ['review', ['air-outlook', 'trace-sources', 'message-previews']],
+      ['message-previews', ['air-outlook']],
     ]);
   });
 });

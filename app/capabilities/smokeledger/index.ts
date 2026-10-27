@@ -431,6 +431,7 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
       } catch {
         input = { needs_scope: true };
       }
+      const wantsMessages = MESSAGE_REQUEST.test(request.objective);
       return [
         {
           key: 'air-outlook',
@@ -453,17 +454,27 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
           definition_id: 'smokeledger.review',
           brief:
             'Independently re-run decisive evidence and check every claim before synthesis.',
-          depends_on: ['air-outlook', 'trace-sources', 'message-previews'],
+          depends_on: [
+            'air-outlook',
+            'trace-sources',
+            ...(wantsMessages ? ['message-previews'] : []),
+          ],
           input,
         },
-        {
-          key: 'message-previews',
-          definition_id: 'smokeledger.previews',
-          brief:
-            'Draft Malay/English community message previews from the outlook for review; never send.',
-          depends_on: ['air-outlook'],
-          input,
-        },
+        // Community message drafts only when the question asks for them: each extra
+        // assignment adds artifacts to the Manager's bounded context.
+        ...(wantsMessages
+          ? [
+              {
+                key: 'message-previews',
+                definition_id: 'smokeledger.previews',
+                brief:
+                  'Draft Malay/English community message previews from the outlook for review; never send.',
+                depends_on: ['air-outlook'],
+                input,
+              },
+            ]
+          : []),
       ];
     },
   };
@@ -545,6 +556,8 @@ const KIND: Record<SmokeLedgerRunTool, string> = {
 };
 // The kind avoids the word "review": Manager selection treats such kinds as review records.
 const DRAFTS_KIND = 'smokeledger.community_message_drafts';
+const MESSAGE_REQUEST =
+  /\b(messages?|notices?|parents?|schools?|alerts?|warn(?:ing|ings)?|drafts?)\b/iu;
 const draftsSchema = z.looseObject({
   bound_to_outlook: artifactRefSchema,
   messages: z.looseObject({ status: z.string() }),
