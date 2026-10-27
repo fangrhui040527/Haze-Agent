@@ -1,0 +1,26 @@
+[
+  {
+    "sex": "both",
+    "date": "2025-01-01",
+    "state": "Selangor",
+    "recipients": 2653.7,
+    "wages_mean": 4258,
+    "wages_median": 3547
+  },
+  {
+    "sex": "both",
+    "date": "2024-01-01",
+    "state": "Selangor",
+    "recipients": 2610.5,
+    "wages_mean": 4052,
+    "wages_median": 3350
+  },
+  {
+    "sex": "both",
+    "date": "2023-01-01",
+    "state": "Selangor",
+    "recipients": 2596.2,
+    "wages_mean": 3885,
+    "wages_median": 3235
+  }
+]

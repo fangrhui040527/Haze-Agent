@@ -143,6 +143,26 @@ const settings = {
   HAZE_AGENT_ROUTES_JSON: {
     validate: (value) => jsonConfiguration(value, 'agents'),
   },
+  HAZE_MANAGER_MAX_MODEL_CALLS: {
+    validate: boundedNumber(1, 64),
+    default: '6',
+  },
+  HAZE_MANAGER_MAX_RETRIEVALS: {
+    validate: boundedNumber(0, 32),
+    default: '4',
+  },
+  HAZE_MANAGER_TIMEOUT_MS: {
+    validate: boundedNumber(1000, 1_800_000),
+    default: '120000',
+  },
+  HAZE_MANAGER_MAX_OUTPUT_TOKENS: {
+    validate: boundedNumber(1, 32_768),
+    default: '2400',
+  },
+  HAZE_MANAGER_MAX_CORRECTIONS: {
+    validate: boundedNumber(0, 8),
+    default: '1',
+  },
   HAZE_NIGHTSHIFT_CLI: { validate: text },
   HAZE_NIGHTSHIFT_MAX_JOBS: { validate: boundedNumber(1, 128), default: '2' },
   HAZE_NIGHTSHIFT_MAX_CHAINS: { validate: boundedNumber(1, 128), default: '8' },

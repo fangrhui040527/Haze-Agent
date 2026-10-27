@@ -122,6 +122,14 @@ function Header() {
           >
             Demo Data
           </NavLink>
+          <NavLink
+            to="/demos"
+            className={({ isActive }) =>
+              `${styles.navLink} ${isActive ? styles.active : ''}`
+            }
+          >
+            Demos
+          </NavLink>
         </nav>
       </div>
     </header>
