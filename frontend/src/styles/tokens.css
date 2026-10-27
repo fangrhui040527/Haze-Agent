@@ -264,43 +264,43 @@
   }
 }
 
-/* App pages (everything except the landing smog sky): light "clear sky" theme for long reading
-   sessions. Dark navy text on white panels over a soft blue-grey gradient; all text pairs meet AA. */
+/* App pages: "dusk haze", a mid-tone sibling of the landing smog sky. Smoke-slate surfaces,
+   a soft amber haze glow, warm off-white text. Lighter than night, never bright white. */
 [data-theme='slate'] {
-  color-scheme: light;
-  --color-bg: #eef2f6;
-  --color-bg-deep: #e3e9f0;
-  --color-surface: #ffffff;
-  --color-panel: color-mix(in srgb, #ffffff 88%, transparent);
-  --color-surface-2: #f1f4f8;
-  --color-text: #17202b;
-  --color-muted: #4f5d6c;
-  --color-border: rgba(23, 32, 43, 0.12);
-  --color-border-strong: rgba(23, 32, 43, 0.26);
-  --color-accent: #1d5f9e;
-  --color-accent-hover: #174d80;
-  --color-accent-contrast: #ffffff;
-  --color-secondary: #5d6b73;
-  --color-focus: #0b57d0;
-  --color-highlight: #e3eefa;
-  --color-button-hover-light: #f7f9fc;
-  --color-ok: #24674a;
-  --color-warn: #7a5300;
-  --color-error: #a2321c;
-  --color-info: #1d5f9e;
-  --color-stale: #56606b;
-  --color-ok-bg: #e2f1e8;
-  --color-warn-bg: #fbf0d4;
-  --color-error-bg: #fbe5df;
-  --color-info-bg: #e3eefa;
-  --color-stale-bg: #eceff3;
-  --fog-color: #d5dee8;
-  --grain-opacity: 0.02;
-  --shadow-color: 23 32 43;
-  --shadow-1: 0 1px 2px rgb(23 32 43 / 0.06), 0 4px 16px rgb(23 32 43 / 0.06);
-  --shadow-2: 0 2px 6px rgb(23 32 43 / 0.08), 0 18px 40px rgb(23 32 43 / 0.1);
+  color-scheme: dark;
+  --color-bg: #2b3038;
+  --color-bg-deep: #242930;
+  --color-surface: #353b45;
+  --color-panel: color-mix(in srgb, #353b45 84%, transparent);
+  --color-surface-2: #3f4651;
+  --color-text: #efe9dc;
+  --color-muted: #c0b8a8;
+  --color-border: rgba(239, 233, 220, 0.14);
+  --color-border-strong: rgba(239, 233, 220, 0.28);
+  --color-accent: #eca452;
+  --color-accent-hover: #f3b770;
+  --color-accent-contrast: #1d1408;
+  --color-secondary: #9fb0bb;
+  --color-focus: #9ccbff;
+  --color-highlight: #4a4234;
+  --color-button-hover-light: #464d59;
+  --color-ok: #9bd3b1;
+  --color-warn: #ecd27a;
+  --color-error: #f5a28c;
+  --color-info: #a9cbe3;
+  --color-stale: #b8b1a4;
+  --color-ok-bg: #2c3d34;
+  --color-warn-bg: #433d27;
+  --color-error-bg: #47322d;
+  --color-info-bg: #2d3c4a;
+  --color-stale-bg: #393d44;
+  --fog-color: #4a4f57;
+  --grain-opacity: 0.035;
+  --shadow-color: 0 0 0;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.18), 0 6px 20px rgb(0 0 0 / 0.16);
+  --shadow-2: 0 2px 8px rgb(0 0 0 / 0.22), 0 20px 50px rgb(0 0 0 / 0.24);
   --gradient-sky:
-    radial-gradient(120% 60% at 85% -10%, rgb(29 95 158 / 0.1), transparent 60%),
-    radial-gradient(90% 50% at 0% 100%, rgb(224 144 47 / 0.06), transparent 60%),
-    linear-gradient(180deg, #e8eef5 0%, #f1f4f8 50%, #f4f6f9 100%);
+    radial-gradient(120% 55% at 75% -5%, rgb(236 164 82 / 0.16), transparent 60%),
+    radial-gradient(90% 60% at 0% 40%, rgb(120 140 155 / 0.18), transparent 65%),
+    linear-gradient(180deg, #262b33 0%, #2f343c 35%, #353330 60%, #2b3038 100%);
 }
