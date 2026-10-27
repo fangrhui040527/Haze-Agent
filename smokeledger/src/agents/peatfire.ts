@@ -12,7 +12,8 @@ import { ref, shortHash } from "./common.ts";
 
 export const PEATFIRE_VERSION = "peatfire-sentinel-1.0";
 
-export async function investigate(scope: Scope, runId: string): Promise<{ assessment: SourceAssessment; evidence: EvidenceRef[] }> {
+// recordConcessions=false leaves facts to an embedding app's own World Model (single authority).
+export async function investigate(scope: Scope, runId: string, recordConcessions = true): Promise<{ assessment: SourceAssessment; evidence: EvidenceRef[] }> {
   const windowHours = Math.max(1, Math.round((scope.endMs - scope.startMs) / HOUR));
   const r = await runBackward(scope.town, scope.endMs, windowHours);
   const d = await buildDossier(r);
@@ -29,7 +30,7 @@ export async function investigate(scope: Scope, runId: string): Promise<{ assess
   // Concessions named in the dossier become World Model entities (held_by -> group).
   const top = d.evidence.find((e) => /ORDER BY w DESC LIMIT 8/.test(e.sql));
   const tops = (top?.rows ?? []).map((row) => ({ concession_id: String(row[0]), name: row[1] as string | null, group_name: row[3] as string | null }));
-  for (const c of tops) {
+  for (const c of recordConcessions ? tops : []) {
     const info = await db().query("SELECT map_source, map_date FROM concessions WHERE concession_id = $1", [c.concession_id]);
     await upsertConcession({ ...c, ...(info.rows[0] ?? {}) }, new Date(scope.endMs).toISOString(), runId);
   }

@@ -35,7 +35,10 @@ import {
   type SmokeLedgerRunTool,
 } from './contracts.js';
 
+import { smokeLedgerWorldModelAdapter } from './world.js';
+
 export { frameSmokeLedgerScope } from './contracts.js';
+export { smokeLedgerWorldModelAdapter } from './world.js';
 export { SmokeLedgerError } from './client.js';
 
 export const SMOKELEDGER_CAPABILITY = 'smokeledger-episode';
@@ -395,6 +398,8 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
         producer_definition_ids: ['smokeledger.previews'],
       },
     ],
+    // Reviewed findings are recorded in the team World Model, the single fact authority.
+    worldModel: smokeLedgerWorldModelAdapter,
     normalizeReview(artifact) {
       if (artifact.kind !== 'review') return undefined;
       const content = z

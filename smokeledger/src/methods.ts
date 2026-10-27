@@ -11,8 +11,6 @@ import { synthesize } from "./agents/manager.ts";
 import { review } from "./agents/critic.ts";
 import { previews } from "./agents/communityalert.ts";
 import { hostedAvailable } from "./llm.ts";
-import { hmem } from "./meterless/hmem.ts";
-import { worldModel } from "./meterless/worldModel.ts";
 import { InputError, validate } from "./run.ts";
 import { withRun, type RunCounters } from "./tracing/context.ts";
 import { logFile, trace } from "./tracing/trace.ts";
@@ -123,7 +121,6 @@ function methodResponse(runId: string, draft: Draft, evidence: EvidenceRef[], ex
 export async function outlookMethod(b: Body) {
   const { runId, scope, unsupported } = await scopeFor(b, "assess_haze");
   if (!scope) return unsupportedResponse(runId, unsupported!);
-  await Promise.all([hmem(), worldModel()]);
   const { result, provenance } = await counted(runId, "outlook", async () => {
     const { assessment, evidence } = await assess(scope, runId, 1);
     const draft = await synthesize(scope, assessment, null, null, [], false);
@@ -140,9 +137,9 @@ export async function outlookMethod(b: Body) {
 export async function traceMethod(b: Body) {
   const { runId, scope, unsupported } = await scopeFor(b, "trace_sources");
   if (!scope) return unsupportedResponse(runId, unsupported!);
-  await Promise.all([hmem(), worldModel()]);
+  // The embedding app's World Model is the fact authority, so no SmokeLedger World Model writes.
   const { result, provenance } = await counted(runId, "trace", async () => {
-    const { assessment, evidence } = await investigate(scope, runId);
+    const { assessment, evidence } = await investigate(scope, runId, false);
     const draft = await synthesize(scope, null, null, assessment, [], false);
     return { assessment, evidence, draft };
   });
