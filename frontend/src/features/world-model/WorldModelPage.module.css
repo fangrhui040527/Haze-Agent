@@ -464,11 +464,11 @@
 }
 .statusBadge[data-status='held'],
 .statusBadge[data-status='pending_review'] {
-  background: var(--color-warn)15;
+  background: var(--color-warn) 15;
   color: var(--color-warn);
 }
 .statusBadge[data-status='not_eligible'] {
-  background: var(--color-error)15;
+  background: var(--color-error) 15;
   color: var(--color-error);
 }
 .metadata {
@@ -611,9 +611,9 @@
   justify-items: start;
   padding: 15px;
   margin-bottom: 16px;
-  border: 1px solid var(--color-error)40;
+  border: 1px solid var(--color-error) 40;
   border-radius: 6px;
-  background: var(--color-error)0a;
+  background: var(--color-error) 0a;
   color: var(--color-error);
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -637,9 +637,9 @@
 .referenceNotice {
   padding: 13px 16px;
   margin-bottom: 20px;
-  border: 1px solid var(--color-warn)30;
+  border: 1px solid var(--color-warn) 30;
   border-radius: 6px;
-  background: var(--color-warn)08;
+  background: var(--color-warn) 08;
   color: var(--color-muted);
   font-size: 12px;
 }

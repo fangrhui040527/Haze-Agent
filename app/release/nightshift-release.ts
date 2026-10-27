@@ -15,6 +15,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { agentRoleSchema, type AgentRole } from '../contracts/capabilities.js';
+import { nightshiftCloudLaneSchema } from '../contracts/nightshift.js';
 import { canonicalJson, parseContractJson } from '../contracts/json.js';
 import {
   automaticReadinessV2Schema,
@@ -32,6 +33,14 @@ import type {
   NightshiftJobPort,
 } from '../orchestration/ports.js';
 import type { ModelRouteService } from '../orchestration/model-service.js';
+import {
+  roleEvaluationEvidenceSchema,
+  validateRoleEvaluation,
+} from './nightshift-role-evidence.js';
+import {
+  retainedDomainEvidenceSchema,
+  validateDomainDemonstration,
+} from './nightshift-domain-evidence.js';
 
 /** Strict role verification and demonstration routes use this exact identity. */
 export const NVIDIA_ULTRA_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b';
@@ -46,7 +55,7 @@ const MANIFEST_MAX_BYTES = 65_536;
 const EVIDENCE_MAX_BYTES = 4_194_304;
 const INTERACTIVE_LATENCY_GATE_MS = 90_000;
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/u);
-const text = z.string().min(1).max(4096);
+const text = z.string().trim().min(1).max(4096);
 const hash = (value: string | Buffer) =>
   createHash('sha256').update(value).digest('hex');
 
@@ -67,6 +76,7 @@ export const releaseBindingsSchema = z.strictObject({
     schema_hash: sha256,
     installation_fingerprint: sha256,
     roster_fingerprint: sha256,
+    cloud_lanes: z.array(nightshiftCloudLaneSchema).min(1).max(128),
   }),
 });
 export type ReleaseBindings = z.infer<typeof releaseBindingsSchema>;
@@ -79,34 +89,18 @@ const demonstrationSchema = z.strictObject({
   workflow: z.enum(['pm25', 'damage-accounting']),
   task_id: z.uuid(),
   status: z.literal('completed'),
-  completion: z.enum(['full', 'partial']),
+  completion: z.literal('full'),
   review_status: z.literal('supported'),
   data_origin: z.enum(['external_source', 'supplied']),
   answer_rendered: z.literal(true),
   model_calls_by_role: modelCallsSchema,
   artifacts: z.array(sha256).min(1).max(256),
   restart_readback: z.literal(true),
+  retained_report: retainedDomainEvidenceSchema,
 });
 /** Kind-specific payloads; each slot proves one release gate with live data only. */
 const payloads = {
-  role_evaluation: z.strictObject({
-    evaluator: text,
-    passed: z.literal(true),
-    scenarios: z.number().int().positive(),
-    outputs: z
-      .array(
-        z.strictObject({
-          role: agentRoleSchema,
-          scenario: text,
-          passed: z.boolean(),
-          output_sha256: sha256,
-          response_model: z.string().min(1).max(256),
-        }),
-      )
-      .min(1)
-      .max(512),
-    model_calls_by_role: modelCallsSchema,
-  }),
+  role_evaluation: roleEvaluationEvidenceSchema,
   independent_review: z.strictObject({
     reviewer: text,
     verdict: z.literal('supported'),
@@ -121,8 +115,14 @@ const payloads = {
   damage_demonstration: demonstrationSchema.extend({
     workflow: z.literal('damage-accounting'),
     data_origin: z.literal('supplied'),
+    planning: demonstrationSchema.extend({
+      workflow: z.literal('damage-reduction'),
+      data_origin: z.literal('supplied'),
+    }),
   }),
   cloud_generation: z.strictObject({
+    task_id: z.uuid(),
+    chain_id: z.uuid(),
     job_id: z.uuid(),
     remote_id: z.string().min(1).max(160),
     privacy: z.literal('cloud-ok'),
@@ -132,6 +132,7 @@ const payloads = {
         z.strictObject({
           lane: z.string().min(1).max(256),
           model: z.string().min(1).max(256),
+          kind: z.literal('cloud'),
         }),
       )
       .min(1)
@@ -139,6 +140,9 @@ const payloads = {
     review_status: z.literal('unreviewed'),
   }),
   wait_wakeup: z.strictObject({
+    task_id: z.uuid(),
+    chain_id: z.uuid(),
+    job_id: z.uuid(),
     wait_id: z.uuid(),
     parked: z.literal(true),
     capacity_released: z.literal(true),
@@ -147,12 +151,17 @@ const payloads = {
     candidate_reviewed: z.literal(true),
   }),
   interactive_latency: z.strictObject({
+    task_id: z.uuid(),
+    chain_id: z.uuid(),
+    job_id: z.uuid(),
     background_active: z.literal(true),
     samples_ms: z.array(z.number().nonnegative()).min(1).max(256),
     gate_ms: z.literal(INTERACTIVE_LATENCY_GATE_MS),
   }),
   automatic_chain: z.strictObject({
+    task_id: z.uuid(),
     chain_id: z.uuid(),
+    job_id: z.uuid(),
     opted_in: z.literal(true),
     successors_admitted: z.literal(1),
     grant: z.strictObject({
@@ -165,6 +174,10 @@ const payloads = {
     }),
   }),
   crash_restart: z.strictObject({
+    task_id: z.uuid(),
+    chain_id: z.uuid(),
+    job_id: z.uuid(),
+    remote_id: z.string().min(1).max(160),
     restart_verified: z.literal(true),
     identities_preserved: z.literal(true),
     accounting_preserved: z.literal(true),
@@ -219,7 +232,10 @@ class ReleaseRejection extends Error {
     super(message);
   }
 }
-const reject = (gate: AutomaticReleaseGateId | null, message: string): never => {
+const reject = (
+  gate: AutomaticReleaseGateId | null,
+  message: string,
+): never => {
   throw new ReleaseRejection(gate, message);
 };
 
@@ -295,7 +311,9 @@ export function validateRelease(
       [
         'roster',
         manifest.bindings.nightshift.roster_fingerprint !==
-          current.nightshift.roster_fingerprint,
+          current.nightshift.roster_fingerprint ||
+          canonicalJson(manifest.bindings.nightshift.cloud_lanes) !==
+            canonicalJson(current.nightshift.cloud_lanes),
       ],
     ] as const
   )
@@ -343,18 +361,21 @@ export function validateRelease(
   }
   const evaluation = parsed.role_evaluation;
   const review = parsed.independent_review;
-  if (
-    evaluation.outputs.some(
-      (output) =>
-        !output.passed ||
-        (manifest.strict_roles.includes(output.role) &&
-          output.response_model !== NVIDIA_ULTRA_MODEL),
-    )
-  )
+  try {
+    validateRoleEvaluation(
+      evaluation,
+      current,
+      manifest.strict_roles,
+      NVIDIA_ULTRA_MODEL,
+    );
+  } catch (error) {
     reject(
       'routing-live-contracts',
-      'Every strict role output must pass with the exact Ultra response identity.',
+      error instanceof Error
+        ? error.message
+        : 'Current frozen role comparison could not be verified.',
     );
+  }
   if (
     review.reviewer.trim().toLowerCase() ===
     evaluation.evaluator.trim().toLowerCase()
@@ -372,6 +393,79 @@ export function validateRelease(
     reject(
       'routing-live-contracts',
       'The independent review is not tied to the exact evaluated outputs.',
+    );
+  for (const [demonstration, workflow] of [
+    [parsed.pm25_demonstration, 'pm25'],
+    [parsed.damage_demonstration, 'damage-accounting'],
+    [parsed.damage_demonstration.planning, 'damage-reduction'],
+  ] as const) {
+    try {
+      validateDomainDemonstration(
+        demonstration,
+        workflow,
+        current,
+        NVIDIA_ULTRA_MODEL,
+      );
+    } catch (error) {
+      reject(
+        'domain-demonstrations',
+        error instanceof Error
+          ? error.message
+          : 'Retained live domain evidence could not be verified.',
+      );
+    }
+  }
+  // Separate successful traces cannot be combined to claim one verified chain.
+  // Every lifecycle gate must identify the same original task, chain and job.
+  const generation = parsed.cloud_generation;
+  const cloudRoster = current.nightshift.cloud_lanes;
+  const rosterBytes = JSON.stringify(
+    cloudRoster
+      .map(({ lane, provider, model }) => [lane, provider, model])
+      .sort((left, right) =>
+        JSON.stringify(left).localeCompare(JSON.stringify(right)),
+      ),
+  );
+  if (
+    new Set(cloudRoster.map(({ lane }) => lane)).size !== cloudRoster.length ||
+    hash(rosterBytes) !== current.nightshift.roster_fingerprint ||
+    generation.attempts.some(
+      (attempt) =>
+        !cloudRoster.some(
+          (lane) => lane.lane === attempt.lane && lane.model === attempt.model,
+        ),
+    )
+  )
+    reject(
+      'cloud-background-generation',
+      'The selected native attempt must belong to the reviewed cloud roster.',
+    );
+  if (generation.attempts.length > manifest.scope.max_attempts_per_job)
+    reject(
+      'cloud-background-generation',
+      'The verified cloud job exceeds the released attempts-per-job ceiling.',
+    );
+  for (const slot of [
+    'wait_wakeup',
+    'interactive_latency',
+    'automatic_chain',
+    'crash_restart',
+  ] as const) {
+    const trace = parsed[slot];
+    if (
+      trace.task_id !== generation.task_id ||
+      trace.chain_id !== generation.chain_id ||
+      trace.job_id !== generation.job_id
+    )
+      reject(
+        SLOT_GATES[slot],
+        `The ${slot} trace does not identify the verified cloud task, chain and job.`,
+      );
+  }
+  if (parsed.crash_restart.remote_id !== generation.remote_id)
+    reject(
+      'crash-restart',
+      'Restart readback must preserve the verified native remote job identity.',
     );
   if (
     Math.max(...parsed.interactive_latency.samples_ms) >
@@ -419,9 +513,10 @@ function releasePaths(stateDirectory: string) {
 }
 
 /** Reads the fixed manifest and content-addressed files beneath the state directory. */
-export function loadRelease(
-  stateDirectory: string,
-): { manifest: ReleaseManifest; evidence: Record<ReleaseEvidenceSlot, Buffer> } | null {
+export function loadRelease(stateDirectory: string): {
+  manifest: ReleaseManifest;
+  evidence: Record<ReleaseEvidenceSlot, Buffer>;
+} | null {
   const paths = releasePaths(stateDirectory);
   const bytes = readBounded(paths.manifest, MANIFEST_MAX_BYTES);
   if (!bytes) return null;
@@ -504,7 +599,10 @@ export function publishNightshiftRelease(options: {
     strict_roles: [...(options.strictRoles ?? STRICT_RELEASE_ROLES)],
     scope: options.scope,
     evidence: Object.fromEntries(
-      RELEASE_EVIDENCE_SLOTS.map((slot) => [slot, hash(options.evidence[slot])]),
+      RELEASE_EVIDENCE_SLOTS.map((slot) => [
+        slot,
+        hash(options.evidence[slot]),
+      ]),
     ),
   });
   // Nothing is written unless every gate passes against the current bindings.
@@ -563,15 +661,20 @@ export function applicationBuildDigest(
       const path = join(directory, entry.name);
       if (entry.isDirectory()) {
         if (entry.name !== 'node_modules') visit(path);
-      } else if (/\.(?:js|mjs|json|ts)$/u.test(entry.name) && !entry.name.endsWith('.d.ts'))
+      } else if (
+        /\.(?:js|mjs|json|ts)$/u.test(entry.name) &&
+        !entry.name.endsWith('.d.ts')
+      )
         files.push(path);
-      if (files.length > 20_000) throw new Error('Build digest bound exceeded.');
+      if (files.length > 20_000)
+        throw new Error('Build digest bound exceeded.');
     }
   };
   visit(root);
   const digest = createHash('sha256');
   for (const file of files.sort()) {
-    if (statSync(file).size > 16_777_216) throw new Error('Build file too large.');
+    if (statSync(file).size > 16_777_216)
+      throw new Error('Build file too large.');
     digest.update(relative(root, file).replaceAll('\\', '/'));
     digest.update('\0');
     digest.update(readFileSync(file));
@@ -651,7 +754,8 @@ export async function currentReleaseBindings(options: {
     !readiness.runtime_version ||
     !readiness.schema_hash ||
     !readiness.installation_fingerprint ||
-    !readiness.roster_fingerprint
+    !readiness.roster_fingerprint ||
+    !readiness.cloud_lanes?.length
   )
     return null;
   const snapshot = options.modelRoutes.snapshot();
@@ -673,6 +777,7 @@ export async function currentReleaseBindings(options: {
       schema_hash: readiness.schema_hash,
       installation_fingerprint: readiness.installation_fingerprint,
       roster_fingerprint: readiness.roster_fingerprint,
+      cloud_lanes: readiness.cloud_lanes,
     },
   });
 }

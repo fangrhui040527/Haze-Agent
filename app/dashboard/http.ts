@@ -280,7 +280,6 @@ export class DashboardService {
           manager: 'registered in task engine',
           hazeops: 'registered; shared collector and watchers',
           worldmodel: 'shared SQLite World Model',
-          hmem: 'not enabled; dashboard memory remains archival',
           evidencecritic:
             'registered in task engine; collection remains unreviewed',
           workershield: 'registered in task engine',

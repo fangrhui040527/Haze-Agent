@@ -22,7 +22,13 @@ export interface City {
 export const CITIES: readonly City[] = [
   { id: 'kl', name: 'Kuala Lumpur', country: 'MY', lat: 3.139, lng: 101.687 },
   { id: 'klang', name: 'Klang', country: 'MY', lat: 3.044, lng: 101.445 },
-  { id: 'shah-alam', name: 'Shah Alam', country: 'MY', lat: 3.073, lng: 101.518 },
+  {
+    id: 'shah-alam',
+    name: 'Shah Alam',
+    country: 'MY',
+    lat: 3.073,
+    lng: 101.518,
+  },
   { id: 'pj', name: 'Petaling Jaya', country: 'MY', lat: 3.107, lng: 101.607 },
   { id: 'jb', name: 'Johor Bahru', country: 'MY', lat: 1.493, lng: 103.741 },
   { id: 'penang', name: 'Penang', country: 'MY', lat: 5.414, lng: 100.329 },
@@ -31,19 +37,53 @@ export const CITIES: readonly City[] = [
   { id: 'kk', name: 'Kota Kinabalu', country: 'MY', lat: 5.98, lng: 116.073 },
   { id: 'sg', name: 'Singapore', country: 'SG', lat: 1.352, lng: 103.82 },
   { id: 'medan', name: 'Medan', country: 'ID', lat: 3.595, lng: 98.672 },
-  { id: 'pekanbaru', name: 'Pekanbaru', country: 'ID', lat: 0.507, lng: 101.448 },
+  {
+    id: 'pekanbaru',
+    name: 'Pekanbaru',
+    country: 'ID',
+    lat: 0.507,
+    lng: 101.448,
+  },
   { id: 'jambi', name: 'Jambi', country: 'ID', lat: -1.61, lng: 103.613 },
-  { id: 'palembang', name: 'Palembang', country: 'ID', lat: -2.976, lng: 104.775 },
-  { id: 'pontianak', name: 'Pontianak', country: 'ID', lat: -0.026, lng: 109.342 },
-  { id: 'palangkaraya', name: 'Palangkaraya', country: 'ID', lat: -2.21, lng: 113.92 },
+  {
+    id: 'palembang',
+    name: 'Palembang',
+    country: 'ID',
+    lat: -2.976,
+    lng: 104.775,
+  },
+  {
+    id: 'pontianak',
+    name: 'Pontianak',
+    country: 'ID',
+    lat: -0.026,
+    lng: 109.342,
+  },
+  {
+    id: 'palangkaraya',
+    name: 'Palangkaraya',
+    country: 'ID',
+    lat: -2.21,
+    lng: 113.92,
+  },
 ];
 
 /** Opening view: all of Malaysia (peninsula + Sabah/Sarawak) first, with Singapore and nearby Indonesia. */
 export const MALAYSIA_VIEW = { lat: 3.2, lng: 109, altitude: 0.4 } as const;
 /** Same framing for the flat map: Malaysia's extent plus a margin for Singapore and Sumatra/Kalimantan. */
-export const MALAYSIA_BOUNDS = { south: -1.5, west: 98.5, north: 7.8, east: 119.5 } as const;
+export const MALAYSIA_BOUNDS = {
+  south: -1.5,
+  west: 98.5,
+  north: 7.8,
+  east: 119.5,
+} as const;
 /** Region box for satellite overlays and fire detections: lat -10..12, lng 92..120. */
-export const REGION_BBOX = { south: -10, west: 92, north: 12, east: 120 } as const;
+export const REGION_BBOX = {
+  south: -10,
+  west: 92,
+  north: 12,
+  east: 120,
+} as const;
 
 export type AqiBandId =
   | 'good'
@@ -68,7 +108,12 @@ export const AQI_BANDS: readonly {
     cssVar: 'sensitive',
   },
   { id: 'unhealthy', label: 'Unhealthy', max: 200, cssVar: 'unhealthy' },
-  { id: 'very_unhealthy', label: 'Very unhealthy', max: 300, cssVar: 'very-unhealthy' },
+  {
+    id: 'very_unhealthy',
+    label: 'Very unhealthy',
+    max: 300,
+    cssVar: 'very-unhealthy',
+  },
   { id: 'hazardous', label: 'Hazardous', max: Infinity, cssVar: 'hazardous' },
 ];
 
@@ -108,7 +153,11 @@ const AQ_VARS = [
   'sulphur_dioxide',
   'ozone',
 ] as const;
-const WX_VARS = ['temperature_2m', 'wind_speed_10m', 'wind_direction_10m'] as const;
+const WX_VARS = [
+  'temperature_2m',
+  'wind_speed_10m',
+  'wind_direction_10m',
+] as const;
 
 interface OpenMeteoPoint {
   utc_offset_seconds: number;
@@ -143,7 +192,9 @@ async function fetchOpenMeteo(
 function toUtcIso(local: unknown, offsetSeconds: number): string | null {
   if (typeof local !== 'string') return null;
   const ms = Date.parse(`${local}Z`);
-  return Number.isNaN(ms) ? null : new Date(ms - offsetSeconds * 1000).toISOString();
+  return Number.isNaN(ms)
+    ? null
+    : new Date(ms - offsetSeconds * 1000).toISOString();
 }
 
 function num(v: unknown): number | null {
@@ -330,7 +381,9 @@ export type FireResult =
   | { status: 'ok'; hotspots: FireHotspot[]; fetchedAt: string; source: string }
   | { status: 'error'; message: string };
 
-const FIRMS_KEY = (import.meta.env.VITE_FIRMS_MAP_KEY as string | undefined)?.trim();
+const FIRMS_KEY = (
+  import.meta.env.VITE_FIRMS_MAP_KEY as string | undefined
+)?.trim();
 const FIRMS_SOURCE = 'VIIRS_NOAA20_NRT';
 
 export function hasFirmsKey() {
@@ -374,17 +427,26 @@ export async function fetchFires(signal?: AbortSignal): Promise<FireResult> {
     });
     return {
       status: 'ok',
-      hotspots: hotspots.filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lng)),
+      hotspots: hotspots.filter(
+        (h) => Number.isFinite(h.lat) && Number.isFinite(h.lng),
+      ),
       fetchedAt: new Date().toISOString(),
       source: 'NASA FIRMS VIIRS NOAA-20 (NRT)',
     };
   } catch (err) {
     if (signal?.aborted) throw err;
-    return { status: 'error', message: err instanceof Error ? err.message : String(err) };
+    return {
+      status: 'error',
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
-export function hotspotsInLast(hotspots: FireHotspot[], hours: number, now = Date.now()) {
+export function hotspotsInLast(
+  hotspots: FireHotspot[],
+  hours: number,
+  now = Date.now(),
+) {
   return hotspots.filter(
     (h) => h.acquiredAt && now - Date.parse(h.acquiredAt) <= hours * 3_600_000,
   ).length;

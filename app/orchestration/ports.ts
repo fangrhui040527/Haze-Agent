@@ -148,6 +148,12 @@ export interface StatefulToolStore {
   ): Artifact;
 }
 
+/** Evidence inspection only; no pins, artifact writes or database handle. */
+export type ReadonlyEvidenceStore = Pick<
+  StatefulToolStore,
+  'read' | 'artifact' | 'world'
+>;
+
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
 export interface TaskMutationContext {
   kind: 'update' | 'control';
@@ -439,7 +445,7 @@ export interface FinalRendererInput {
   reviews: readonly ArtifactReviewCheck[];
   /** Read-only services. Renderers never call models or mutate state. */
   services: {
-    store: StatefulToolStore;
+    store: ReadonlyEvidenceStore;
     mode: ExecutionMode;
     read(ref: ArtifactRef): Artifact;
   };

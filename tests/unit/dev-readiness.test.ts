@@ -25,7 +25,6 @@ const defaults: Record<string, unknown> = {
   '/api/health': {
     ok: true,
     mode: 'live',
-    agents: { hmem: 'not enabled; dashboard memory remains archival' },
     hazeops: { scheduler: 'running', reason: null },
     watchers: [{ enabled: true, lastOutcome: 'ok' }],
   },
@@ -98,7 +97,7 @@ function application(
 }
 
 describe('named startup component readiness', () => {
-  it('checks data access and reports active, archival, and unverified components separately', async () => {
+  it('checks data access and reports active and unverified components separately', async () => {
     const { client, fetchImpl } = application();
     const published: ReadinessRow[] = [];
     const rows = await client.startupChecks({
@@ -109,7 +108,11 @@ describe('named startup component readiness', () => {
     expect(byId.tasks?.status).toBe('READY');
     expect(byId.world?.status).toBe('READY');
     expect(byId.world?.detail).toContain('7 records, 12 events');
-    expect(byId.hmem?.status).toBe('DISABLED');
+    expect(byId.hmem).toBeUndefined();
+    // Health must initialize the single runtime before parallel store probes.
+    expect(fetchImpl.mock.calls[0]?.[0]).toEqual(
+      new URL('http://127.0.0.1:5198/api/health'),
+    );
     expect(byId.hazeops?.status).toBe('RUNNING');
     expect(byId['nightshift-runtime']?.status).toBe('RUNNING');
     expect(byId['nightshift-jobs']?.status).toBe('READY');
@@ -189,7 +192,7 @@ describe('named startup component readiness', () => {
     expect(rows.find((value) => value.id === 'tasks')?.status).toBe('READY');
   });
 
-  it('reports missing memory diagnostics as unknown and fixture automation as synthetic', async () => {
+  it('omits retired memory and labels fixture automation as synthetic', async () => {
     const { client } = application({
       '/api/health': {
         ok: true,
@@ -206,7 +209,7 @@ describe('named startup component readiness', () => {
       },
     });
     const rows = await client.startupChecks();
-    expect(rows.find((value) => value.id === 'hmem')?.status).toBe('UNKNOWN');
+    expect(rows.some((value) => value.id === 'hmem')).toBe(false);
     expect(rows.find((value) => value.id === 'hazeops')?.status).toBe(
       'DISABLED',
     );

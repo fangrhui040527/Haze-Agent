@@ -9,7 +9,7 @@ import type {
   WorldUtilities,
 } from './ports.js';
 
-// Both app/adapters/meterless and dist/adapters/meterless are three levels below the repository root.
+// Both app/compatibility/meterless and dist/compatibility/meterless are three levels below the repository root.
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 type Component = 'starter' | 'hmem' | 'world_model';
 type Constructor<T> = new (options: Record<string, unknown>) => T;

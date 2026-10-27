@@ -77,7 +77,10 @@ export function assembleManagerContext(
   );
   const context: ManagerContext = {
     purpose: 'decision',
-    decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}`,
+    // Distinct applied decisions can share a material-event cursor (for
+    // example, coordinate then wait). Rejected proposals and checkpoint
+    // replay retain this ordinal until a decision commits.
+    decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}:${state.decisions.length}`,
     run_id: task.current_run_id,
     generation: task.generation,
     objective_revision: task.objective_revision,

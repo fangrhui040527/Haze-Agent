@@ -30,7 +30,7 @@ import { handleNightshiftHttp } from './nightshift-http.js';
 import {
   createNightshiftReleasePolicy,
   currentReleaseBindings,
-} from './nightshift-release.js';
+} from '../release/nightshift-release.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -147,7 +147,8 @@ export function createTaskHandler(
     nightshiftJobs,
     registry,
     // Live servers load release evidence from their own state directory only.
-    ...(options.nightshiftAutomaticRelease || (options.mode ?? 'live') !== 'live'
+    ...(options.nightshiftAutomaticRelease ||
+    (options.mode ?? 'live') !== 'live'
       ? {}
       : {
           nightshiftAutomaticRelease: createNightshiftReleasePolicy({

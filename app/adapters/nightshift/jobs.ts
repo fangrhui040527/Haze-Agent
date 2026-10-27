@@ -314,8 +314,12 @@ function reviewedInstallationFingerprint(
     return null;
   }
 }
-/** The ready cloud lanes the runtime may select from; a changed roster is new evidence. */
-export function cloudRosterFingerprint(statusValue: unknown): string | null {
+/** Only named, ready cloud lanes can prove the selected native compute locality. */
+export function inspectCloudLanes(statusValue: unknown): {
+  lane: string;
+  provider: string;
+  model: string;
+}[] {
   const status = record(statusValue);
   const lanes = (Array.isArray(status?.lanes) ? status.lanes : [])
     .map(record)
@@ -331,11 +335,27 @@ export function cloudRosterFingerprint(statusValue: unknown): string | null {
         typeof lane.model === 'string' &&
         lane.model.length > 0,
     )
-    .map((lane) => [
-      safeText(lane.id) ?? '',
-      safeText(lane.provider) ?? '',
-      String(lane.model),
-    ])
+    .flatMap((lane) => {
+      const id = safeText(lane.id);
+      const provider = safeText(lane.provider);
+      const model = safeText(lane.model);
+      return id && provider && model ? [{ lane: id, provider, model }] : [];
+    });
+  if (
+    lanes.length > 128 ||
+    new Set(lanes.map((lane) => lane.lane)).size !== lanes.length
+  )
+    return [];
+  return lanes.sort((left, right) =>
+    JSON.stringify([left.lane, left.provider, left.model]).localeCompare(
+      JSON.stringify([right.lane, right.provider, right.model]),
+    ),
+  );
+}
+/** The ready cloud lanes the runtime may select from; a changed roster is new evidence. */
+export function cloudRosterFingerprint(statusValue: unknown): string | null {
+  const lanes = inspectCloudLanes(statusValue)
+    .map(({ lane, provider, model }) => [lane, provider, model])
     .sort((left, right) =>
       JSON.stringify(left).localeCompare(JSON.stringify(right)),
     );
@@ -577,6 +597,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       reason: null,
       installation_fingerprint: null,
       roster_fingerprint: null,
+      cloud_lanes: [],
       options: {
         judges: ['accuracy', 'consistency', 'creative', 'quality'],
         budgets: ['low', 'mid', 'high', 'max'],
@@ -647,6 +668,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
         localCompute = inspectLocalCompute(fleets, status);
         cloudCompute = inspectCloudCompute(status);
         base.roster_fingerprint = cloudRosterFingerprint(status);
+        base.cloud_lanes = inspectCloudLanes(status);
         // This runtime records fleet_id as metadata; it does not select a
         // different compute roster. Do not advertise it as a submission choice.
       }

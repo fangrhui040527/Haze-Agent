@@ -17,7 +17,11 @@ import type {
   FinalRendererInput,
   StatefulToolStore,
 } from '../../app/orchestration/ports.js';
-import { roundedPercent } from '../../app/orchestration/final-answer.js';
+import { ExecutionRegistry } from '../../app/orchestration/ports.js';
+import {
+  renderFinalAnswer,
+  roundedPercent,
+} from '../../app/orchestration/final-answer.js';
 import { pm25AnalysisSchema } from '../../app/capabilities/pm25/methods.js';
 import { damageAccountFinalRenderer } from '../../app/capabilities/damage-appraisal/final-answer.js';
 import { createReductionFinalRenderer } from '../../app/capabilities/damage-reduction-planning/final-answer.js';
@@ -163,8 +167,10 @@ describe('grounded final answers', () => {
     expect(task.status, task.error?.message).toBe('completed');
     const answer = task.result!.answer;
     expect(answer).not.toContain(INVENTED);
-    const analysis = task.result!.work_products
-      .map((item) => runtime.store.artifact(item.id, localTaskIdentity))
+    const analysis = task
+      .result!.work_products.map((item) =>
+        runtime.store.artifact(item.id, localTaskIdentity),
+      )
       .find((artifact) => artifact.kind === 'pm25.analysis')!;
     const reviewed = pm25AnalysisSchema.parse(analysis.content);
     expect(answer).toContain(
@@ -194,7 +200,11 @@ describe('grounded final answers', () => {
     const refs = Object.fromEntries(
       DAMAGE_COMPONENT_KINDS.map((kind) => [
         kind,
-        { id: randomUUID(), version: 1, sha256: contractHash(components[kind]) },
+        {
+          id: randomUUID(),
+          version: 1,
+          sha256: contractHash(components[kind]),
+        },
       ]),
     ) as Parameters<typeof assembleDamageAccount>[2];
     const account = stored(
@@ -228,7 +238,123 @@ describe('grounded final answers', () => {
     expect(welfare.lines.join()).not.toBe(financial.lines.join());
     expect(output).toContain('synthetic, not a real-data result');
     expect(output).toMatch(/Currency CU; price year \d{4}/u);
+    expect(output).toMatch(/avoided damage 4570000(?:\.\d+)? CU/u);
+    expect(output).toContain('project cost 1000000 CU');
+    expect(output).toMatch(/benefit-cost ratio 4\.57\d* \(dimensionless\)/u);
     expect(rendered.limitations).toContain('Reviewer limitation retained.');
+  });
+});
+
+describe('final renderer boundaries', () => {
+  function renderInput(registry: ExecutionRegistry, artifacts: Artifact[]) {
+    const task = {
+      id: randomUUID(),
+      identity: localTaskIdentity,
+      current_run_id: 'current-run',
+      objective_revision: 1,
+      assignments: ['first', 'second', 'unrelated'].map((capability) => ({
+        id: capability,
+        capability,
+        role: 'WorkerShield',
+        status: 'completed',
+        run_id: 'current-run',
+        objective_revision: 1,
+      })),
+    } as TaskRecord;
+    const read = () => task;
+    const artifact = (id: string) => artifacts.find((item) => item.id === id)!;
+    const store = {
+      read,
+      artifact,
+      world: { lookup: () => [], activeHolds: () => [] },
+      saveArtifact: () => {
+        throw new Error('renderer_must_not_write');
+      },
+    } as unknown as StatefulToolStore;
+    return {
+      task,
+      registry,
+      selected: artifacts.map(ref),
+      closure: artifacts,
+      reviews: artifacts.map((item) => supported(item)),
+      citations: [],
+      store,
+      mode: 'fixture' as const,
+      read: (value: ArtifactRef) => artifact(value.id),
+    };
+  }
+
+  it('keeps mixed outputs separate, excludes other producers and names missing outputs', () => {
+    const registry = new ExecutionRegistry();
+    for (const capability of ['first', 'second'])
+      registry.registerFinalRenderer(capability, {
+        artifact_kinds: ['quantity'],
+        render({ artifacts }) {
+          return {
+            sections: artifacts.map((artifact) => ({
+              heading: capability,
+              lines: [`Reviewed quantity: ${JSON.stringify(artifact.content)}`],
+            })),
+            limitations: [],
+            gaps: [],
+          };
+        },
+      });
+    const first = { ...stored('quantity', 12), assignment_id: 'first' };
+    const second = { ...stored('quantity', 34), assignment_id: 'second' };
+    const unrelated = {
+      ...stored('quantity', 999),
+      assignment_id: 'unrelated',
+    };
+    const mixed = renderFinalAnswer(
+      renderInput(registry, [first, second, unrelated]),
+    )!;
+    expect(mixed.answer).toContain('first\n- Reviewed quantity: 12');
+    expect(mixed.answer).toContain('second\n- Reviewed quantity: 34');
+    expect(mixed.answer).not.toContain('999');
+    expect(mixed.gaps).toEqual([]);
+
+    const missing = renderFinalAnswer(renderInput(registry, [first]))!;
+    expect(missing.answer).toContain('second: gap');
+    expect(missing.gaps).toEqual([
+      'No independently reviewed second output was selected; no second figure is reported.',
+    ]);
+  });
+
+  it('supplies an inspection-only facade without store mutation methods', () => {
+    const registry = new ExecutionRegistry();
+    let inspected = false;
+    registry.registerFinalRenderer('first', {
+      artifact_kinds: ['quantity'],
+      render({ task, services }) {
+        inspected = true;
+        expect(Object.keys(services.store).sort()).toEqual([
+          'artifact',
+          'read',
+          'world',
+        ]);
+        expect(Object.keys(services.store.world).sort()).toEqual([
+          'activeHolds',
+          'lookup',
+        ]);
+        expect(Object.isFrozen(services.store)).toBe(true);
+        expect(Object.isFrozen(services.store.world)).toBe(true);
+        expect(services.store.read(task.id, task.identity).id).toBe(task.id);
+        return { sections: [], limitations: [], gaps: [] };
+      },
+    });
+    renderFinalAnswer(
+      renderInput(registry, [
+        { ...stored('quantity', 12), assignment_id: 'first' },
+      ]),
+    );
+    expect(inspected).toBe(true);
+  });
+
+  it('preserves conceptual synthesis when no quantitative capability was assigned', () => {
+    expect(renderFinalAnswer(renderInput(new ExecutionRegistry(), []))).toBe(
+      undefined,
+    );
   });
 });
 

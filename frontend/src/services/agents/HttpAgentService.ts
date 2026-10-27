@@ -23,6 +23,8 @@ import {
   AgentRunError,
   AgentTaskCancelledError,
   type AgentService,
+  type TaskListOptions,
+  type TaskListPage,
 } from './AgentService.ts';
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
@@ -243,6 +245,56 @@ export class HttpAgentService implements AgentService {
       status: 'queued',
     });
     return this.watchTask(admitted.task_id, onEvent, signal, onTask);
+  }
+  async listTasks(
+    options: TaskListOptions = {},
+    signal?: AbortSignal,
+  ): Promise<TaskListPage> {
+    const [{ z }, { taskRecordSchema }] = await Promise.all([
+      import('zod'),
+      import('../../../../app/contracts/tasks.ts'),
+    ]);
+    const query = new URLSearchParams();
+    if (options.limit !== undefined) query.set('limit', String(options.limit));
+    if (options.cursor !== undefined) query.set('cursor', options.cursor);
+    if (options.status !== undefined) query.set('status', options.status);
+    const parsed = z
+      .strictObject({
+        tasks: z
+          .array(
+            taskRecordSchema
+              .pick({
+                id: true,
+                status: true,
+                current_run_id: true,
+                updated_at: true,
+                usage: true,
+              })
+              .extend({ objective: z.string().max(1600) }),
+          )
+          .max(100),
+        has_more: z.boolean(),
+        next_cursor: z
+          .string()
+          .regex(/^\d{1,16}$/u)
+          .refine((cursor) => Number.isSafeInteger(Number(cursor)))
+          .optional(),
+      })
+      .refine((page) => !page.has_more || page.next_cursor !== undefined)
+      .safeParse(
+        await this.read(
+          `/api/tasks${query.size ? `?${query}` : ''}`,
+          {},
+          signal,
+        ),
+      );
+    if (!parsed.success)
+      throw new AgentRunError(
+        'The saved task history response failed validation. Refresh the application after updating the backend.',
+        false,
+        { category: 'task_response_validation', cause: parsed.error },
+      );
+    return parsed.data;
   }
   async readTask(taskId: string, signal?: AbortSignal): Promise<TaskRecord> {
     const { taskRecordSchema } =

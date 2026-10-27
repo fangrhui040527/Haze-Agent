@@ -23,6 +23,7 @@ import { NightshiftJobService } from '../../app/tasks/nightshift-service.js';
 import {
   automaticReadinessSchema,
   automaticReleaseBlocked,
+  INITIAL_AUTOMATIC_SCOPE,
   type AutomaticReleasePolicy,
 } from '../../app/contracts/nightshift-automatic.js';
 
@@ -172,12 +173,17 @@ function automaticAdmission(store: TaskStore) {
     task,
     body: {
       schema_version: 'haze.nightshift.chain.admission.v2',
-      privacy: 'local-only',
-      max_spend_usd: 0,
+      privacy: INITIAL_AUTOMATIC_SCOPE.privacy[0],
+      max_spend_usd: null,
       task_id: task.id,
       ...authority(task),
-      total_runs: 2,
-      automatic_followup_runs: 1,
+      total_runs: INITIAL_AUTOMATIC_SCOPE.max_total_runs,
+      automatic_followup_runs: INITIAL_AUTOMATIC_SCOPE.max_automatic_followups,
+      max_jobs: INITIAL_AUTOMATIC_SCOPE.max_jobs,
+      max_attempts:
+        INITIAL_AUTOMATIC_SCOPE.max_jobs *
+        INITIAL_AUTOMATIC_SCOPE.max_attempts_per_job,
+      lifetime_seconds: INITIAL_AUTOMATIC_SCOPE.max_lifetime_seconds,
       automatic_opt_in: true,
       initial_progress: {
         schema_version: 'haze.nightshift.progress.v1',
@@ -298,7 +304,16 @@ describe('browser-independent Nightshift supervisor', () => {
     ).rejects.toMatchObject({ code: 'nightshift_unavailable' });
   });
   it('admits v2 only while both release checks remain ready', async () => {
-    const adapter = port();
+    const ready = await port().readiness();
+    const adapter = port({
+      readiness: vi.fn(() =>
+        Promise.resolve({
+          ...ready,
+          cloud_enforced: true,
+          cloud_compute_available: true,
+        }),
+      ),
+    });
     const gate = vi.fn(() => Promise.resolve(releasedFixture()));
     const state = setup(adapter, undefined, gate);
     const f = automaticAdmission(state.store);
@@ -346,7 +361,11 @@ describe('browser-independent Nightshift supervisor', () => {
   });
   it('rechecks automatic release after deferred runtime discovery before creating any grant', async () => {
     const initialAdapter = port();
-    const ready = await initialAdapter.readiness();
+    const ready = {
+      ...(await initialAdapter.readiness()),
+      cloud_enforced: true,
+      cloud_compute_available: true,
+    };
     let finishReadiness!: (value: NightshiftJobReadiness) => void;
     const adapter = port({
       readiness: vi.fn(

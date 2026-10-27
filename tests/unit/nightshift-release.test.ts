@@ -13,14 +13,19 @@ import {
   RELEASE_EVIDENCE_SLOTS,
   type ReleaseBindings,
   type ReleaseEvidenceSlot,
-} from '../../app/tasks/nightshift-release.js';
+} from '../../app/release/nightshift-release.js';
 import {
   automaticReadinessSchema,
   INITIAL_AUTOMATIC_SCOPE,
   type AutomaticScope,
 } from '../../app/contracts/nightshift-automatic.js';
 import { TaskStore } from '../../app/tasks/store.js';
-import { taskRequestSchema, type TaskRecord } from '../../app/contracts/tasks.js';
+import { roleEvaluationFixture } from '../fixtures/nightshift-role-evidence.js';
+import { domainDemonstrationFixture } from '../fixtures/nightshift-domain-evidence.js';
+import {
+  taskRequestSchema,
+  type TaskRecord,
+} from '../../app/contracts/tasks.js';
 
 const identity = { principal: 'local-user', workspace: 'local-workspace' };
 const directories: string[] = [];
@@ -39,7 +44,11 @@ const temporary = () => {
   return directory;
 };
 const digest = (character: string) => character.repeat(64);
-const exactRef = (artifact: { id: string; version: number; sha256: string }) => ({
+const exactRef = (artifact: {
+  id: string;
+  version: number;
+  sha256: string;
+}) => ({
   id: artifact.id,
   version: artifact.version,
   sha256: artifact.sha256,
@@ -59,46 +68,38 @@ function bindings(overrides: Partial<ReleaseBindings> = {}): ReleaseBindings {
       EvidenceCritic: route(NVIDIA_ULTRA_MODEL),
       DamageAccountant: route(NVIDIA_ULTRA_MODEL),
       HazeOps: route('nvidia/nemotron-3.5-lightning-30b-a3b'),
+      WorkerShield: route('nvidia/nemotron-3.5-lightning-30b-a3b'),
     },
     nightshift: {
       runtime_version: '1.2.1',
       schema_hash: digest('d'),
       installation_fingerprint: digest('e'),
-      roster_fingerprint: digest('f'),
+      roster_fingerprint: createHash('sha256')
+        .update(
+          JSON.stringify([['nvidia-cloud', 'nvidia', 'runtime-selected']]),
+        )
+        .digest('hex'),
+      cloud_lanes: [
+        { lane: 'nvidia-cloud', provider: 'nvidia', model: 'runtime-selected' },
+      ],
     },
     ...overrides,
   };
 }
-const outputs = [digest('1'), digest('2'), digest('3')];
+const outputs = roleEvaluationFixture(bindings()).outputs.map(
+  (output) => output.output_sha256,
+);
 function payloads(
   evaluationSha: string,
+  current = bindings(),
 ): Record<ReleaseEvidenceSlot, Record<string, unknown>> {
-  const demonstration = {
+  const lifecycle = {
     task_id: randomUUID(),
-    status: 'completed',
-    completion: 'full',
-    review_status: 'supported',
-    answer_rendered: true,
-    model_calls_by_role: { Manager: 3, EvidenceCritic: 1 },
-    artifacts: [digest('9')],
-    restart_readback: true,
+    chain_id: randomUUID(),
+    job_id: randomUUID(),
   };
   return {
-    role_evaluation: {
-      evaluator: 'role-evaluation-runner',
-      passed: true,
-      scenarios: 3,
-      outputs: (['Manager', 'EvidenceCritic', 'DamageAccountant'] as const).map(
-        (role, index) => ({
-          role,
-          scenario: `scenario-${index}`,
-          passed: true,
-          output_sha256: outputs[index],
-          response_model: NVIDIA_ULTRA_MODEL,
-        }),
-      ),
-      model_calls_by_role: { Manager: 1, EvidenceCritic: 1, DamageAccountant: 1 },
-    },
+    role_evaluation: roleEvaluationFixture(current),
     independent_review: {
       reviewer: 'separate-human-reviewer',
       verdict: 'supported',
@@ -106,25 +107,35 @@ function payloads(
       reviewed_output_sha256s: outputs,
       findings: [],
     },
-    pm25_demonstration: {
-      ...demonstration,
-      workflow: 'pm25',
-      data_origin: 'external_source',
-    },
+    pm25_demonstration: domainDemonstrationFixture(
+      'pm25',
+      current,
+      NVIDIA_ULTRA_MODEL,
+    ),
     damage_demonstration: {
-      ...demonstration,
-      workflow: 'damage-accounting',
-      data_origin: 'supplied',
+      ...domainDemonstrationFixture(
+        'damage-accounting',
+        current,
+        NVIDIA_ULTRA_MODEL,
+      ),
+      planning: domainDemonstrationFixture(
+        'damage-reduction',
+        current,
+        NVIDIA_ULTRA_MODEL,
+      ),
     },
     cloud_generation: {
-      job_id: randomUUID(),
+      ...lifecycle,
       remote_id: 'remote-1',
       privacy: 'cloud-ok',
       execution_state: 'completed',
-      attempts: [{ lane: 'nvidia-cloud', model: 'runtime-selected' }],
+      attempts: [
+        { lane: 'nvidia-cloud', model: 'runtime-selected', kind: 'cloud' },
+      ],
       review_status: 'unreviewed',
     },
     wait_wakeup: {
+      ...lifecycle,
       wait_id: randomUUID(),
       parked: true,
       capacity_released: true,
@@ -133,12 +144,13 @@ function payloads(
       candidate_reviewed: true,
     },
     interactive_latency: {
+      ...lifecycle,
       background_active: true,
       samples_ms: [1200, 3400],
       gate_ms: 90_000,
     },
     automatic_chain: {
-      chain_id: randomUUID(),
+      ...lifecycle,
       opted_in: true,
       successors_admitted: 1,
       grant: {
@@ -151,6 +163,8 @@ function payloads(
       },
     },
     crash_restart: {
+      ...lifecycle,
+      remote_id: 'remote-1',
       restart_verified: true,
       identities_preserved: true,
       accounting_preserved: true,
@@ -164,15 +178,16 @@ function evidence(
     values: Record<ReleaseEvidenceSlot, Record<string, unknown>>,
   ) => void = () => undefined,
 ) {
+  const values = payloads('0'.repeat(64), current);
+  change(values);
   const evaluation = releaseEvidenceRecord(
     'role_evaluation',
     current,
-    payloads('0'.repeat(64)).role_evaluation,
+    values.role_evaluation,
   );
-  const values = payloads(
-    createHash('sha256').update(evaluation).digest('hex'),
-  );
-  change(values);
+  values.independent_review.reviewed_evaluation_sha256 = createHash('sha256')
+    .update(evaluation)
+    .digest('hex');
   return Object.fromEntries(
     RELEASE_EVIDENCE_SLOTS.map((slot) => [
       slot,
@@ -198,7 +213,10 @@ function publish(
     evidence: options.files ?? evidence(current),
   });
 }
-const policy = (directory: string, current: ReleaseBindings | null = bindings()) =>
+const policy = (
+  directory: string,
+  current: ReleaseBindings | null = bindings(),
+) =>
   createNightshiftReleasePolicy({
     stateDirectory: directory,
     bindings: () => Promise.resolve(current),
@@ -238,7 +256,7 @@ describe('production Nightshift release evidence', () => {
     expect(readiness.released).toBe(false);
     expect(readiness.reason).toContain('hash does not match');
   });
-  it('rejects fixture evidence even when it is otherwise complete', async () => {
+  it('rejects fixture evidence even when it is otherwise complete', () => {
     const directory = temporary();
     const files = evidence();
     files.cloud_generation = Buffer.from(
@@ -267,6 +285,117 @@ describe('production Nightshift release evidence', () => {
       }),
     ).toThrow('exact evaluated outputs');
   });
+  it('requires real retained output bytes and coverage of every strict role', () => {
+    const evaluated = (values: ReturnType<typeof payloads>) =>
+      values.role_evaluation.outputs as { role: string; output: string }[];
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.role_evaluation.outputs = evaluated(values).slice(0, 2);
+        }),
+      }),
+    ).toThrow(/frozen scenario|actual retained attempt/u);
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          evaluated(values)[0]!.output = 'Changed after evaluation';
+        }),
+      }),
+    ).toThrow(/retained bytes|raw provider attempt/u);
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.role_evaluation.model_calls_by_role = { Manager: 0 };
+        }),
+      }),
+    ).toThrow('Actual model calls per role');
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.role_evaluation.scenarios = 9;
+        }),
+      }),
+    ).toThrow(/frozen scenario|actual retained attempt/u);
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          const rows = values.role_evaluation.outputs as {
+            receipt: { synthetic?: boolean };
+          }[];
+          rows[0]!.receipt.synthetic = true;
+        }),
+      }),
+    ).toThrow();
+  });
+  it('requires completed accounting and planning demonstrations with actual role calls', () => {
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.damage_demonstration.completion = 'partial';
+        }),
+      }),
+    ).toThrow();
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          delete values.damage_demonstration.planning;
+        }),
+      }),
+    ).toThrow();
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.pm25_demonstration.model_calls_by_role = { Manager: 0 };
+        }),
+      }),
+    ).toThrow();
+  });
+  it.each([
+    'wait_wakeup',
+    'interactive_latency',
+    'automatic_chain',
+    'crash_restart',
+  ] as const)(
+    'rejects a %s trace taken from a different native lifecycle',
+    (slot) => {
+      expect(() =>
+        publish(temporary(), {
+          files: evidence(bindings(), (values) => {
+            values[slot].job_id = randomUUID();
+          }),
+        }),
+      ).toThrow('verified cloud task, chain and job');
+    },
+  );
+  it('requires restart readback of the same remote identity', () => {
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          values.crash_restart.remote_id = 'different-remote';
+        }),
+      }),
+    ).toThrow('native remote job identity');
+  });
+  it('rejects local native attempts and too many attempts in the cloud trace', () => {
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          const attempts = values.cloud_generation.attempts as {
+            kind: string;
+          }[];
+          attempts[0]!.kind = 'local';
+        }),
+      }),
+    ).toThrow();
+    expect(() =>
+      publish(temporary(), {
+        files: evidence(bindings(), (values) => {
+          const attempts = values.cloud_generation.attempts as object[];
+          attempts.push({ ...attempts[0] });
+        }),
+      }),
+    ).toThrow('attempts-per-job ceiling');
+  });
   it('invalidates release evidence when routes, build or roster change', async () => {
     const directory = temporary();
     publish(directory);
@@ -285,7 +414,10 @@ describe('production Nightshift release evidence', () => {
       directory,
       bindings({
         build_sha256: digest('0'),
-        nightshift: { ...bindings().nightshift, roster_fingerprint: digest('0') },
+        nightshift: {
+          ...bindings().nightshift,
+          roster_fingerprint: digest('0'),
+        },
       }),
     );
     expect(rebuilt.reason).toContain('build, roster');
@@ -312,7 +444,10 @@ describe('production Nightshift release evidence', () => {
     ).toThrow(/privacy/u);
     expect(() =>
       publish(temporary(), {
-        scope: { ...structuredClone(INITIAL_AUTOMATIC_SCOPE), max_total_runs: 3 },
+        scope: {
+          ...structuredClone(INITIAL_AUTOMATIC_SCOPE),
+          max_total_runs: 3,
+        },
       }),
     ).toThrow('exceeds the supported initial automatic release');
     expect(() =>
@@ -348,9 +483,7 @@ describe('released automatic scope enforcement', () => {
         schema_version: 'haze.artifact.import.v3',
         filename: 'changed.txt',
         media_type: 'text/plain',
-        content_base64: Buffer.from('Changed source facts.').toString(
-          'base64',
-        ),
+        content_base64: Buffer.from('Changed source facts.').toString('base64'),
       },
       identity,
       randomUUID(),

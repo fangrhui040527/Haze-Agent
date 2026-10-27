@@ -245,15 +245,13 @@ describe('HazeOps web search evidence tool', () => {
       'data:text/html,test',
       'https://user:password@example.invalid/source',
     ]) {
-      const search = vi
-        .fn<SearchFn>()
-        .mockResolvedValue(
-          bytes({
-            results: [
-              { url, title: 'Unsafe result', content: 'Untrusted text.' },
-            ],
-          }),
-        );
+      const search = vi.fn<SearchFn>().mockResolvedValue(
+        bytes({
+          results: [
+            { url, title: 'Unsafe result', content: 'Untrusted text.' },
+          ],
+        }),
+      );
       await expect(
         tool('live', search).execute(query(), context()),
       ).rejects.toThrow();

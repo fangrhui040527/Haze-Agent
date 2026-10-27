@@ -64,7 +64,10 @@ export default function RegionMap({
       attribution: 'Imagery: NASA GIBS / EOSDIS',
     }).addTo(map);
     const overlay = L.layerGroup().addTo(map);
-    L.imageOverlay(gibsReferenceUrl(), BOUNDS, { opacity: 0.8, crossOrigin: true }).addTo(map);
+    L.imageOverlay(gibsReferenceUrl(), BOUNDS, {
+      opacity: 0.8,
+      crossOrigin: true,
+    }).addTo(map);
     const firesGroup = L.layerGroup().addTo(map);
     const markers = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -96,7 +99,11 @@ export default function RegionMap({
         onSelect,
       });
       L.marker([r.city.lat, r.city.lng], {
-        icon: L.divIcon({ html: el, className: styles.leafletIcon, iconSize: undefined }),
+        icon: L.divIcon({
+          html: el,
+          className: styles.leafletIcon,
+          iconSize: undefined,
+        }),
         keyboard: false,
       }).addTo(groups.markers);
     }

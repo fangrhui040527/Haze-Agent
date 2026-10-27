@@ -4,7 +4,6 @@ export const STARTUP_COMPONENTS = [
   { id: 'web', label: 'Haze web app' },
   { id: 'tasks', label: 'Haze tasks (LangGraph)' },
   { id: 'world', label: 'World Model (SQLite)' },
-  { id: 'hmem', label: 'H-MEM' },
   { id: 'hazeops', label: 'HazeOps collectors' },
   { id: 'agents', label: 'Agent model routes' },
   { id: 'nightshift-runtime', label: 'Nightshift runtime' },
@@ -18,24 +17,6 @@ const text = (value) =>
     .replace(/[\r\n\t]/g, ' ')
     .slice(0, 500);
 const row = (id, status, detail) => ({ id, status, detail: text(detail) });
-
-export function memoryReadiness(health) {
-  const description = health.agents?.hmem;
-  if (
-    typeof description === 'string' &&
-    /not enabled|disabled|archival/i.test(description)
-  )
-    return row(
-      'hmem',
-      'DISABLED',
-      'Not attached to Haze tasks; historical memory is archival',
-    );
-  return row(
-    'hmem',
-    'UNKNOWN',
-    'No active H-MEM readiness check is exposed by this runtime',
-  );
-}
 
 export function collectorsReadiness(health) {
   const watchers = health.watchers ?? [];
@@ -136,11 +117,11 @@ export async function checkStartupComponents({
   };
   // A successful health response initializes the single runtime before parallel reads.
   let health;
-  await check(['hmem'], async () => {
+  await check([], async () => {
     health = await request('/api/health', { signal });
     if (health.ok !== true)
       throw new Error('Haze health check did not report ready.');
-    return [memoryReadiness(health)];
+    return [];
   });
   const mode = health?.mode === 'fixture' ? ' (fixture)' : '';
   await Promise.all([

@@ -47,10 +47,14 @@ function step(value: number, breaks: readonly number[]) {
 /** CSS custom property (without var()) for a reading's marker colour on the active layer. */
 export function markerVar(r: CityReading, layer: PrimaryLayer): string {
   if (layer === 'aqi') {
-    return r.usAqi === null ? '--band-unknown' : `--band-${aqiBand(r.usAqi).cssVar}`;
+    return r.usAqi === null
+      ? '--band-unknown'
+      : `--band-${aqiBand(r.usAqi).cssVar}`;
   }
   if (layer === 'co') {
-    return r.co === null ? '--band-unknown' : `--scale-co-${step(r.co, CO_BREAKS)}`;
+    return r.co === null
+      ? '--band-unknown'
+      : `--scale-co-${step(r.co, CO_BREAKS)}`;
   }
   return r.temperature === null
     ? '--band-unknown'
@@ -59,8 +63,10 @@ export function markerVar(r: CityReading, layer: PrimaryLayer): string {
 
 /** Short value text shown on the marker label. Missing values read "no data", never 0. */
 export function markerValue(r: CityReading, layer: PrimaryLayer): string {
-  if (layer === 'aqi') return r.usAqi === null ? 'no data' : `AQI ${Math.round(r.usAqi)}`;
-  if (layer === 'co') return r.co === null ? 'no data' : `CO ${Math.round(r.co)}`;
+  if (layer === 'aqi')
+    return r.usAqi === null ? 'no data' : `AQI ${Math.round(r.usAqi)}`;
+  if (layer === 'co')
+    return r.co === null ? 'no data' : `CO ${Math.round(r.co)}`;
   return r.temperature === null ? 'no data' : `${r.temperature.toFixed(1)}°C`;
 }
 
@@ -76,7 +82,9 @@ export function describeReading(r: CityReading): string {
   if (r.co !== null) parts.push(`CO ${Math.round(r.co)} µg/m³`);
   if (r.temperature !== null) parts.push(`${r.temperature.toFixed(1)} °C`);
   if (r.windSpeed !== null && r.windDirection !== null) {
-    parts.push(`wind ${Math.round(r.windSpeed)} km/h from ${compass(r.windDirection)}`);
+    parts.push(
+      `wind ${Math.round(r.windSpeed)} km/h from ${compass(r.windDirection)}`,
+    );
   }
   return parts.join(', ');
 }
@@ -98,12 +106,15 @@ export function hasWebGL(): boolean {
 /** Low-power or reduced-motion devices get the flat map by default. */
 export function prefersFlatMap(): boolean {
   if (!hasWebGL()) return true;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    return true;
   const nav = navigator as Navigator & {
     deviceMemory?: number;
     connection?: { saveData?: boolean };
   };
   if (nav.connection?.saveData) return true;
   if (nav.deviceMemory !== undefined && nav.deviceMemory <= 2) return true;
-  return navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2;
+  return (
+    navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2
+  );
 }

@@ -1635,6 +1635,19 @@ export class TaskRuntime {
               topology: MANAGER_TOPOLOGY,
             }),
           ),
+        traceCompleted: (node, timing) =>
+          this.store.appendEvent(
+            id,
+            'manager.graph.completed',
+            'Runtime',
+            `Manager graph ${timing.outcome === 'ok' ? 'completed' : 'failed'}: ${node}`,
+            json({
+              thread_id: job.thread_id,
+              node,
+              topology: MANAGER_TOPOLOGY,
+              ...timing,
+            }),
+          ),
       },
     );
     const config = {

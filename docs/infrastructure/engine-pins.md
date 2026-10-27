@@ -65,3 +65,7 @@ workflow changes, update `app/workflow_versions.json`, package pins, the root
 lockfile and graph/schema compatibility versions together as appropriate.
 
 See `THIRD_PARTY_NOTICES.md` for retained licensing and documented build changes.
+
+The coupled first-party wrappers live in `app/compatibility/meterless/`. H-MEM
+is retained for isolated compatibility and conformance checks, with no active
+product integration. Existing historical stores are preserved.

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { Link } from 'react-router';
 import {
   ArrowRight,
@@ -117,7 +123,10 @@ function Readout({
         <h2 id="readout-title">
           Right now in {reading?.city.name ?? 'Kuala Lumpur'}
         </h2>
-        <Badge tone={stale ? 'stale' : 'info'} title="CAMS model output via Open-Meteo">
+        <Badge
+          tone={stale ? 'stale' : 'info'}
+          title="CAMS model output via Open-Meteo"
+        >
           {stale ? 'Stale · modelled' : 'Modelled'}
         </Badge>
       </header>
@@ -176,7 +185,8 @@ function Readout({
             <div>
               <dt>Wind</dt>
               <dd>
-                {reading.windSpeed === null || reading.windDirection === null ? (
+                {reading.windSpeed === null ||
+                reading.windDirection === null ? (
                   'no data'
                 ) : (
                   <>
@@ -247,9 +257,17 @@ export function LandingPage() {
           Haze
         </Link>
         <nav className={styles.topnav} aria-label="Primary">
-          <Link viewTransition to="/world-model">World Model</Link>
-          <Link viewTransition to="/damage-account">Damage appraisal</Link>
-          <Link viewTransition to="/dashboard" className={buttonClass('primary', 'small')}>
+          <Link viewTransition to="/world-model">
+            World Model
+          </Link>
+          <Link viewTransition to="/damage-account">
+            Damage appraisal
+          </Link>
+          <Link
+            viewTransition
+            to="/dashboard"
+            className={buttonClass('primary', 'small')}
+          >
             Open app
           </Link>
         </nav>
@@ -271,7 +289,11 @@ export function LandingPage() {
               gaps instead of filling them.
             </p>
             <div className={styles.ctas}>
-              <Link viewTransition to="/dashboard" className={buttonClass('primary')}>
+              <Link
+                viewTransition
+                to="/dashboard"
+                className={buttonClass('primary')}
+              >
                 Start a task <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link viewTransition to="/world-model" className={buttonClass()}>
@@ -285,8 +307,8 @@ export function LandingPage() {
             />
             {region.status === 'error' && (
               <p className={styles.dataError} role="alert">
-                Live readings are unavailable right now ({region.error}). Nothing
-                is shown in their place.
+                Live readings are unavailable right now ({region.error}).
+                Nothing is shown in their place.
               </p>
             )}
             {region.status === 'cached' && region.error && (
@@ -393,13 +415,13 @@ export function LandingPage() {
             <summary>About this data</summary>
             <p>
               City values are <strong>modelled</strong> by the Copernicus
-              Atmosphere Monitoring Service (CAMS) and served by Open-Meteo; they
-              are not readings from a ground sensor. Malaysia's Department of
-              Environment (DOE) publishes its own Air Pollutant Index (API) from
-              ground stations, which uses a different scale, so official values
-              may differ from this US AQI view. Satellite layers come from NASA
-              GIBS and lag real time; each shows its observation date. Fire
-              detections come from NASA FIRMS.
+              Atmosphere Monitoring Service (CAMS) and served by Open-Meteo;
+              they are not readings from a ground sensor. Malaysia's Department
+              of Environment (DOE) publishes its own Air Pollutant Index (API)
+              from ground stations, which uses a different scale, so official
+              values may differ from this US AQI view. Satellite layers come
+              from NASA GIBS and lag real time; each shows its observation date.
+              Fire detections come from NASA FIRMS.
             </p>
           </details>
         </section>
@@ -443,7 +465,11 @@ export function LandingPage() {
             When the data is not there, Haze reports an explicit acquisition gap
             rather than guessing.
           </p>
-          <Link viewTransition to="/dashboard" className={buttonClass('primary')}>
+          <Link
+            viewTransition
+            to="/dashboard"
+            className={buttonClass('primary')}
+          >
             Open the dashboard <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </section>
@@ -457,8 +483,9 @@ export function LandingPage() {
           modelled by <a href="https://atmosphere.copernicus.eu/">CAMS</a>{' '}
           (Copernicus). Satellite imagery:{' '}
           <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a>. Fire
-          detections: <a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a>
-          . Both part of NASA EOSDIS. Not medical advice.
+          detections:{' '}
+          <a href="https://firms.modaps.eosdis.nasa.gov/">NASA FIRMS</a>. Both
+          part of NASA EOSDIS. Not medical advice.
         </p>
       </footer>
     </div>

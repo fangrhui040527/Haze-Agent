@@ -311,15 +311,15 @@ The landing page shows live haze conditions on a 3D globe (globe.gl, lazy-loaded
 WebGL / with reduced motion / on low-power devices, a flat Leaflet map with the same layers.
 All fetching lives in `src/shared/data/airQuality.ts`; the refresh loop is `useRegionData.ts`.
 
-| Layer | Source | Kind | Latency |
-| --- | --- | --- | --- |
-| US AQI, PM2.5, PM10, CO, NO₂, SO₂, O₃ | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS) | **Modelled**, not ground sensors | hourly |
-| Temperature 2 m, wind 10 m | [Open-Meteo Forecast API](https://open-meteo.com/en/docs) | Modelled | hourly |
-| Himawari clouds | NASA GIBS `Himawari_AHI_Band13_Clean_Infrared` | Satellite | ~1 h |
-| Aerosol optical depth | NASA GIBS `MODIS_Terra_Aerosol_Optical_Depth_3km` | Satellite | ~1 day |
-| CO column | NASA GIBS `AIRS_L3_Carbon_Monoxide_500hPa_Volume_Mixing_Ratio_Daily_Day` | Satellite | ~8 days |
-| Fire hotspots | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/) `VIIRS_NOAA20_NRT`, lat −10…12, lng 92…120, 2 days | Satellite | ~3 h |
-| Base relief, borders | NASA GIBS `BlueMarble_ShadedRelief_Bathymetry`, `Reference_Features_15m`, `Coastlines_15m` | Static | – |
+| Layer                                 | Source                                                                                                     | Kind                             | Latency |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------- | ------- |
+| US AQI, PM2.5, PM10, CO, NO₂, SO₂, O₃ | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS)                        | **Modelled**, not ground sensors | hourly  |
+| Temperature 2 m, wind 10 m            | [Open-Meteo Forecast API](https://open-meteo.com/en/docs)                                                  | Modelled                         | hourly  |
+| Himawari clouds                       | NASA GIBS `Himawari_AHI_Band13_Clean_Infrared`                                                             | Satellite                        | ~1 h    |
+| Aerosol optical depth                 | NASA GIBS `MODIS_Terra_Aerosol_Optical_Depth_3km`                                                          | Satellite                        | ~1 day  |
+| CO column                             | NASA GIBS `AIRS_L3_Carbon_Monoxide_500hPa_Volume_Mixing_Ratio_Daily_Day`                                   | Satellite                        | ~8 days |
+| Fire hotspots                         | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/) `VIIRS_NOAA20_NRT`, lat −10…12, lng 92…120, 2 days | Satellite                        | ~3 h    |
+| Base relief, borders                  | NASA GIBS `BlueMarble_ShadedRelief_Bathymetry`, `Reference_Features_15m`, `Coastlines_15m`                 | Static                           | –       |
 
 GIBS layer IDs were read from the WMTS capabilities (2026-10-27). Sentinel-5P/TROPOMI CO is not
 in GIBS and MOPITT daily CO stops at 2024-11-10, hence AIRS. Overlays are requested from the GIBS

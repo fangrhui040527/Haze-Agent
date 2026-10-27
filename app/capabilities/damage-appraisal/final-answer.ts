@@ -75,7 +75,7 @@ export const damageAccountFinalRenderer: FinalRenderer = {
           lines: account.scenarios.map((comparison) =>
             comparison.status === 'withheld'
               ? `${comparison.scenario_id} vs ${comparison.comparator_id} (${comparison.interpretation}): withheld — ${comparison.limitation ?? 'no limitation recorded'}`
-              : `${comparison.scenario_id} vs ${comparison.comparator_id} (${comparison.interpretation}): avoided damage ${format.number(comparison.avoided_damage)}, project cost ${format.number(comparison.project_cost)}, net benefit ${format.number(comparison.net_benefit)}, benefit-cost ratio ${format.number(comparison.benefit_cost_ratio)} ${comparison.currency} (${comparison.price_year} prices); not a cash-return claim`,
+              : `${comparison.scenario_id} vs ${comparison.comparator_id} (${comparison.interpretation}): avoided damage ${format.number(comparison.avoided_damage)} ${comparison.currency}, project cost ${format.number(comparison.project_cost)} ${comparison.currency}, net benefit ${format.number(comparison.net_benefit)} ${comparison.currency} (${comparison.price_year} prices); benefit-cost ratio ${format.number(comparison.benefit_cost_ratio)} (dimensionless); not a cash-return claim`,
           ),
         });
       if (account.status !== 'complete_for_declared_imported_scope')

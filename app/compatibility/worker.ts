@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openSqliteCheckpointer } from '../checkpoints/sqlite.js';
-import { openHazeEngines } from '../adapters/meterless/index.js';
+import { openHazeEngines } from './meterless/index.js';
 import versions from '../workflow_versions.json' with { type: 'json' };
 import {
   createCompatibilityGraph,

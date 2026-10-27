@@ -19,9 +19,13 @@ automatic admission path blocked. A fixture evidence label never establishes
 production readiness.
 
 Manual admission continues using `haze.nightshift.chain.admission.v1` with zero
-automatic follow-ups. Explicit automatic admission uses v2, a total of at most
-four runs, one to three automatic follow-ups within that total, an absolute
-lifetime of at most twenty-four hours, and a versioned initial progress record.
+automatic follow-ups. Explicit automatic admission uses v2 and a versioned
+initial progress record. Production readiness v2 publishes the supported scope:
+`cloud-ok`, two total runs, one automatic follow-up, one concurrent native job,
+two jobs total, one attempt per job, and a thirty-minute absolute chain lifetime.
+Existing task, token and operation limits still apply. Cloud jobs use the
+runtime's uncapped monetary policy; the application does not claim an enforceable
+dollar ceiling. Admission and successor dispatch both revalidate release scope.
 The form accepts a bounded permitted purpose, an unresolved instruction and exact
 input references. Server-owned identity, current task revisions and immutable
 route/grant accounting remain authoritative.
@@ -99,8 +103,84 @@ controlled result consumption and partial finalization with review still needed.
 They also verify that an unreleased server refuses v2 admission and leaves a
 manual-only chain manual-only after late result capture.
 
-The installed configuration currently lacks an eligible local text lane. Genuine
-Manager, specialist and background-job traces, including an interactive latency
-observation, remain live gates. Do not enable production automatic mode from
-schema inspection or fixture success, change fleets or download models to
-manufacture a successful trace, or rewrite historical local-only/$0 grants.
+## Native cloud verification and production evidence
+
+No local model installation is required for the bounded cloud lane. Inspect the
+installed native contract without submitting work, or explicitly request one
+genuine native job:
+
+```powershell
+node --env-file-if-exists=.env scripts/verify-nightshift-jobs.mjs --privacy cloud-ok
+node --env-file-if-exists=.env scripts/verify-nightshift-jobs.mjs --live --privacy cloud-ok
+```
+
+Both commands retain a report and preserve the selected privacy/spend policy.
+Inspection remains the default. Live completion requires the actual native
+lane/model provenance, one remote acknowledgement and restart readback. A native
+judge result remains an unreviewed candidate.
+
+The isolated lifecycle verifier exercises a genuine cloud job under a provisional
+trusted policy, capacity release while parked, completion/wakeup, one opted-in
+successor, explicit candidate consumption and restart preservation. It also makes
+one genuine NVIDIA Ultra interactive call while native work is active and applies
+the 90-second latency gate:
+
+```powershell
+npm run build
+node --env-file-if-exists=.env scripts/verify-nightshift-live.mjs
+node --env-file-if-exists=.env scripts/verify-nightshift-live.mjs --live --output .state/nightshift-live-verification
+node --test scripts/nightshift-verification-support.test.mjs
+npm test -- tests/unit/nightshift-release.test.ts
+```
+
+The lifecycle Manager and specialist decisions are scripted, and their receipts
+are synthetic. Actual provider calls and scripted decisions are counted
+separately in the retained report. This verifies lifecycle behavior rather than
+strict role quality or a scientific demonstration. The state directory is unique
+to each execution. Its provisional policy cannot become production evidence;
+the verifier checks that no production manifest was installed and ordinary
+production loading remains blocked. No command above publishes a release.
+
+Production reads only `<state directory>/nightshift-release/current.json` and
+its bounded, content-addressed evidence files. The trusted publisher validates
+every gate before atomically replacing that manifest. Browser and task input
+cannot install release evidence. Evidence binds the current build, instructions,
+registered contracts, exact strict Ultra routes, reviewed installation and ready
+cloud roster. Any changed identity invalidates the corresponding release.
+
+Role evaluation evidence must retain the exact response bytes and matching
+hashes, the complete current frozen suite, and both baseline and candidate
+attempts for every scenario. The loader reconstructs probe inputs from current
+instructions, revalidates production action contracts and frozen outcome/reference
+criteria, and enforces actual non-synthetic response receipts, output bounds and
+latency. Candidate strict roles use the exact Ultra identity; a comparison
+baseline retains its own pinned identity. A separate reviewer must inspect these
+exact outputs. Full PM2.5, supplied-data damage accounting and
+supplied-data reduction planning demonstrations are required. Partial completion
+or missing real data cannot release production. Domain slots must retain their
+complete report bytes, tasks, results, exact artifact closure, independent review
+artifacts and genuine model attempts. Claimed booleans or nonexistent artifact
+hashes cannot replace those records. Cloud generation, wait/wakeup,
+latency, automatic-chain and restart evidence must all identify the same task,
+chain and native job, including the original remote identity after restart.
+
+The trusted assembler takes a reviewed directory with the fixed evidence slot
+filenames and validates it against identities discovered from the current server
+configuration. Validation is read-only by default:
+
+```powershell
+node --env-file-if-exists=.env scripts/assemble-nightshift-release.mjs --evidence .state/reviewed-release-bundle --state .state/server
+```
+
+It reports named missing gates, and writes no release files unless a complete
+bundle passes every validation and publication is explicitly requested with
+`--publish`. Publication rechecks current identities, atomically replaces the
+manifest, then verifies ordinary production loading without policy injection.
+Keep publication blocked while the real damage package or independent live
+review is missing.
+
+Genuine role evaluation and independent review remain separate gates even when
+the provisional lifecycle verifier passes. Do not enable production automatic
+mode from schema inspection, fixture success or the provisional report, change
+fleets or download models to manufacture a trace, or rewrite historical
+local-only/$0 grants.

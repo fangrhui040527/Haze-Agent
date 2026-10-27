@@ -51,7 +51,10 @@ export function createReductionFinalRenderer(
         const scopeLine = `Scope: ${target.scope.endpoint} in ${target.scope.unit}; ${target.scope.population}; ${target.scope.geography}; ${target.scope.pollutant}; ${target.scope.period.start} to ${target.scope.period.end}. Comparator ${target.comparator}; intervention ${target.intervention}.`;
         const gap = (reason: string) => {
           gaps.push(reason);
-          sections.push({ heading: `${heading}: gap`, lines: [scopeLine, reason] });
+          sections.push({
+            heading: `${heading}: gap`,
+            lines: [scopeLine, reason],
+          });
         };
         if (assessment.status !== 'supported') {
           gap(
