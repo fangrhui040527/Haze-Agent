@@ -32,7 +32,7 @@
 .table caption {
   padding: var(--space-4);
   text-align: left;
-  font-weight: 800;
+  font-weight: var(--weight-semibold);
 }
 
 .table th,

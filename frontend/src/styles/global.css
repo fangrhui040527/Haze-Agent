@@ -17,17 +17,36 @@ body {
   display: flex;
   flex-direction: column;
   background-color: var(--color-bg);
-  background-image: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--color-text) 9%, transparent) 1.5px,
-    transparent 1.5px
-  );
-  background-size: 20px 20px;
+  /* Soft fog: two diffuse gradients, no pattern */
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 85% -10%,
+      color-mix(in srgb, var(--sun-color) 10%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 90% 70% at 0% 110%,
+      color-mix(in srgb, var(--fog-color) 55%, transparent),
+      transparent 65%
+    );
+  background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-ui);
   font-size: var(--text-md);
   line-height: var(--line-height);
+  font-feature-settings: 'kern';
   overflow: hidden;
+}
+
+/* Film grain: a tiny inline SVG noise at very low opacity, purely decorative. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 #root {
@@ -45,27 +64,43 @@ p {
   margin: 0;
 }
 
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-medium);
+  font-optical-sizing: auto;
+}
+
 h1 {
   font-size: var(--text-xl);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
 h2 {
   font-size: var(--text-lg);
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   line-height: 1.3;
 }
 
 h3 {
   font-size: var(--text-md);
-  font-weight: 800;
+  font-weight: var(--weight-semibold);
+}
+
+/* Numbers line up in columns everywhere they are set in mono. */
+code,
+pre,
+kbd,
+samp,
+.num {
+  font-variant-numeric: tabular-nums;
 }
 
 a {
   color: var(--color-info);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
 }
 
 button,
@@ -79,6 +114,7 @@ textarea {
 :focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 table {
@@ -111,6 +147,7 @@ pre {
   z-index: calc(var(--z-header) + 1);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
+  border: var(--hairline);
   border-radius: var(--radius-sm);
 }
 
@@ -118,17 +155,15 @@ pre {
   top: var(--space-2);
 }
 
-/* ── Custom scrollbar — thin, orange, on-theme ── */
-/* Firefox */
+/* ── Scrollbar: thin hairline, on-theme ── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-accent) transparent;
+  scrollbar-color: var(--color-border-strong) transparent;
 }
 
-/* Chrome / Edge / Safari */
 ::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -136,12 +171,12 @@ pre {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-accent);
+  background: var(--color-border-strong);
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent-hover);
+  background: var(--color-muted);
 }
 
 ::-webkit-scrollbar-corner {

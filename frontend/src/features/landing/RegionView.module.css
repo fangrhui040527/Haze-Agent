@@ -1,0 +1,325 @@
+.wrap {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.stage {
+  position: relative;
+  height: var(--globe-height);
+  min-height: 320px;
+  overflow: hidden;
+  border: var(--hairline);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--globe-atmosphere) 12%, transparent),
+      transparent 62%
+    ),
+    var(--globe-bg);
+}
+
+.canvasHost {
+  position: absolute;
+  inset: 0;
+}
+
+/* Leaflet's own background, recoloured to the night palette. */
+.canvasHost:global(.leaflet-container) {
+  background: var(--globe-bg);
+  font-family: var(--font-ui);
+}
+
+.canvasHost :global(.leaflet-control-attribution) {
+  background: color-mix(in srgb, var(--globe-bg) 75%, transparent);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.canvasHost :global(.leaflet-control-attribution a) {
+  color: var(--color-text);
+}
+
+.locked .canvasHost {
+  pointer-events: none;
+}
+
+.loading {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.tapCover {
+  position: absolute;
+  inset: auto var(--space-3) var(--space-3) auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-scrim);
+  color: var(--color-on-scrim);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.stageControls {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.stageControls > * {
+  background: color-mix(in srgb, var(--globe-bg) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+/* ── City markers (plain DOM, used by globe and map) ── */
+
+.marker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 2px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-7px, -50%);
+  white-space: nowrap;
+}
+
+.marker:hover,
+.marker[aria-pressed='true'] {
+  border-color: var(--color-border-strong);
+  background: color-mix(in srgb, var(--globe-bg) 72%, transparent);
+}
+
+.marker[aria-pressed='true'] .markerDot {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+.markerDot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border: 1px solid rgb(0 0 0 / 0.45);
+  border-radius: 50%;
+  background: var(--marker-color);
+}
+
+.markerText {
+  display: grid;
+  line-height: 1.15;
+  text-align: left;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.9);
+}
+
+.markerName {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+}
+
+.markerValue {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+/* Only the selected city shows its name until hover/focus, to keep the region legible. */
+.marker:not([aria-pressed='true']):not(:hover):not(:focus-visible) .markerName {
+  display: none;
+}
+
+.windArrow {
+  display: inline-block;
+  color: var(--wind-color);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.windSpeed {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--wind-color);
+}
+
+.marker:hover .windSpeed,
+.marker:focus-visible .windSpeed,
+.marker[aria-pressed='true'] .windSpeed {
+  display: inline;
+}
+
+.leafletIcon {
+  width: auto !important;
+  height: auto !important;
+  background: none;
+  border: none;
+}
+
+/* ── Layer chips ── */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.chipGroup legend {
+  float: left;
+  margin-right: var(--space-2);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.chip input {
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.chip:has(input:checked) {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  background: var(--color-accent-soft);
+}
+
+.chip:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.chip:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── Legend ── */
+
+.legend {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text);
+  font-size: var(--text-xs);
+}
+
+.scale li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scaleSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-border-strong);
+}
+
+.legendNote strong {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.credits {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* ── Table alternative ── */
+
+.tableWrap summary {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.table {
+  width: 100%;
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  display: block;
+  overflow-x: auto;
+}
+
+.table caption {
+  padding-bottom: var(--space-2);
+  color: var(--color-muted);
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-3) var(--space-1) 0;
+  border-bottom: var(--hairline);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.table thead th {
+  color: var(--color-muted);
+  font-weight: var(--weight-medium);
+}

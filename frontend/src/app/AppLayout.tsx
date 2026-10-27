@@ -9,6 +9,7 @@ import {
 } from 'react-router';
 import { Badge } from '../shared/ui/Badge.tsx';
 import { buttonClass } from '../shared/ui/Button.tsx';
+import { HazeMark } from '../shared/ui/HazeMark.tsx';
 import { StateMessage } from '../shared/ui/States.tsx';
 import { TimeAgo } from '../shared/ui/TimeAgo.tsx';
 import styles from './AppLayout.module.css';
@@ -29,9 +30,9 @@ function Header() {
     <header className={styles.header}>
       <div className={styles.headerInner}>
         <Link to="/" className={styles.brand}>
-          <span className={styles.logo} aria-hidden="true">
-            ▦
-          </span>{' '}
+          <span className={styles.logo}>
+            <HazeMark size={22} />
+          </span>
           Haze
         </Link>
         {live.fictional && (
@@ -134,6 +135,11 @@ function Footer() {
       Not medical advice. Follow your local authorities. Sources are listed on
       each item. Fictional samples are labeled; evidence answers identify their
       source and execution mode.
+      <br />
+      Weather and air-quality data by{' '}
+      <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0), modelled
+      by CAMS (Copernicus). Satellite imagery and fire detections: NASA GIBS and
+      FIRMS, part of NASA EOSDIS.
     </footer>
   );
 }

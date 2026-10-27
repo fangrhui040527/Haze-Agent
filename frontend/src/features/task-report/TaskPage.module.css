@@ -275,3 +275,23 @@
   padding-left: 1.3em;
   font-size: var(--text-sm);
 }
+
+/* ── Editorial report: serif headings, mono citations and metadata ── */
+.title,
+.heading {
+  font-family: var(--font-display);
+  font-weight: var(--weight-medium);
+}
+
+.quote {
+  border-left: 2px solid var(--color-accent);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+.meta,
+.footer,
+.label {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

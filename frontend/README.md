@@ -298,3 +298,43 @@ Chat uses `haze.task.request.v3` for every task and submits your question as the
 The local Vite API plugin serves task admission/readback/events, corrections, controls, authorized capabilities, and exact artifacts. It uses `.state/general-v1` unless `STATE_DIR` is explicitly set. Set server-side `HAZE_EXECUTION_MODE=fixture` for fixture verification; live is the default. There is no automatic fixture fallback.
 
 Questions and correction passages remain attached to the saved task. Pause, cancel, resume, and continuation send the current objective/run/generation/state revisions and display persisted requested/confirmed receipts. Stopping the browser wait does not cancel the saved task. General results show work products, sources, scope, uncertainty, review, currency, and provenance. PM2.5 coverage is an optional `pm25.analysis` artifact renderer.
+
+## Live regional data (landing page)
+
+The landing page shows live haze conditions on a 3D globe (globe.gl, lazy-loaded) or, without
+WebGL / with reduced motion / on low-power devices, a flat Leaflet map with the same layers.
+All fetching lives in `src/shared/data/airQuality.ts`; the refresh loop is `useRegionData.ts`.
+
+| Layer | Source | Kind | Latency |
+| --- | --- | --- | --- |
+| US AQI, PM2.5, PM10, CO, NO₂, SO₂, O₃ | [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api) (CAMS) | **Modelled**, not ground sensors | hourly |
+| Temperature 2 m, wind 10 m | [Open-Meteo Forecast API](https://open-meteo.com/en/docs) | Modelled | hourly |
+| Himawari clouds | NASA GIBS `Himawari_AHI_Band13_Clean_Infrared` | Satellite | ~1 h |
+| Aerosol optical depth | NASA GIBS `MODIS_Terra_Aerosol_Optical_Depth_3km` | Satellite | ~1 day |
+| CO column | NASA GIBS `AIRS_L3_Carbon_Monoxide_500hPa_Volume_Mixing_Ratio_Daily_Day` | Satellite | ~8 days |
+| Fire hotspots | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/) `VIIRS_NOAA20_NRT`, lat −10…12, lng 92…120, 2 days | Satellite | ~3 h |
+| Base relief, borders | NASA GIBS `BlueMarble_ShadedRelief_Bathymetry`, `Reference_Features_15m`, `Coastlines_15m` | Static | – |
+
+GIBS layer IDs were read from the WMTS capabilities (2026-10-27). Sentinel-5P/TROPOMI CO is not
+in GIBS and MOPITT daily CO stops at 2024-11-10, hence AIRS. Overlays are requested from the GIBS
+WMS (EPSG:4326) as one image over the region box; each shows its observation date in the legend.
+
+Readings refresh every 12 minutes while the tab is visible and pause when hidden. The last good
+snapshot is cached in `localStorage` and marked stale after 2 hours. Nothing is invented when a
+source fails: the UI shows an error or "no data".
+
+**Environment**: `VITE_FIRMS_MAP_KEY` (optional, see `.env.example`). FIRMS is called through a
+same-origin proxy at `/firms-api` (configured in `vite.config.ts` for dev and preview); a static
+deployment must forward `/firms-api/*` to `https://firms.modaps.eosdis.nasa.gov/api/*`.
+
+**Attribution** (shown in the footer and the globe legend): "Weather and air-quality data by
+Open-Meteo.com" (CC BY 4.0); CAMS / Copernicus; NASA GIBS and FIRMS, part of NASA EOSDIS.
+
+**Licensing**: Open-Meteo's free API is for **non-commercial use only**. If Haze is commercialised,
+buy an Open-Meteo commercial plan or switch provider. Malaysia's DOE publishes its own Air
+Pollutant Index (API) from ground stations; it uses a different scale from US AQI and is the
+official figure.
+
+**Swapping a provider**: replace `fetchRegionSnapshot` (or `fetchFires`) in `airQuality.ts` and
+keep returning `RegionSnapshot` / `FireResult`. Satellite layers are entries in
+`SATELLITE_LAYERS` (GIBS ID, time function, label).

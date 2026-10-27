@@ -1,49 +1,87 @@
 /*
  * Design tokens: the ONLY place colours, spacing, fonts, radii and motion are defined.
  * Components use var(--token-name). Change a value here and it updates everywhere.
+ *
+ * Direction: "instrument panel in the smoke". Daylight haze (light) and night smog (dark),
+ * a dim-sun amber accent, hairline borders and soft diffused depth instead of hard shadows.
  */
 :root {
   color-scheme: light dark;
 
-  /* Surfaces and text */
-  --color-bg: #f4f2ed;
-  --color-surface: #ffffff;
-  --color-panel: color-mix(
-    in srgb,
-    var(--color-bg) 18.5%,
-    var(--color-surface) 81.5%
-  );
-  --color-surface-2: #ece9e1;
-  --color-text: #1c2024;
-  --color-muted: #5a636c;
-  --color-border: #d6d2c7;
-  --color-accent: #a8481a;
-  --color-accent-hover: #8c3a12;
-  --color-accent-contrast: #ffffff;
-  --color-focus: #1f6feb;
-  --color-highlight: #fff4cc;
-  --color-button-hover-light: #ffffff;
+  /* Surfaces and text: daylight haze */
+  --color-bg: #e9e4d8;
+  --color-bg-deep: #ddd6c6;
+  --color-surface: #f4f0e6;
+  --color-panel: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  --color-surface-2: #e3ddcf;
+  --color-text: #23201a;
+  --color-muted: #615a4e;
+  --color-border: rgba(35, 32, 26, 0.14);
+  --color-border-strong: rgba(35, 32, 26, 0.28);
+  --color-accent: #9e5a10;
+  --color-accent-hover: #864b0b;
+  --color-accent-contrast: #fffaf0;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  --color-secondary: #4d5a62;
+  --color-focus: #1d5fd1;
+  --color-highlight: #f3e2bf;
+  --color-button-hover-light: #fbf8f1;
+  --color-scrim: rgba(20, 19, 15, 0.55);
+  --color-on-scrim: #ece6d8;
 
-  /* Status */
-  --color-ok: #2c7a39;
-  --color-warn: #9a5b00;
-  --color-error: #b3261e;
-  --color-info: #2b5fa8;
-  --color-stale: #66696f;
-  --color-ok-bg: #e3f2e5;
-  --color-warn-bg: #fdf0d8;
-  --color-error-bg: #fbe4e2;
-  --color-info-bg: #e3ecf8;
-  --color-stale-bg: #ebebec;
+  /* Status (text colours meet AA on their own -bg and on --color-surface) */
+  --color-ok: #2f6b4d;
+  --color-warn: #7f5a00;
+  --color-error: #a23a20;
+  --color-info: #2f5873;
+  --color-stale: #5f5b53;
+  --color-ok-bg: #dce9df;
+  --color-warn-bg: #f1e5bf;
+  --color-error-bg: #f3d9cf;
+  --color-info-bg: #d9e3e8;
+  --color-stale-bg: #e1ddd3;
 
-  /* Air-quality bands (always shown WITH a text label, never colour alone) */
-  --band-good: #3d9a4f;
-  --band-moderate: #e0b81f;
-  --band-sensitive: #ec8526;
-  --band-unhealthy: #d4413a;
-  --band-very-unhealthy: #8f3f9f;
-  --band-hazardous: #6e1b2e;
-  --band-unknown: #9aa0a6;
+  /* Haze bands: US AQI categories. Always shown WITH a text label, never colour alone.
+     --band-*-ink is the AA text colour to use on top of that band. */
+  --band-good: #5a9a78;
+  --band-moderate: #d8bf4a;
+  --band-sensitive: #e39a3b;
+  --band-unhealthy: #c24e29;
+  --band-very-unhealthy: #a63a4a;
+  --band-hazardous: #6a2a55;
+  --band-unknown: #8e877a;
+  --band-good-ink: #10140f;
+  --band-moderate-ink: #1b1709;
+  --band-sensitive-ink: #1b1209;
+  --band-unhealthy-ink: #ffffff;
+  --band-very-unhealthy-ink: #ffffff;
+  --band-hazardous-ink: #ffffff;
+  --band-unknown-ink: #14130f;
+
+  /* Sequential scales for map layers (always paired with numbers in labels and legend) */
+  --scale-co-1: #5d6b73;
+  --scale-co-2: #7f8a78;
+  --scale-co-3: #b59b5a;
+  --scale-co-4: #d97f36;
+  --scale-co-5: #c2412a;
+  --scale-temp-1: #4f7fa8;
+  --scale-temp-2: #6fa39a;
+  --scale-temp-3: #d8bf4a;
+  --scale-temp-4: #e08a3a;
+  --scale-temp-5: #c2412a;
+  --fire-color: #ff7a2f;
+  --wind-color: #cfd8dc;
+  --globe-bg: #0e0d0b;
+  --office-frame: #2a2620;
+  --office-frame-inner: #5d6b73;
+  --office-floor: #8c8170;
+  --globe-atmosphere: #c9b58f;
+
+  /* Atmosphere: --haze-density (0-1) is set at runtime from live PM2.5, capped for legibility. */
+  --haze-density: 0.35;
+  --fog-color: #cfc6b2;
+  --sun-color: #e0902f;
+  --grain-opacity: 0.035;
 
   /* Spacing (4 px scale) */
   --space-1: 4px;
@@ -52,97 +90,150 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
 
   /* Type */
+  --font-display:
+    'Fraunces', 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-ui:
-    'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+    'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   --font-mono:
-    ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+    'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo,
+    Consolas, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
   --text-lg: 1.25rem;
   --text-xl: 1.5rem;
-  --line-height: 1.5;
+  --text-2xl: 2rem;
+  --text-display: clamp(2.25rem, 5.5vw, 4rem);
+  --line-height: 1.55;
+  --tracking-label: 0.08em;
 
-  /* Shape & Neo-Brutalist Tokens */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 18px;
-  --radius-card: 18px;
+  /* Shape: small and technical */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-card: 8px;
   --radius-pill: 9999px;
+  --hairline: 1px solid var(--color-border);
 
-  --border-width: 0px;
-  --color-border-neo: transparent;
-  --color-shadow-neo: #f4a261;
-  --color-shadow-card: var(--color-shadow-neo);
-
-  --shadow-card: 4px 4px 0 var(--color-shadow-card);
-  --shadow-btn: 3px 3px 0 var(--color-shadow-neo);
-  --shadow-btn-hover: 4px 4px 0 var(--color-shadow-neo);
-  --shadow-btn-active: 1px 1px 0 var(--color-shadow-neo);
+  /* Depth: soft, diffused, never offset hard edges */
+  --shadow-color: 35 32 26;
+  --shadow-1: 0 1px 2px rgb(var(--shadow-color) / 0.06),
+    0 4px 14px rgb(var(--shadow-color) / 0.06);
+  --shadow-2: 0 2px 6px rgb(var(--shadow-color) / 0.08),
+    0 18px 40px rgb(var(--shadow-color) / 0.1);
+  --shadow-card: var(--shadow-1);
+  --shadow-btn: none;
+  --shadow-btn-hover: 0 2px 10px rgb(var(--shadow-color) / 0.1);
+  --shadow-btn-active: none;
   --shadow-badge: none;
+  --blur-glass: 10px;
 
-  --shadow-1: 3px 3px 0 var(--color-shadow-neo);
-  --shadow-2: 5px 5px 0 var(--color-shadow-neo);
+  /* Legacy aliases kept so older rules keep resolving */
+  --border-width: 1px;
+  --color-border-neo: var(--color-border);
+  --color-shadow-neo: transparent;
+  --color-shadow-card: transparent;
 
   /* Layers */
   --z-header: 10;
   --z-overlay: 20;
 
   /* Layout */
-  --header-height: 56px;
+  --header-height: 52px;
   --page-gutter: 16px;
   --content-max: 1440px;
   --table-height: 36vh;
   /* Office canvas height cap, so chat + office fit on a laptop screen together with the table. */
   --office-height: 56vh;
+  --globe-height: min(72vh, 680px);
 
   /* Motion: --motion-scale becomes 0 when the user asks for reduced motion */
   --motion-scale: 1;
   --duration-fast: calc(150ms * var(--motion-scale));
   --duration-base: calc(250ms * var(--motion-scale));
+  --duration-drift: calc(90s / max(var(--motion-scale), 0.001));
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Night smog. Shared by the dark colour scheme and by [data-theme='night'] scopes (landing). */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #141619;
-    --color-surface: #1d2024;
-    --color-panel: color-mix(
-      in srgb,
-      var(--color-bg) 18.5%,
-      var(--color-surface) 81.5%
-    );
-    --color-surface-2: #262a2f;
-    --color-text: #e8e6e1;
-    --color-muted: #a3a9b0;
-    --color-border: #363b42;
-    --color-accent: #f08a4b;
-    --color-accent-hover: #f6a374;
-    --color-accent-contrast: #1a1006;
-    --color-focus: #6ea8ff;
-    --color-highlight: #3a3418;
-    --color-button-hover-light: #383f47;
+    --color-bg: #14130f;
+    --color-bg-deep: #0e0d0b;
+    --color-surface: #24211c;
+    --color-surface-2: #2e2a24;
+    --color-text: #ece6d8;
+    --color-muted: #a39b8b;
+    --color-border: rgba(236, 230, 216, 0.12);
+    --color-border-strong: rgba(236, 230, 216, 0.26);
+    --color-accent: #e0902f;
+    --color-accent-hover: #eca452;
+    --color-accent-contrast: #1a1206;
+    --color-secondary: #8fa0a9;
+    --color-focus: #8cc4ff;
+    --color-highlight: #3b3020;
+    --color-button-hover-light: #34302a;
 
-    --color-ok: #6fcf7f;
-    --color-warn: #f2b84b;
-    --color-error: #ff8a80;
-    --color-info: #8ab4f8;
-    --color-stale: #a7abb1;
-    --color-ok-bg: #1f3324;
-    --color-warn-bg: #3a2c12;
-    --color-error-bg: #3d1f1d;
-    --color-info-bg: #1d2a3d;
-    --color-stale-bg: #2b2d31;
+    --color-ok: #8fc7a6;
+    --color-warn: #e5c96a;
+    --color-error: #f0937a;
+    --color-info: #9cb8c8;
+    --color-stale: #ada597;
+    --color-ok-bg: #1d2b23;
+    --color-warn-bg: #2f2914;
+    --color-error-bg: #35201a;
+    --color-info-bg: #1d272c;
+    --color-stale-bg: #2a2722;
 
-    --color-border-neo: transparent;
-    --color-shadow-neo: #e08f58;
-    --color-shadow-card: var(--color-shadow-neo);
-
-    --shadow-1: 3px 3px 0 var(--color-shadow-neo);
-    --shadow-2: 5px 5px 0 var(--color-shadow-neo);
+    --fog-color: #3a352c;
+    --grain-opacity: 0.045;
+    --shadow-color: 0 0 0;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+    --shadow-2: 0 2px 8px rgb(0 0 0 / 0.35), 0 24px 60px rgb(0 0 0 / 0.4);
   }
+}
+
+[data-theme='night'] {
+  color-scheme: dark;
+  --color-bg: #14130f;
+  --color-bg-deep: #0e0d0b;
+  --color-surface: #24211c;
+  --color-panel: color-mix(in srgb, #24211c 78%, transparent);
+  --color-surface-2: #2e2a24;
+  --color-text: #ece6d8;
+  --color-muted: #a39b8b;
+  --color-border: rgba(236, 230, 216, 0.12);
+  --color-border-strong: rgba(236, 230, 216, 0.26);
+  --color-accent: #e0902f;
+  --color-accent-hover: #eca452;
+  --color-accent-contrast: #1a1206;
+  --color-secondary: #8fa0a9;
+  --color-focus: #8cc4ff;
+  --color-highlight: #3b3020;
+  --color-ok: #8fc7a6;
+  --color-warn: #e5c96a;
+  --color-error: #f0937a;
+  --color-info: #9cb8c8;
+  --color-stale: #ada597;
+  --color-ok-bg: #1d2b23;
+  --color-warn-bg: #2f2914;
+  --color-error-bg: #35201a;
+  --color-info-bg: #1d272c;
+  --color-stale-bg: #2a2722;
+  --fog-color: #3a352c;
+  --grain-opacity: 0.045;
+  --shadow-color: 0 0 0;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
+  --shadow-2: 0 2px 8px rgb(0 0 0 / 0.35), 0 24px 60px rgb(0 0 0 / 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -154,6 +245,7 @@
 @media (max-width: 767px) {
   :root {
     --table-height: 60vh;
-    --page-gutter: 12px;
+    --page-gutter: 16px;
+    --globe-height: 60vh;
   }
 }
