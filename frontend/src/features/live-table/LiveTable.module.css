@@ -808,3 +808,19 @@
 .table tbody > tr:not(.breakdownRow):nth-of-type(even) > td {
   background: color-mix(in srgb, var(--color-text) 3%, transparent);
 }
+
+/* Long values end in "…" inside their own column instead of spilling into the next one. */
+.table tbody > tr:not(.breakdownRow) > td {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table tbody > tr:not(.breakdownRow) > td > * {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

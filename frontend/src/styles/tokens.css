@@ -263,3 +263,43 @@
     --globe-height: 60vh;
   }
 }
+
+/* App pages (everything except the landing smog sky): calm slate-navy, cool neutrals, amber accent. */
+[data-theme='slate'] {
+  color-scheme: dark;
+  --color-bg: #0f141a;
+  --color-bg-deep: #0a0e13;
+  --color-surface: #18202a;
+  --color-panel: color-mix(in srgb, #18202a 82%, transparent);
+  --color-surface-2: #212b37;
+  --color-text: #e6ebf0;
+  --color-muted: #9ba7b4;
+  --color-border: rgba(230, 235, 240, 0.1);
+  --color-border-strong: rgba(230, 235, 240, 0.22);
+  --color-accent: #e0a04f;
+  --color-accent-hover: #ebb46d;
+  --color-accent-contrast: #14100a;
+  --color-secondary: #8fa6b8;
+  --color-focus: #8cc4ff;
+  --color-highlight: #26354a;
+  --color-button-hover-light: #2a3644;
+  --color-ok: #8fc7a6;
+  --color-warn: #e5c96a;
+  --color-error: #f0937a;
+  --color-info: #9cc2df;
+  --color-stale: #a5afba;
+  --color-ok-bg: #18291f;
+  --color-warn-bg: #2b2715;
+  --color-error-bg: #33201c;
+  --color-info-bg: #172634;
+  --color-stale-bg: #1f2730;
+  --fog-color: #253140;
+  --grain-opacity: 0.03;
+  --shadow-color: 0 0 0;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.22);
+  --shadow-2: 0 2px 8px rgb(0 0 0 / 0.35), 0 24px 60px rgb(0 0 0 / 0.35);
+  --gradient-sky:
+    radial-gradient(120% 60% at 80% -10%, rgb(70 110 150 / 0.22), transparent 60%),
+    radial-gradient(90% 60% at 0% 100%, rgb(224 160 79 / 0.06), transparent 60%),
+    linear-gradient(180deg, #0b1016 0%, #101721 45%, #0f141a 100%);
+}
