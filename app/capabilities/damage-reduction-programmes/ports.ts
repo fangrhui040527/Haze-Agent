@@ -13,6 +13,7 @@ import type {
 import type { ReductionPreviewView } from '../../contracts/damage-reduction-view.js';
 import type { PilotTaskView } from '../../contracts/damage-reduction-pilot.js';
 import type { EvaluationTaskView } from '../../contracts/damage-reduction-evaluation.js';
+import type { ReductionInputSelection } from '../../contracts/damage-reduction.js';
 
 export interface ProgrammeScope extends TaskIdentity {
   mode: TaskRecord['mode'];
@@ -26,6 +27,11 @@ export interface ProgrammeHost {
   readTask(taskId: string, identity: TaskIdentity): TaskRecord;
   readArtifact(ref: ArtifactRef, identity: TaskIdentity): Artifact;
   assertEvidenceCurrent(ref: ArtifactRef, identity: TaskIdentity): void;
+  retainSelection(
+    selection: ReductionInputSelection,
+    identity: TaskIdentity,
+    key: string,
+  ): ArtifactRef;
   pinTaskInputs(
     taskId: string,
     refs: ArtifactRef[],

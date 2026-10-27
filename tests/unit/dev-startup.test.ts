@@ -11,6 +11,7 @@ const callMarker = '__DEV_STARTUP_CALL__';
 const killMarker = '__DEV_STARTUP_KILL__';
 
 interface Scenario {
+  tty?: boolean;
   failAt?: number;
   errorAt?: number;
   interruptAt?: number;
@@ -53,6 +54,11 @@ import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 
 const scenario = ${JSON.stringify(scenario)};
+if (scenario.tty) {
+  Object.defineProperty(process.stdout, 'isTTY', { value: true });
+  Object.defineProperty(process.stdout, 'columns', { value: 80 });
+  process.env.TERM = 'xterm';
+}
 if (scenario.consoleCommands) Object.defineProperty(process, 'stdin', { value: new PassThrough() });
 globalThis.fetch = async (input) => {
   if (scenario.apiFailure) throw new TypeError('connection refused');
@@ -218,7 +224,7 @@ describe('root development startup', () => {
     expect(result.output).toMatch(/World Model \(SQLite\)[^\n]*READY/);
     expect(result.output).toMatch(/H-MEM[^\n]*DISABLED/);
     expect(result.output).toMatch(/Nightshift runtime[^\n]*UNREACHABLE/);
-    expect(result.output).toMatch(/Nightshift local jobs[^\n]*UNAVAILABLE/);
+    expect(result.output).toMatch(/Nightshift candidate jobs[^\n]*UNAVAILABLE/);
     for (const name of [
       'Zetaris platform',
       'Haze TypeScript build',
@@ -296,6 +302,27 @@ describe('root development startup', () => {
     expect(result.output).toContain('TypeScript build diagnostic');
     expect(result.output).toContain('The backend could not compile');
     expect(result.output).toMatch(/Haze TypeScript build[^\n]*FAILED/);
+  });
+
+  it('keeps failed-build diagnostics below the frozen panel in an interactive terminal', async () => {
+    const diagnostic = 'Error: Source file inventory differs: world_model';
+    const result = await launch({
+      tty: true,
+      failAt: 2,
+      exitCode: 23,
+      outputAt: 2,
+      stderr: `${diagnostic}\n`,
+    });
+
+    expect(result.status).toBe(23);
+    expect(result.calls).toHaveLength(3);
+    expect(result.output).toMatch(/Haze TypeScript build[^\n]*FAILED/);
+    expect(result.output).toContain(diagnostic);
+    const diagnosticPosition = result.output.lastIndexOf(diagnostic);
+    expect(diagnosticPosition).toBeGreaterThan(
+      result.output.lastIndexOf('  Haze Agent'),
+    );
+    expect(result.output.slice(diagnosticPosition)).not.toContain('\u001b[');
   });
 
   it('preserves runtime lines and UTF-8 characters across output chunks', async () => {

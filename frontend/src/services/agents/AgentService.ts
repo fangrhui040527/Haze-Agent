@@ -20,9 +20,17 @@ import type {
   WorldRecordReadResponse,
   WorldTaskResponse,
 } from '../../../../app/contracts/world-api.ts';
+import type {
+  ManagerChatRequest,
+  ManagerChatResponse,
+} from '../../../../app/contracts/manager-chat.ts';
 
 export interface AgentService {
   readonly label: string;
+  managerChat?(
+    request: ManagerChatRequest,
+    signal?: AbortSignal,
+  ): Promise<ManagerChatResponse>;
   ask(
     request: AskRequest,
     onEvent: (event: AgentEvent) => void,
@@ -78,9 +86,20 @@ export class AgentTaskCancelledError extends Error {
 }
 export class AgentRunError extends Error {
   readonly retryable: boolean;
-  constructor(message: string, retryable: boolean) {
-    super(message);
+  readonly category:
+    | 'transport'
+    | 'server'
+    | 'response_validation'
+    | 'task_response_validation'
+    | 'unexpected';
+  constructor(
+    message: string,
+    retryable: boolean,
+    options: { category?: AgentRunError['category']; cause?: unknown } = {},
+  ) {
+    super(message, { cause: options.cause });
     this.name = 'AgentRunError';
     this.retryable = retryable;
+    this.category = options.category ?? 'server';
   }
 }

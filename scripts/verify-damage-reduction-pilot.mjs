@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { DatabaseSync } from 'node:sqlite';
 import { contractHash } from '../dist/contracts/json.js';
 import { artifactSchema } from '../dist/contracts/artifacts.js';
 import {
@@ -31,10 +32,16 @@ import {
   syntheticActionReceipt,
 } from '../dist/capabilities/damage-reduction-programmes/pilot-fixtures.js';
 
-if (process.argv.slice(2).some((flag) => flag !== '--fixture'))
+const flags = process.argv.slice(2);
+if (
+  flags.some((flag) => !['--fixture', '--live'].includes(flag)) ||
+  (flags.includes('--fixture') && flags.includes('--live'))
+)
   throw new Error(
-    'Usage: verify-damage-reduction-pilot.mjs [--fixture]. Imported/simulated engineering recordkeeping only.',
+    'Usage: verify-damage-reduction-pilot.mjs [--fixture|--live]. Imported/simulated engineering recordkeeping only; no digital service is contacted.',
   );
+const live = flags.includes('--live');
+const mode = live ? 'live' : 'fixture';
 const root = resolve(
   process.env.STATE_DIR || '.state',
   'damage-reduction-pilot-verification',
@@ -44,23 +51,32 @@ await mkdir(root, { recursive: true });
 const frozenCases = JSON.parse(
   await readFile(
     new URL(
-      '../docs/Testing/damage-reduction-pilot-cases.json',
+      '../docs/testing/cases/damage-reduction-pilot-cases.json',
       import.meta.url,
     ),
     'utf8',
   ),
 );
 let child;
+let origin;
+let programmeId;
+const serverStartups = [];
+const serverMemory = [];
 async function boot() {
-  child = fork(new URL('./serve-tasks.mjs', import.meta.url), ['--fixture'], {
-    env: {
-      ...process.env,
-      STATE_DIR: root,
-      HAZE_TASK_STATE_DIR: root,
-      HAZE_TASK_PORT: '0',
+  const started = performance.now();
+  child = fork(
+    new URL('./reduction-capacity-worker.mjs', import.meta.url),
+    live ? [] : ['--fixture'],
+    {
+      env: {
+        ...process.env,
+        STATE_DIR: root,
+        HAZE_TASK_STATE_DIR: root,
+        HAZE_TASK_PORT: '0',
+      },
+      stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
     },
-    stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
-  });
+  );
   const active = child;
   return new Promise((ready, reject) => {
     const timer = setTimeout(
@@ -70,6 +86,7 @@ async function boot() {
     active.on('message', (message) => {
       if (message.port) {
         clearTimeout(timer);
+        serverStartups.push(performance.now() - started);
         ready(`http://127.0.0.1:${message.port}`);
       }
     });
@@ -82,6 +99,36 @@ async function boot() {
       reject(new Error(`Pilot verification server exited (${code}).`));
     });
   });
+}
+async function captureMemory() {
+  const active = child;
+  const requestId = randomUUID();
+  const memory = await new Promise((ready, reject) => {
+    const listener = (message) => {
+      if (
+        message?.type !== 'reduction-capacity-metrics' ||
+        message.request_id !== requestId
+      )
+        return;
+      clearTimeout(timer);
+      active.off('message', listener);
+      ready({
+        rss_bytes: message.rss_bytes,
+        peak_rss_bytes: message.peak_rss_bytes,
+      });
+    };
+    const timer = setTimeout(() => {
+      active.off('message', listener);
+      reject(new Error('Pilot server memory telemetry timed out.'));
+    }, 5000);
+    active.on('message', listener);
+    active.send({ type: 'reduction-capacity-metrics', request_id: requestId });
+  });
+  serverMemory.push(memory);
+  assert.ok(
+    memory.peak_rss_bytes <= 1_073_741_824,
+    'Pilot API peak RSS exceeded the predeclared 1 GiB engineering envelope.',
+  );
 }
 async function stop() {
   if (!child || child.exitCode !== null) return;
@@ -134,7 +181,7 @@ async function imported(origin, content, label) {
       filename: `${label}.json`,
       media_type: 'application/json',
       declared_origin:
-        'Operator-supplied engineering example retained for imported/simulated recordkeeping. No digital service was contacted.',
+        'Operator-supplied engineering example retained for imported/simulated recordkeeping. No delivery service contacted a recipient or changed a schedule.',
       content_base64: Buffer.from(JSON.stringify(content)).toString('base64'),
     }),
   );
@@ -238,6 +285,7 @@ async function phase(origin, id, kind, dependency) {
   assert.equal(projected.currency, 'current');
   assert.equal(projected.result_status, 'available');
   const snapshot = await taskCapture(origin, task.id);
+  await captureMemory();
   traces.push({
     phase: kind,
     attempt_id: attempt.id,
@@ -250,7 +298,35 @@ async function phase(origin, id, kind, dependency) {
     reservation: attempt.reservation,
     limits: task.limits,
     artifact_bytes: Buffer.byteLength(JSON.stringify(snapshot.artifacts)),
+    programme_snapshot_bytes: Buffer.byteLength(
+      JSON.stringify((await view(origin, id)).programme),
+    ),
+    provider_receipts: (task.result?.provenance.receipts ?? []).filter(
+      (receipt) => receipt.kind === 'model',
+    ),
   });
+  if (live) {
+    const receipts = traces
+      .at(-1)
+      .provider_receipts.filter(
+        (entry) =>
+          entry.status === 'completed' &&
+          entry.accepted === true &&
+          entry.synthetic !== true &&
+          entry.receipt?.synthetic !== true &&
+          entry.receipt?.http_status >= 200 &&
+          entry.receipt.http_status < 300 &&
+          entry.receipt.response_status === 'stop' &&
+          typeof entry.receipt.response_model === 'string' &&
+          entry.receipt.response_model.length > 0 &&
+          typeof entry.receipt.response_id === 'string' &&
+          entry.receipt.response_id.length > 0,
+      );
+    assert.ok(
+      task.usage.model_calls > 0 && receipts.length > 0,
+      `Configured live ${kind} requires actual charged model calls and accepted successful provider receipts.`,
+    );
+  }
   return attempt;
 }
 async function append(origin, id, record, key = randomUUID()) {
@@ -360,9 +436,19 @@ const fence = (task) => ({
   expected_generation: task.generation,
   expected_state_revision: task.state_revision,
 });
-let report;
+let report = {
+  passed: false,
+  mode,
+  evidence_origin: 'synthetic',
+  scientific_qualification: 'unqualified',
+  achieved_reduction: false,
+  configured_live_model_behavior: 'not_tested',
+  traces,
+  server_startups_ms: serverStartups,
+  server_memory: serverMemory,
+};
 try {
-  let origin = await boot();
+  origin = await boot();
   const source = await imported(
     origin,
     syntheticResidualImport(),
@@ -386,6 +472,7 @@ try {
     }),
   );
   const id = created.programme_id;
+  programmeId = id;
   const assessment = await phase(origin, id, 'assessment');
   const planning = await phase(origin, id, 'planning', assessment.id);
   const supplied = await imported(
@@ -607,6 +694,7 @@ try {
   const before = await capture(origin, id);
   await stop();
   origin = await boot();
+  await captureMemory();
   const after = await capture(origin, id);
   assert.deepEqual(stable(after), stable(before));
   const lastPilot = await read(origin, `/api/tasks/${traces.at(-1).task_id}`);
@@ -638,9 +726,10 @@ try {
   const qualified = JSON.stringify(revoked.pilot);
   assert.ok(!qualified.includes('"scientific_qualification":"qualified"'));
   report = {
+    ...report,
     checked_at: new Date().toISOString(),
     passed: true,
-    mode: 'fixture',
+    mode,
     frozen_cases_sha256: contractHash(frozenCases),
     programme_id: id,
     explicit_runs: 4,
@@ -657,9 +746,10 @@ try {
     live_delivery: 'deferred',
     scientific_qualification: 'unqualified',
     achieved_reduction: false,
-    configured_live_model_behavior: 'not_tested',
-    interpretation:
-      'Deterministic imported/simulated engineering recordkeeping examples. No digital action was sent; no exposure or physical-damage effect was measured and no scientific qualification was established.',
+    configured_live_model_behavior: live
+      ? 'verified_admitted_trace'
+      : 'not_tested',
+    interpretation: `${live ? 'Configured live model workflow over synthetic' : 'Deterministic'} imported/simulated engineering recordkeeping examples. No digital action was sent; no exposure or physical-damage effect was measured and no scientific qualification was established.`,
     traces,
     before_restart: before,
     after_restart: after,
@@ -684,12 +774,67 @@ try {
     ),
   );
 } catch (error) {
+  report.error =
+    error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : String(error);
+  if (origin && programmeId) {
+    try {
+      report.failure_capture = await capture(origin, programmeId);
+    } catch (captureError) {
+      report.capture_error = captureError.message;
+    }
+  }
   await writeFile(
     resolve(root, 'failure.json'),
     `${JSON.stringify({ checked_at: new Date().toISOString(), passed: false, error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error), traces }, null, 2)}\n`,
   );
-  throw error;
+  process.exitCode = 1;
 } finally {
-  await stop();
+  try {
+    await stop();
+  } catch (error) {
+    report.passed = false;
+    report.shutdown_error = error.message;
+    process.exitCode = 1;
+  }
+  try {
+    const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
+      readOnly: true,
+    });
+    try {
+      report.model_attempts = database
+        .prepare('SELECT body FROM attempts ORDER BY rowid')
+        .all()
+        .map(({ body }) => JSON.parse(body))
+        .filter(({ kind }) => kind === 'model');
+      if (live && !report.passed && report.model_attempts.length)
+        report.configured_live_model_behavior = 'attempted_unsuccessful_trace';
+    } finally {
+      database.close();
+    }
+  } catch (error) {
+    report.telemetry_error = error.message;
+    report.passed = false;
+    process.exitCode = 1;
+  }
+  report.checked_at = new Date().toISOString();
+  await writeFile(
+    resolve(root, 'report.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  console.log(
+    JSON.stringify(
+      {
+        report: resolve(root, 'report.json'),
+        passed: report.passed,
+        mode,
+        runs: traces.length,
+        error: report.error,
+      },
+      null,
+      2,
+    ),
+  );
 }
 if (!report?.passed) process.exitCode = 2;

@@ -87,7 +87,8 @@ export function embeddedEvaluationReferences(
           'programme_context_bound',
           'Evaluation evidence exceeds 128 retained references.',
         );
-      return;
+      // A reference-shaped wrapper may also contain raw proof or other exact
+      // references. Its metadata cannot hide those dependencies from checks.
     }
     ancestors.add(item);
     for (const child of Object.values(item)) visit(child, level + 1);

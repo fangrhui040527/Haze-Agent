@@ -85,6 +85,12 @@ export const reductionPreviewRequestSchema = z.strictObject({
   selection: reductionInputSelectionSchema,
   candidate: reductionCandidateSchema,
 });
+/** Compact task scope; the exact original declaration retains every selected row. */
+export const reductionPreviewSelectionRequestSchema = z.strictObject({
+  schema_version: z.literal('haze.reduction.preview-selection-request.v1'),
+  selection_ref: artifactRefSchema,
+  candidate: reductionCandidateSchema,
+});
 export const conditionalPlanPrerequisiteSchema = z.strictObject({
   id: identifierSchema,
   description: text,

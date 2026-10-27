@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { artifactRefSchema, boundedJsonSchema } from './artifacts.js';
 import { agentRoleSchema } from './capabilities.js';
+import {
+  nightshiftPrivacySchema,
+  nightshiftSpendSchema,
+  validateNightshiftPolicy,
+} from './nightshift.js';
 
 const count = z.number().int().nonnegative();
 const nullableText = z.string().nullable();
@@ -28,19 +33,21 @@ export const nightshiftChainSchema = z
     expires_at: z.string(),
     original_run_id: z.uuid(),
     objective_revision: z.number().int().positive(),
-    grant: z.strictObject({
-      total_runs: z.number().int().min(1).max(4),
-      max_jobs: z.number().int().min(1).max(4),
-      max_attempts: z.number().int().min(1).max(16),
-      automatic_followup_runs: z.number().int().min(0).max(3),
-      privacy: z.literal('local-only'),
-      max_spend_usd: z.literal(0),
-      max_model_calls: count,
-      max_tool_calls: count,
-      max_assignments: count,
-      max_artifacts: count,
-      route_ids: z.record(agentRoleSchema, z.string()),
-    }),
+    grant: z
+      .strictObject({
+        total_runs: z.number().int().min(1).max(4),
+        max_jobs: z.number().int().min(1).max(4),
+        max_attempts: z.number().int().min(1).max(16),
+        automatic_followup_runs: z.number().int().min(0).max(3),
+        privacy: nightshiftPrivacySchema,
+        max_spend_usd: nightshiftSpendSchema,
+        max_model_calls: count,
+        max_tool_calls: count,
+        max_assignments: count,
+        max_artifacts: count,
+        route_ids: z.record(agentRoleSchema, z.string()),
+      })
+      .superRefine(validateNightshiftPolicy),
     usage: usageSchema,
     remaining: usageSchema,
     stop_reason: nullableText,
@@ -80,15 +87,17 @@ export const nightshiftJobSchema = z.strictObject({
   prompt: z.string(),
   input_refs: z.array(artifactRefSchema).max(32),
   route_id: z.string(),
-  options: z.strictObject({
-    n: z.number().int().positive(),
-    judge: z.string(),
-    budget: z.string(),
-    window: z.string(),
-    fleet: nullableText,
-    privacy: z.literal('local-only'),
-    max_spend_usd: z.literal(0),
-  }),
+  options: z
+    .strictObject({
+      n: z.number().int().positive(),
+      judge: z.string(),
+      budget: z.string(),
+      window: z.string(),
+      fleet: nullableText,
+      privacy: nightshiftPrivacySchema,
+      max_spend_usd: nightshiftSpendSchema,
+    })
+    .superRefine(validateNightshiftPolicy),
   request_fingerprint: z.string(),
   adapter_version: z.string(),
   runtime_version: nullableText,

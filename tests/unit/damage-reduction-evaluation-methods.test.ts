@@ -198,6 +198,50 @@ describe('reviewed external point-estimate comparison', () => {
     expect(check().verdict).toBe('supported');
   });
 
+  it.each([
+    { numerator: '3', denominator: '25' },
+    { numerator: '0.12', denominator: '1' },
+    { numerator: '0.000000000003', denominator: '0.000000000025' },
+  ])(
+    'accepts independently supplied equivalent rational output %j',
+    (ratio) => {
+      const { draft, check } = fixture(() => {}, {
+        ...EXPECTED_SUPPORT,
+        relative_reduction: ratio,
+      });
+      const products = draft();
+      expect(products.result).toMatchObject({
+        ...EXPECTED_SUPPORT,
+        status: 'supported',
+        scientific_qualification: 'unqualified',
+        achieved_reduction: false,
+      });
+      expect(check(products).verdict).toBe('supported');
+    },
+  );
+
+  it.each([
+    { numerator: '3', denominator: '26' },
+    { numerator: '3', denominator: '0' },
+    { numerator: `3${'0'.repeat(128)}`, denominator: `25${'0'.repeat(128)}` },
+  ])(
+    'withholds incompatible or oversized expected rational output %j',
+    (ratio) => {
+      const { draft, check } = fixture(() => {}, {
+        ...EXPECTED_SUPPORT,
+        relative_reduction: ratio,
+      });
+      const products = draft();
+      expect(products.result).toMatchObject({
+        status: 'incompatible',
+        relative_reduction: null,
+        target_met: null,
+        achieved_reduction: false,
+      });
+      expect(check(products).verdict).toBe('supported');
+    },
+  );
+
   it('preserves unknown quantities as a reviewed evidence gap', () => {
     const numbers: Numbers = {
       baseline_damage: null,

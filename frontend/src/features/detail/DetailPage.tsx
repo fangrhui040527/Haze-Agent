@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useLiveData } from '../../app/liveDataContext.ts';
 import { dataService } from '../../services/data/index.ts';
@@ -37,6 +37,7 @@ import { Panel, Skeleton, StateMessage } from '../../shared/ui/States.tsx';
 import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
 import { RankBreakdown } from '../live-table/LiveTable.tsx';
 import { rankItems } from '../live-table/ranking.ts';
+import { latestLiveItem, refreshLiveDetail } from './liveDetail.ts';
 import styles from './DetailPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
 
@@ -64,21 +65,46 @@ export function DetailPage() {
   const navigate = useNavigate();
   const live = useLiveData();
   const now = useNow(30_000);
+  const liveItem = useMemo(
+    () => latestLiveItem(id, live.items, live.pending),
+    [id, live.items, live.pending],
+  );
+  const liveItemRef = useRef(liveItem);
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
+    liveItemRef.current = liveItem;
+    setState((current) => {
+      if (current.status !== 'ready' || current.detail.item.id !== id)
+        return current;
+      const detail = refreshLiveDetail(current.detail, liveItem);
+      return detail === current.detail ? current : { status: 'ready', detail };
+    });
+  }, [id, liveItem]);
+
+  useEffect(() => {
     const controller = new AbortController();
+    const liveAtStart = liveItemRef.current;
     setState({ status: 'loading' });
     dataService
       .getItem(id, controller.signal)
-      .then((detail) =>
+      .then((detail) => {
+        if (controller.signal.aborted) return;
         setState(
-          detail ? { status: 'ready', detail } : { status: 'not_found' },
-        ),
-      )
+          detail
+            ? {
+                status: 'ready',
+                detail:
+                  liveAtStart === liveItemRef.current
+                    ? detail
+                    : refreshLiveDetail(detail, liveItemRef.current),
+              }
+            : { status: 'not_found' },
+        );
+      })
       .catch((error: unknown) => {
-        if (!isAbortError(error))
+        if (!controller.signal.aborted && !isAbortError(error))
           setState({
             status: 'error',
             message: error instanceof Error ? error.message : String(error),
@@ -92,8 +118,7 @@ export function DetailPage() {
     [live.items, live.locations, now],
   );
   const rankInfo = ranked.find((r) => r.item.id === id) ?? null;
-  const liveRevision =
-    [...live.items, ...live.pending].find((i) => i.id === id)?.revision ?? null;
+  const liveRevision = liveItem?.revision ?? null;
 
   useEffect(() => {
     if (state.status === 'ready')
@@ -161,6 +186,9 @@ export function DetailPage() {
   const pm25 = itemPm25(item);
   const band = itemBand(item);
   const passed = item.checks.filter((c) => c.result === 'pass').length;
+  const warnings = item.checks.filter((c) => c.result === 'warn').length;
+  const failed = item.checks.filter((c) => c.result === 'fail').length;
+  const pending = item.checks.filter((c) => c.result === 'pending').length;
 
   const ask = () =>
     navigate('/dashboard', {
@@ -404,7 +432,11 @@ export function DetailPage() {
         <h2>
           Evidence checks{' '}
           <span className={styles.muted}>
-            (by EvidenceCritic: {passed} of {item.checks.length} passed)
+            ({passed} of {item.checks.length} passed
+            {warnings > 0 &&
+              `; ${warnings} warning${warnings === 1 ? '' : 's'}`}
+            {failed > 0 && `; ${failed} failed`}
+            {pending > 0 && `; ${pending} pending`})
           </span>
         </h2>
         {item.checks.length === 0 ? (

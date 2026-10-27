@@ -435,15 +435,117 @@ describe('retained pilot governance and delivery evidence', () => {
   });
 
   it('rejects rebinding the same action identity to another operational payload', () => {
-    const { registration, action, record, snapshot, context } = setup();
-    const initial = record(action());
-    const changed = {
-      ...initial.record,
-      permitted_action: 'Different schedule change',
-    } as Action;
+    const { registration, action, record, snapshot, context, save } = setup();
+    const original = action();
+    const initial = record(original);
+    for (const mismatch of [
+      { permitted_action: 'Different schedule change' },
+      { trigger_refs: [ref(save('A different trigger event.'))] },
+      { occurred_at: '2026-10-27T12:00:01Z' },
+      { registration_id: id(99) },
+    ])
+      expect(() =>
+        validatePilotRecord(
+          { ...original, ...mismatch },
+          snapshot,
+          [registration, initial],
+          context,
+        ),
+      ).toThrow(/logical action ID/);
     expect(() =>
-      validatePilotRecord(changed, snapshot, [registration, initial], context),
-    ).toThrow();
+      validatePilotRecord(
+        { ...original, occurred_at: '2026-10-27T20:00:00+08:00' },
+        snapshot,
+        [registration, initial],
+        context,
+      ),
+    ).not.toThrow();
+  });
+
+  it('does not reconcile historical unknown actions with another trigger, occurrence or registration', () => {
+    const { registration, action, record, confirm, project, save } = setup();
+    for (const mismatch of [
+      { trigger_refs: [ref(save('A different trigger event.'))] },
+      { occurred_at: '2026-10-27T11:59:59Z' },
+      { registration_id: id(99) },
+    ]) {
+      const original = action({ status: 'unknown' });
+      const initial = record(original);
+      const changed = record(
+        confirm({
+          ...original,
+          ...mismatch,
+          status: 'confirmed',
+          reconciles_record_id: initial.id,
+        }),
+      );
+      const replay = record(
+        confirm(
+          { ...original, status: 'confirmed' },
+          { receipt_id: 'replay-receipt' },
+        ),
+      );
+      const exact = record(
+        confirm(
+          {
+            ...original,
+            occurred_at: '2026-10-27T20:00:00+08:00',
+            status: 'confirmed',
+            reconciles_record_id: initial.id,
+          },
+          { receipt_id: 'exact-reconciliation-receipt' },
+        ),
+      );
+      const view = project([registration, initial, changed, replay, exact]);
+      expect(view.actions[1]).toMatchObject({
+        currency: 'stale',
+        effective_status: 'unknown',
+        recorded_delivery: false,
+      });
+      expect(view.actions[1]?.reasons.join(' ')).toContain(
+        'identity differs from its original event',
+      );
+      expect(view.actions[2]?.effective_status).toBe('unknown');
+      expect(view.actions[3]).toMatchObject({
+        effective_status: 'confirmed',
+        recorded_delivery: true,
+      });
+    }
+  });
+
+  it('requires the exact agreed trigger inputs even when an unrelated trigger has a matching service receipt', () => {
+    const {
+      registration,
+      action,
+      confirm,
+      record,
+      project,
+      save,
+      held,
+      evidence,
+    } = setup();
+    const exact = record(confirm(action()));
+    const unrelated = record(
+      confirm(
+        action({
+          trigger_refs: [ref(save('Unrelated current nonsynthetic evidence.'))],
+        }),
+      ),
+    );
+    const view = project([registration, exact, unrelated]);
+    expect(view.actions[0]?.recorded_delivery).toBe(true);
+    expect(view.actions[1]).toMatchObject({
+      effective_status: 'confirmed',
+      recorded_delivery: false,
+    });
+    expect(view.actions[1]?.reasons.join(' ')).toContain(
+      'does not cover every exact input declared by the agreed rule',
+    );
+    held.add(evidence.id);
+    const unavailable = project([registration, exact, unrelated]);
+    expect(unavailable.actions.every((item) => !item.recorded_delivery)).toBe(
+      true,
+    );
   });
 
   it('rejects operational rule changes without a new rule version', () => {

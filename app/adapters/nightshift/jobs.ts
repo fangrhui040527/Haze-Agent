@@ -24,7 +24,7 @@ import {
   resolveRouteCredential,
 } from './runtime.js';
 
-export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v1';
+export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v3';
 const MAX_STDIO_BYTES = 2 * 1024 * 1024;
 // Installed cancel() labels the record before provider-abort completion. That
 // label is deliberately absent: it cannot prove remote compute termination.
@@ -127,6 +127,8 @@ export function inspectLocalCompute(
     .filter(
       (lane): lane is Record<string, unknown> =>
         lane?.kind === 'local' &&
+        !lane.disabled &&
+        lane.races !== false &&
         typeof lane.state === 'string' &&
         lane.state.toLowerCase() === 'ready' &&
         typeof lane.model === 'string' &&
@@ -158,8 +160,28 @@ export function inspectLocalCompute(
       .map((value: unknown) => String(record(value)!.id)),
   };
 }
-// Source-reviewed local-only contract: attempts AND judges carry the job floor
-// through host.mjs to providers.js's refusal boundary. New builds fail closed.
+/** Cloud permission is separate from a local gateway address or local readiness. */
+export function inspectCloudCompute(statusValue: unknown): boolean {
+  const status = record(statusValue);
+  const lanes = Array.isArray(status?.lanes) ? status.lanes : [];
+  return lanes.some((value: unknown) => {
+    const lane = record(value);
+    return (
+      lane !== null &&
+      (lane.kind === 'cloud' ||
+        (lane.kind === undefined && lane.provider === 'nvidia')) &&
+      !lane.disabled &&
+      lane.races !== false &&
+      typeof lane.state === 'string' &&
+      lane.state.toLowerCase() === 'ready' &&
+      typeof lane.model === 'string' &&
+      lane.model.length > 0
+    );
+  });
+}
+// Source-reviewed privacy contract: attempts AND judges carry the job floor
+// through host.mjs to providers.js's refusal boundary. Cloud jobs omit the CLI's
+// unenforceable monetary ceiling. New builds fail closed.
 const REVIEWED_SOURCE_HASHES: Record<string, string> = {
   'cli/ns.mjs':
     'f6c05c9c30f549eacebefe1a0413730a0e346c20f37896a29f7fc2da52e0f378',
@@ -172,6 +194,29 @@ const REVIEWED_SOURCE_HASHES: Record<string, string> = {
   'engine/host.mjs':
     'ab9e35a78b6545780c904a1d7bc3d6e576598edf5e3e063aebc0c4d2d3e5ce00',
 };
+// The reviewed strict-inference overlay adds a separate facade and HTTP route.
+// Job methods and their local-only refusal boundary are unchanged. Its imported
+// modules are pinned too: a matching host alone cannot attest a changed overlay.
+const REVIEWED_STRICT_SOURCE_HASHES: Record<string, string> = {
+  'engine/host.mjs':
+    'e1668b09429e1aca3364a3cbefe2c2b9acb2a2cdc94a0ead9dca582a17bab350',
+  'engine/server.mjs':
+    'e0ba7c357f688b096c60d7d09937d68ff2102424c329ea55d58a3ddd108e8e80',
+  'engine/haze-strict/integration.mjs':
+    '8fa11bc9801d62f70a86f7183e4ab3524e1bc49fc5578f3d602e85c03b23233c',
+  'engine/haze-strict/handler.mjs':
+    '8c709532e5845419b177ff8edc4bcaac345a19ff2aa81d476802cc051422c5d0',
+};
+export function reviewedNightshiftJobSourceHashes(
+  actual: Readonly<Record<string, string>>,
+): boolean {
+  const matches = (expected: Record<string, string>) =>
+    Object.entries(expected).every(([path, hash]) => actual[path] === hash);
+  return (
+    matches(REVIEWED_SOURCE_HASHES) ||
+    matches({ ...REVIEWED_SOURCE_HASHES, ...REVIEWED_STRICT_SOURCE_HASHES })
+  );
+}
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -239,12 +284,20 @@ export function discoverNightshiftCli(
 function reviewedInstallation(command: NightshiftCliCommand): boolean {
   if (!command.installationRoot) return false;
   try {
-    return Object.entries(REVIEWED_SOURCE_HASHES).every(
-      ([path, hash]) =>
-        createHash('sha256')
-          .update(readFileSync(join(command.installationRoot!, path)))
-          .digest('hex') === hash,
-    );
+    const paths = Object.keys(REVIEWED_SOURCE_HASHES);
+    const actual: Record<string, string> = {};
+    const readHash = (path: string) =>
+      createHash('sha256')
+        .update(readFileSync(join(command.installationRoot!, path)))
+        .digest('hex');
+    for (const path of paths) actual[path] = readHash(path);
+    if (
+      actual['engine/host.mjs'] ===
+      REVIEWED_STRICT_SOURCE_HASHES['engine/host.mjs']
+    )
+      for (const path of Object.keys(REVIEWED_STRICT_SOURCE_HASHES))
+        actual[path] = readHash(path);
+    return reviewedNightshiftJobSourceHashes(actual);
   } catch {
     return false;
   }
@@ -473,6 +526,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       local_only_enforced: false,
       local_compute_available: false,
       cloud_enforced: false,
+      cloud_compute_available: false,
       ready: false,
       runtime_version: null,
       adapter_version: NIGHTSHIFT_JOB_ADAPTER_VERSION,
@@ -520,7 +574,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
           (name) => flags[name] !== undefined,
         ) &&
         accepts('kind', ['best_of_n']) &&
-        accepts('privacy', ['local-only']) &&
+        accepts('privacy', ['local-only', 'cloud-ok']) &&
         accepts('judge', base.options.judges) &&
         accepts('budget', base.options.budgets) &&
         accepts('window', base.options.windows);
@@ -537,30 +591,36 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       const sourceContract =
         reviewedInstallation(this.command) && base.runtime_version === '1.2.1';
       base.local_only_enforced = sourceContract;
+      base.cloud_enforced = sourceContract;
       let localCompute = { available: false, fleets: [] as string[] };
+      let cloudCompute = false;
       if (base.runtime_reachable && sourceContract) {
         const [fleets, status] = await Promise.all([
           readNightshiftControl(this.env, '/admin/fleets', signal),
           readNightshiftControl(this.env, '/admin/status', signal),
         ]);
         localCompute = inspectLocalCompute(fleets, status);
-        base.options.fleets = localCompute.fleets;
+        cloudCompute = inspectCloudCompute(status);
+        // This runtime records fleet_id as metadata; it does not select a
+        // different compute roster. Do not advertise it as a submission choice.
       }
       base.local_compute_available = localCompute.available;
+      base.cloud_compute_available = cloudCompute;
       const contractAvailable =
         base.schema_compatible &&
         base.runtime_reachable &&
         generation &&
         outcome &&
         sourceContract;
-      base.ready = contractAvailable && localCompute.available;
+      base.ready =
+        contractAvailable && (localCompute.available || cloudCompute);
       base.can_reconcile = contractAvailable;
       base.reason = base.ready
-        ? 'Local-only text jobs are available. Exact native-request reconciliation requires a stored server nonce; cloud grants remain disabled.'
+        ? 'Text jobs can use the ready runtime lanes permitted by their grant. Cloud-enabled jobs have no monetary cap; local-only jobs retain $0 cloud spend. Explicit fleet selection is unsupported. Exact native-request reconciliation requires a stored server nonce.'
         : !sourceContract
           ? 'The installed job privacy contract has not been reviewed for this build.'
-          : contractAvailable && !localCompute.available
-            ? 'The daemon is reachable, but no eligible local text lane is ready. Configure local models and fleets in Nightshift; cloud lanes cannot serve local-only jobs.'
+          : contractAvailable && !localCompute.available && !cloudCompute
+            ? 'The daemon is reachable, but no eligible local or cloud text lane is ready. Configure ready models and fleets in Nightshift.'
             : 'The runtime job capabilities are unavailable or unverified.';
       return base;
     } catch {
@@ -583,21 +643,26 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       throw new NightshiftJobTransportError(
         'rejected-before-acceptance',
         'invalid_options',
-        'Nightshift job options violate the admitted local-only contract.',
+        'Nightshift job options violate the admitted privacy and spending contract.',
       );
     }
-    const readiness = await this.readiness(signal);
-    if (!readiness.ready)
-      throw new NightshiftJobTransportError(
-        'rejected-before-acceptance',
-        'unavailable',
-        'Nightshift local-job readiness is not established.',
-      );
-    if (request.fleet && !readiness.options.fleets.includes(request.fleet))
+    if (request.fleet !== undefined)
       throw new NightshiftJobTransportError(
         'rejected-before-acceptance',
         'fleet_unverified',
-        'The installed CLI cannot verify this fleet selection; use runtime selection.',
+        'The installed runtime records fleet names as metadata and cannot select compute by fleet; use runtime selection.',
+      );
+    const readiness = await this.readiness(signal);
+    const policyReady =
+      request.privacy === 'cloud-ok'
+        ? readiness.cloud_enforced && readiness.cloud_compute_available === true
+        : readiness.local_only_enforced &&
+          readiness.local_compute_available !== false;
+    if (!readiness.ready || !policyReady)
+      throw new NightshiftJobTransportError(
+        'rejected-before-acceptance',
+        'unavailable',
+        'Nightshift job readiness is not established for the requested privacy policy.',
       );
     const args = [
       'generate',
@@ -613,11 +678,9 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       '--window',
       request.window,
       '--privacy',
-      'local-only',
-      '--max-spend',
-      '0',
-      ...(request.fleet ? ['--fleet', request.fleet] : []),
+      request.privacy,
     ];
+    if (request.privacy === 'local-only') args.push('--max-spend', '0');
     const result = record(
       await this.invoke(args, signal, request.prompt, true),
     );
@@ -829,7 +892,9 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       if (
         !readiness.can_reconcile ||
         !readiness.runtime_reachable ||
-        !readiness.local_only_enforced
+        !(request.privacy === 'cloud-ok'
+          ? readiness.cloud_enforced
+          : readiness.local_only_enforced)
       )
         return refused;
       const native = record(
@@ -845,7 +910,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
           canonicalJson([{ role: 'user', content: request.prompt }]) ||
         native.n !== request.n ||
         native.window !== request.window ||
-        native.privacy !== 'local-only' ||
+        native.privacy !== request.privacy ||
         native.judge_mode !== request.judge ||
         record(native.attempt_budget)?.level !== request.budget ||
         (native.fleet_id ?? null) !== (request.fleet ?? null)

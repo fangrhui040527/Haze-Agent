@@ -8,7 +8,7 @@ export const STARTUP_COMPONENTS = [
   { id: 'hazeops', label: 'HazeOps collectors' },
   { id: 'agents', label: 'Agent model routes' },
   { id: 'nightshift-runtime', label: 'Nightshift runtime' },
-  { id: 'nightshift-jobs', label: 'Nightshift local jobs' },
+  { id: 'nightshift-jobs', label: 'Nightshift candidate jobs' },
   { id: 'nightshift-inference', label: 'Nightshift inference' },
   { id: 'nightshift-automation', label: 'Nightshift automation' },
 ];
@@ -232,8 +232,10 @@ export async function checkStartupComponents({
         value.ready === true &&
         value.runtime_reachable === true &&
         value.schema_compatible === true &&
-        value.local_only_enforced === true &&
-        value.local_compute_available === true;
+        ((value.cloud_enforced === true &&
+          value.cloud_compute_available === true) ||
+          (value.local_only_enforced === true &&
+            value.local_compute_available === true));
       return [
         row(
           'nightshift-runtime',
@@ -250,8 +252,8 @@ export async function checkStartupComponents({
               ? 'UNAVAILABLE'
               : 'BLOCKED',
           ready
-            ? 'Local generation contract and local-only compute available; no job submitted'
-            : (value.reason ?? 'Local-only job requirements are not met'),
+            ? 'Candidate generation contract and eligible compute available; no job submitted'
+            : (value.reason ?? 'Candidate job requirements are not met'),
         ),
       ];
     }),

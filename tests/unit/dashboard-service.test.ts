@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import type { Source } from '../../app/contracts/dashboard.js';
 import type { EvidenceRecord } from '../../app/capabilities/evidence-collection/types.js';
 import { pinEvidence } from '../../app/capabilities/evidence-collection/evidence.js';
@@ -187,6 +187,92 @@ it('publishes stale status without changing or recollecting the retained observa
   expect(history).toHaveLength(1);
   service.close();
   expect(listeners.size).toBe(0);
+});
+
+it('omits retired observation review placeholders from new and retained evidence views', () => {
+  const { service, record } = dashboard();
+  expect(record.checks.map((check) => check.id)).not.toContain(
+    'review.independent',
+  );
+  const legacyCheck = {
+    id: 'review.independent',
+    label: 'Independent check (EvidenceCritic)',
+    result: 'pending' as const,
+    detail: 'Legacy placeholder retained in archived evidence.',
+  };
+  record.checks.push(legacyCheck);
+
+  const item = service.snapshot().items[0]!;
+  expect(item.checks.map((check) => check.id)).not.toContain(
+    'review.independent',
+  );
+  expect(item.checks).toContainEqual(
+    expect.objectContaining({ id: 'review.applicability', result: 'pending' }),
+  );
+  expect(item.agentResults.map((result) => result.agent)).toEqual([
+    'hazeops',
+    'worldmodel',
+  ]);
+  expect(item.status).toBe('partial');
+  expect(service.detail(item.id)?.item.checks).toEqual(item.checks);
+  expect(record.checks).toContain(legacyCheck);
+});
+
+it('shares repeated World Model reads within a snapshot and reads updates on the next snapshot', () => {
+  const { service, world, record, history, setTime } = dashboard();
+  const location = world.entity('location:haze:klang')!;
+  const originalFacts = world.facts.bind(world);
+  world.facts = function* () {
+    yield* originalFacts();
+    yield {
+      about: history[0]!.about,
+      predicate: 'pm25_forecast_24h',
+      history: [
+        {
+          ...history[0]!,
+          predicate: 'pm25_forecast_24h',
+          value: {
+            evidenceId: record.evidenceId,
+            maxPm25: 18,
+            meanPm25: 12,
+            pastMeanPm25: 10,
+            direction: 'worsening',
+            validFrom: observedAt,
+            validTo: '2026-10-25T12:00:00.000Z',
+          },
+        },
+      ],
+    };
+  };
+  const entityReads = vi.spyOn(world, 'entity');
+  const entityListReads = vi.spyOn(world, 'entities');
+  const evidenceReads = vi.spyOn(world, 'evidence');
+
+  const first = service.snapshot();
+  expect(first.items.map((item) => item.id)).toEqual([
+    'hz-modeled-klang',
+    'hz-forecast-klang',
+  ]);
+  expect(first.items.every((item) => item.status === 'partial')).toBe(true);
+  expect(evidenceReads).toHaveBeenCalledExactlyOnceWith(record.evidenceId);
+  expect(entityListReads).toHaveBeenCalledTimes(2);
+  expect(entityReads).not.toHaveBeenCalled();
+
+  location.name = 'Updated Klang';
+  record.title = 'Updated retained evidence';
+  setTime('2026-10-24T16:00:00.000Z');
+  const second = service.snapshot();
+  expect(second.locations[0]?.name).toBe('Updated Klang');
+  expect(second.items.every((item) => item.status === 'stale')).toBe(true);
+  expect(
+    second.items.every(
+      (item) =>
+        item.headline.includes('Updated Klang') &&
+        item.details.some((detail) => detail.includes(record.title)),
+    ),
+  ).toBe(true);
+  expect(evidenceReads).toHaveBeenCalledTimes(2);
+  expect(entityListReads).toHaveBeenCalledTimes(4);
 });
 
 it('labels fixture collection values explicitly without atmospheric model claims', () => {

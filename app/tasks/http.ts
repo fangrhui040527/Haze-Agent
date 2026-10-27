@@ -16,6 +16,7 @@ import {
   createDashboardServices,
   createExecutionRegistry,
   createModelRouteRegistry,
+  createManagerConversation,
   createNightshiftJobAdapter,
 } from '../composition.js';
 import {
@@ -124,6 +125,8 @@ export function createTaskHandler(
 ) {
   const runtime = new TaskRuntime({
     ...options,
+    conversationFactory:
+      options.conversationFactory ?? createManagerConversation,
     modelRoutes:
       options.modelRoutes ??
       createModelRouteRegistry(options.env ?? process.env),
@@ -157,6 +160,26 @@ export function createTaskHandler(
           'The application is closing.',
         );
       const { url, identity } = authorize(request);
+      if (url.pathname === '/api/manager/chat') {
+        if (request.method !== 'POST')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size)
+          throw new TaskError(
+            400,
+            'invalid_query',
+            'Chat accepts no query parameters.',
+          );
+        const key = idempotencyKey(request);
+        send(
+          200,
+          await runtime.managerChat(
+            await readBody(request, 65536),
+            key,
+            identity,
+          ),
+        );
+        return;
+      }
       if (runtime.handlesExtensionHttp(url.pathname)) {
         const mutation = request.method === 'POST';
         const handled = runtime.handleExtensionHttp({

@@ -14,7 +14,7 @@ existing file or commit credentials. Legacy `app/adapters/zetaris/.env.local`
 files supply missing settings; root `.env` values take precedence. Start with
 [the shared template](../../../../.env.example). The root Compose deployment uses
 this same file.
-See the [client setup guide](../../../../docs/Zetaris/connections/client-setup.md) for how to
+See the [client setup guide](../../../../docs/zetaris/connections/client-setup.md) for how to
 find your organisation ID and protect your credentials.
 
 The quick SQL helpers use the **UI proxy**. Set its UI origin, numeric org ID,
@@ -148,7 +148,7 @@ python3 scripts/onboard.py teardown sic_edgar_usl --drop-namespace --yes
 `--drop-namespace` removes every USL in that namespace. This runner leaves
 REST/file registrations, Lightning databases and SchemaStore containers for
 manual cleanup; its output lists them. That is a runner limitation, not proof
-that the platform has no removal command. See [tested cleanup](../../../../docs/Zetaris/guides/troubleshooting.md#cleanup).
+that the platform has no removal command. See [tested cleanup](../../../../docs/zetaris/guides/troubleshooting.md#cleanup).
 If objects remain, inspect their definitions and use `--skip-exists` on the
 next run. Check the verbose plan when adding statement types.
 
@@ -195,5 +195,5 @@ python3 scripts/fetch_openfoodfacts.py --sample-rows 5000
 
 The PUDL chart example is conditional on an already verified PUDL table.
 PUDL registration is currently known to fail; start with another source. See
-[troubleshooting](../../../../docs/Zetaris/guides/troubleshooting.md) for connection and
+[troubleshooting](../../../../docs/zetaris/guides/troubleshooting.md) for connection and
 partial-setup recovery.

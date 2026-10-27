@@ -522,4 +522,191 @@ describe('authorized World Model reuse services', () => {
       store.world.lookup({ ...other, mode: 'fixture' }, { limit: 20 }),
     ).toEqual([]);
   });
+
+  it('reads conversation evidence without admitting a task and keeps identity and mode boundaries', () => {
+    const store = createStore();
+    const record = store.world.putRecord({
+      scope: { ...identity, mode: 'fixture' },
+      operation_key: 'conversation-record',
+      kind: 'research_note',
+      external_id: 'conversation:note',
+      payload: { note: 'Stored evidence, not an accepted decision.' },
+      producer: { kind: 'service', id: 'test' },
+    }).value;
+    expect(
+      store
+        .conversationWorldLookup(identity, 'fixture', {
+          external_id: 'conversation:note',
+          limit: 10,
+        })
+        .records.map((entry) => entry.ref.id),
+    ).toEqual([record.ref.id]);
+    expect(
+      store.conversationWorldContext(identity, 'fixture', record.ref.id)
+        .acceptances,
+    ).toEqual([]);
+    expect(
+      store.conversationWorldLookup(identity, 'live', { limit: 10 }).records,
+    ).toEqual([]);
+    expect(() =>
+      store.conversationWorldContext(
+        { ...identity, principal: 'other-principal' },
+        'fixture',
+        record.ref.id,
+      ),
+    ).toThrow('World Model record not found');
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM tasks').get(),
+    ).toEqual({
+      count: 0,
+    });
+  });
+
+  it('rechecks conversation acceptance against current policy and expiry', () => {
+    const store = createStore('research-v1');
+    const scope = { ...identity, mode: 'fixture' as const };
+    const record = store.world.putRecord({
+      scope,
+      operation_key: 'conversation-acceptance',
+      kind: 'research_note',
+      external_id: 'conversation:acceptance',
+      payload: { note: 'Needs current acceptance checks.' },
+      producer: { kind: 'service', id: 'test' },
+    }).value;
+    store.world.evaluateAcceptance({
+      scope,
+      subject: record.ref,
+      stated_use: 'Earlier policy use',
+      status: 'accepted',
+      policy: {
+        id: store.worldAcceptancePolicy.id,
+        version: store.worldAcceptancePolicy.version,
+        sha256: 'a'.repeat(64),
+      },
+      support_revisions: [],
+      actor: { kind: 'service', id: 'test-policy' },
+    });
+    store.world.evaluateAcceptance({
+      scope,
+      subject: record.ref,
+      stated_use: 'Expired use',
+      status: 'accepted',
+      policy: {
+        id: store.worldAcceptancePolicy.id,
+        version: store.worldAcceptancePolicy.version,
+        sha256: store.worldAcceptancePolicy.sha256,
+      },
+      support_revisions: [],
+      evaluated_at: '2025-01-01T00:00:00Z',
+      expires_at: '2025-01-02T00:00:00Z',
+      actor: { kind: 'service', id: 'test-policy' },
+    });
+    const context = store.conversationWorldContext(
+      identity,
+      'fixture',
+      record.ref.id,
+    );
+    expect(context.acceptances).toHaveLength(2);
+    expect(
+      context.acceptances.every((entry) => entry.status === 'not_eligible'),
+    ).toBe(true);
+    expect(
+      store
+        .conversationWorldLookup(identity, 'fixture', {
+          kind: 'research_note',
+          limit: 10,
+        })
+        .current_acceptances.every(
+          ({ acceptance }) => acceptance.status === 'not_eligible',
+        ),
+    ).toBe(true);
+  });
+
+  it('hides conversation records supported by revoked grants, stale artifacts, or another mode', () => {
+    const store = createStore();
+    const owner = store.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Produce reusable evidence.',
+        context_refs: [],
+        constraints: [],
+        desired_deliverables: [],
+      },
+      identity,
+      'conversation-source-owner',
+      { mode: 'fixture', tools: ['world.context'] },
+    ).task;
+    const assignment = store.createAssignments(
+      owner.id,
+      owner.current_run_id,
+      owner.objective_revision,
+      [
+        {
+          role: 'HazeOps',
+          definition_id: 'conversation.producer',
+          capability: 'evidence-synthesis',
+          definition_version: '1',
+          brief: 'Produce evidence.',
+          tools: ['world.context'],
+        },
+      ],
+    )[0]!;
+    store.acquireAssignment(owner.id, assignment.id);
+    const artifact = store.saveArtifact(owner.id, identity, {
+      kind: 'conversation.source',
+      content: { note: 'Restricted evidence.' },
+      producer: { kind: 'assignment', id: assignment.id },
+      generation: 1,
+    });
+    const record = store.world.projectArtifact(artifact, 'fixture').value;
+    expect(
+      store.conversationWorldContext(identity, 'fixture', record.ref.id).record
+        .ref,
+    ).toEqual(record.ref);
+    const crossover = store.world.projectArtifact(artifact, 'live').value;
+    expect(() =>
+      store.conversationWorldContext(identity, 'live', crossover.ref.id),
+    ).toThrow('Current source access');
+    store.recordApplicability(
+      owner.id,
+      identity,
+      artifact,
+      false,
+      'Withdrawn evidence.',
+      'Runtime',
+    );
+    expect(() =>
+      store.conversationWorldContext(identity, 'fixture', record.ref.id),
+    ).toThrow('Current source access');
+    store.recordApplicability(
+      owner.id,
+      identity,
+      artifact,
+      true,
+      'Restored before revocation.',
+      'Runtime',
+    );
+    const current = store.read(owner.id, identity);
+    store.control(owner.id, identity, 'conversation-revoke', {
+      schema_version: 'haze.task.control.v3',
+      action: 'revoke',
+      revoked_tools: ['world.context'],
+      expected_objective_revision: current.objective_revision,
+      expected_run_id: current.current_run_id,
+      expected_generation: current.generation,
+      expected_state_revision: current.state_revision,
+    });
+    expect(() =>
+      store.conversationWorldContext(identity, 'fixture', record.ref.id),
+    ).toThrow('Current source access');
+    expect(
+      store.conversationWorldLookup(identity, 'fixture', {
+        kind: 'artifact_reference',
+        limit: 50,
+      }).records,
+    ).toEqual([]);
+    expect(
+      store.db.prepare('SELECT COUNT(*) AS count FROM tasks').get(),
+    ).toEqual({ count: 1 });
+  });
 });

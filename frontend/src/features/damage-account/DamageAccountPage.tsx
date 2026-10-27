@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
-import { TaskControls } from '../chat/TaskControls.tsx';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { DamageWorkProducts } from './DamageWorkProducts.tsx';
@@ -194,7 +193,6 @@ export function DamageAccountView({
           )}
           {record && (
             <>
-              <TaskControls run={run} />
               <TaskQuestions run={run} />
               <div className={styles.actions}>
                 <Link

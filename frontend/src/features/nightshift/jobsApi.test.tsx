@@ -151,6 +151,45 @@ it('requires new explicit intent before changed work can get a new key', async (
   expect(one.key).toBe('one');
   expect(two.key).toBe('two');
 });
+it('preserves an uncapped cloud policy when submitting and displaying a candidate job', async () => {
+  const cloudJob = nightshiftJobSchema.parse({
+    ...job(),
+    options: { ...job().options, privacy: 'cloud-ok', max_spend_usd: null },
+  });
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(Response.json(cloudJob));
+  const client = new NightshiftClient(fetcher);
+  const result = await client.submitJob(
+    { ...submission, privacy: 'cloud-ok', max_spend_usd: null },
+    'cloud-key',
+    new AbortController().signal,
+  );
+  const request = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body)) as {
+    privacy: string;
+    max_spend_usd: number | null;
+  };
+  expect(request.privacy).toBe('cloud-ok');
+  expect(request.max_spend_usd).toBeNull();
+  expect(result.options.privacy).toBe('cloud-ok');
+  const markup = renderToStaticMarkup(
+    createElement(
+      MemoryRouter,
+      {},
+      createElement(JobDetails, {
+        job: cloudJob,
+        events: [],
+        busy: false,
+        canReconcile: false,
+        onCancel: () => undefined,
+        onReconcile: () => undefined,
+        onSelect: () => undefined,
+      }),
+    ),
+  );
+  expect(markup).toContain('No cloud spend cap');
+  expect(markup).not.toContain('$0 cloud spend');
+});
 it('reads deep-linked jobs and reconnect cursors without submission', async () => {
   const fetcher = vi
     .fn<typeof fetch>()

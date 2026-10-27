@@ -77,7 +77,7 @@ export function PilotTaskResults({
         <h3 id={`${idPrefix}-feasibility-heading`}>Pilot feasibility</h3>
         {feasibility ? (
           <>
-            <p>
+            <p className={styles.resultLabel}>
               <Badge tone={current ? 'info' : 'warn'}>
                 {current ? 'Current classification' : 'Retained classification'}
                 : {label(feasibility.classification)}

@@ -974,6 +974,27 @@ export class ReductionProgrammeService {
           'Assessment phases cannot depend on an assessment attempt.',
           400,
         );
+      let phaseScope: unknown = pilotScope;
+      if (request.phase === 'assessment' || request.phase === 'planning') {
+        const selectionRef = this.host.retainSelection(
+          previous.preview.selection,
+          identity,
+          `programme-selection:${contractHash({ id, selection: previous.preview.selection })}`,
+        );
+        refs.push(selectionRef);
+        taskRefs.push(selectionRef);
+        phaseScope =
+          request.phase === 'assessment'
+            ? {
+                schema_version: 'haze.reduction.selection-request.v1',
+                selection_ref: selectionRef,
+              }
+            : {
+                schema_version: 'haze.reduction.preview-selection-request.v1',
+                selection_ref: selectionRef,
+                candidate: previous.preview.candidate,
+              };
+      }
       refs = [
         ...new Map(refs.map((item) => [refKey(item), exact(item)])).values(),
       ];
@@ -988,21 +1009,19 @@ export class ReductionProgrammeService {
         schema_version: 'haze.task.request.v3',
         objective:
           request.phase === 'assessment'
-            ? 'Assess the supplied residual damage scenario against ordinary management with exact quantities and independent review.'
+            ? 'Execute the registered damage-reduction assessment workflow on exact selected originals: persist the numerical comparison against ordinary management and independent review; report input gaps.'
             : request.phase === 'planning'
-              ? 'Prepare a conditional damage reduction planning preview from the exact selected scenario and supplied digital intervention.'
+              ? 'Execute the registered damage-reduction planning workflow on the exact selected scenario and supplied digital intervention: persist a conditional plan and independent review; report input gaps.'
               : request.phase === 'evaluation'
-                ? 'Review the supplied external programme evaluation, reproduce exact residual point comparisons, retain scientific dossier and learning without granting scientific authority.'
-                : 'Draft design-specific damage reduction pilot feasibility and a protocol for the exact reviewed scenario and digital rules.',
-        scope:
-          request.phase === 'assessment'
-            ? previous.preview.selection
-            : request.phase === 'planning'
-              ? previous.preview
-              : pilotScope,
+                ? 'Execute the registered external damage-reduction evaluation workflow: persist exact residual comparisons, dossier completeness, learning and independent technical review; report input gaps.'
+                : 'Execute the registered damage-reduction pilot workflow on pinned design inputs and reviewed lineage: persist feasibility, protocol drafts and independent review; report input gaps.',
+        scope: phaseScope,
         context_refs: taskRefs,
         constraints: [
           'No live digital delivery or achieved-reduction claim. Scientific applicability remains unqualified.',
+          request.phase === 'assessment' || request.phase === 'planning'
+            ? 'Selected originals and declaration are pinned in scope/context_refs. Registered reduction.select resolves scope.selection_ref. Inspect exact originals and retain input gaps; a source-only answer does not fulfill this phase.'
+            : 'Inputs and reviewed lineage are pinned in scope/context_refs. Inspect exact originals and retain input gaps; a source-only answer does not fulfill this phase.',
         ],
         desired_deliverables:
           request.phase === 'assessment'
@@ -1205,13 +1224,7 @@ export class ReductionProgrammeService {
         context.identity,
         reservation,
       );
-      this.host.pinTaskInputs(
-        task.id,
-        ['pilot', 'evaluation'].includes(bound.phase)
-          ? bound.selected_refs
-          : this.selectedRefs(snapshot, bound.phase, context.identity),
-        context.identity,
-      );
+      this.host.pinTaskInputs(task.id, bound.selected_refs, context.identity);
       const next = {
         ...snapshot,
         revision: snapshot.revision + 1,

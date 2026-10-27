@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { TaskControls } from '../chat/TaskControls.tsx';
+import { TaskControls } from './TaskControls.tsx';
+import { NextTaskPermissions } from './NextTaskPermissions.tsx';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
 import { ManagerWorkspace } from '../task-report/ManagerWorkspace.tsx';
@@ -31,6 +32,7 @@ export function ManagerPage() {
   ) : (
     <article className={styles.page}>
       <PageHeader />
+      <NextTaskPermissions />
       <section className={styles.empty}>
         <h2>No task selected</h2>
         <p>
@@ -93,6 +95,7 @@ export function ManagerTaskView({
   return (
     <article className={styles.page} aria-busy={loading}>
       <PageHeader taskId={record ? taskId : undefined} />
+      <NextTaskPermissions />
       <TaskPicker taskId={taskId} />
       <div className={styles.status}>
         {record && (

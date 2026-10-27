@@ -8,7 +8,6 @@ import {
 import {
   conditionalPlanReviewSchema,
   conditionalReductionPlanSchema,
-  reductionPreviewRequestSchema,
 } from '../../contracts/damage-reduction-plan.js';
 import {
   reductionPreviewViewSchema,
@@ -23,6 +22,7 @@ import type {
 import { exactReductionRef } from './inputs.js';
 import { readDamageReductionClaim } from './claims.js';
 import { independentlyCheckConditionalPlan } from './planning-checker.js';
+import { resolveReductionPreviewRequest } from './request.js';
 
 const key = (ref: ArtifactRef) => `${ref.id}:${ref.version}:${ref.sha256}`;
 
@@ -238,7 +238,9 @@ export function readDamageReductionPreview(
         task.corrections.findLast(
           (correction) => correction.scope !== undefined,
         )?.scope ?? task.original_request.scope;
-      const request = reductionPreviewRequestSchema.parse(scope);
+      const request = resolveReductionPreviewRequest(scope, [
+        ...loaded.values(),
+      ]);
       const planArtifact = loaded.get(key(result.plan.artifact))!;
       const reviewArtifact = loaded.get(key(result.plan_review.artifact))!;
       if (
@@ -286,7 +288,9 @@ export function readDamageReductionPreview(
     !!declaredScope &&
     typeof declaredScope === 'object' &&
     !Array.isArray(declaredScope) &&
-    declaredScope.schema_version === 'haze.reduction.preview-request.v1';
+    (declaredScope.schema_version === 'haze.reduction.preview-request.v1' ||
+      declaredScope.schema_version ===
+        'haze.reduction.preview-selection-request.v1');
   if (
     !planningRequested &&
     task.status === 'completed' &&

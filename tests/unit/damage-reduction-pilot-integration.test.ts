@@ -1124,7 +1124,7 @@ describe('pilot and digital-action recordkeeping integration', () => {
     expect((await programme(api, scene.id)).records).toHaveLength(1);
   }, 40_000);
 
-  it('fails closed for synthetic proof wrappers and commits no partial verification state after invalid timing or a later missing proof', async () => {
+  it('fails closed for synthetic receipt and registration or rule proof wrappers', async () => {
     const api = await setup();
     const scene = await draftPilot(
       api,
@@ -1154,6 +1154,112 @@ describe('pilot and digital-action recordkeeping integration', () => {
     )!;
     expect(wrapperView.origin).toBe('simulated');
     expect(wrapperView.recorded_delivery).toBe(false);
+    const pairs = [];
+    for (const id of ['rule-proof-action']) {
+      const body = await withReceipt(
+        api,
+        {
+          ...action(scene, registered.saved.id, id),
+          mode: 'imported_live',
+          status: 'confirmed',
+        },
+        'imported_service',
+      );
+      const saved = await append(api, scene.id, body);
+      expect(
+        saved.view.pilot!.actions.find(
+          ({ record_id }) => record_id === saved.saved.id,
+        )?.recorded_delivery,
+      ).toBe(true);
+      pairs.push({ body, saved: saved.saved });
+    }
+    const external = await importJson(
+      api,
+      {
+        schema_version: 'haze.reduction.external-registration.v1',
+        origin: 'supplied',
+        registry: 'Example supplied registry',
+        registered_at: '2020-01-01T00:00:00Z',
+        protocol_sha256: scene.draft.protocol.artifact.sha256,
+        evidence: [],
+      },
+      'external-wrapper',
+    );
+    const externalBody = registration(scene);
+    externalBody.external_registration = {
+      registry: 'Example supplied registry',
+      registered_at: '2020-01-01T00:00:00Z',
+      evidence: external,
+    };
+    const externalSaved = await append(api, scene.id, externalBody);
+    expect(
+      externalSaved.view.pilot!.registrations.find(
+        ({ record_id }) => record_id === externalSaved.saved.id,
+      )?.timing,
+    ).toBe('external_prior_registration_attested');
+    const syntheticMetadata = projectPilotRecords(
+      externalSaved.view.programme,
+      externalSaved.view.records,
+      {
+        identity: localTaskIdentity,
+        now: new Date().toISOString(),
+        current_draft: scene.draft,
+        readArtifact(ref) {
+          const artifact = api.runtime.store.artifact(
+            ref.id,
+            localTaskIdentity,
+          );
+          return ref.id === external.id
+            ? { ...artifact, evidence_origin: 'synthetic_fixture' }
+            : artifact;
+        },
+        assertEvidenceCurrent() {},
+      },
+    );
+    expect(
+      syntheticMetadata.registrations.find(
+        ({ record_id }) => record_id === externalSaved.saved.id,
+      )?.timing,
+    ).not.toBe('external_prior_registration_attested');
+    const ruleRef =
+      scene.input.protocol_spec.digital_rule!.approval.evidence[0]!;
+    const syntheticRule = projectPilotRecords(
+      externalSaved.view.programme,
+      externalSaved.view.records,
+      {
+        identity: localTaskIdentity,
+        now: new Date().toISOString(),
+        current_draft: scene.draft,
+        readArtifact(ref) {
+          const artifact = api.runtime.store.artifact(
+            ref.id,
+            localTaskIdentity,
+          );
+          return ref.id === ruleRef.id
+            ? { ...artifact, evidence_origin: 'synthetic_fixture' }
+            : artifact;
+        },
+        assertEvidenceCurrent() {},
+      },
+    );
+    for (const pair of pairs) {
+      const projected = syntheticRule.actions.find(
+        ({ record_id }) => record_id === pair.saved.id,
+      )!;
+      expect(projected.origin).toBe('simulated');
+      expect(projected.recorded_delivery).toBe(false);
+      expect(projected.independent_verification).toBe('none');
+    }
+  }, 40_000);
+
+  it('commits no partial delivery verification after invalid timing or a later missing proof', async () => {
+    const api = await setup();
+    const scene = await draftPilot(
+      api,
+      await plannedProgramme(api),
+      await completeEngineeringInput(api),
+    );
+    const registered = await append(api, scene.id, registration(scene));
     const pairs = [];
     for (const id of [
       'first-verification-action',
@@ -1232,83 +1338,6 @@ describe('pilot and digital-action recordkeeping integration', () => {
             ({ record_id }) => record_id === pair.saved.id,
           )?.independent_verification,
         ).toBe('none');
-    }
-    const external = await importJson(
-      api,
-      {
-        schema_version: 'haze.reduction.external-registration.v1',
-        origin: 'supplied',
-        registry: 'Example supplied registry',
-        registered_at: '2020-01-01T00:00:00Z',
-        protocol_sha256: scene.draft.protocol.artifact.sha256,
-        evidence: [],
-      },
-      'external-wrapper',
-    );
-    const externalBody = registration(scene);
-    externalBody.external_registration = {
-      registry: 'Example supplied registry',
-      registered_at: '2020-01-01T00:00:00Z',
-      evidence: external,
-    };
-    const externalSaved = await append(api, scene.id, externalBody);
-    expect(
-      externalSaved.view.pilot!.registrations.find(
-        ({ record_id }) => record_id === externalSaved.saved.id,
-      )?.timing,
-    ).toBe('external_prior_registration_attested');
-    const syntheticMetadata = projectPilotRecords(
-      externalSaved.view.programme,
-      externalSaved.view.records,
-      {
-        identity: localTaskIdentity,
-        now: new Date().toISOString(),
-        current_draft: scene.draft,
-        readArtifact(ref) {
-          const artifact = api.runtime.store.artifact(
-            ref.id,
-            localTaskIdentity,
-          );
-          return ref.id === external.id
-            ? { ...artifact, evidence_origin: 'synthetic_fixture' }
-            : artifact;
-        },
-        assertEvidenceCurrent() {},
-      },
-    );
-    expect(
-      syntheticMetadata.registrations.find(
-        ({ record_id }) => record_id === externalSaved.saved.id,
-      )?.timing,
-    ).not.toBe('external_prior_registration_attested');
-    const ruleRef =
-      scene.input.protocol_spec.digital_rule!.approval.evidence[0]!;
-    const syntheticRule = projectPilotRecords(
-      externalSaved.view.programme,
-      externalSaved.view.records,
-      {
-        identity: localTaskIdentity,
-        now: new Date().toISOString(),
-        current_draft: scene.draft,
-        readArtifact(ref) {
-          const artifact = api.runtime.store.artifact(
-            ref.id,
-            localTaskIdentity,
-          );
-          return ref.id === ruleRef.id
-            ? { ...artifact, evidence_origin: 'synthetic_fixture' }
-            : artifact;
-        },
-        assertEvidenceCurrent() {},
-      },
-    );
-    for (const pair of pairs) {
-      const projected = syntheticRule.actions.find(
-        ({ record_id }) => record_id === pair.saved.id,
-      )!;
-      expect(projected.origin).toBe('simulated');
-      expect(projected.recorded_delivery).toBe(false);
-      expect(projected.independent_verification).toBe('none');
     }
   }, 40_000);
 
@@ -1433,8 +1462,8 @@ describe('pilot and digital-action recordkeeping integration', () => {
     });
     expect([403, 409]).toContain(update.status);
     for (let index = 0; index < 2; index++) {
-      const current = api.runtime.store.read(original.id, localTaskIdentity);
       const before = await programme(api, scene.id);
+      const current = api.runtime.store.read(original.id, localTaskIdentity);
       const response = await api.call(`/api/tasks/${original.id}/control`, {
         schema_version: 'haze.task.control.v3',
         ...fence(current),
@@ -1445,13 +1474,42 @@ describe('pilot and digital-action recordkeeping integration', () => {
         },
       });
       expect(response.status, JSON.stringify(response.body)).toBe(200);
-      await settle(api, original.id);
+      const successor = api.runtime.store.read(original.id, localTaskIdentity);
+      expect(successor.current_run_id).not.toBe(current.current_run_id);
+      // Admission consumes the phase allowance even if the operator cancels
+      // before another draft finishes; cancellation must not replenish it.
+      // Use the same validated public runtime operation synchronously so a
+      // worker event cannot invalidate the fresh fence during an HTTP hop.
+      const cancelled = api.runtime.control(
+        original.id,
+        {
+          schema_version: 'haze.task.control.v3',
+          ...fence(successor),
+          action: 'cancel',
+          reason: 'Retain the admitted successor without another pilot draft.',
+        },
+        randomUUID(),
+        localTaskIdentity,
+      );
+      expect(cancelled.run_id).toBe(successor.current_run_id);
+      expect(
+        api.runtime.store.read(original.id, localTaskIdentity).status,
+      ).toBe('cancelled');
     }
     const exhausted = await programme(api, scene.id);
-    expect(exhausted.capacity.remaining_attempts.pilot).toBe(0);
+    expect(exhausted.capacity).toMatchObject({
+      remaining_attempts: { pilot: 0 },
+      reserved_model_calls: 0,
+      reserved_tool_calls: 0,
+    });
     expect(
       exhausted.attempts.filter(({ attempt }) => attempt.phase === 'pilot'),
     ).toHaveLength(3);
+    expect(
+      exhausted.attempts
+        .filter(({ attempt }) => attempt.phase === 'pilot')
+        .map(({ execution_status }) => execution_status),
+    ).toEqual(['completed', 'cancelled', 'cancelled']);
     const task = api.runtime.store.read(original.id, localTaskIdentity);
     const denied = await api.call(`/api/tasks/${original.id}/control`, {
       schema_version: 'haze.task.control.v3',

@@ -56,7 +56,7 @@ const help = {
   tasks:
     'tasks run "<objective>"\ntasks list [--active|--failed]\ntasks show <id>\ntasks watch <id>\ntasks pause|resume|cancel|continue <id>\ntasks reply <id> "<answer>" [--question <id>]\n  Resume retains the deadline and remaining budget. Continue creates a linked run.\n  Local cancellation does not confirm remote provider termination.',
   nightshift:
-    'nightshift status\nnightshift jobs\nnightshift show <id>\n  Inspect separate local-job, direct-inference, and automation readiness.\n  Configure models and fleets in the Nightshift cockpit.',
+    'nightshift status\nnightshift jobs\nnightshift show <id>\n  Inspect separate candidate-job, direct-inference, and automation readiness.\n  Configure models and fleets in the Nightshift cockpit.',
   config:
     'config\nconfig show\nconfig get <KEY>\nconfig set <KEY> "<value>"\nconfig validate\n  Validate and save supported settings to root .env. Restart to apply.\n  Secrets are redacted and config set commands are excluded from history.',
   logs: "logs [app|zetaris] [--follow]\n  Show recent app output or this project's Compose logs. Ctrl+C ends follow.\n  For durable work history use tasks watch <id> or nightshift show <id>.",

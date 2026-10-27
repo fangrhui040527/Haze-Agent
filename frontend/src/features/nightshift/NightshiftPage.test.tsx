@@ -55,7 +55,10 @@ it('offers manual-only jobs and separate browser observation while loading', () 
   expect(markup).toContain('Submit job');
   expect(markup).toContain('Stop browser observation');
   expect(markup).toContain('zero automatic follow-ups');
-  expect(markup).toContain('Local-only');
+  expect(markup).toContain('Cloud allowed');
+  expect(markup).toContain('no cloud spend cap');
+  expect(markup).toContain('Local only');
+  expect(markup).not.toContain('Cloud generation is disabled');
 });
 
 it('reads validated readiness without submitting inference or exposing credentials', async () => {

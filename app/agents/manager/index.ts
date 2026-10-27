@@ -16,7 +16,7 @@ const synthesisSchema = z.strictObject({
 });
 export const managerAgent: AgentDefinition = {
   id: 'Manager',
-  version: 'manager.v5',
+  version: 'manager.v15',
   schemas: {
     plan: managerPlanSchema,
     synthesis: synthesisSchema,

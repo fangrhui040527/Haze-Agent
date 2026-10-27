@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1940" viewBox="0 0 2400 1940">
+<title>Haze sponsor technology relationship graph</title><desc>Current Haze architecture connecting LangGraph workflows, NVIDIA Nemotron model routes, optional Meterless Nightshift inference and background jobs, Zetaris evidence retrieval, Haze authoritative SQLite state, and separately packaged Meterless reference engines with H-MEM disabled.</desc>
+<defs><filter id="shadow" x="-15%" y="-15%" width="130%" height="145%"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#16304e" flood-opacity=".055"/></filter>
+<marker id="arrow-7590ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7590ae"/></marker>
+<marker id="start-7590ae" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#7590ae"/></marker>
+<marker id="arrow-3d70c9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3d70c9"/></marker>
+<marker id="start-3d70c9" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#3d70c9"/></marker>
+<marker id="arrow-237659" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#237659"/></marker>
+<marker id="start-237659" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#237659"/></marker>
+<marker id="arrow-5f8d19" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5f8d19"/></marker>
+<marker id="start-5f8d19" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#5f8d19"/></marker>
+<marker id="arrow-b6731a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#b6731a"/></marker>
+<marker id="start-b6731a" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#b6731a"/></marker>
+<marker id="arrow-7950b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7950b1"/></marker>
+<marker id="start-7950b1" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#7950b1"/></marker>
+<marker id="arrow-167d86" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#167d86"/></marker>
+<marker id="start-167d86" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#167d86"/></marker>
+<marker id="arrow-78818e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#78818e"/></marker>
+<marker id="start-78818e" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#78818e"/></marker>
+</defs><g font-family="Segoe UI, Arial, sans-serif">
+<rect x="0" y="0" width="2400" height="1940" rx="0" fill="#f4f7fc" stroke="none" stroke-width="1.5"/>
+<rect x="70" y="46" width="128" height="31" rx="15" fill="#e5edfb" stroke="none" stroke-width="1.5"/>
+<text x="134" y="68" font-size="21" font-weight="700" fill="#3d70c9" text-anchor="middle" letter-spacing="0.6">HAZE</text>
+<text x="70" y="151" font-size="61" font-weight="750" fill="#14273e" text-anchor="start" letter-spacing="0">How sponsor technology fits into Haze</text>
+<text x="72" y="199" font-size="28" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Current code connections, service boundaries, and reference-only integrations</text>
+<text x="2330" y="69" font-size="20" font-weight="650" fill="#60738a" text-anchor="end" letter-spacing="1">27 OCT 2026</text>
+<path d="M 76 247 L 129 247" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
+<text x="144" y="254" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Implemented core connection</text>
+<path d="M 592 247 L 645 247" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)"/>
+<text x="660" y="254" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Optional route / explicit job grant</text>
+<rect x="1195" y="233" width="32" height="25" rx="6" fill="#f1f3f6" stroke="#78818e" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="1243" y="254" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Reference / inactive</text>
+<text x="2330" y="254" font-size="20" font-weight="400" fill="#60738a" text-anchor="end" letter-spacing="0">Connections show implementation; live readiness is separate.</text>
+<rect x="690" y="353" width="1000" height="1048" rx="29" fill="#ffffff" stroke="#cad7ea" stroke-width="2"/>
+<text x="721" y="389" font-size="19" font-weight="750" fill="#3d70c9" text-anchor="start" letter-spacing="1.6">HAZE APPLICATION</text>
+<text x="1658" y="389" font-size="18" font-weight="400" fill="#60738a" text-anchor="end" letter-spacing="0">One local backend + one SQLite owner</text>
+<path d="M 1190 333 L 1190 420" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
+<path d="M 1190 544 L 1190 600" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
+<path d="M 1190 766 L 1190 820" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
+<path d="M 1190 968 L 1190 1027" fill="none" stroke="#167d86" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-167d86)"/>
+<path d="M 1190 1180 L 1190 1230" fill="none" stroke="#167d86" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-167d86)"/>
+<text x="1222" y="570" text-anchor="start" font-size="20" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">dispatch</text>
+<text x="1222" y="800" text-anchor="start" font-size="20" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">controlled tools</text>
+<text x="1222" y="1003" text-anchor="start" font-size="19" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">retain exact evidence + results</text>
+<text x="1222" y="1212" text-anchor="start" font-size="19" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">current support + review state</text>
+<path d="M 1640 668 L 1734 668 L 1734 454 L 1830 454" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
+<text x="1740" y="610" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">bounded</text>
+<text x="1740" y="635" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">model turns</text>
+<path d="M 2080 530 L 2080 595" fill="none" stroke="#5f8d19" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-5f8d19)"/>
+<text x="2104" y="568" text-anchor="start" font-size="19" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">direct adapter</text>
+<path d="M 1840 507 L 1787 507 L 1787 917 L 1830 917" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)"/>
+<text x="1791" y="785" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">configured</text>
+<text x="1791" y="810" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">strict route</text>
+<path d="M 2092 841 L 2092 758" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)"/>
+<text x="2117" y="794" text-anchor="start" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">hosted inference</text>
+<text x="2117" y="819" text-anchor="start" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">when NVIDIA-routed</text>
+<path d="M 560 590 L 617 590 L 617 801 L 703 801 L 703 843 L 740 843" fill="none" stroke="#78818e" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-78818e)" marker-start="url(#start-78818e)"/>
+<text x="640" y="713" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">HazeOps direct</text>
+<text x="640" y="738" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">collection</text>
+<path d="M 315 665 L 315 785" fill="none" stroke="#7950b1" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-7950b1)"/>
+<text x="337" y="719" text-anchor="start" font-size="21" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">publish /</text>
+<text x="337" y="744" text-anchor="start" font-size="21" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">register snapshots</text>
+<path d="M 560 885 L 740 885" fill="none" stroke="#7950b1" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-7950b1)" marker-start="url(#start-7950b1)"/>
+<text x="650" y="848" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">bounded SQL</text>
+<text x="650" y="873" text-anchor="middle" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">rows + receipts</text>
+<path d="M 1640 918 L 1725 918 L 1725 1220 L 1830 1220" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)" marker-start="url(#start-b6731a)"/>
+<text x="1731" y="1094" text-anchor="middle" font-size="17" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">granted jobs /</text>
+<text x="1731" y="1119" text-anchor="middle" font-size="17" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">candidate context</text>
+<path d="M 2092 1117 L 2092 1051" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)" marker-start="url(#start-b6731a)"/>
+<text x="2115" y="1085" text-anchor="start" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">local job control</text>
+<rect x="835" y="281" width="710" height="52" rx="18" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.6"/>
+<text x="1190" y="315" font-size="26" font-weight="650" fill="#14273e" text-anchor="middle" letter-spacing="0">Chat · Dashboard · World Model explorer</text>
+<rect x="740" y="420" width="900" height="124" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="740" y="439" width="5" height="86" rx="2.5" fill="#3d70c9"/>
+<text x="765" y="451" font-size="18" font-weight="700" fill="#3d70c9" text-anchor="start" letter-spacing="1.3">ADMISSION &amp; CONTROL</text>
+<text x="765" y="490" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Task API + durable runtime</text>
+<text x="765" y="527" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">v3 objectives · permissions · budgets · leases · operation receipts</text>
+<rect x="740" y="600" width="900" height="166" rx="20" fill="#e9f6ef" stroke="#237659" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="740" y="619" width="5" height="128" rx="2.5" fill="#237659"/>
+<text x="765" y="631" font-size="18" font-weight="700" fill="#237659" text-anchor="start" letter-spacing="1.3">LANGCHAIN / LANGGRAPH</text>
+<text x="765" y="670" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Manager + independent specialist workflows</text>
+<text x="765" y="707" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Embedded StateGraph execution · SQLite checkpoints · wait / resume</text>
+<text x="765" y="739" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">HazeOps · WorkerShield · DamageAccountant · EvidenceCritic</text>
+<rect x="740" y="820" width="900" height="148" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="740" y="839" width="5" height="110" rx="2.5" fill="#3d70c9"/>
+<text x="765" y="851" font-size="18" font-weight="700" fill="#3d70c9" text-anchor="start" letter-spacing="1.3">DOMAIN EXECUTION</text>
+<text x="765" y="890" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Registered capabilities + controlled adapters</text>
+<text x="765" y="927" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Evidence collection · PM2.5 analysis · damage appraisal</text>
+<text x="765" y="959" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Reduction planning / programmes · independent numerical checks</text>
+<rect x="740" y="1027" width="900" height="153" rx="20" fill="#e6f6f6" stroke="#167d86" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="740" y="1046" width="5" height="115" rx="2.5" fill="#167d86"/>
+<text x="765" y="1058" font-size="18" font-weight="700" fill="#167d86" text-anchor="start" letter-spacing="1.3">AUTHORITATIVE APPLICATION STATE</text>
+<text x="765" y="1097" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Haze World Model + task store</text>
+<text x="765" y="1134" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">SQLite records · immutable artifacts · source provenance</text>
+<text x="765" y="1166" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Relationships · review outcomes · holds · cross-task lineage</text>
+<rect x="740" y="1230" width="900" height="127" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="740" y="1249" width="5" height="89" rx="2.5" fill="#3d70c9"/>
+<text x="765" y="1261" font-size="18" font-weight="700" fill="#3d70c9" text-anchor="start" letter-spacing="1.3">OUTPUT &amp; ACCEPTANCE GATES</text>
+<text x="765" y="1300" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Manager finalization</text>
+<text x="765" y="1337" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Source-linked answers · reviewed work products · explicit evidence gaps</text>
+<rect x="70" y="518" width="490" height="147" rx="20" fill="#ffffff" stroke="#78818e" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="70" y="537" width="5" height="109" rx="2.5" fill="#78818e"/>
+<text x="95" y="549" font-size="18" font-weight="700" fill="#78818e" text-anchor="start" letter-spacing="1.3">SOURCE DATA + INGESTION</text>
+<text x="95" y="588" font-size="27" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Environmental data</text>
+<text x="95" y="625" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">PM2.5 · wind · fire</text>
+<text x="95" y="657" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Open-Meteo · NASA FIRMS · other feeds</text>
+<rect x="70" y="785" width="490" height="207" rx="20" fill="#f4edfc" stroke="#7950b1" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="70" y="804" width="5" height="169" rx="2.5" fill="#7950b1"/>
+<text x="95" y="816" font-size="18" font-weight="700" fill="#7950b1" text-anchor="start" letter-spacing="1.3">ZETARIS</text>
+<text x="95" y="855" font-size="28" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Governed evidence layer</text>
+<text x="95" y="892" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">SQL · FileStore · USL views</text>
+<text x="95" y="924" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Bounded REST queries + exact source rows</text>
+<text x="95" y="972" font-size="18" font-weight="400" fill="#7950b1" text-anchor="start" letter-spacing="0">app/adapters/zetaris.ts</text>
+<rect x="1830" y="395" width="500" height="135" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="1830" y="414" width="5" height="97" rx="2.5" fill="#3d70c9"/>
+<text x="1855" y="426" font-size="18" font-weight="700" fill="#3d70c9" text-anchor="start" letter-spacing="1.3">HAZE MODEL ROUTE REGISTRY</text>
+<text x="1855" y="465" font-size="26" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Role-specific model routes</text>
+<text x="1855" y="502" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Pinned at task admission; exact model + cap</text>
+<rect x="1830" y="595" width="500" height="163" rx="20" fill="#f1f8e4" stroke="#5f8d19" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="1830" y="614" width="5" height="125" rx="2.5" fill="#5f8d19"/>
+<text x="1855" y="626" font-size="18" font-weight="700" fill="#5f8d19" text-anchor="start" letter-spacing="1.3">NVIDIA</text>
+<text x="1855" y="665" font-size="27" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Nemotron hosted inference</text>
+<text x="1855" y="702" font-size="20" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Role reasoning via NVIDIA HTTPS API</text>
+<text x="1855" y="734" font-size="20" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Default NVIDIA model: Nemotron 3.5 Lightning</text>
+<rect x="1830" y="841" width="500" height="210" rx="20" fill="#fff2df" stroke="#b6731a" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="1830" y="860" width="5" height="172" rx="2.5" fill="#b6731a"/>
+<text x="1855" y="872" font-size="18" font-weight="700" fill="#b6731a" text-anchor="start" letter-spacing="1.3">METERLESS NIGHTSHIFT</text>
+<text x="1855" y="911" font-size="25" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Inference + external compute</text>
+<text x="1855" y="948" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Strict inference → configured model</text>
+<text x="1855" y="980" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Background jobs → verified local lane</text>
+<text x="1855" y="1012" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Readiness checks and explicit grants apply</text>
+<rect x="1830" y="1117" width="500" height="211" rx="20" fill="#fff2df" stroke="#b6731a" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="1830" y="1136" width="5" height="173" rx="2.5" fill="#b6731a"/>
+<text x="1855" y="1148" font-size="18" font-weight="700" fill="#b6731a" text-anchor="start" letter-spacing="1.3">HAZE NIGHTSHIFT JOB SERVICE</text>
+<text x="1855" y="1187" font-size="28" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Submit → wait → deliver</text>
+<text x="1855" y="1224" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Durable job ledger + supervisor</text>
+<text x="1855" y="1256" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Candidate outputs enter controlled context</text>
+<text x="1855" y="1288" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Independent review still applies</text>
+<text x="76" y="1143" font-size="26" font-weight="700" fill="#7950b1" text-anchor="start" letter-spacing="0">Zetaris supplies evidence.</text>
+<text x="76" y="1183" font-size="24" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Models propose actions and candidates.</text>
+<text x="76" y="1218" font-size="24" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Haze owns permissions, calculations,</text>
+<text x="76" y="1253" font-size="24" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">review and final acceptance.</text>
+<rect x="76" y="1308" width="476" height="31" rx="15" fill="#fff2df" stroke="none" stroke-width="1.5"/>
+<text x="314" y="1330" font-size="17" font-weight="700" fill="#b6731a" text-anchor="middle" letter-spacing="0.6">AUTOMATIC NIGHTSHIFT CHAINS: GATED</text>
+<rect x="70" y="1465" width="2260" height="306" rx="25" fill="#ffffff" stroke="#cdd4dd" stroke-width="2" stroke-dasharray="8 7"/>
+<text x="102" y="1509" font-size="22" font-weight="750" fill="#78818e" text-anchor="start" letter-spacing="0.8">METERLESS · CHECKSUM-PINNED STARTER &amp; REFERENCE ENGINES</text>
+<text x="2295" y="1509" font-size="21" font-weight="400" fill="#60738a" text-anchor="end" letter-spacing="0">Separate reference / archival paths</text>
+<rect x="101" y="1544" width="1072" height="191" rx="20" fill="#f1f3f6" stroke="#78818e" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="101" y="1563" width="5" height="153" rx="2.5" fill="#78818e"/>
+<text x="126" y="1575" font-size="18" font-weight="700" fill="#78818e" text-anchor="start" letter-spacing="1.3">WORLD MODEL REFERENCE</text>
+<text x="126" y="1614" font-size="28" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Compatibility checks + disposable browser sandbox</text>
+<text x="126" y="1651" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Vendored upstream engine and original control-plane example.</text>
+<text x="126" y="1683" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Active Haze domain state uses the transactional SQLite store above.</text>
+<text x="126" y="1715" font-size="18" font-weight="400" fill="#78818e" text-anchor="start" letter-spacing="0">app/adapters/meterless/   ·   frontend/public/meterless-world-model/</text>
+<rect x="1202" y="1544" width="1097" height="191" rx="20" fill="#f1f3f6" stroke="#78818e" stroke-width="1.8" filter="url(#shadow)"/>
+<rect x="1202" y="1563" width="5" height="153" rx="2.5" fill="#78818e"/>
+<text x="1227" y="1575" font-size="18" font-weight="700" fill="#78818e" text-anchor="start" letter-spacing="1.3">H-MEM REFERENCE</text>
+<text x="1227" y="1614" font-size="30" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Packaged; disabled for active tasks</text>
+<text x="1227" y="1651" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Pinned source + conformance checks are retained.</text>
+<text x="1227" y="1683" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Historical dashboard memory is archival; live task memory is unattached.</text>
+<text x="1227" y="1715" font-size="18" font-weight="400" fill="#78818e" text-anchor="start" letter-spacing="0">README.md   ·   docs/infrastructure/engine-pins.md</text>
+<text x="74" y="1830" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Architecture evidence: app/composition.ts · app/tasks/runtime.ts · app/adapters/model-routes.ts · app/tasks/world-store.ts</text>
+<text x="74" y="1866" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Nightshift automatic successors remain production-gated. World Model acceptance requires a configured supported policy.</text>
+<text x="2328" y="1910" font-size="17" font-weight="650" fill="#8b99aa" text-anchor="end" letter-spacing="1.5">HAZE / SPONSOR RELATIONSHIP MAP</text>
+</g></svg>

@@ -15,7 +15,10 @@ import {
 } from '../../app/contracts/manager.js';
 import { ExecutionRegistry } from '../../app/orchestration/ports.js';
 import { TaskStore } from '../../app/tasks/store.js';
-import { taskRequestSchema } from '../../app/contracts/tasks.js';
+import {
+  taskEventSchema,
+  taskRequestSchema,
+} from '../../app/contracts/tasks.js';
 import { fixtureDecision } from '../../app/agents/manager/fixture.js';
 
 const identity = { principal: 'local-user', workspace: 'local-workspace' };
@@ -224,7 +227,349 @@ describe('registered Manager decision layer', () => {
         }),
     });
     expect(result.action.type).toBe('question');
-    expect(managerAgent.version).toBe('manager.v5');
+    expect(managerAgent.version).toBe('manager.v15');
+  });
+  it('requests one changed model turn for a source-backed answer missing its citation', async () => {
+    const { context } = await setup();
+    const source = { id: randomUUID(), version: 1, sha256: 'c'.repeat(64) };
+    context.artifacts = [{ ref: source, kind: 'source.import', current: true }];
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action: {
+              type: 'finalize',
+              answer:
+                inputs.length === 1
+                  ? 'The supplied source is limited.'
+                  : 'The supplied source is limited. [S1]',
+              work_products: [],
+              sources: [source],
+              uncertainty: [],
+              unfinished: [],
+            },
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1]).toMatchObject({
+      run_id: context.run_id,
+      event_cursor: context.event_cursor,
+      decision_feedback: { correction: 1, code: 'missing_source_citation' },
+    });
+    expect(result.action).toMatchObject({
+      type: 'finalize',
+      answer: 'The supplied source is limited. [S1]',
+      sources: [source],
+    });
+  });
+  it.each(['id', 'version', 'sha256'])(
+    'requests a complete supplied artifact reference when %s is missing',
+    async (field) => {
+      const { context } = await setup();
+      const product = { id: randomUUID(), version: 1, sha256: 'e'.repeat(64) };
+      const incomplete: Record<string, unknown> = { ...product };
+      delete incomplete[field];
+      context.artifacts = [
+        { ref: product, kind: 'test.finding', current: true },
+      ];
+      const inputs: unknown[] = [];
+      const result = await decide({
+        context,
+        model(input) {
+          inputs.push(input);
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: 'A bounded finding.',
+                work_products: [inputs.length === 1 ? incomplete : product],
+                sources: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(inputs).toHaveLength(2);
+      expect(inputs[1]).toMatchObject({
+        decision_feedback: {
+          correction: 1,
+          code: 'incomplete_artifact_reference',
+        },
+      });
+      expect(result.action).toMatchObject({ work_products: [product] });
+    },
+  );
+  it('never fills in a reference or requests a third model turn after another missing hash', async () => {
+    const { context } = await setup();
+    let calls = 0;
+    await expect(
+      decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: 'An incomplete reference.',
+                work_products: [{ id: randomUUID(), version: 1 }],
+                sources: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'incomplete_artifact_reference' });
+    expect(calls).toBe(2);
+  });
+  it('rejects a repeated malformed hash after one schema correction without filling it', async () => {
+    const { context } = await setup();
+    let calls = 0;
+    await expect(
+      decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: 'A malformed reference.',
+                work_products: [{ id: randomUUID(), version: 1, sha256: null }],
+                sources: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      }),
+    ).rejects.toBeInstanceOf(z.ZodError);
+    expect(calls).toBe(2);
+  });
+  it('allows one full schema correction for initial retained assignment keys without admitting them', async () => {
+    const { context } = await setup();
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify(
+            inputs.length === 1
+              ? {
+                  ...response(context),
+                  action: {
+                    type: 'apply_plan',
+                    retain_assignment_ids: ['new-logical-key'],
+                    assignments: [],
+                  },
+                }
+              : response(context),
+          ),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1]).toMatchObject({
+      run_id: context.run_id,
+      event_cursor: context.event_cursor,
+      decision_feedback: {
+        correction: 1,
+        code: 'invalid_decision_schema',
+        message: expect.stringContaining(
+          'action.retain_assignment_ids.0',
+        ) as unknown,
+      },
+    });
+    expect(result).toEqual(response(context));
+    expect(context.assignments).toEqual([]);
+  });
+  it('stops after one unsuccessful correction without synthesizing a citation', async () => {
+    const { context } = await setup();
+    const source = { id: randomUUID(), version: 1, sha256: 'd'.repeat(64) };
+    context.artifacts = [{ ref: source, kind: 'source.import', current: true }];
+    let calls = 0;
+    await expect(
+      decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: 'An uncited claim.',
+                work_products: [],
+                sources: [source],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_source_citation' });
+    expect(calls).toBe(2);
+  });
+  it.each(['provider_failed', 'graph_operation_unknown'])(
+    'does not retry a %s instead of a received invalid model output',
+    async (code) => {
+      const { context } = await setup();
+      let calls = 0;
+      const failure = Object.assign(new Error(code), { code });
+      await expect(
+        decide({
+          context,
+          model() {
+            calls++;
+            return Promise.reject(failure);
+          },
+        }),
+      ).rejects.toBe(failure);
+      expect(calls).toBe(1);
+    },
+  );
+  it('corrects duplicate queued work using only an exact missing required peer channel hint', async () => {
+    const { context } = await setup();
+    context.plan_objective_revision = context.objective_revision;
+    const first = { id: randomUUID(), revision: 2 };
+    const second = { id: randomUUID(), revision: 3 };
+    context.assignments = [
+      {
+        ...first,
+        role: 'HazeOps',
+        definition_id: 'test.produce',
+        status: 'queued',
+        support: 'unknown',
+        usability: 'needs_review',
+      },
+      {
+        ...second,
+        role: 'EvidenceCritic',
+        definition_id: 'test.review',
+        status: 'queued',
+        support: 'unknown',
+        usability: 'needs_review',
+      },
+    ];
+    context.capabilities[0]!.peer_requirements = [
+      {
+        definitions: ['test.produce', 'test.review'],
+        purpose: 'independent-check',
+      },
+    ];
+    const participants: [
+      { assignment_id: string; revision: number },
+      { assignment_id: string; revision: number },
+    ] = [
+      { assignment_id: first.id, revision: first.revision },
+      { assignment_id: second.id, revision: second.revision },
+    ];
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action:
+              inputs.length === 1
+                ? {
+                    type: 'apply_plan',
+                    assignments: [
+                      {
+                        key: first.id,
+                        definition_id: 'test.produce',
+                        brief: 'Duplicate existing work.',
+                        depends_on: [],
+                      },
+                    ],
+                    retain_assignment_ids: [first.id, second.id],
+                    reason: 'This repeats queued work.',
+                  }
+                : {
+                    type: 'coordinate',
+                    participants,
+                    purpose: 'independent-check',
+                  },
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: {
+        code: 'duplicate_active_assignment',
+        peer_prerequisite: {
+          type: 'coordinate',
+          participants,
+          purpose: 'independent-check',
+        },
+      },
+    });
+    expect(result.action).toEqual({
+      type: 'coordinate',
+      participants,
+      purpose: 'independent-check',
+    });
+    expect(context.peer_grants).toEqual([]);
   });
   it.each([
     'run_id',
@@ -305,6 +650,34 @@ describe('registered Manager decision layer', () => {
       }),
     ).rejects.toThrow('reserved for runtime');
   });
+  it.each(['work_products', 'sources', 'uncertainty', 'unfinished'] as const)(
+    'rejects a question decision with finalize-only %s appended at the root',
+    async (field) => {
+      const { context } = await setup();
+      const value = {
+        ...response(context),
+        [field]:
+          field === 'uncertainty' || field === 'unfinished'
+            ? ['The missing input remains unresolved.']
+            : [],
+      };
+      await expect(
+        decide({
+          context,
+          model: () =>
+            Promise.resolve({
+              text: JSON.stringify(value),
+              receipt: {
+                response_model: null,
+                response_id: null,
+                input_tokens: null,
+                output_tokens: null,
+              },
+            }),
+        }),
+      ).rejects.toThrow('Unrecognized key');
+    },
+  );
   it('rejects invented action types and executable fields', async () => {
     const { context } = await setup();
     const value = response(context);
@@ -393,6 +766,47 @@ describe('registered Manager decision layer', () => {
     expect(context.artifacts[0]?.excerpt ?? '').not.toContain(
       'evidence '.repeat(1000),
     );
+  });
+  it('preserves an admitted unknown-operation event when optional progress events exceed the context budget', async () => {
+    const { store, task, registry } = await setup(
+      'Recover the dispatched retrieval.',
+    );
+    const events = Array.from({ length: 7 }, (_, index) =>
+      taskEventSchema.parse({
+        schema_version: 'haze.task.event.v3',
+        cursor: index + 1,
+        task_id: task.id,
+        run_id: task.current_run_id,
+        objective_revision: task.objective_revision,
+        generation: task.generation,
+        at: task.created_at,
+        type: index === 0 ? 'operation_unknown' : 'optional_progress',
+        actor: 'Runtime',
+        message:
+          index === 0
+            ? 'Remote outcome unknown; explicit continuation is required before recovery.'
+            : 'Optional progress detail. '.repeat(80),
+      }),
+    );
+    const originalEvents = structuredClone(events);
+    const context = assembleManagerContext(
+      task,
+      registry,
+      store.managerState(task.id, identity)!,
+      { events, artifacts: [], maxBytes: 6000 },
+    );
+
+    expect(context.context_status.omitted_events).toBeGreaterThan(0);
+    expect(context.events).toContainEqual({
+      cursor: 1,
+      type: 'operation_unknown',
+      message: events[0]!.message,
+    });
+    expect(context.event_cursor).toBe(7);
+    expect(Buffer.byteLength(JSON.stringify(context))).toBeLessThanOrEqual(
+      6000,
+    );
+    expect(events).toEqual(originalEvents);
   });
   it('fails explicitly when mandatory original constraints cannot fit', async () => {
     const { task, registry, store } = await setup(

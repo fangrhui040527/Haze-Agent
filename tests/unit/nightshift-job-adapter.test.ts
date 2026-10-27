@@ -7,7 +7,9 @@ import {
   discoverNightshiftCli,
   parseNightshiftEnvelope,
   runNightshiftCli,
+  inspectCloudCompute,
   inspectLocalCompute,
+  reviewedNightshiftJobSourceHashes,
   type NightshiftCliInvocation,
   type NightshiftCliRunner,
 } from '../../app/adapters/nightshift/jobs.js';
@@ -70,7 +72,7 @@ const ready: NightshiftJobReadiness = {
     budgets: ['low'],
     windows: ['now', 'quiet'],
     max_attempts: 16,
-    fleets: ['known'],
+    fleets: [],
   },
 };
 function adapter(runner: NightshiftCliRunner) {
@@ -81,6 +83,53 @@ function adapter(runner: NightshiftCliRunner) {
 }
 
 describe('Nightshift job transport contracts', () => {
+  it('accepts only the reviewed original or complete strict-overlay installation', () => {
+    const original = {
+      'cli/ns.mjs':
+        'f6c05c9c30f549eacebefe1a0413730a0e346c20f37896a29f7fc2da52e0f378',
+      'cli/lib/transport.mjs':
+        '2ba85dbdd7ea8e4d31fc76c60d44e9c4267b097a194d0123e24612d3284eb3a7',
+      'engine/js/engine/jobs.js':
+        '94bafd05f32a9b7a58ff91be0a7feaf549f5513c078232e9b5d2f26a76a2757a',
+      'engine/js/engine/providers.js':
+        '04fae12dfdeb4299ee2a36016b437de7bf5120006393d0c8c1d88ac75f288825',
+      'engine/host.mjs':
+        'ab9e35a78b6545780c904a1d7bc3d6e576598edf5e3e063aebc0c4d2d3e5ce00',
+    };
+    const strict = {
+      ...original,
+      'engine/host.mjs':
+        'e1668b09429e1aca3364a3cbefe2c2b9acb2a2cdc94a0ead9dca582a17bab350',
+      'engine/server.mjs':
+        'e0ba7c357f688b096c60d7d09937d68ff2102424c329ea55d58a3ddd108e8e80',
+      'engine/haze-strict/integration.mjs':
+        '8fa11bc9801d62f70a86f7183e4ab3524e1bc49fc5578f3d602e85c03b23233c',
+      'engine/haze-strict/handler.mjs':
+        '8c709532e5845419b177ff8edc4bcaac345a19ff2aa81d476802cc051422c5d0',
+    };
+    for (const installation of [original, strict]) {
+      expect(reviewedNightshiftJobSourceHashes(installation)).toBe(true);
+      for (const path of Object.keys(installation)) {
+        expect(
+          reviewedNightshiftJobSourceHashes({
+            ...installation,
+            [path]: '0'.repeat(64),
+          }),
+          path,
+        ).toBe(false);
+        const missing: Record<string, string> = { ...installation };
+        delete missing[path];
+        expect(reviewedNightshiftJobSourceHashes(missing), path).toBe(false);
+      }
+    }
+    expect(
+      reviewedNightshiftJobSourceHashes({
+        ...original,
+        'engine/host.mjs': strict['engine/host.mjs'],
+      }),
+    ).toBe(false);
+  });
+
   it('treats literal prompt text as stdin and never a shell or command argument', async () => {
     const calls: NightshiftCliInvocation[] = [];
     const instance = adapter((input) => {
@@ -98,15 +147,96 @@ describe('Nightshift job transport contracts', () => {
     expect(calls[0]?.args).toContain('local-only');
     expect(calls[0]?.args).not.toContain('--wait');
     expect(calls[0]?.args).not.toContain('--idempotency-key');
+    expect(calls[0]?.args).not.toContain('--fleet');
     expect(calls[0]?.mutation).toBe(true);
   });
-  it('rejects unsupported cloud/fleet/options before invoking the mutation', async () => {
+  it('submits cloud-enabled jobs without the CLI zero-spend override or a false monetary ceiling', async () => {
+    const calls: NightshiftCliInvocation[] = [];
+    const instance = adapter((input) => {
+      calls.push(input);
+      return Promise.resolve(okay({ job_id: 'cloud-job1' }));
+    });
+    vi.spyOn(instance, 'readiness').mockResolvedValue({
+      ...ready,
+      cloud_enforced: true,
+      cloud_compute_available: true,
+      local_compute_available: false,
+    });
+    await expect(
+      instance.submit({ ...request, privacy: 'cloud-ok', max_spend_usd: null }),
+    ).resolves.toEqual({ remote_id: 'cloud-job1' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.args).toContain('cloud-ok');
+    expect(calls[0]?.args).not.toContain('--max-spend');
+    expect(calls[0]?.args).not.toContain('local-only');
+    expect(calls[0]?.stdin).toBe(request.prompt);
+    expect(calls[0]?.mutation).toBe(true);
+  });
+  it.each([
+    { cloud_enforced: false, cloud_compute_available: true },
+    { cloud_enforced: true, cloud_compute_available: false },
+    { cloud_enforced: true, cloud_compute_available: undefined },
+  ])(
+    'refuses cloud work without reviewed policy and ready cloud compute (%j)',
+    async (policy) => {
+      const runner = vi.fn<NightshiftCliRunner>();
+      const instance = adapter(runner);
+      vi.spyOn(instance, 'readiness').mockResolvedValue({
+        ...ready,
+        ...policy,
+      });
+      await expect(
+        instance.submit({
+          ...request,
+          privacy: 'cloud-ok',
+          max_spend_usd: null,
+        }),
+      ).rejects.toMatchObject({
+        outcome: 'rejected-before-acceptance',
+        diagnostic_code: 'unavailable',
+      });
+      expect(runner).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps local-only jobs blocked when only cloud compute is ready', async () => {
+    const runner = vi.fn<NightshiftCliRunner>();
+    const instance = adapter(runner);
+    vi.spyOn(instance, 'readiness').mockResolvedValue({
+      ...ready,
+      cloud_enforced: true,
+      cloud_compute_available: true,
+      local_compute_available: false,
+    });
+    await expect(instance.submit(request)).rejects.toMatchObject({
+      outcome: 'rejected-before-acceptance',
+      diagnostic_code: 'unavailable',
+    });
+    expect(runner).not.toHaveBeenCalled();
+  });
+  it('rejects an explicit fleet before invoking the CLI even if stale readiness advertises it', async () => {
+    const runner = vi.fn<NightshiftCliRunner>();
+    const instance = adapter(runner);
+    vi.spyOn(instance, 'readiness').mockResolvedValue({
+      ...ready,
+      options: { ...ready.options, fleets: ['known'] },
+    });
+    await expect(
+      instance.submit({ ...request, fleet: 'known' }),
+    ).rejects.toMatchObject({
+      outcome: 'rejected-before-acceptance',
+      diagnostic_code: 'fleet_unverified',
+    });
+    expect(runner).not.toHaveBeenCalled();
+  });
+  it('rejects inconsistent privacy, unsupported fleet and positive monetary caps before invoking the mutation', async () => {
     const runner = vi.fn<NightshiftCliRunner>();
     const instance = adapter(runner);
     vi.spyOn(instance, 'readiness').mockResolvedValue(ready);
     for (const input of [
       { ...request, fleet: 'unknown' },
       { ...request, privacy: 'cloud-ok' },
+      { ...request, privacy: 'local-only', max_spend_usd: null },
+      { ...request, privacy: 'cloud-ok', max_spend_usd: 1 },
       { ...request, max_spend_usd: 1 },
       { ...request, n: 17 },
     ]) {
@@ -287,44 +417,123 @@ describe('Nightshift job transport contracts', () => {
       }),
     ).toEqual({ available: true, fleets: [] });
   });
-  it('verifies an exact native request with a unique canonical server nonce', async () => {
-    const marked = {
-      ...request,
-      prompt:
-        '[Haze request 11111111-1111-4111-8111-111111111111]\nOriginal synthetic objective.',
-    };
-    const native = {
-      id: 'job1',
-      app: 'ns',
-      kind: 'best_of_n',
-      prompt_full: marked.prompt,
-      messages: [{ role: 'user', content: marked.prompt }],
-      n: 1,
-      window: 'now',
-      privacy: 'local-only',
-      judge_mode: 'accuracy',
-      attempt_budget: { level: 'low' },
-    };
-    const instance = adapter((input) =>
-      Promise.resolve(
-        okay(
-          input.args.includes('list')
-            ? {
-                jobs: [{ id: 'job1', prompt: marked.prompt.slice(0, 160) }],
-                total: 1,
-              }
-            : native,
+  it.each([{ disabled: true }, { races: false }])(
+    'does not count a ready local lane excluded from the installed host roster (%j)',
+    (eligibility) => {
+      const lane = {
+        id: 'local1',
+        kind: 'local',
+        state: 'ready',
+        model: 'local.gguf',
+      };
+      const fleet = { fleets: [{ id: 'local', lanes: [lane] }] };
+      expect(
+        inspectLocalCompute(fleet, { lanes: [{ ...lane, ...eligibility }] }),
+      ).toEqual({ available: false, fleets: [] });
+      for (const flags of [{}, { disabled: false, races: true }])
+        expect(
+          inspectLocalCompute(fleet, { lanes: [{ ...lane, ...flags }] }),
+        ).toEqual({ available: true, fleets: ['local'] });
+    },
+  );
+
+  it.each([{ kind: 'cloud' }, { provider: 'nvidia' }])(
+    'recognizes a ready cloud race lane independently of local compute (%j)',
+    (classification) => {
+      const status = {
+        lanes: [
+          {
+            id: 'cloud1',
+            model: 'nvidia/nemotron',
+            state: 'ready',
+            ...classification,
+          },
+        ],
+      };
+      expect(inspectCloudCompute(status)).toBe(true);
+      expect(inspectLocalCompute({ fleets: [] }, status).available).toBe(false);
+    },
+  );
+  it.each([
+    { state: 'loading' },
+    { disabled: true },
+    { races: false },
+    { model: '' },
+    { kind: 'local', provider: 'nvidia' },
+    { kind: undefined, provider: undefined },
+  ])(
+    'does not advertise unavailable or unclassified cloud compute (%j)',
+    (change) => {
+      expect(
+        inspectCloudCompute({
+          lanes: [
+            {
+              id: 'cloud1',
+              kind: 'cloud',
+              model: 'nvidia/nemotron',
+              state: 'ready',
+              ...change,
+            },
+          ],
+        }),
+      ).toBe(false);
+      expect(inspectCloudCompute(null)).toBe(false);
+    },
+  );
+
+  it.each([
+    [undefined, 'local-only', 0],
+    ['historical-local', 'local-only', 0],
+    [undefined, 'cloud-ok', null],
+  ] as const)(
+    'verifies an exact native request and its fleet and privacy metadata (%s, %s)',
+    async (fleet, privacy, max_spend_usd) => {
+      const marked = {
+        ...request,
+        privacy,
+        max_spend_usd,
+        ...(fleet ? { fleet } : {}),
+        prompt:
+          '[Haze request 11111111-1111-4111-8111-111111111111]\nOriginal synthetic objective.',
+      };
+      const native = {
+        id: 'job1',
+        app: 'ns',
+        kind: 'best_of_n',
+        prompt_full: marked.prompt,
+        messages: [{ role: 'user', content: marked.prompt }],
+        n: 1,
+        window: 'now',
+        privacy,
+        judge_mode: 'accuracy',
+        attempt_budget: { level: 'low' },
+        ...(fleet ? { fleet_id: fleet } : {}),
+      };
+      const instance = adapter((input) =>
+        Promise.resolve(
+          okay(
+            input.args.includes('list')
+              ? {
+                  jobs: [{ id: 'job1', prompt: marked.prompt.slice(0, 160) }],
+                  total: 1,
+                }
+              : native,
+          ),
         ),
-      ),
-    );
-    vi.spyOn(instance, 'readiness').mockResolvedValue({
-      ...ready,
-      can_reconcile: true,
-    });
-    await expect(
-      instance.verifyReconciliation('job1', marked),
-    ).resolves.toEqual({ verified: true, reason: null });
-  });
+      );
+      vi.spyOn(instance, 'readiness').mockResolvedValue({
+        ...ready,
+        ready: false,
+        local_compute_available: false,
+        cloud_enforced: true,
+        cloud_compute_available: false,
+        can_reconcile: true,
+      });
+      await expect(
+        instance.verifyReconciliation('job1', marked),
+      ).resolves.toEqual({ verified: true, reason: null });
+    },
+  );
   it.each([
     { app: 'cockpit' },
     { kind: 'batch' },
@@ -588,7 +797,7 @@ describe('Nightshift job transport contracts', () => {
       diagnostic_code: 'response_oversized',
     });
   });
-  it('mutation schemas prohibit automatic successors and positive/cloud spending', () => {
+  it('defaults new grants to cloud permission without a monetary cap and preserves explicit local-only grants', () => {
     const authority = {
       expected_run_id: '11111111-1111-4111-8111-111111111111',
       expected_generation: 1,
@@ -601,6 +810,17 @@ describe('Nightshift job transport contracts', () => {
       ...authority,
     };
     expect(chainAdmissionSchema.parse(chain).automatic_followup_runs).toBe(0);
+    expect(chainAdmissionSchema.parse(chain)).toMatchObject({
+      privacy: 'cloud-ok',
+      max_spend_usd: null,
+    });
+    expect(
+      chainAdmissionSchema.parse({
+        ...chain,
+        privacy: 'local-only',
+        max_spend_usd: 0,
+      }),
+    ).toMatchObject({ privacy: 'local-only', max_spend_usd: 0 });
     expect(
       chainAdmissionSchema.safeParse({ ...chain, automatic_followup_runs: 1 })
         .success,

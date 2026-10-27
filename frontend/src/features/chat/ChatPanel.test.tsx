@@ -70,14 +70,12 @@ describe('chat after crew demo retirement', () => {
     expect(markup).not.toContain('Klang crew sample');
     expect(markup).not.toContain('Legacy scheduling demo');
   });
-  it('offers a separate unchecked per-task Nightshift grant without authorizing successors', () => {
+  it('keeps next-task permissions and lifecycle controls out of chat', () => {
     const markup = renderChat();
-    expect(markup).toContain('Allow Nightshift candidate tools for this task');
-    expect(markup).toContain('separate bounded chain grant');
-    expect(markup).toContain('No automatic successor runs are authorized');
-    const checkbox = markup.match(/<input[^>]*type="checkbox"[^>]*>/u)?.[0];
-    expect(checkbox).toBeDefined();
-    expect(checkbox).not.toContain('checked');
+    expect(markup).not.toContain('Nightshift');
+    expect(markup).not.toContain('type="checkbox"');
+    expect(markup).not.toContain('Cancel task');
+    expect(markup).not.toContain('Pause task');
   });
 
   it('retains saved legacy text and safely ignores retired structured payloads', () => {
@@ -144,13 +142,13 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Template answer from real records');
   });
 
-  it('keeps saved task access and explicit server cancellation after polling detaches', () => {
+  it('shows a compact workspace card while a task runs', () => {
     const run = idleRun();
     run.status = 'cancelled';
     run.statusText =
       'Stopped waiting. Check the saved task for its server status.';
     run.task = {
-      id: 'current',
+      id: taskId,
       schemaVersion: 'haze.task.v3',
       record: {
         ...fixtureTask(),
@@ -161,16 +159,13 @@ describe('chat after crew demo retirement', () => {
       status: 'running',
     };
     const markup = renderChat(run);
-    expect(markup).toContain('Stopped waiting. Check the saved task');
-    expect(markup).toContain('href="/api/tasks/current"');
-    expect(markup).toContain('Cancel task');
-    expect(markup).toContain('Pause task');
-    expect(markup).toContain('Saved task');
-    expect(markup).toContain('href="/task/current"');
-    expect(markup).toContain('Open task report');
-    expect(markup).not.toContain('href="/manager/current"');
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).not.toContain('Cancel task');
+    expect(markup).not.toContain('Pause task');
+    expect(markup).not.toContain('Stop waiting');
+    expect(markup).not.toContain('Open task report');
     expect(markup).not.toContain('Correct or clarify this task');
-    expect(markup).not.toContain('Open Manager workspace');
     expect(markup).not.toContain('Attach source material');
     expect(markup).not.toContain('Paste a source instead');
     expect(markup).not.toContain('Optional task scope');
@@ -196,7 +191,10 @@ describe('chat after crew demo retirement', () => {
       status: 'completed',
     };
     const markup = renderChat(run);
-    expect(markup).toContain(run.task.record!.result!.answer);
+    expect(markup).toContain(
+      'Completed. The result is available in the Manager workspace.',
+    );
+    expect(markup).not.toContain(run.task.record!.result!.answer);
     expect(markup).toContain('Clear chat');
     expect(markup).not.toContain(
       'Describe what you need to understand or investigate.',
@@ -205,8 +203,33 @@ describe('chat after crew demo retirement', () => {
       'Explain the difference between modeled PM2.5 estimates',
     );
   });
+  it('shows the fresh conversation after Clear even if the dashboard retains a restored task', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) =>
+        key === 'haze.chat.detached-task-restore.v1'
+          ? 'false'
+          : key === 'haze.chat.v1'
+            ? '[]'
+            : null,
+      setItem: vi.fn(),
+    });
+    const run = idleRun();
+    run.status = 'completed';
+    run.task = {
+      id: taskId,
+      schemaVersion: 'haze.task.v3',
+      taskUrl: `/api/tasks/${taskId}`,
+      status: 'completed',
+      record: fixtureTask(),
+    };
+    const markup = renderChat(run);
+    expect(markup).toContain('Latest haze information for Singapore');
+    expect(markup).not.toContain('Open Manager workspace');
+    expect(markup).not.toContain('The task is complete');
+    expect(markup).not.toContain('Clear chat');
+  });
 
-  it('shows missing-evidence questions with a route to answer them', () => {
+  it('shows task questions as Manager messages answerable in chat', () => {
     const run = idleRun();
     const record = fixtureTask();
     record.status = 'waiting';
@@ -233,8 +256,10 @@ describe('chat after crew demo retirement', () => {
     };
     const markup = renderChat(run);
     expect(markup).toContain('Which evidence or source should I analyze?');
-    expect(markup).toContain('Answer in task report');
-    expect(markup).toContain(`href="/task/${taskId}"`);
+    expect(markup).toContain('Answer this question');
+    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).not.toContain('Clarification needed');
+    expect(markup).not.toContain('Answer in task report');
     expect(markup).not.toContain('Result: full');
     expect(markup).not.toContain('Correct or clarify this task');
   });

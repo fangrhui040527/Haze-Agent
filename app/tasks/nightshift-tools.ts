@@ -3,6 +3,7 @@ import { artifactRefSchema } from '../contracts/artifacts.js';
 import {
   nightshiftJobOptionsSchema,
   NIGHTSHIFT_LIMITS,
+  validateNightshiftPolicy,
 } from '../contracts/nightshift.js';
 import { TaskError } from '../contracts/tasks.js';
 import { nightshiftProgressSchema } from '../contracts/nightshift-chains.js';
@@ -20,19 +21,21 @@ export const NIGHTSHIFT_TOOL_IDS = [
 export type NightshiftToolId = (typeof NIGHTSHIFT_TOOL_IDS)[number];
 
 /** Identity, revisions and route authority are supplied by the host, never the model. */
-export const nightshiftSubmitToolSchema = z.strictObject({
-  schema_version: z.literal('haze.nightshift.tool.submit.v1'),
-  chain_id: z.uuid(),
-  expected_chain_revision: z.number().int().positive(),
-  purpose: z.enum([
-    'evidence_linked_draft',
-    'alternative_explanation',
-    'critique_candidate',
-  ]),
-  ...nightshiftJobOptionsSchema.shape,
-  input_refs: z.array(artifactRefSchema).min(1).max(32),
-  progress: nightshiftProgressSchema.optional(),
-});
+export const nightshiftSubmitToolSchema = z
+  .strictObject({
+    schema_version: z.literal('haze.nightshift.tool.submit.v1'),
+    chain_id: z.uuid(),
+    expected_chain_revision: z.number().int().positive(),
+    purpose: z.enum([
+      'evidence_linked_draft',
+      'alternative_explanation',
+      'critique_candidate',
+    ]),
+    ...nightshiftJobOptionsSchema.shape,
+    input_refs: z.array(artifactRefSchema).min(1).max(32),
+    progress: nightshiftProgressSchema.optional(),
+  })
+  .superRefine(validateNightshiftPolicy);
 export const nightshiftResultToolSchema = z
   .strictObject({
     schema_version: z.literal('haze.nightshift.tool.result.v1'),
@@ -118,7 +121,7 @@ export function createNightshiftTools(
       version: 'nightshift-submit.v1',
       mode,
       description:
-        'Submit one bounded local-only, $0 candidate job inside an existing explicit chain grant. Use exact evidence references. Retrieval, calculations and independent checks require registered Haze capabilities. Returns a local job handle; unknown submission must never be retried automatically.',
+        'Submit one candidate job inside an existing explicit chain grant, matching its privacy and spending policy. New grants default to cloud-ok with no cloud spend cap; local-only grants require $0 cloud spend. Use exact evidence references. Retrieval, calculations and independent checks require registered Haze capabilities. Returns a local job handle; unknown submission must never be retried automatically.',
       inputSchema: nightshiftSubmitToolSchema,
       outputSchema: nightshiftToolOutputSchema,
       execute: (input, context) =>

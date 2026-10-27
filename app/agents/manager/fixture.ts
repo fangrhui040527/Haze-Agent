@@ -44,10 +44,33 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
     ...context.request.context_refs,
     ...context.corrections.flatMap((c) => c.context_refs ?? []),
   ];
+  const indexedImports = new Set(
+    (context.current_import_context_ref_indices ?? []).map((index) => {
+      if (
+        !Number.isSafeInteger(index) ||
+        index < 0 ||
+        index >= originalRefs.length
+      )
+        throw new Error('Invalid compact current-import reference index.');
+      return index;
+    }),
+  );
+  const taggedImports = new Map(
+    [...indexedImports].map((index) => [
+      originalRefs[index]!.id,
+      originalRefs[index]!,
+    ]),
+  );
   if (context.objective_revision > 1) {
     const source = originalRefs.find(
       (ref) =>
-        !context.source_applicability.some((a) => a.id === ref.id && a.current),
+        !context.source_applicability.some(
+          (a) => a.id === ref.id && a.current,
+        ) &&
+        !(
+          taggedImports.get(ref.id)?.version === ref.version &&
+          taggedImports.get(ref.id)?.sha256 === ref.sha256
+        ),
     );
     if (source) {
       if (!context.inspections.some((i) => i.artifact.id === source.id))
@@ -221,6 +244,17 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
       (originalRefs.some((r) => r.id === a.ref.id) ||
         a.kind.endsWith('.capture')),
   );
+  for (const ref of taggedImports.values())
+    if (!sources.some((entry) => entry.ref.id === ref.id))
+      sources.push({ ref, kind: 'source.import', current: true });
+  if (taggedImports.size)
+    sources.sort((left, right) => {
+      const sourceIndex = (id: string) => {
+        const index = originalRefs.findIndex((ref) => ref.id === id);
+        return index < 0 ? originalRefs.length : index;
+      };
+      return sourceIndex(left.ref.id) - sourceIndex(right.ref.id);
+    });
   const summaries = context.artifacts
     .filter((a) => a.current && a.kind === 'assignment.summary')
     .flatMap((a) => {

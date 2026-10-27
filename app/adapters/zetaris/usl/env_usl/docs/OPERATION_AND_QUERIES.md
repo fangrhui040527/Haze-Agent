@@ -51,7 +51,14 @@ node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-
 # Preview execution steps without applying changes
 node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --dry-run
 node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-only --dry-run
+
+# Optional post-bootstrap entity checks (may take several minutes)
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl_and_verify.ts --env-only
 ```
+
+The regular `bootstrap_usl.ts` command bootstraps and activates the selected
+USLs without running post-bootstrap verification queries. Run
+`bootstrap_usl_and_verify.ts` explicitly when you want those checks.
 
 > **Windy in the bootstrap:** `bootstrap_usl.ts` builds Windy at `[Env Step 6/7]`. It runs `windy_register.sql` (filling the `${WINDY_API_KEY}` placeholder from `.env`), then `windy_view.sql`, and activates the two Windy USL tables during step 7. If `WINDY_API_KEY` is not set, Windy registration is skipped with a warning and the rest of the bootstrap continues.
 

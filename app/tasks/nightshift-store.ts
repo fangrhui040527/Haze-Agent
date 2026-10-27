@@ -110,6 +110,16 @@ const refOf = ({ id, version, sha256 }: Artifact): ArtifactRef => ({
   version,
   sha256,
 });
+function legacyPolicyRequest(normalized: object, original: unknown) {
+  if (
+    original === null ||
+    typeof original !== 'object' ||
+    Object.hasOwn(original, 'privacy') ||
+    Object.hasOwn(original, 'max_spend_usd')
+  )
+    return undefined;
+  return { ...normalized, privacy: 'local-only', max_spend_usd: 0 };
+}
 function fail(code: string, message: string, status = 409): never {
   throw new TaskError(status, code, message);
 }
@@ -350,6 +360,7 @@ export class NightshiftStore {
     scope: string,
     key: string,
     input: unknown,
+    legacyInput?: unknown,
   ): T | null {
     if (!key || key.length > 256)
       fail(
@@ -368,7 +379,11 @@ export class NightshiftStore {
       )
       .get(owner, key) as { fingerprint: string; receipt: string } | undefined;
     if (!row) return null;
-    if (row.fingerprint !== contractHash(input))
+    if (
+      row.fingerprint !== contractHash(input) &&
+      (legacyInput === undefined ||
+        row.fingerprint !== contractHash(legacyInput))
+    )
       fail('idempotency_conflict', 'This key was used with different content.');
     return JSON.parse(row.receipt) as T;
   }
@@ -376,6 +391,7 @@ export class NightshiftStore {
     value: unknown,
     key: string,
     identity: TaskIdentity,
+    originalRaw: unknown = value,
   ): { chain: NightshiftChain; reused: true } | null {
     const request = chainAdmissionSchema.parse(value);
     const prior = this.replay<NightshiftChain>(
@@ -383,6 +399,7 @@ export class NightshiftStore {
       'nightshift-chain-admission',
       key,
       request,
+      legacyPolicyRequest(request, originalRaw),
     );
     return prior
       ? { chain: this.chain(prior.id, identity), reused: true }
@@ -392,6 +409,7 @@ export class NightshiftStore {
     value: unknown,
     key: string,
     identity: TaskIdentity,
+    originalRaw: unknown = value,
   ): { job: NightshiftJob; reused: true } | null {
     const request = jobSubmitSchema.parse(value);
     const prior = this.replay<NightshiftJob>(
@@ -399,6 +417,7 @@ export class NightshiftStore {
       `nightshift-job-submit:${request.chain_id}`,
       key,
       request,
+      legacyPolicyRequest(request, originalRaw),
     );
     return prior ? { job: this.job(prior.id, identity), reused: true } : null;
   }
@@ -697,8 +716,11 @@ export class NightshiftStore {
     value: unknown,
     key: string,
     identity: TaskIdentity,
+    originalRaw: unknown = value,
   ): { chain: NightshiftChain; reused: boolean } {
     const request = chainAdmissionSchema.parse(value);
+    const prior = this.admissionForKey(request, key, identity, originalRaw);
+    if (prior) return prior;
     return this.access.atomic(() => {
       const result = this.operation(
         identity,
@@ -707,6 +729,11 @@ export class NightshiftStore {
         request,
         () => {
           const task = this.current(request.task_id, identity, request);
+          if (!['queued', 'running', 'waiting'].includes(task.status))
+            fail(
+              'nightshift_task_inactive',
+              'A paused or terminal task cannot admit a new Nightshift chain.',
+            );
           if (request.schema_version === 'haze.nightshift.chain.admission.v2') {
             this.requireAutomaticRelease();
             if (request.previous_chain_id) {
@@ -809,8 +836,8 @@ export class NightshiftStore {
               max_jobs: request.max_jobs,
               max_attempts: request.max_attempts,
               automatic_followup_runs: request.automatic_followup_runs,
-              privacy: 'local-only',
-              max_spend_usd: 0,
+              privacy: request.privacy,
+              max_spend_usd: request.max_spend_usd,
               max_model_calls: task.limits.max_model_calls * request.total_runs,
               max_tool_calls: task.limits.max_tool_calls * request.total_runs,
               max_assignments: task.limits.max_assignments * request.total_runs,
@@ -935,7 +962,8 @@ export class NightshiftStore {
             if (!OPEN.includes(chain.status))
               fail('nightshift_chain_closed', 'The chain is already closed.');
             chain.status = 'paused';
-            chain.stop_reason = 'Manual submission paused.';
+            if (!chain.stop_reason?.startsWith('no_progress:'))
+              chain.stop_reason = 'Manual submission paused.';
           } else {
             chain.status = 'closed';
             chain.stop_reason =
@@ -967,7 +995,12 @@ export class NightshiftStore {
       idempotencyRequest === undefined
         ? request
         : jobSubmitSchema.parse(idempotencyRequest);
-    const replay = this.submissionForKey(original, key, identity);
+    const replay = this.submissionForKey(
+      original,
+      key,
+      identity,
+      idempotencyRequest === undefined ? value : idempotencyRequest,
+    );
     if (replay) return replay;
     this.assertJobProgress(
       request.chain_id,
@@ -985,7 +1018,21 @@ export class NightshiftStore {
           const chain = this.refresh(this.rawChain(request.chain_id, identity));
           this.live(chain);
           this.requireChainRevision(chain, request.expected_chain_revision);
+          if (
+            request.privacy !== chain.grant.privacy ||
+            request.max_spend_usd !== chain.grant.max_spend_usd
+          )
+            fail(
+              'nightshift_job_policy_mismatch',
+              'The job privacy and monetary policy must match its immutable chain grant.',
+              403,
+            );
           const task = this.current(chain.task_id, identity, request);
+          if (!['queued', 'running', 'waiting'].includes(task.status))
+            fail(
+              'nightshift_task_inactive',
+              'A paused or terminal task cannot submit a new Nightshift job.',
+            );
           if (task.objective_revision !== chain.objective_revision)
             fail(
               'nightshift_objective_changed',
@@ -1070,8 +1117,8 @@ export class NightshiftStore {
               budget: request.budget,
               window: request.window,
               fleet: request.fleet ?? null,
-              privacy: 'local-only',
-              max_spend_usd: 0,
+              privacy: request.privacy,
+              max_spend_usd: request.max_spend_usd,
             },
             request_fingerprint: contractHash({
               request,
@@ -1211,9 +1258,13 @@ export class NightshiftStore {
       const job = this.rawJob(id);
       if (job.remote_id || job.execution_state !== 'submitting')
         fail('nightshift_dispatch_fenced', 'Submission cannot be repeated.');
-      this.db
-        .prepare('UPDATE ns_submission_attempts SET state=? WHERE job_id=?')
-        .run('dispatched', id);
+      const dispatch = this.db
+        .prepare(
+          'UPDATE ns_submission_attempts SET state=? WHERE job_id=? AND state=?',
+        )
+        .run('dispatched', id, 'intent');
+      if (Number(dispatch.changes) !== 1)
+        fail('nightshift_dispatch_fenced', 'Submission cannot be repeated.');
       this.event(
         job,
         'submission_dispatched',
@@ -1390,7 +1441,7 @@ export class NightshiftStore {
       }
       if (wasTerminal && !remote.terminal) job.execution_state = originalState;
       if (
-        remote.privacy !== 'local-only' ||
+        remote.privacy !== job.options.privacy ||
         (remote.requested_attempts !== null &&
           remote.requested_attempts !== job.options.n)
       ) {
@@ -2734,9 +2785,24 @@ export class NightshiftStore {
           'INSERT OR IGNORE INTO ns_chain_stops(chain_id,fingerprint,body) VALUES(?,?,?)',
         )
         .run(chain.id, fingerprint, JSON.stringify(record));
-      if (!inserted.changes) return;
-      chain.status = input.status ?? 'paused';
-      chain.stop_reason = `${input.code}: ${record.message}`;
+      const status = input.status ?? 'paused';
+      let accepted = record;
+      if (!inserted.changes) {
+        // Redelivery cannot reopen a terminal grant or undo a separate user
+        // pause. A repeated fence must still take effect if mutable state no
+        // longer reflects the original accepted stop.
+        if (!OPEN.includes(chain.status) || status === 'active') return;
+        const prior = this.db
+          .prepare(
+            'SELECT body FROM ns_chain_stops WHERE chain_id=? AND fingerprint=?',
+          )
+          .get(chain.id, fingerprint) as { body: string };
+        accepted = nightshiftStopSchema.parse(JSON.parse(prior.body));
+      }
+      const reason = `${accepted.code}: ${accepted.message}`;
+      if (chain.status === status && chain.stop_reason === reason) return;
+      chain.status = status;
+      chain.stop_reason = reason;
       chain.revision++;
       this.putChain(chain);
       if (['closed', 'expired', 'invalidated'].includes(chain.status))

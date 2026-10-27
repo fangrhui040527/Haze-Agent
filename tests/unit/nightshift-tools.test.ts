@@ -33,8 +33,8 @@ describe('bounded specialist Nightshift tool contracts', () => {
   });
   it('requires evidence refs and typed allowed purposes while rejecting arbitrary authority and executable fields', () => {
     expect(nightshiftSubmitToolSchema.parse(submit)).toMatchObject({
-      privacy: 'local-only',
-      max_spend_usd: 0,
+      privacy: 'cloud-ok',
+      max_spend_usd: null,
       n: 4,
     });
     for (const invalid of [
@@ -43,6 +43,8 @@ describe('bounded specialist Nightshift tool contracts', () => {
       { ...submit, purpose: 'calculate_numbers' },
       { ...submit, prompt: 'x'.repeat(12001) },
       { ...submit, max_spend_usd: 1 },
+      { ...submit, privacy: 'cloud-ok', max_spend_usd: 0 },
+      { ...submit, privacy: 'local-only', max_spend_usd: null },
       { ...submit, privacy: 'cloud' },
       { ...submit, command: 'arbitrary executable' },
       { ...submit, endpoint: 'https://remote.invalid' },
@@ -51,6 +53,13 @@ describe('bounded specialist Nightshift tool contracts', () => {
       { ...submit, token: 'secret' },
     ])
       expect(nightshiftSubmitToolSchema.safeParse(invalid).success).toBe(false);
+    expect(
+      nightshiftSubmitToolSchema.parse({
+        ...submit,
+        privacy: 'local-only',
+        max_spend_usd: 0,
+      }),
+    ).toMatchObject({ privacy: 'local-only', max_spend_usd: 0 });
   });
   it('requires a reason for explicit dependency resolution and exact local handles', () => {
     const result = {

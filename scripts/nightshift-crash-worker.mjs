@@ -294,6 +294,8 @@ process.on('message', async ({ id, action }) => {
       const chain = await service.admitChain(
         {
           schema_version: 'haze.nightshift.chain.admission.v1',
+          privacy: 'local-only',
+          max_spend_usd: 0,
           task_id: task.id,
           ...authority(task),
         },
@@ -302,6 +304,8 @@ process.on('message', async ({ id, action }) => {
       );
       metadata.submission = {
         schema_version: 'haze.nightshift.job.submit.v1',
+        privacy: 'local-only',
+        max_spend_usd: 0,
         chain_id: chain.id,
         ...authority(task),
         expected_chain_revision: chain.revision,

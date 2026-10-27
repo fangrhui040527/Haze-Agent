@@ -9,7 +9,7 @@ import type {
   TimelineEntry,
   Trend,
 } from '../contracts/dashboard.js';
-import type { WmFact } from '../world/types.js';
+import type { WmEntity, WmFact } from '../world/types.js';
 import { freshnessCheck } from '../capabilities/evidence-collection/checks.js';
 import type {
   EvidenceRecord,
@@ -58,7 +58,7 @@ function statusFrom(checks: EvidenceCheck[]): ItemStatus {
   if (checks.some((c) => c.id === 'coverage.freshness' && c.result === 'fail'))
     return 'stale';
   if (checks.some((c) => c.result === 'fail')) return 'unverified';
-  // Identity and coverage checks passed; independent review is still pending.
+  // Collection checks do not establish scientific applicability.
   return 'partial';
 }
 
@@ -68,6 +68,34 @@ export interface ProjectionContext {
   lastRunMs: Map<string, number>;
   now: Date;
   fictional?: boolean;
+}
+
+/** Share repeated reads within one snapshot, then discard them before the next. */
+export function cacheProjectionWorld(
+  world: ProjectionContext['world'],
+): ProjectionContext['world'] {
+  const entities = new Map<string, WmEntity | undefined>();
+  const entityLists = new Map<string, WmEntity[]>();
+  const evidence = new Map<string, EvidenceRecord | null>();
+  return {
+    entity(id) {
+      if (!entities.has(id)) entities.set(id, world.entity(id));
+      return entities.get(id);
+    },
+    entities(type) {
+      if (!entityLists.has(type)) {
+        const list = world.entities(type);
+        entityLists.set(type, list);
+        for (const entity of list) entities.set(entity.id, entity);
+      }
+      return entityLists.get(type)!;
+    },
+    evidence(id) {
+      if (!evidence.has(id)) evidence.set(id, world.evidence(id));
+      return evidence.get(id)!;
+    },
+    facts: () => world.facts(),
+  };
 }
 
 interface Draft {
@@ -439,7 +467,11 @@ function finish(
 ): HazeItem {
   const checks = [
     freshnessCheck(draft.freshnessAt, context.now, draft.maxAgeMinutes),
-    ...(draft.evidence?.checks ?? []),
+    // Retained records can contain the retired observation-review placeholder.
+    // Omit it from the current view without rewriting archived evidence.
+    ...(draft.evidence?.checks ?? []).filter(
+      (check) => check.id !== 'review.independent',
+    ),
   ];
   const sourceId = draft.evidence?.sourceId ?? '';
   const spec = context.specsBySource.get(sourceId);
@@ -456,13 +488,6 @@ function finish(
       agent: 'worldmodel',
       outcome: 'ok',
       summary: `${draft.history.length} fact revision(s) retained in the shared SQLite World Model; newest observation shown, older ones are kept.`,
-      durationMs: 0,
-    },
-    {
-      agent: 'evidencecritic',
-      outcome: 'skipped',
-      summary:
-        'Collected evidence remains unreviewed; no independent review is attached to this observation.',
       durationMs: 0,
     },
   ];

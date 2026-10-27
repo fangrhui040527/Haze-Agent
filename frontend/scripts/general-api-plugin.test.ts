@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import type { PreviewServer, ResolvedConfig, ViteDevServer } from 'vite';
 import type * as Vite from 'vite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TaskError } from '../../app/contracts/tasks.ts';
 
 const {
   taskRequests,
@@ -12,8 +13,10 @@ const {
   taskEnvironments,
   environmentFiles,
   viteEnvironment,
+  runtimeFailure,
 } = vi.hoisted(() => {
   const viteEnvironment: Record<string, string> = {};
+  const runtimeFailure: { error: Error | undefined } = { error: undefined };
   return {
     taskRequests: [] as string[],
     taskDirectories: [] as string[],
@@ -21,6 +24,7 @@ const {
     taskEnvironments: [] as Record<string, string | undefined>[],
     environmentFiles: new Map<string, string>(),
     viteEnvironment,
+    runtimeFailure,
   };
 });
 vi.mock('node:fs', async (importOriginal) => ({
@@ -45,6 +49,7 @@ vi.mock('../../app/tasks/http.ts', () => ({
     acceptancePolicy?: unknown;
     env?: NodeJS.ProcessEnv;
   }) => {
+    if (runtimeFailure.error !== undefined) throw runtimeFailure.error;
     taskDirectories.push(options.stateDirectory);
     taskPolicies.push(options.acceptancePolicy);
     // Retain only dummy test variables so failures cannot print host secrets.
@@ -119,13 +124,56 @@ beforeEach(() => {
   taskPolicies.length = 0;
   taskEnvironments.length = 0;
   environmentFiles.clear();
+  runtimeFailure.error = undefined;
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   for (const key of Object.keys(viteEnvironment)) delete viteEnvironment[key];
   vi.unstubAllEnvs();
 });
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
+  it('preserves the actual state owner diagnostic when another runtime holds the lock', async () => {
+    const message =
+      'This state directory already has a runtime owner (PID 12345): test-state. Set HAZE_TASK_STATE_DIR to a separate directory.';
+    runtimeFailure.error = new TaskError(409, 'runtime_owner_exists', message);
+
+    const response = await requestTo(mode, '/api/health');
+
+    expect(response.writeHead).toHaveBeenCalledWith(503, expect.any(Object));
+    expect(JSON.parse(response.end.mock.calls[0]?.[0] as string)).toEqual({
+      error: {
+        code: 'runtime_owner_exists',
+        message: `${message} No task was admitted.`,
+      },
+    });
+    expect(taskRequests).toEqual([]);
+  });
+
+  it('logs other initialization failures without misreporting an ownership conflict or exposing their details in the API', async () => {
+    runtimeFailure.error = new Error('invalid configuration: test-secret');
+
+    const response = await requestTo(mode, '/api/health');
+    const body = response.end.mock.calls[0]?.[0] as string;
+
+    expect(response.writeHead).toHaveBeenCalledWith(503, expect.any(Object));
+    expect(JSON.parse(body)).toEqual({
+      error: {
+        code: 'task_runtime_unavailable',
+        message:
+          'The local task runtime could not initialize. Check the server log for the cause. No task was admitted.',
+      },
+    });
+    expect(body).not.toContain('test-secret');
+    expect(console.error).toHaveBeenCalledWith(
+      'Haze task runtime failed to initialize: invalid configuration: test-secret',
+    );
+    expect(taskRequests).toEqual([]);
+  });
+
   it('passes root settings ahead of legacy settings and honors process and Vite overrides', async () => {
     for (const key of ['ROOT', 'EMPTY', 'LEGACY', 'MODE'])
       vi.stubEnv(`HAZE_ENV_TEST_${key}`, undefined);

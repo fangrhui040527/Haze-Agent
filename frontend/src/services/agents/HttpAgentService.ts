@@ -1,5 +1,6 @@
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import type { ArtifactImport } from '../../../../app/contracts/artifacts.ts';
+import type { ManagerChatRequest } from '../../../../app/contracts/manager-chat.ts';
 import type {
   TaskControl,
   TaskUpdate,
@@ -22,6 +23,7 @@ import {
 } from './AgentService.ts';
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+class TaskResponseValidationError extends Error {}
 /** Abort even when an injected transport does not implement AbortSignal. */
 function abortable<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) {
@@ -71,38 +73,64 @@ export class HttpAgentService implements AgentService {
     suppliedSignal?: AbortSignal,
   ): Promise<unknown> {
     const signal = suppliedSignal ?? AbortSignal.timeout(15_000);
-    const response = await abortable(
-      this.fetcher(`${this.baseUrl}${path}`, {
-        ...init,
+    const apiName = path.startsWith('/api/manager/chat')
+      ? 'Manager conversation'
+      : 'task';
+    let response: Response;
+    try {
+      response = await abortable(
+        this.fetcher(`${this.baseUrl}${path}`, {
+          ...init,
+          signal,
+          cache: 'no-store',
+          credentials: 'same-origin',
+        }),
         signal,
-        cache: 'no-store',
-        credentials: 'same-origin',
-      }),
-      signal,
-    );
+      );
+    } catch (cause) {
+      if (signal.aborted || isAbortError(cause)) throw abortError();
+      throw new AgentRunError(
+        'The API could not be reached. Check the connection and retry the same request.',
+        true,
+        { category: 'transport', cause },
+      );
+    }
     if (!response.headers.get('content-type')?.includes('application/json')) {
       void response.body?.cancel().catch(() => {});
       throw new AgentRunError(
-        'The task API is unavailable on this host. Start the configured Haze backend and retry.',
+        `The ${apiName} API is unavailable on this host. Start the configured Haze backend and retry.`,
         false,
+        { category: 'response_validation' },
       );
     }
-    const raw = await abortable(response.text(), signal);
+    let raw: string;
+    try {
+      raw = await abortable(response.text(), signal);
+    } catch (cause) {
+      if (signal.aborted || isAbortError(cause)) throw abortError();
+      throw new AgentRunError(
+        'The API response was interrupted. Retry the same request.',
+        true,
+        { category: 'transport', cause },
+      );
+    }
     const responseBound = path.startsWith('/api/artifacts')
       ? 8 * 1024 * 1024
       : MAX_RESPONSE_BYTES;
     if (new TextEncoder().encode(raw).byteLength > responseBound)
       throw new AgentRunError(
-        'The task response exceeds the browser response bound.',
+        `The ${apiName} response exceeds the browser response bound.`,
         false,
+        { category: 'response_validation' },
       );
     let value: unknown;
     try {
       value = JSON.parse(raw);
-    } catch {
+    } catch (cause) {
       throw new AgentRunError(
-        'The task API returned invalid JSON. Check the saved task and retry.',
-        false,
+        `The ${apiName} API returned invalid JSON. Retry the same request to recover any saved response.`,
+        true,
+        { category: 'response_validation', cause },
       );
     }
     if (!response.ok) {
@@ -127,6 +155,39 @@ export class HttpAgentService implements AgentService {
       signal,
     );
   }
+  async managerChat(
+    request: ManagerChatRequest,
+    signal = AbortSignal.timeout(130_000),
+  ) {
+    const { managerChatRequestSchema, managerChatResponseSchema } =
+      await import('../../../../app/contracts/manager-chat.ts');
+    const parsedRequest = managerChatRequestSchema.safeParse(request);
+    if (!parsedRequest.success)
+      throw new AgentRunError(
+        'This message or its conversation context exceeds the supported size. Shorten the message or start a fresh conversation.',
+        false,
+      );
+    const body = parsedRequest.data;
+    const response = managerChatResponseSchema.safeParse(
+      await this.post('/api/manager/chat', body, body.turn_id, signal),
+    );
+    if (!response.success)
+      throw new AgentRunError(
+        'The Manager conversation response failed validation. Retry this same turn after updating the backend.',
+        true,
+        { category: 'response_validation', cause: response.error },
+      );
+    if (response.data.task) {
+      const expected = `/api/tasks/${response.data.task.task_id}`;
+      if (response.data.task.status_url !== expected)
+        throw new AgentRunError(
+          'The Manager task response does not match its saved task identity.',
+          true,
+          { category: 'task_response_validation' },
+        );
+    }
+    return response.data;
+  }
   async ask(
     request: AskRequest,
     onEvent: (event: AgentEvent) => void,
@@ -137,7 +198,7 @@ export class HttpAgentService implements AgentService {
       import('../../../../app/contracts/tasks.ts'),
       signal,
     );
-    const admitted = taskAdmissionSchema.parse(
+    const admission = taskAdmissionSchema.safeParse(
       await this.post(
         '/api/tasks',
         {
@@ -155,6 +216,13 @@ export class HttpAgentService implements AgentService {
         signal,
       ),
     );
+    if (!admission.success)
+      throw new AgentRunError(
+        'The task admission response failed contract validation. Retry the same request to recover any saved admission.',
+        true,
+        { category: 'task_response_validation', cause: admission.error },
+      );
+    const admitted = admission.data;
     const path = `/api/tasks/${admitted.task_id}`;
     if (
       admitted.status_url !== path ||
@@ -163,6 +231,7 @@ export class HttpAgentService implements AgentService {
       throw new AgentRunError(
         'Task admission paths do not match the admitted identity.',
         false,
+        { category: 'task_response_validation' },
       );
     onTask?.({
       id: admitted.task_id,
@@ -182,12 +251,14 @@ export class HttpAgentService implements AgentService {
       throw new AgentRunError(
         'The saved task response failed contract validation for the general protocol. Refresh the application after updating the backend.',
         false,
+        { category: 'task_response_validation', cause: parsed.error },
       );
     const record = parsed.data;
     if (record.id !== taskId)
       throw new AgentRunError(
         'The task response belongs to another task.',
         false,
+        { category: 'task_response_validation' },
       );
     return record;
   }
@@ -223,12 +294,20 @@ export class HttpAgentService implements AgentService {
     const path = `/api/tasks/${taskId}`;
     try {
       while (true) {
-        const page = taskEventPageSchema.parse(
+        const parsedPage = taskEventPageSchema.safeParse(
           await this.read(`${path}/events?after=${cursor}`, {}, signal),
         );
+        if (!parsedPage.success)
+          throw new TaskResponseValidationError(
+            'The task event response has an invalid shape.',
+            { cause: parsedPage.error },
+          );
+        const page = parsedPage.data;
         for (const event of page.events) {
           if (event.task_id !== taskId || event.cursor <= cursor)
-            throw new Error('Invalid event identity or cursor.');
+            throw new TaskResponseValidationError(
+              'Invalid event identity or cursor.',
+            );
           cursor = event.cursor;
           onEvent({
             type: 'task_event',
@@ -239,7 +318,7 @@ export class HttpAgentService implements AgentService {
           });
         }
         if (page.next_cursor !== cursor)
-          throw new Error('Event page skipped receipts.');
+          throw new TaskResponseValidationError('Event page skipped receipts.');
         const record = await this.readTask(taskId, signal);
         onTask?.({
           id: record.id,
@@ -270,7 +349,7 @@ export class HttpAgentService implements AgentService {
             citations: result.sources.map((source) => {
               const exact = `/api/artifacts/${source.artifact.id}`;
               if (source.url && source.url !== exact)
-                throw new Error(
+                throw new TaskResponseValidationError(
                   'A source does not point to its exact artifact.',
                 );
               return {
@@ -304,9 +383,16 @@ export class HttpAgentService implements AgentService {
       if (signal.aborted || isAbortError(error)) throw abortError();
       if (error instanceof AgentTaskCancelledError) throw error;
       if (error instanceof AgentRunError) throw error;
+      if (error instanceof TaskResponseValidationError)
+        throw new AgentRunError(
+          `The task response failed contract validation. Persisted task: ${this.baseUrl}${path}.`,
+          false,
+          { category: 'task_response_validation', cause: error },
+        );
       throw new AgentRunError(
-        `The task response failed contract validation. Persisted task: ${this.baseUrl}${path}.`,
-        false,
+        'Task progress could not be read. The last confirmed saved task state is retained.',
+        true,
+        { category: 'unexpected', cause: error },
       );
     }
   }

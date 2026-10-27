@@ -67,6 +67,30 @@ function Header() {
             Dashboard
           </NavLink>
           <NavLink
+            to="/manager"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Manager Workspace
+          </NavLink>
+          <NavLink
+            to="/damage-account"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Damage Appraisal
+          </NavLink>
+          <NavLink
+            to="/damage-reduction"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Damage reduction
+          </NavLink>
+          <NavLink
             to="/world-model"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -89,14 +113,6 @@ function Header() {
             }
           >
             Nightshift
-          </NavLink>
-          <NavLink
-            to="/damage-reduction"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Damage reduction
           </NavLink>
           <NavLink
             to="/demo-data"

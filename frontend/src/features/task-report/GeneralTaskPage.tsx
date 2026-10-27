@@ -1,5 +1,4 @@
 import { Link } from 'react-router';
-import { TaskControls } from '../chat/TaskControls.tsx';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { TaskResult } from '../chat/TaskResult.tsx';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
@@ -109,7 +108,6 @@ export function GeneralTaskReport({
         )}
         {record && (
           <>
-            <TaskControls run={run} />
             <TaskQuestions run={run} />
           </>
         )}

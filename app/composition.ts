@@ -3,6 +3,12 @@ import {
   type ExecutionMode,
 } from './orchestration/ports.js';
 import { managerAgent } from './agents/manager/index.js';
+import { ManagerConversation } from './agents/manager/conversation.js';
+import type { ManagerConversationFactory } from './orchestration/conversation.js';
+
+export const createManagerConversation: ManagerConversationFactory = (
+  options,
+) => new ManagerConversation(options);
 import { hazeOpsAgent } from './agents/hazeops/index.js';
 import { workerShieldAgent } from './agents/workershield/index.js';
 import { evidenceCriticAgent } from './agents/evidence-critic/index.js';

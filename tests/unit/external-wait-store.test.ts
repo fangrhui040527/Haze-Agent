@@ -8,7 +8,10 @@ import {
   taskRequestSchema,
   type TaskRecord,
 } from '../../app/contracts/tasks.js';
-import type { ExternalAuthority } from '../../app/contracts/external-waits.js';
+import type {
+  ExternalAuthority,
+  ExternalWait,
+} from '../../app/contracts/external-waits.js';
 import type { NightshiftJob } from '../../app/contracts/nightshift-records.js';
 
 const identity = {
@@ -81,6 +84,8 @@ function fixture(store: TaskStore, key = 'task') {
   const chain = store.nightshift.admitChain(
     {
       schema_version: 'haze.nightshift.chain.admission.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       task_id: task.id,
       ...expected(task),
     },
@@ -91,6 +96,8 @@ function fixture(store: TaskStore, key = 'task') {
   const job = store.nightshift.reserveJob(
     {
       schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       chain_id: chain.id,
       ...expected(task),
       expected_assignment_id: specialist.id,
@@ -127,13 +134,19 @@ function fixture(store: TaskStore, key = 'task') {
   };
 }
 type Fixture = ReturnType<typeof fixture>;
-function park(store: TaskStore, f: Fixture) {
+function park(
+  store: TaskStore,
+  f: Fixture,
+  dependencies: ExternalWait['dependencies'] = [
+    { job_id: f.job.id, required: true },
+  ],
+) {
   const wait = store.externalWaits.wait(
     {
       ...f.authority,
       thread_id: f.thread_id,
       after_cursor: f.cursor,
-      dependencies: [{ job_id: f.job.id, required: true }],
+      dependencies,
     },
     identity,
   );
@@ -220,8 +233,162 @@ function activate(store: TaskStore, f: Fixture) {
     store.acquireAssignment(f.task.id, f.authority.assignment_id),
   ).not.toBeNull();
 }
+function consumedRequiredWithOptional(store: TaskStore) {
+  const f = fixture(store);
+  const task = store.read(f.task.id, identity);
+  const chain = store.nightshift.chain(f.job.chain_id, identity);
+  const submitted = store.nightshift.reserveJob(
+    {
+      schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
+      chain_id: chain.id,
+      ...expected(task),
+      expected_assignment_id: f.authority.assignment_id,
+      expected_assignment_revision: f.authority.assignment_revision,
+      expected_chain_revision: chain.revision,
+      prompt: 'An optional alternative; never delay required completion.',
+      n: 1,
+      role: 'HazeOps',
+    },
+    'optional-job',
+    identity,
+    {
+      adapter_version: 'fixture.v1',
+      runtime_version: 'fixture.v1',
+      schema_hash: 'fixture',
+    },
+  ).job;
+  const optional = store.nightshift.acknowledge(
+    submitted.id,
+    `remote-${submitted.id}`,
+  );
+  const wait = park(store, f, [
+    { job_id: f.job.id, required: true },
+    { job_id: optional.id, required: false },
+  ]);
+  finish(store, f.job);
+  store.externalWaits.reconcileDeliveries();
+  activate(store, f);
+  store.externalWaits.resolve(f.job.id, f.authority, identity, {
+    decision: 'use_candidate',
+  });
+  return { ...f, optional, wait };
+}
 
 describe('external waits and durable capacity', () => {
+  it('retains and explicitly consumes a late optional result without reopening required completion or waking execution', () => {
+    const store = open(),
+      f = consumedRequiredWithOptional(store);
+    expect(() =>
+      store.externalWaits.assertFinalizable(f.authority),
+    ).not.toThrow();
+    const cursor = store.events(f.task.id, identity, 0).next_cursor;
+    const before = store.externalWaits.view(f.task.id, identity);
+    expect(before.waits.find((wait) => wait.id === f.wait.id)?.state).toBe(
+      'consumed',
+    );
+
+    finish(store, f.optional);
+    expect(store.externalWaits.reconcileDeliveries()).toBe(1);
+    expect(store.externalWaits.reconcileDeliveries()).toBe(0);
+    const delivered = store.externalWaits.view(f.task.id, identity);
+    expect(delivered.waits.find((wait) => wait.id === f.wait.id)?.state).toBe(
+      'consumed',
+    );
+    expect(delivered.deliveries).toHaveLength(2);
+    expect(
+      delivered.deliveries.find((item) => item.job_id === f.optional.id),
+    ).toMatchObject({ state: 'retained', reason: null });
+    expect(delivered.capacity.queue).toEqual(before.capacity.queue);
+    const events = store.events(f.task.id, identity, cursor).events;
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'external_result',
+      data: { job_id: f.optional.id, retained_only: true },
+    });
+    expect(store.externalWaits.drainReady()).toEqual([]);
+
+    const consumed = store.externalWaits.resolve(
+      f.optional.id,
+      f.authority,
+      identity,
+      { decision: 'use_candidate' },
+    );
+    expect(consumed.state).toBe('consumed');
+    expect(
+      store.externalWaits.resolve(f.optional.id, f.authority, identity, {
+        decision: 'use_candidate',
+      }).id,
+    ).toBe(consumed.id);
+    expect(
+      store.externalWaits
+        .candidateContext(f.authority, identity)
+        .map((item) => item.job_id),
+    ).toEqual([f.job.id, f.optional.id]);
+    expect(store.externalWaits.reconcileDeliveries()).toBe(0);
+    expect(
+      store.externalWaits.view(f.task.id, identity).deliveries,
+    ).toHaveLength(2);
+  });
+  it.each(['pause', 'close'] as const)(
+    'retains a late optional result after %s without a new readiness event or wake',
+    (action) => {
+      const store = open(),
+        f = consumedRequiredWithOptional(store);
+      const task = store.read(f.task.id, identity);
+      if (action === 'pause')
+        store.control(task.id, identity, 'pause', {
+          schema_version: 'haze.task.control.v3',
+          ...expected(task),
+          action: 'pause',
+        });
+      else {
+        store.nightshift.controlChain(
+          f.job.chain_id,
+          {
+            schema_version: 'haze.nightshift.chain.control.v1',
+            ...expected(task),
+            expected_chain_revision: store.nightshift.chain(
+              f.job.chain_id,
+              identity,
+            ).revision,
+            action: 'close',
+          },
+          'close',
+          identity,
+        );
+        store.externalWaits.onChainControl(f.job.chain_id, 'close');
+      }
+      const cursor = store.events(f.task.id, identity, 0).next_cursor;
+      finish(store, f.optional);
+      expect(store.externalWaits.reconcileDeliveries()).toBe(1);
+      expect(store.externalWaits.reconcileDeliveries()).toBe(0);
+      const view = store.externalWaits.view(f.task.id, identity);
+      expect(view.waits.find((wait) => wait.id === f.wait.id)?.state).toBe(
+        'consumed',
+      );
+      expect(view.deliveries).toHaveLength(2);
+      expect(
+        view.deliveries.find((item) => item.job_id === f.optional.id)?.state,
+      ).toBe('fenced');
+      const events = store.events(f.task.id, identity, cursor).events;
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        type: 'external_result',
+        data: { job_id: f.optional.id, retained_only: true },
+      });
+      expect(store.externalWaits.drainReady()).toEqual([]);
+      expect(() =>
+        store.externalWaits.resolve(f.optional.id, f.authority, identity, {
+          decision: 'use_candidate',
+        }),
+      ).toThrow();
+      expect(
+        store.nightshift.job(f.optional.id, identity).receipt,
+      ).not.toBeNull();
+    },
+  );
   it('releases the specialist lease and only verified external-only work releases its task permit', () => {
     const store = open(),
       f = fixture(store);

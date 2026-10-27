@@ -406,6 +406,8 @@ async function main() {
     if (stopping) return;
     finished('FAILED');
     display.skipPending(stage + 1);
+    // Leave diagnostics below the frozen panel so the failure stays visible.
+    display.close();
     if (error.output && (stage !== 2 || !frontendReady)) log(error.output);
     log(error.message);
     if (stage === 0)

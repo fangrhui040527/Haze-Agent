@@ -30,10 +30,17 @@ const fence = (task: TaskRecord) => ({
   expected_objective_revision: task.objective_revision,
   expected_state_revision: task.state_revision,
 });
-function fixture(terminal = true) {
+function fixture(
+  terminal = true,
+  privacy: 'local-only' | 'cloud-ok' = 'cloud-ok',
+) {
   const directory = mkdtempSync(join(tmpdir(), 'haze-ns-transfers-'));
   directories.push(directory);
   const store = new TaskStore(directory, { recover: false });
+  const policy = {
+    privacy,
+    max_spend_usd: privacy === 'local-only' ? 0 : null,
+  };
   stores.push(store);
   let task = store.admit(
     taskRequestSchema.parse({
@@ -57,6 +64,7 @@ function fixture(terminal = true) {
       task_id: task.id,
       ...fence(task),
       total_runs: 2,
+      ...policy,
     },
     randomUUID(),
     identity,
@@ -70,6 +78,7 @@ function fixture(terminal = true) {
       prompt: 'Unreviewed predecessor candidate.',
       n: 1,
       input_refs: [],
+      ...policy,
     },
     randomUUID(),
     identity,
@@ -87,7 +96,7 @@ function fixture(terminal = true) {
       terminal: true,
       generated: 1,
       requested_attempts: 1,
-      privacy: 'local-only',
+      privacy: job.options.privacy,
       fleet: null,
       runtime_version: 'fixture',
     });
@@ -259,120 +268,128 @@ describe('explicit successor inbox delegation', () => {
       f.store.nightshiftTransfers.inbox(f.task.id, identity)[0]?.resolved,
     ).toBe(false);
   });
-  it('requires the exact controlled dependency decision and rebinds only the resumed current specialist', () => {
-    const f = fixture();
-    const after = f.store.events(f.task.id, identity).next_cursor;
-    f.store.externalWaits.wait(
-      {
+  it.each(['local-only', 'cloud-ok'] as const)(
+    'requires the exact controlled %s dependency decision and rebinds only the resumed current specialist',
+    (privacy) => {
+      const f = fixture(true, privacy);
+      const after = f.store.events(f.task.id, identity).next_cursor;
+      f.store.externalWaits.wait(
+        {
+          ...f.authority,
+          assignment_id: f.assignment.id,
+          assignment_revision: f.assignment.revision,
+          thread_id: graphThreadId('assignment', f.authority),
+          after_cursor: after,
+          dependencies: [{ job_id: f.job.id, required: true }],
+        },
+        identity,
+      );
+      f.store.graph.park({
         ...f.authority,
-        assignment_id: f.assignment.id,
-        assignment_revision: f.assignment.revision,
+        kind: 'assignment',
         thread_id: graphThreadId('assignment', f.authority),
+        cursor: after,
         after_cursor: after,
-        dependencies: [{ job_id: f.job.id, required: true }],
-      },
-      identity,
-    );
-    f.store.graph.park({
-      ...f.authority,
-      kind: 'assignment',
-      thread_id: graphThreadId('assignment', f.authority),
-      cursor: after,
-      after_cursor: after,
-      event_types: ['external_result_ready'],
-    });
-    f.store.externalWaits.resolve(
-      f.job.id,
-      {
-        ...f.authority,
-        assignment_id: f.assignment.id,
-        assignment_revision: f.assignment.revision,
-      },
-      identity,
-      {
-        decision: 'use_candidate',
-        reason: 'Inspect unreviewed bytes under exact current authority.',
-      },
-    );
-    f.store.nightshiftTransfers.resolve(
-      f.authority,
-      f.job.id,
-      identity,
-      'use_candidate',
-    );
-    expect(() =>
-      f.store.nightshiftTransfers.assertFinalizable(f.authority),
-    ).not.toThrow();
-    let current = f.store.read(f.task.id, identity);
-    f.store.control(current.id, identity, randomUUID(), {
-      schema_version: 'haze.task.control.v3',
-      ...fence(current),
-      action: 'pause',
-    });
-    current = f.store.read(current.id, identity);
-    f.store.nightshift.controlChain(
-      f.chain.id,
-      {
-        schema_version: 'haze.nightshift.chain.control.v1',
-        ...fence(current),
-        expected_chain_revision: f.store.nightshift.chain(f.chain.id, identity)
-          .revision,
-        action: 'resume',
-      },
-      randomUUID(),
-      identity,
-    );
-    f.store.control(current.id, identity, randomUUID(), {
-      schema_version: 'haze.task.control.v3',
-      ...fence(current),
-      action: 'resume',
-    });
-    const leased = f.store.acquireAssignment(current.id, f.assignment.id)!;
-    current = f.store.read(current.id, identity);
-    const resumed = { ...f.authority, generation: current.generation };
-    expect(leased.generation).toBe(current.generation);
-    expect(
-      f.store.nightshiftTransfers.authorized(
+        event_types: ['external_result_ready'],
+      });
+      f.store.externalWaits.resolve(
+        f.job.id,
+        {
+          ...f.authority,
+          assignment_id: f.assignment.id,
+          assignment_revision: f.assignment.revision,
+        },
+        identity,
+        {
+          decision: 'use_candidate',
+          reason: 'Inspect unreviewed bytes under exact current authority.',
+        },
+      );
+      f.store.nightshiftTransfers.resolve(
         f.authority,
-        f.store.nightshift.job(f.job.id, identity),
+        f.job.id,
         identity,
-      ),
-    ).toBe(false);
-    expect(
-      f.store.nightshiftTransfers.authorized(
+        'use_candidate',
+      );
+      expect(() =>
+        f.store.nightshiftTransfers.assertFinalizable(f.authority),
+      ).not.toThrow();
+      let current = f.store.read(f.task.id, identity);
+      f.store.control(current.id, identity, randomUUID(), {
+        schema_version: 'haze.task.control.v3',
+        ...fence(current),
+        action: 'pause',
+      });
+      current = f.store.read(current.id, identity);
+      f.store.nightshift.controlChain(
+        f.chain.id,
+        {
+          schema_version: 'haze.nightshift.chain.control.v1',
+          ...fence(current),
+          expected_chain_revision: f.store.nightshift.chain(
+            f.chain.id,
+            identity,
+          ).revision,
+          action: 'resume',
+        },
+        randomUUID(),
+        identity,
+      );
+      f.store.control(current.id, identity, randomUUID(), {
+        schema_version: 'haze.task.control.v3',
+        ...fence(current),
+        action: 'resume',
+      });
+      const leased = f.store.acquireAssignment(current.id, f.assignment.id)!;
+      current = f.store.read(current.id, identity);
+      const resumed = { ...f.authority, generation: current.generation };
+      expect(leased.generation).toBe(current.generation);
+      expect(
+        f.store.nightshiftTransfers.authorized(
+          f.authority,
+          f.store.nightshift.job(f.job.id, identity),
+          identity,
+        ),
+      ).toBe(false);
+      expect(
+        f.store.nightshiftTransfers.authorized(
+          resumed,
+          f.store.nightshift.job(f.job.id, identity),
+          identity,
+        ),
+      ).toBe(true);
+      const recovered = f.store.externalWaits.candidateContext(
         resumed,
-        f.store.nightshift.job(f.job.id, identity),
         identity,
-      ),
-    ).toBe(true);
-    const recovered = f.store.externalWaits.candidateContext(resumed, identity);
-    expect(recovered.map((item) => item.job_id)).toEqual([f.job.id]);
-    const retained = f.store.saveArtifact(current.id, identity, {
-      kind: 'fixture.recovered-candidate-draft',
-      content: { summary: 'Materially informed by the retained candidate.' },
-      producer: { kind: 'assignment', id: f.assignment.id },
-      generation: current.generation,
-      assignment_revision: f.assignment.revision,
-    });
-    expect(retained.external_candidates).toEqual([recovered[0]!.artifact]);
-    expect(
-      (
-        f.store.db
-          .prepare('SELECT count(*) n FROM external_result_deliveries')
-          .get() as { n: number }
-      ).n,
-    ).toBe(1);
-    f.store.db
-      .prepare('DELETE FROM graph_waits WHERE thread_id=?')
-      .run(graphThreadId('assignment', resumed));
-    // A terminal result tool can recover through the accepted control event
-    // even when it never needed an interrupt checkpoint.
-    expect(
-      f.store.externalWaits
-        .candidateContext(resumed, identity)
-        .map((item) => item.job_id),
-    ).toEqual([f.job.id]);
-  });
+      );
+      expect(recovered.map((item) => item.job_id)).toEqual([f.job.id]);
+      const retained = f.store.saveArtifact(current.id, identity, {
+        kind: 'fixture.recovered-candidate-draft',
+        content: { summary: 'Materially informed by the retained candidate.' },
+        producer: { kind: 'assignment', id: f.assignment.id },
+        generation: current.generation,
+        assignment_revision: f.assignment.revision,
+      });
+      expect(retained.external_candidates).toEqual([recovered[0]!.artifact]);
+      expect(
+        (
+          f.store.db
+            .prepare('SELECT count(*) n FROM external_result_deliveries')
+            .get() as { n: number }
+        ).n,
+      ).toBe(1);
+      f.store.db
+        .prepare('DELETE FROM graph_waits WHERE thread_id=?')
+        .run(graphThreadId('assignment', resumed));
+      // A terminal result tool can recover through the accepted control event
+      // even when it never needed an interrupt checkpoint.
+      expect(
+        f.store.externalWaits
+          .candidateContext(resumed, identity)
+          .map((item) => item.job_id),
+      ).toEqual([f.job.id]);
+    },
+  );
   it('recovers consumed terminal candidates without a GraphWait and preserves their derived provenance', () => {
     const f = fixture(),
       after = f.store.events(f.task.id, identity).next_cursor;

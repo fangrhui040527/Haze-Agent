@@ -1,4 +1,19 @@
 import { randomUUID } from 'node:crypto';
+import type {
+  ManagerConversationFactory,
+  ManagerConversationService,
+  ManagerConversationResolution,
+} from '../orchestration/conversation.js';
+import {
+  managerChatRequestSchema,
+  managerChatResponseSchema,
+  type ManagerChatResponse,
+} from '../contracts/manager-chat.js';
+import { ConversationTurnStore } from './conversation-store.js';
+import {
+  createManagerReferenceContract,
+  managerReferenceOutputSchema,
+} from '../orchestration/manager-reference-contract.js';
 import {
   createSpecialistActionContract,
   SPECIALIST_ACTION_CONTRACT_VERSION,
@@ -42,6 +57,7 @@ import {
 import { openSqliteCheckpointer } from '../checkpoints/sqlite.js';
 import { contractHash, parseContractJson } from '../contracts/json.js';
 import {
+  MANAGER_DECISION_FEEDBACK_MAX_BYTES,
   managerDecisionSchema,
   type ManagerDecision,
 } from '../contracts/manager.js';
@@ -117,6 +133,7 @@ export interface TaskRuntimeOptions {
   mode?: ExecutionMode;
   model?: AgentModel;
   modelRoutes?: ModelRouteService;
+  conversationFactory?: ManagerConversationFactory;
   nightshiftJobs?: NightshiftJobPort;
   nightshiftPollIntervalMs?: number;
   /** Trusted server release evidence; no environment, browser or model may set it. */
@@ -204,6 +221,13 @@ export class TaskRuntime {
   private model: AgentModel | undefined;
   private readonly modelRouteRegistry: ModelRouteService;
   private closed = false;
+  private conversation: ManagerConversationService | undefined;
+  private conversationTurns: ConversationTurnStore | undefined;
+  private readonly conversationAbort = new AbortController();
+  private readonly conversationPending = new Map<
+    string,
+    Promise<ManagerChatResponse>
+  >();
   private readonly externalWaitTimer: ReturnType<typeof setInterval>;
   private readonly extensions = new Map<string, TaskRuntimeExtension>();
   private readonly extensionTaskViews = new Map<
@@ -574,6 +598,176 @@ export class TaskRuntime {
     return this.model
       ? createInjectedRouteSnapshot(this.model.selection)
       : this.modelRouteRegistry.snapshot();
+  }
+  /** Chat decisions have no execution lease and never await task completion. */
+  async managerChat(
+    value: unknown,
+    key: string,
+    identity: TaskIdentity = localTaskIdentity,
+  ): Promise<ManagerChatResponse> {
+    if (this.closed)
+      throw new TaskError(503, 'runtime_closed', 'The Manager is stopping.');
+    this.capabilities(identity);
+    const parsed = managerChatRequestSchema.safeParse(value);
+    if (!parsed.success)
+      throw new TaskError(
+        400,
+        'invalid_chat_request',
+        'Send a bounded haze.manager.chat.request.v1 conversation turn.',
+      );
+    const request = parsed.data;
+    const ledger = (this.conversationTurns ??= new ConversationTurnStore(
+      this.store,
+    ));
+    const existing = ledger.begin(request, request, key, identity);
+    if (existing.response !== null)
+      return managerChatResponseSchema.parse(JSON.parse(existing.response));
+    const pendingKey = JSON.stringify([
+      identity.principal,
+      identity.workspace,
+      request.conversation_id,
+      request.turn_id,
+    ]);
+    const pending = this.conversationPending.get(pendingKey);
+    if (pending) return pending;
+    const execute = async (): Promise<ManagerChatResponse> => {
+      if (!this.options.conversationFactory)
+        throw new TaskError(
+          503,
+          'chat_unavailable',
+          'A Manager conversation controller has not been registered.',
+        );
+      this.conversation ??= this.options.conversationFactory({
+        store: this.store,
+        mode: this.executionMode,
+        env: this.options.env ?? process.env,
+        ...(this.model ? { model: this.model } : {}),
+        modelRoutes: this.modelRouteRegistry,
+        diagnostic: (category, error) => ledger.diagnostic(category, error),
+      });
+      const resolution: ManagerConversationResolution =
+        existing.resolution !== null
+          ? (JSON.parse(existing.resolution) as ManagerConversationResolution)
+          : await this.conversation.resolve(
+              request,
+              identity,
+              AbortSignal.any([
+                this.conversationAbort.signal,
+                AbortSignal.timeout(120_000),
+              ]),
+            );
+      if (this.closed)
+        throw new TaskError(
+          503,
+          'runtime_closed',
+          'The Manager is stopping. Retry this saved turn after restart.',
+        );
+      ledger.resolve(request, identity, resolution);
+      try {
+        return ledger.finish(request, identity, () => {
+          const common = {
+            schema_version: 'haze.manager.chat.response.v1' as const,
+            paragraphs: resolution.paragraphs,
+            citations: resolution.citations,
+          };
+          if (resolution.kind === 'start_task') {
+            // Only the user's workspace setting grants optional execution tools.
+            const taskRequest = { ...resolution.request };
+            delete taskRequest.nightshift_tools;
+            const permission = Boolean(
+              request.nightshift_tools?.length &&
+              request.nightshift_permission_id &&
+              ledger.claimPermission(
+                request.nightshift_permission_id,
+                request,
+                identity,
+              ),
+            );
+            const admitted = this.admit(
+              {
+                ...taskRequest,
+                ...(permission
+                  ? { nightshift_tools: request.nightshift_tools }
+                  : {}),
+              },
+              `chat-admit-${request.conversation_id}-${request.turn_id}`,
+              identity,
+            );
+            return managerChatResponseSchema.parse({
+              ...common,
+              kind: 'task_admitted',
+              task: {
+                task_id: admitted.task_id,
+                title: resolution.title,
+                summary: 'Task admitted. The Manager is preparing the work.',
+                status_url: admitted.status_url,
+              },
+            });
+          }
+          if (resolution.kind === 'answer_task') {
+            const { task_id, ...question } = resolution.answer_to;
+            this.update(
+              task_id,
+              {
+                ...question,
+                schema_version: 'haze.task.update.v3',
+                kind: 'clarification',
+                passage: resolution.passage,
+              },
+              `chat-answer-${request.conversation_id}-${request.turn_id}`,
+              identity,
+            );
+            const task = this.store.read(task_id, identity);
+            return managerChatResponseSchema.parse({
+              ...common,
+              kind: 'task_updated',
+              task: {
+                task_id,
+                title: task.original_request.objective.slice(0, 240),
+                summary:
+                  'Your answer was saved. The Manager can continue the task.',
+                status_url: `/api/tasks/${task_id}`,
+              },
+            });
+          }
+          return managerChatResponseSchema.parse({
+            ...common,
+            kind: resolution.kind,
+            ...('error' in resolution && resolution.error
+              ? { error: resolution.error }
+              : {}),
+          });
+        });
+      } catch (error) {
+        const category =
+          error instanceof TaskError
+            ? error.status === 409
+              ? 'task_conflict'
+              : 'task_admission_failed'
+            : 'task_response_invalid';
+        ledger.diagnostic(category, error);
+        return ledger.finish(request, identity, () =>
+          managerChatResponseSchema.parse({
+            schema_version: 'haze.manager.chat.response.v1',
+            kind: 'reply',
+            citations: [],
+            paragraphs: [
+              error instanceof TaskError
+                ? error.message
+                : 'The Manager could not validate the task response. The last confirmed task state is still available in the Manager workspace.',
+            ],
+            error: { category, retryable: false },
+          }),
+        );
+      }
+    };
+    const operation = execute();
+    this.conversationPending.set(pendingKey, operation);
+    try {
+      return await operation;
+    } finally {
+      this.conversationPending.delete(pendingKey);
+    }
   }
   admit(
     value: unknown,
@@ -1055,8 +1249,10 @@ export class TaskRuntime {
               role: 'Manager',
               instruction: modelInstruction(agent.instructions),
               context: {},
-              output_schema: promptSchema(
-                agent.schemas?.decision ?? managerDecisionSchema,
+              output_schema: managerReferenceOutputSchema(
+                promptSchema(
+                  agent.schemas?.decision ?? managerDecisionSchema,
+                ) as Record<string, unknown>,
               ),
               max_output_tokens: task.limits.max_model_output_tokens,
               json_mode: true,
@@ -1077,7 +1273,10 @@ export class TaskRuntime {
               ),
               maxBytes: Math.max(
                 1,
-                task.limits.max_model_input_bytes - overhead - 128,
+                task.limits.max_model_input_bytes -
+                  overhead -
+                  128 -
+                  MANAGER_DECISION_FEEDBACK_MAX_BYTES,
               ),
             },
           );
@@ -1096,6 +1295,7 @@ export class TaskRuntime {
           )!;
           const agent = this.options.registry.agents.get('Manager')!;
           let response: AgentModelCompletion | undefined;
+          let modelInvocation = 0;
           const pending = this.store
             .actions(id, task.identity)
             .findLast(
@@ -1215,6 +1415,7 @@ export class TaskRuntime {
               : await agent.decide!({
                   context,
                   model: async (input) => {
+                    const invocation = modelInvocation++;
                     if (task.mode === 'fixture') {
                       if (!agent.fixtureDecision)
                         throw new TaskError(
@@ -1238,7 +1439,7 @@ export class TaskRuntime {
                         coordinator,
                         input,
                         signal,
-                        `manager:${task.objective_revision}:decision:${state.decisions.length}:model`,
+                        `manager:${task.objective_revision}:decision:${state.decisions.length}:model${invocation ? `:repair:${invocation}` : ''}`,
                       );
                     return response;
                   },
@@ -1330,23 +1531,11 @@ export class TaskRuntime {
           const after = this.store.read(id, task.identity);
           return {
             forceDecision:
-              [
-                'inspect',
-                'applicability',
-                'lookup',
-                'coordinate',
-                'steer',
-              ].includes(decision.action.type) ||
-              (decision.action.type === 'apply_plan' &&
-                [...this.options.registry.capabilities.values()].some(
-                  (capability) =>
-                    (capability.peer_requirements?.length ?? 0) > 0 &&
-                    after.assignments.some(
-                      (a) =>
-                        a.run_id === after.current_run_id &&
-                        a.capability === capability.card.id,
-                    ),
-                )),
+              ['inspect', 'applicability', 'lookup', 'steer'].includes(
+                decision.action.type,
+              ) ||
+              (['apply_plan', 'coordinate'].includes(decision.action.type) &&
+                this.needsRequiredPeerChannel(after)),
           };
         },
         dispatch: ({ forceDecision }) => {
@@ -1359,7 +1548,9 @@ export class TaskRuntime {
             };
           if (!['queued', 'running'].includes(task.status))
             return { route: 'done' };
-          if (!forceDecision) this.dispatchAssignments(task);
+          const missingPeerChannel = this.needsRequiredPeerChannel(task);
+          if (!forceDecision && !missingPeerChannel)
+            this.dispatchAssignments(task);
           const state = this.store.managerState(id, task.identity)!;
           const pending = this.store.pendingManagerEvents(id, task.identity);
           const last = state.decisions.at(-1)?.decision;
@@ -1376,7 +1567,8 @@ export class TaskRuntime {
             pending.length ||
             !last ||
             (last.action.type !== 'wait' && !active) ||
-            forceDecision;
+            forceDecision ||
+            missingPeerChannel;
           return {
             route: needsDecision ? 'decide' : 'wait',
             forceDecision: false,
@@ -1459,7 +1651,65 @@ export class TaskRuntime {
         : { cycle: 0 };
     await graph.invoke(input, config);
   }
+  private needsRequiredPeerChannel(task: TaskRecord): boolean {
+    const work = task.assignments.filter(
+      (assignment) =>
+        assignment.run_id === task.current_run_id &&
+        assignment.objective_revision === task.objective_revision &&
+        assignment.usability !== 'stale' &&
+        !['failed', 'cancelled', 'timed_out', 'stale'].includes(
+          assignment.status,
+        ),
+    );
+    const channel = this.store.peerChannelForRun(task.current_run_id);
+    for (const capability of this.options.registry.capabilities.values())
+      for (const requirement of capability.peer_requirements ?? []) {
+        const participants = requirement.definitions.map((definition) =>
+          work.find(
+            (assignment) =>
+              assignment.capability === capability.card.id &&
+              assignment.definition_id === definition,
+          ),
+        );
+        if (!participants[0] || !participants[1]) continue;
+        if (
+          participants.every((assignment) => assignment!.status === 'completed')
+        )
+          continue;
+        // Completion normally closes a channel. Its exact approved pair still
+        // covers the dependent reviewer; it cannot cover a newly admitted ID.
+        const completedParticipant = participants.some(
+          (assignment) => assignment!.status === 'completed',
+        );
+        if (
+          !channel ||
+          channel.task_id !== task.id ||
+          channel.run_id !== task.current_run_id ||
+          channel.objective_revision !== task.objective_revision ||
+          (channel.status !== 'open' &&
+            !(channel.status === 'closed' && completedParticipant)) ||
+          Date.parse(channel.expires_at) <= Date.now() ||
+          channel.purpose !== requirement.purpose ||
+          !participants.every((assignment) =>
+            channel.participants.some(
+              (participant) =>
+                participant.assignment_id === assignment!.id &&
+                participant.revision === assignment!.revision,
+            ),
+          )
+        )
+          return true;
+      }
+    return false;
+  }
   private dispatchAssignments(task: TaskRecord) {
+    // Hydration, restart and material-event paths also enter here. None may
+    // dispatch queued work before the Manager's exact required peer grant.
+    if (
+      !['queued', 'running'].includes(task.status) ||
+      this.needsRequiredPeerChannel(task)
+    )
+      return;
     const work = task.assignments.filter(
       (a) =>
         a.run_id === task.current_run_id &&
@@ -2224,6 +2474,14 @@ export class TaskRuntime {
     const specialistContract = enumerated
       ? createSpecialistActionContract(context, actionSchema)
       : undefined;
+    const managerContract =
+      purpose === 'decision'
+        ? createManagerReferenceContract(
+            context,
+            actionSchema,
+            promptSchema(actionSchema) as Record<string, unknown>,
+          )
+        : undefined;
     const contract =
       'Return exactly one strict JSON action matching the supplied schema and context.action_contract. Use only its legal actions, tools, recipients, job handles and exact artifact references. Advance after a successful tool result instead of repeating unchanged work. Never repeat a JSON key. A rejected_action in history means no action was dispatched: apply its remedy within the existing turn budget and use a new unique action id.';
     const selectedCandidates = this.store.nightshift.selectedDependencies(
@@ -2275,7 +2533,9 @@ export class TaskRuntime {
       // The structure travels in output_schema alone. Duplicating it in the
       // context dominates the prompt and blows the admitted input limit.
       output_schema:
-        specialistContract?.outputSchema ?? promptSchema(actionSchema),
+        specialistContract?.outputSchema ??
+        managerContract?.outputSchema ??
+        promptSchema(actionSchema),
       max_output_tokens: task.limits.max_model_output_tokens,
       json_mode: true,
     };
@@ -2524,8 +2784,29 @@ export class TaskRuntime {
         );
       // Returning accepted bytes never grants their new applicability. The
       // current source grants and candidate context are still revalidated.
-      this.store.externalWaits.candidateContext(authority, task.identity);
-      return nightshiftToolOutputSchema.parse(receipt.value);
+      const candidates = this.store.externalWaits.candidateContext(
+        authority,
+        task.identity,
+      );
+      const value = nightshiftToolOutputSchema.parse(receipt.value);
+      if (
+        value.output !== null &&
+        !candidates.some(
+          (candidate) =>
+            value.candidate !== null &&
+            candidate.job_id === value.job_id &&
+            candidate.artifact.id === value.candidate.id &&
+            candidate.artifact.version === value.candidate.version &&
+            candidate.artifact.sha256 === value.candidate.sha256 &&
+            candidate.text === value.output,
+        )
+      )
+        throw new TaskError(
+          403,
+          'nightshift_result_no_longer_authorized',
+          'The retained candidate is no longer authorized for current result consumption.',
+        );
+      return value;
     }
     if (operation.status !== 'prepared')
       throw new TaskError(
@@ -3815,6 +4096,7 @@ export class TaskRuntime {
   async close() {
     if (this.closed) return;
     this.closed = true;
+    this.conversationAbort.abort(new Error('Manager runtime closed.'));
     clearInterval(this.externalWaitTimer);
     for (const task of this.store.listRecoverableTasks()) {
       if (!['queued', 'running'].includes(task.status)) continue;
@@ -3829,6 +4111,8 @@ export class TaskRuntime {
         expected_objective_revision: task.objective_revision,
       });
     }
+    if (this.conversationPending.size)
+      await Promise.allSettled(this.conversationPending.values());
     await this.automaticChains.close();
     await this.nightshift.close();
     await this.dispatcher.close();

@@ -110,6 +110,8 @@ function fixture(store: TaskStore, enable = true) {
     automatic_followup_runs: 2,
     automatic_opt_in: true,
     initial_progress: progress,
+    privacy: 'local-only',
+    max_spend_usd: 0,
   };
   return { task, ref, progress, request };
 }
@@ -419,6 +421,31 @@ describe('automatic chain immutable grants and progress', () => {
         identity,
       ),
     ).toThrow('validated refinement');
+    const pausedAgain = store.nightshift.controlChain(
+      chain.id,
+      {
+        schema_version: 'haze.nightshift.chain.control.v2',
+        ...authority(store.read(f.task.id, identity)),
+        expected_chain_revision: stopped.revision,
+        action: 'pause',
+      },
+      'redundant-user-pause',
+      identity,
+    );
+    expect(pausedAgain.stop_reason).toBe(stopped.stop_reason);
+    expect(() =>
+      store.nightshift.controlChain(
+        chain.id,
+        {
+          schema_version: 'haze.nightshift.chain.control.v2',
+          ...authority(store.read(f.task.id, identity)),
+          expected_chain_revision: pausedAgain.revision,
+          action: 'resume',
+        },
+        'cannot-resume-after-redundant-pause',
+        identity,
+      ),
+    ).toThrow('validated refinement');
     const ref = source(
       store,
       'A changed exact source with supported additional evidence.',
@@ -448,6 +475,88 @@ describe('automatic chain immutable grants and progress', () => {
     expect(
       store.nightshift.progress(chain.id, identity)?.progress.input_refs,
     ).toEqual([ref]);
+  });
+  it('re-enforces a duplicate accepted stop without duplicating records or refreshing the grant', () => {
+    const store = open(),
+      f = fixture(store),
+      chain = store.nightshift.admitChain(f.request, 'chain', identity).chain;
+    const stop = {
+      code: 'no_progress',
+      message: 'Identical admitted work has no supported changed cause.',
+      cursor: 0,
+      refs: [f.ref],
+    };
+    store.nightshift.stopAutomatic(chain.id, stop);
+    const original = store.nightshift.chain(chain.id, identity);
+    const accepted = store.nightshift.automationView(chain.id, identity).stops;
+    const eventCursor = store.events(f.task.id, identity, 0).next_cursor;
+    const taskUsage = store.read(f.task.id, identity).usage;
+    // Recreate the mutable state left by the old pause/Resume bypass. The
+    // immutable stop ledger remains the authority when the same fence returns.
+    store.db
+      .prepare('UPDATE ns_chains SET body=? WHERE id=?')
+      .run(
+        JSON.stringify({ ...original, status: 'active', stop_reason: null }),
+        chain.id,
+      );
+    store.nightshift.stopAutomatic(chain.id, {
+      ...stop,
+      message: 'Redelivery must not rewrite the accepted explanation.',
+    });
+    const restored = store.nightshift.chain(chain.id, identity);
+    expect(restored).toMatchObject({
+      status: 'paused',
+      stop_reason: original.stop_reason,
+      expires_at: original.expires_at,
+      grant: original.grant,
+      usage: original.usage,
+      remaining: original.remaining,
+    });
+    expect(store.nightshift.automationView(chain.id, identity).stops).toEqual(
+      accepted,
+    );
+    expect(store.events(f.task.id, identity, eventCursor).events).toEqual([]);
+    expect(store.read(f.task.id, identity).usage).toEqual(taskUsage);
+    expect(
+      store.db
+        .prepare('SELECT COUNT(*) count FROM ns_chain_stops WHERE chain_id=?')
+        .get(chain.id),
+    ).toMatchObject({ count: 1 });
+    store.nightshift.stopAutomatic(chain.id, stop);
+    expect(store.nightshift.chain(chain.id, identity)).toEqual(restored);
+  });
+  it('duplicate observational stops preserve an independent user pause and never reopen a closed grant', () => {
+    const store = open(),
+      f = fixture(store),
+      chain = store.nightshift.admitChain(f.request, 'chain', identity).chain;
+    const stop = {
+      code: 'automatic_followups_exhausted',
+      message: 'Only separately authorized manual authority remains.',
+      cursor: 0,
+      refs: [],
+      status: 'active' as const,
+    };
+    store.nightshift.stopAutomatic(chain.id, stop);
+    const control = (action: 'pause' | 'close') =>
+      store.nightshift.controlChain(
+        chain.id,
+        {
+          schema_version: 'haze.nightshift.chain.control.v2',
+          ...authority(store.read(f.task.id, identity)),
+          expected_chain_revision: store.nightshift.chain(chain.id, identity)
+            .revision,
+          action,
+        },
+        action,
+        identity,
+      );
+    const paused = control('pause');
+    expect(paused.stop_reason).toBe('Manual submission paused.');
+    store.nightshift.stopAutomatic(chain.id, stop);
+    expect(store.nightshift.chain(chain.id, identity)).toEqual(paused);
+    const closed = control('close');
+    store.nightshift.stopAutomatic(chain.id, stop);
+    expect(store.nightshift.chain(chain.id, identity)).toEqual(closed);
   });
   it('unknown submission and cancellation pending outcomes block further jobs and all continuation paths', () => {
     const store = open(),

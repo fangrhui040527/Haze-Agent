@@ -12,6 +12,7 @@ import type { NightshiftJob } from '../../app/contracts/nightshift-records.js';
 import type {
   NightshiftJobReadiness,
   NightshiftRemoteJob,
+  NightshiftSubmitRequest,
 } from '../../app/contracts/nightshift.js';
 import {
   NightshiftJobTransportError,
@@ -19,6 +20,11 @@ import {
 } from '../../app/orchestration/ports.js';
 import { TaskStore } from '../../app/tasks/store.js';
 import { NightshiftJobService } from '../../app/tasks/nightshift-service.js';
+import {
+  automaticReadinessSchema,
+  automaticReleaseBlocked,
+  type AutomaticReleasePolicy,
+} from '../../app/contracts/nightshift-automatic.js';
 
 const identity: TaskIdentity = {
   principal: 'local-user',
@@ -98,7 +104,11 @@ function port(overrides: Partial<NightshiftJobPort> = {}) {
     ...overrides,
   } satisfies NightshiftJobPort;
 }
-function setup(adapter: NightshiftJobPort, existing?: string) {
+function setup(
+  adapter: NightshiftJobPort,
+  existing?: string,
+  automaticReadiness?: AutomaticReleasePolicy,
+) {
   const path = existing ?? mkdtempSync(join(tmpdir(), 'haze-job-service-'));
   if (!existing) paths.push(path);
   const store = new TaskStore(path);
@@ -117,7 +127,11 @@ function setup(adapter: NightshiftJobPort, existing?: string) {
           'Local identity required.',
         );
     },
-    { env: {}, pollIntervalMs: 60_000 },
+    {
+      env: {},
+      pollIntervalMs: 60_000,
+      ...(automaticReadiness ? { automaticReadiness } : {}),
+    },
   );
   services.push(service);
   return { path, store, service };
@@ -128,8 +142,78 @@ const authority = (task: TaskRecord) => ({
   expected_objective_revision: task.objective_revision,
   expected_state_revision: task.state_revision,
 });
-async function admission(adapter: NightshiftJobPort = port()) {
+function automaticAdmission(store: TaskStore) {
+  const source = store.importArtifact(
+    {
+      schema_version: 'haze.artifact.import.v3',
+      filename: 'source.txt',
+      media_type: 'text/plain',
+      content_base64: Buffer.from(
+        'Synthetic source for admission only.',
+      ).toString('base64'),
+    },
+    identity,
+    'source',
+  ).artifact;
+  const ref = { id: source.id, version: source.version, sha256: source.sha256 };
+  const tools = ['nightshift.submit', 'nightshift.result'];
+  const task = store.admit(
+    taskRequestSchema.parse({
+      schema_version: 'haze.task.request.v3',
+      objective: 'Prepare a bounded unreviewed draft.',
+      context_refs: [ref],
+      nightshift_tools: tools,
+    }),
+    identity,
+    'automatic-task',
+    { tools },
+  ).task;
+  return {
+    task,
+    body: {
+      schema_version: 'haze.nightshift.chain.admission.v2',
+      privacy: 'local-only',
+      max_spend_usd: 0,
+      task_id: task.id,
+      ...authority(task),
+      total_runs: 2,
+      automatic_followup_runs: 1,
+      automatic_opt_in: true,
+      initial_progress: {
+        schema_version: 'haze.nightshift.progress.v1',
+        purpose: 'evidence_linked_draft',
+        instruction:
+          'Inspect the exact source without accepting generated claims.',
+        input_refs: [ref],
+      },
+    },
+  };
+}
+function releasedFixture() {
+  const blocked = automaticReleaseBlocked('Fixture prerequisites only.');
+  return automaticReadinessSchema.parse({
+    ...blocked,
+    released: true,
+    ready: true,
+    evidence_id: 'synthetic-release-no-live-claim',
+    evidence_kind: 'fixture',
+    reason: null,
+    gates: blocked.gates.map((gate) => ({
+      ...gate,
+      passed: true,
+      reason: null,
+    })),
+  });
+}
+async function admission(
+  adapter: NightshiftJobPort = port(),
+  privacy: NightshiftSubmitRequest['privacy'] = 'local-only',
+) {
   const state = setup(adapter);
+  const policy = {
+    privacy,
+    max_spend_usd: privacy === 'local-only' ? 0 : null,
+  };
   const task = state.store.admit(
     taskRequestSchema.parse({
       schema_version: 'haze.task.request.v3',
@@ -141,6 +225,7 @@ async function admission(adapter: NightshiftJobPort = port()) {
   const chain = await state.service.admitChain(
     {
       schema_version: 'haze.nightshift.chain.admission.v1',
+      ...policy,
       task_id: task.id,
       ...authority(task),
     },
@@ -149,6 +234,7 @@ async function admission(adapter: NightshiftJobPort = port()) {
   );
   const body = {
     schema_version: 'haze.nightshift.job.submit.v1',
+    ...policy,
     chain_id: chain.id,
     expected_chain_revision: chain.revision,
     ...authority(task),
@@ -166,6 +252,136 @@ function control(job: NightshiftJob, store: TaskStore) {
 }
 
 describe('browser-independent Nightshift supervisor', () => {
+  it('dispatches cloud candidates without requiring any local model or adding a dollar cap', async () => {
+    const baseline = port();
+    const ready = await baseline.readiness();
+    const remote = await baseline.inspect('remote-1');
+    const adapter = port({
+      readiness: vi.fn(() =>
+        Promise.resolve({
+          ...ready,
+          cloud_enforced: true,
+          cloud_compute_available: true,
+          local_compute_available: false,
+        }),
+      ),
+      inspect: vi.fn(() => Promise.resolve({ ...remote, privacy: 'cloud-ok' })),
+    });
+    const state = await admission(adapter, 'cloud-ok');
+    expect(state.chain.grant).toMatchObject({
+      privacy: 'cloud-ok',
+      max_spend_usd: null,
+      automatic_followup_runs: 0,
+    });
+    const job = await state.service.submitJob(
+      state.body,
+      'cloud-job',
+      identity,
+    );
+    expect(job.remote_id).toBe('remote-1');
+    expect(adapter.submit).toHaveBeenCalledWith(
+      expect.objectContaining({ privacy: 'cloud-ok', max_spend_usd: null }),
+      expect.any(AbortSignal),
+    );
+    await expect(
+      state.service.admitChain(
+        {
+          schema_version: 'haze.nightshift.chain.admission.v1',
+          task_id: state.task.id,
+          ...authority(state.store.read(state.task.id, identity)),
+          privacy: 'local-only',
+          max_spend_usd: 0,
+        },
+        'unavailable-local-chain',
+        identity,
+      ),
+    ).rejects.toMatchObject({ code: 'nightshift_unavailable' });
+  });
+  it('admits v2 only while both release checks remain ready', async () => {
+    const adapter = port();
+    const gate = vi.fn(() => Promise.resolve(releasedFixture()));
+    const state = setup(adapter, undefined, gate);
+    const f = automaticAdmission(state.store);
+    const chain = await state.service.admitChain(
+      f.body,
+      'automatic-chain',
+      identity,
+    );
+    expect(chain.schema_version).toBe('haze.nightshift.chain.v2');
+    expect(gate).toHaveBeenCalledTimes(2);
+    expect(adapter.readiness).toHaveBeenCalledOnce();
+    expect(state.service.listChains(identity).chains).toHaveLength(1);
+    expect(adapter.submit).not.toHaveBeenCalled();
+  });
+  it('keeps v1 admission independent of the automatic release policy', async () => {
+    const adapter = port();
+    const gate = vi.fn(() =>
+      Promise.resolve(automaticReleaseBlocked('Automatic mode is closed.')),
+    );
+    const state = setup(adapter, undefined, gate);
+    const task = state.store.admit(
+      taskRequestSchema.parse({
+        schema_version: 'haze.task.request.v3',
+        objective: 'Prepare a manual-only draft.',
+      }),
+      identity,
+      'manual-task',
+    ).task;
+    const chain = await state.service.admitChain(
+      {
+        schema_version: 'haze.nightshift.chain.admission.v1',
+        privacy: 'local-only',
+        max_spend_usd: 0,
+        task_id: task.id,
+        ...authority(task),
+      },
+      'manual-chain',
+      identity,
+    );
+    expect(chain.schema_version).toBe('haze.nightshift.chain.v1');
+    expect(chain.grant.automatic_followup_runs).toBe(0);
+    expect(gate).not.toHaveBeenCalled();
+    expect(adapter.readiness).toHaveBeenCalledOnce();
+    expect(adapter.submit).not.toHaveBeenCalled();
+  });
+  it('rechecks automatic release after deferred runtime discovery before creating any grant', async () => {
+    const initialAdapter = port();
+    const ready = await initialAdapter.readiness();
+    let finishReadiness!: (value: NightshiftJobReadiness) => void;
+    const adapter = port({
+      readiness: vi.fn(
+        () =>
+          new Promise<NightshiftJobReadiness>((done) => {
+            finishReadiness = done;
+          }),
+      ),
+    });
+    let release = releasedFixture();
+    const gate = vi.fn(() => Promise.resolve(release));
+    const state = setup(adapter, undefined, gate);
+    const f = automaticAdmission(state.store);
+    const before = state.store.read(f.task.id, identity).usage;
+    const pending = state.service.admitChain(
+      f.body,
+      'automatic-chain',
+      identity,
+    );
+    await vi.waitFor(() => expect(adapter.readiness).toHaveBeenCalledOnce());
+    release = automaticReleaseBlocked(
+      'Release evidence was revoked during discovery.',
+    );
+    const rejection = expect(pending).rejects.toMatchObject({
+      status: 503,
+      code: 'nightshift_automatic_release_blocked',
+    });
+    finishReadiness(ready);
+    await rejection;
+    expect(gate).toHaveBeenCalledTimes(2);
+    expect(state.service.listChains(identity).chains).toEqual([]);
+    expect(state.service.listJobs(identity).jobs).toEqual([]);
+    expect(state.store.read(f.task.id, identity).usage).toEqual(before);
+    expect(adapter.submit).not.toHaveBeenCalled();
+  });
   it('keeps a known judge outcome when output retrieval fails, then preserves it on capture', async () => {
     let outputAvailable = false;
     let outcomeAvailable = true;
@@ -486,7 +702,7 @@ describe('browser-independent Nightshift supervisor', () => {
     await state.service.close();
     expect((await work).execution_state).toBe('submission_unknown');
   });
-  it('rejects unavailable/cloud/unsupported options before creating a remote submission', async () => {
+  it('rejects unenforceable dollar caps and unsupported options before remote submission', async () => {
     const adapter = port();
     const state = await admission(adapter);
     await expect(
