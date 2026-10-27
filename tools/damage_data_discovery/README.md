@@ -9,6 +9,8 @@ The remaining data and method readiness work is tracked in
 [PILOT_READINESS_MATRIX.md](./PILOT_READINESS_MATRIX.md); its implementation
 sequence and task status are summarized in
 [CRAWLER_CAPABILITIES_AND_DATA_GAPS.md](./CRAWLER_CAPABILITIES_AND_DATA_GAPS.md).
+The active scope and implementation sequence are in
+[DAMAGE_ACCOUNTANT_IMPLEMENTATION_PLAN.md](../DAMAGE_ACCOUNTANT_IMPLEMENTATION_PLAN.md).
 The matrix is currently blocked on approval of a specific pilot scope and
 does not imply that the prototype has met the screenshot requirements.
 
@@ -45,11 +47,14 @@ non-approved host is blocked by the route guard.
 The output directory `run-output/` is local and ignored by Git. It contains a
 compact JSON/Markdown discovery report, not a mirror of page contents.
 
-## Bounded PM2.5 acquisition pilot
+## Historical PM2.5 discovery smoke test (not in the active plan)
 
-The separate `pilot_pm25.py` script makes one fixed, bounded HTTPS GET to the
-reviewed Data.gov.my PM2.5 sample endpoint (maximum three records). It does not
-use the LLM, follow links, or write into Zetaris. Run:
+The completed `pilot_pm25.py` experiment made one fixed, bounded HTTPS GET to
+the reviewed Data.gov.my PM2.5 sample endpoint (maximum three records). This
+is retained as historical discovery work only. The project owner reports
+that PM2.5 is already fetchable through Zetaris; the active implementation
+plan excludes new PM2.5 acquisition and adapter work. The sample does not
+alter or write into Zetaris. To reproduce the old smoke test:
 
 ```powershell
 & 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' tools\damage_data_discovery\pilot_pm25.py
@@ -140,11 +145,19 @@ assessment. It accepts only an HTTP endpoint on `localhost`, `127.0.0.1` or
 
 This is a separate experiment from both the crawler report and its
 Meterless-only summarizer. It crawls exactly one reviewed seed page with
-Crawl4AI, then sends a bounded excerpt of the fetched page text to Nemotron to
-inspect the content and report what data it can identify. It does not follow
-discovered links or download bulk datasets.
+Crawl4AI, then uses Crawl4AI's `LLMExtractionStrategy` with LiteLLM and
+NVIDIA's OpenAI-compatible endpoint to inspect a bounded excerpt of the page.
+It does not follow discovered links or download bulk datasets.
 
-After rotating the exposed NVIDIA key, set `NVIDIA_API_KEY` in `.env` and run:
+Install the optional LiteLLM provider bridge in the crawler virtual
+environment:
+
+```powershell
+& 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' -m pip install -r tools\damage_data_discovery\requirements-llm.txt
+```
+
+After rotating the previously exposed NVIDIA key, set `NVIDIA_API_KEY` in
+`.env` and run:
 
 ```powershell
 & 'C:\Users\user\Desktop\crawler\law_agent\.venv\Scripts\python.exe' tools\damage_data_discovery\nemotron_crawl.py
@@ -153,13 +166,15 @@ After rotating the exposed NVIDIA key, set `NVIDIA_API_KEY` in `.env` and run:
 Use `--source-id <id>` to choose another reviewed seed, `--list-sources` to
 list available seeds, `--dry-run` to validate selection without network
 requests, or `--crawl-only` to test the crawl and print a short excerpt without
-calling NVIDIA. The fetched page text is sent to NVIDIA in the normal run, so
-review it and the provider's data-handling terms before running the experiment.
-Nemotron is prompted to return JSON identifying candidate fields, documented
-units, coverage, access methods, limitations, short exact evidence quotes, and
-questions that remain unverified. The response is not parsed as trusted
-metadata; check every claim against the provider's official documentation
-before relying on it or changing the curated seed annotations.
+calling NVIDIA. A normal run sends at most 16,000 page-text characters to
+NVIDIA; review that data transfer and the provider's terms before running it.
+The LLM strategy uses the OpenAI-compatible LiteLLM provider configuration
+(`openai/<model>`) with NVIDIA's `/v1` base URL. Nemotron is prompted to return
+structured JSON identifying candidate fields, documented units, coverage,
+access methods, limitations, short exact evidence quotes, and questions that
+remain unverified. The response is schema-checked but is not trusted metadata;
+check every claim against the provider's official documentation before relying
+on it or changing the curated seed annotations.
 
 ## Screenshot coverage
 
