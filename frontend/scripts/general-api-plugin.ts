@@ -4,6 +4,7 @@ import { parseEnv } from 'node:util';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadEnv, type Plugin } from 'vite';
 import { createTaskHandler } from '../../app/tasks/http.ts';
+import { TaskError } from '../../app/contracts/tasks.ts';
 import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.ts';
 import { envFileCandidates } from '../../app/adapters/zetaris/scripts/env-files.ts';
 
@@ -12,6 +13,8 @@ export function generalApiPlugin(): Plugin {
   let env: NodeJS.ProcessEnv = process.env;
   let tasks: ReturnType<typeof createTaskHandler> | undefined;
   let closing: Promise<void> | undefined;
+  let lastFailure: string | undefined;
+  let reportFailure = (message: string) => console.error(message);
   const closeTasks = () => {
     const current = tasks;
     return (closing ??= (async () => {
@@ -51,9 +54,22 @@ export function generalApiPlugin(): Plugin {
           ),
         });
         closing = undefined;
+        lastFailure = undefined;
       }
       tasks(request, response);
-    } catch {
+    } catch (error) {
+      const ownerConflict =
+        error instanceof TaskError && error.code === 'runtime_owner_exists';
+      if (!ownerConflict) {
+        const diagnostic =
+          error instanceof Error ? error.message : String(error);
+        if (diagnostic !== lastFailure) {
+          reportFailure(
+            `Haze task runtime failed to initialize: ${diagnostic}`,
+          );
+          lastFailure = diagnostic;
+        }
+      }
       response.writeHead(503, {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
@@ -61,9 +77,10 @@ export function generalApiPlugin(): Plugin {
       response.end(
         JSON.stringify({
           error: {
-            code: 'task_runtime_unavailable',
-            message:
-              'The local task runtime is unavailable. Another server may own this state directory. Use a separate STATE_DIR or stop the other owner. No task was admitted.',
+            code: ownerConflict ? error.code : 'task_runtime_unavailable',
+            message: ownerConflict
+              ? `${error.message} No task was admitted.`
+              : 'The local task runtime could not initialize. Check the server log for the cause. No task was admitted.',
           },
         }),
       );
@@ -93,6 +110,7 @@ export function generalApiPlugin(): Plugin {
     // Vitest starts an internal Vite server; unit tests must not acquire live state.
     apply: (_config, { mode }) => mode !== 'test',
     configResolved(config) {
+      reportFailure = (message) => config.logger.error(message);
       // Server-only root configuration. Vite still exposes only VITE_* to the browser.
       const sourceEnv: Record<string, string> = {};
       // Read lower-priority files first; the root .env and Vite mode settings win.

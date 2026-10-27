@@ -2,7 +2,7 @@
 
 Date: 2026-10-27
 
-Status: Proposed; implementation and verification are pending.
+Status: Implemented; automated and fixture browser verification are recorded in the [implementation report](../../reports/orchestration/manager-conversation-routing-report.md). Live provider verification remains outside this evidence.
 
 [Implementation plans](../README.md)
 

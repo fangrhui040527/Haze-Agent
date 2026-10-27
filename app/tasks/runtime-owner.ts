@@ -18,12 +18,29 @@ export function acquireRuntimeOwner(directory: string) {
   const lock = new DatabaseSync(`${resolve(directory)}.owner.sqlite`);
   try {
     lock.exec('PRAGMA busy_timeout=0; BEGIN EXCLUSIVE');
-  } catch {
+  } catch (error) {
     lock.close();
+    if (
+      !(error instanceof Error) ||
+      !('errcode' in error) ||
+      typeof error.errcode !== 'number' ||
+      ![5, 6].includes(error.errcode & 0xff)
+    )
+      throw error;
+    let owner = '';
+    try {
+      const { pid } = JSON.parse(readFileSync(path, 'utf8')) as {
+        pid?: unknown;
+      };
+      if (typeof pid === 'number' && Number.isSafeInteger(pid) && pid > 0)
+        owner = ` (PID ${pid})`;
+    } catch {
+      // The sidecar is diagnostic only; SQLite remains the ownership authority.
+    }
     throw new TaskError(
       409,
       'runtime_owner_exists',
-      'This state directory already has a runtime owner.',
+      `This state directory already has a runtime owner${owner}: ${resolve(directory)}. Stop the existing server with Ctrl+C in its terminal, or set HAZE_TASK_STATE_DIR to a separate directory. HAZE_TASK_STATE_DIR takes precedence over STATE_DIR.`,
     );
   }
   try {

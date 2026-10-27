@@ -23,6 +23,7 @@
     "zetaris:fetch:wind": "node --experimental-strip-types app/adapters/zetaris/sources/wind/fetch_wind.ts",
     "zetaris:fetch:pm25": "node --experimental-strip-types app/adapters/zetaris/sources/air_quality/fetch_air_quality.ts",
     "zetaris:bootstrap:smokeledger": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --smokeledger-only",
+    "zetaris:bootstrap:verify": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl_and_verify.ts",
     "zetaris:bootstrap:sources": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_sources.ts",
     "build": "npm run vendor:engines && node scripts/build.mjs",
     "vendor:engines": "node scripts/vendor-engines.mjs",
