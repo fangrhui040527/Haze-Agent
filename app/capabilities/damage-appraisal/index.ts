@@ -44,6 +44,7 @@ import {
   independentlyCheckDamageRevisionBridge,
 } from './checker.js';
 import { createDamageRevisionBridge } from './publication.js';
+import { assertScientificInputBindings } from '../damage-evidence-review/science.js';
 
 const componentKinds = [
   'damage.scope',
@@ -266,7 +267,16 @@ const worldSelections = (context: ToolContext) =>
 const sources = (context: ToolContext) => {
   const selections = worldSelections(context);
   if (!selections.length)
-    return context.inputs.filter((a) => a.producer.kind !== 'assignment');
+    return context.inputs.filter(
+      (a) =>
+        a.producer.kind !== 'assignment' &&
+        ![
+          'damage.scientific-review',
+          'damage.published-effect',
+          'damage.parameter-evidence',
+          'damage.original-evidence',
+        ].includes(a.kind),
+    );
   if (selections.length !== 1)
     throw new Error('Ambiguous World Model accounting selection.');
   return selections[0]!.value.source_refs.map((ref) => {
@@ -302,6 +312,7 @@ function selectedInputs(
     return artifact;
   });
   const inputs = normalizeDamageInputs(artifacts);
+  assertScientificInputBindings(inputs, context.inputs);
   if (
     inputs.scope.approved_method_ids.some(
       (id) => !input.method_ids.includes(id),
@@ -352,7 +363,11 @@ async function prepareDamageInputs(
   const links = services.context.inputs.filter(
     (a) => a.kind === 'damage.world-inputs',
   );
-  if (!links.length) return normalizeDamageInputs(sources(services.context));
+  if (!links.length) {
+    const inputs = normalizeDamageInputs(sources(services.context));
+    assertScientificInputBindings(inputs, services.context.inputs);
+    return inputs;
+  }
   if (links.length !== 1)
     throw new Error('Ambiguous World Model input lineage.');
   const link = damageWorldLinkSchema.parse(links[0]!.content);

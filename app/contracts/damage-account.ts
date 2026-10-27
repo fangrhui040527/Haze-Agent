@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { artifactRefSchema } from './artifacts.js';
 import { identifierSchema } from './common.js';
+import {
+  damageGeographySchema,
+  damageReportingSchema,
+} from './damage-evidence-review.js';
 
 /** Browser-safe contracts. Imported quantities are assertions, not scientific validation. */
 const text = z.string().min(1).max(4096);
@@ -47,6 +51,8 @@ export const damageScopeSchema = z.strictObject({
   historical_scenario_id: id,
   baseline_scenario_id: id,
   approved_method_ids: z.array(id).min(1).max(32),
+  /** Optional versioned metadata: legacy artifacts retain their unknown scientific basis. */
+  reporting: damageReportingSchema.optional(),
   presentation_decimal_places: z.number().int().min(0).max(8).default(3),
 });
 export const damageEffectSchema = z
@@ -56,6 +62,7 @@ export const damageEffectSchema = z
     scenario_id: id,
     baseline_id: id,
     geography: text,
+    geography_id: damageGeographySchema.optional(),
     period: damagePeriodSchema,
     population_stratum: text,
     quantity: amount.nullable(),

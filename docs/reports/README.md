@@ -4,6 +4,8 @@
 
 These reports retain executed checks, evidence limits and follow-up findings. Engineering verification does not replace the scientific qualification, live inference or operational release gates recorded in each report. See [plans](../plans/README.md) for intended scope and [testing](../testing/README.md) for reusable verification guides and fixtures.
 
+- [Damage evidence web search implementation and verification](damage-evidence-web-search-implementation-report-2026-10-27.md).
+
 ## Orchestration and World Model
 
 - [General engine verification](orchestration/general-engine-verification.md).

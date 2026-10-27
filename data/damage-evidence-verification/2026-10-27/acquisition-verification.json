@@ -1,0 +1,520 @@
+{
+  "schema_version": "haze.damage.evidence.live-verification.v1",
+  "verified_at": "2026-10-27T15:55:45.132Z",
+  "verification_level": "real_public_source_acquisition_only",
+  "archive_root": "C:\\Users\\ASUS\\Desktop\\Cracks\\Haze-Agent\\.state\\damage-evidence-verification\\2026-10-27",
+  "outcomes": [
+    {
+      "source_id": "dosm-district-population",
+      "status": "acquired",
+      "capture": {
+        "schema_version": "haze.damage.evidence.capture.v1",
+        "capture_id": "97a4f1882ecf1c8156593bc85f13d95ed7fe4c43a4091e96b3f9865e746ec41e",
+        "source_id": "dosm-district-population",
+        "request_key": "db8222e520e28f16b24a1f329c10298b4f2b88561771275377d118a604f955ea",
+        "request": {
+          "source_id": "dosm-district-population",
+          "selection": {
+            "state": "Selangor",
+            "district": "Klang",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "sex": "both",
+            "age": "overall",
+            "ethnicity": "overall"
+          }
+        },
+        "source_url": "https://storage.dosm.gov.my/population/population_district.csv",
+        "parser_version": "dosm-population-csv.v1",
+        "source_version": {
+          "etag": "\"34596c61cdef428f56a3412c4be5a884-3\"",
+          "last_modified": "Wed, 07 Oct 2026 22:51:33 GMT"
+        },
+        "retrieved_at": "2026-10-27T15:44:43.407Z",
+        "raw_ref": "sha256:2c7caf2fc4bda1f58f12db6cc2d6d5f39148fbeaaa0516017eb59fb8e23784e0",
+        "raw_sha256": "2c7caf2fc4bda1f58f12db6cc2d6d5f39148fbeaaa0516017eb59fb8e23784e0",
+        "raw_bytes": 24637855,
+        "media_type": "binary/octet-stream",
+        "document_published_at": null,
+        "observation_period": {
+          "start": "2024-01-01",
+          "end": "2024-12-31"
+        },
+        "evidence_origin": "external_source",
+        "stage": "validated",
+        "normalized_values": [
+          {
+            "input": "population",
+            "value": 1174700,
+            "unit": "persons",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "geography": {
+              "level": "district",
+              "name": "Klang",
+              "boundary_version": null
+            },
+            "strata": {
+              "sex": "both",
+              "age": "overall",
+              "ethnicity": "overall"
+            },
+            "currency": null,
+            "price_year": null,
+            "source_locator": "/csv/record/259523/population",
+            "transformation": {
+              "operation": "multiply",
+              "factor": 1000,
+              "original_value": 1174.7,
+              "original_unit": "thousand_persons"
+            }
+          }
+        ],
+        "excerpt": null,
+        "gaps": [],
+        "limitations": [
+          "District totals are not population grids.",
+          "The source population unit is thousands of persons; normalization multiplies by 1000.",
+          "A catalogue API filter failed during research; the CSV is the registered route."
+        ]
+      },
+      "attempt": {
+        "schema_version": "haze.damage.evidence.attempt.v1",
+        "id": "65a62326-0a94-4bf6-b953-bc6f9f1f1d5d",
+        "source_id": "dosm-district-population",
+        "request_key": "db8222e520e28f16b24a1f329c10298b4f2b88561771275377d118a604f955ea",
+        "started_at": "2026-10-27T15:55:05.334Z",
+        "finished_at": "2026-10-27T15:55:10.296Z",
+        "source_url": "https://storage.dosm.gov.my/population/population_district.csv",
+        "status": "succeeded",
+        "http_status": 200,
+        "capture_id": "97a4f1882ecf1c8156593bc85f13d95ed7fe4c43a4091e96b3f9865e746ec41e",
+        "unchanged": true,
+        "error": null
+      },
+      "unchanged": true
+    },
+    {
+      "source_id": "dosm-district-deaths",
+      "status": "acquired",
+      "capture": {
+        "schema_version": "haze.damage.evidence.capture.v1",
+        "capture_id": "cb05a650f8dae9fb60f7e95c0daad30e359d524ba60b158c510e9ef499235d79",
+        "source_id": "dosm-district-deaths",
+        "request_key": "7cc6513db9e467e69cf135836bea285e334f615eaa1c1cb3d42edae7d3d394a5",
+        "request": {
+          "source_id": "dosm-district-deaths",
+          "selection": {
+            "state": "Selangor",
+            "district": "Klang",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "sex": "both",
+            "age": "overall",
+            "ethnicity": "overall"
+          }
+        },
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=deaths_district_sex&filter=Klang%40district%2CSelangor%40state%2Cboth%40sex&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "parser_version": "dosm-deaths-json.v1",
+        "source_version": {
+          "etag": null,
+          "last_modified": null
+        },
+        "retrieved_at": "2026-10-27T15:48:54.683Z",
+        "raw_ref": "sha256:bd2e53731322f19b4308a5f8674723058d1cdd8dcc2d9e492366321a998c6627",
+        "raw_sha256": "bd2e53731322f19b4308a5f8674723058d1cdd8dcc2d9e492366321a998c6627",
+        "raw_bytes": 109,
+        "media_type": "application/json",
+        "redirect_chain": [],
+        "document_published_at": null,
+        "observation_period": {
+          "start": "2024-01-01",
+          "end": "2024-12-31"
+        },
+        "evidence_origin": "external_source",
+        "stage": "validated",
+        "normalized_values": [
+          {
+            "input": "mortality_baseline",
+            "value": 5619,
+            "unit": "deaths",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "geography": {
+              "level": "district",
+              "name": "Klang",
+              "boundary_version": null
+            },
+            "strata": {
+              "sex": "both"
+            },
+            "currency": null,
+            "price_year": null,
+            "source_locator": "/0/abs",
+            "transformation": {
+              "operation": "identity",
+              "factor": 1,
+              "original_value": 5619,
+              "original_unit": "deaths"
+            }
+          }
+        ],
+        "excerpt": null,
+        "gaps": [],
+        "limitations": [
+          "All-cause annual counts do not establish haze-attributable deaths.",
+          "No daily, age-specific or cause-specific response is inferred."
+        ]
+      },
+      "attempt": {
+        "schema_version": "haze.damage.evidence.attempt.v1",
+        "id": "54ecd9a3-3f21-42c9-bf90-363d1be2cb5a",
+        "source_id": "dosm-district-deaths",
+        "request_key": "7cc6513db9e467e69cf135836bea285e334f615eaa1c1cb3d42edae7d3d394a5",
+        "started_at": "2026-10-27T15:55:10.303Z",
+        "finished_at": "2026-10-27T15:55:10.784Z",
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=deaths_district_sex&filter=Klang%40district%2CSelangor%40state%2Cboth%40sex&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "status": "succeeded",
+        "http_status": 200,
+        "capture_id": "cb05a650f8dae9fb60f7e95c0daad30e359d524ba60b158c510e9ef499235d79",
+        "unchanged": true,
+        "error": null
+      },
+      "unchanged": true
+    },
+    {
+      "source_id": "dosm-selangor-wages",
+      "status": "acquired",
+      "capture": {
+        "schema_version": "haze.damage.evidence.capture.v1",
+        "capture_id": "2066acc3a9d7f91d92e48e95ca8943b397834fd859cfb95a0bb567b0d2ca552a",
+        "source_id": "dosm-selangor-wages",
+        "request_key": "dfb07de7d862b88e6e508bd9a979866097dfb9f19236e7a65847c740693e259d",
+        "request": {
+          "source_id": "dosm-selangor-wages",
+          "selection": {
+            "state": "Selangor",
+            "district": "Klang",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "sex": "both",
+            "age": "overall",
+            "ethnicity": "overall"
+          }
+        },
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=wages_state&filter=Selangor%40state%2Cboth%40sex&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "parser_version": "dosm-wages-json.v1",
+        "source_version": {
+          "etag": null,
+          "last_modified": null
+        },
+        "retrieved_at": "2026-10-27T15:49:10.049Z",
+        "raw_ref": "sha256:c9050971629fe87fb6043d8feec808ad1888794f7a51870eafd9cbe5a4a5d25c",
+        "raw_sha256": "c9050971629fe87fb6043d8feec808ad1888794f7a51870eafd9cbe5a4a5d25c",
+        "raw_bytes": 124,
+        "media_type": "application/json",
+        "redirect_chain": [],
+        "document_published_at": null,
+        "observation_period": {
+          "start": "2024-01-01",
+          "end": "2024-12-31"
+        },
+        "evidence_origin": "external_source",
+        "stage": "validated",
+        "normalized_values": [
+          {
+            "input": "wage_context",
+            "value": 4052,
+            "unit": "MYR/month",
+            "period": {
+              "start": "2024-01-01",
+              "end": "2024-12-31"
+            },
+            "geography": {
+              "level": "state",
+              "name": "Selangor",
+              "boundary_version": null
+            },
+            "strata": {
+              "sex": "both",
+              "population": "covered citizen employees"
+            },
+            "currency": "MYR",
+            "price_year": 2024,
+            "source_locator": "/0/wages_mean",
+            "transformation": {
+              "operation": "identity",
+              "factor": 1,
+              "original_value": 4052,
+              "original_unit": "MYR/month"
+            }
+          }
+        ],
+        "excerpt": null,
+        "gaps": [],
+        "limitations": [
+          "Monthly wages are not lost workdays or an automatically applicable daily loss.",
+          "State and employee coverage cannot be silently assigned to district residents."
+        ]
+      },
+      "attempt": {
+        "schema_version": "haze.damage.evidence.attempt.v1",
+        "id": "721d96ae-f1c1-4d58-959c-ab5d7471398e",
+        "source_id": "dosm-selangor-wages",
+        "request_key": "dfb07de7d862b88e6e508bd9a979866097dfb9f19236e7a65847c740693e259d",
+        "started_at": "2026-10-27T15:55:10.787Z",
+        "finished_at": "2026-10-27T15:55:25.866Z",
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=wages_state&filter=Selangor%40state%2Cboth%40sex&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "status": "succeeded",
+        "http_status": 200,
+        "capture_id": "2066acc3a9d7f91d92e48e95ca8943b397834fd859cfb95a0bb567b0d2ca552a",
+        "unchanged": true,
+        "error": null
+      },
+      "unchanged": true
+    },
+    {
+      "source_id": "malaysia-monthly-pollution",
+      "status": "acquired",
+      "capture": {
+        "schema_version": "haze.damage.evidence.capture.v1",
+        "capture_id": "2f11f6ac0ada0e8f97ed8454df7e0f53ae7e3ed0da9b6daf42093384ee374e29",
+        "source_id": "malaysia-monthly-pollution",
+        "request_key": "d1e073260c637cd96fa7f70db2306a9afd5a5a85e16c827da2612f225f990abe",
+        "request": {
+          "source_id": "malaysia-monthly-pollution",
+          "selection": {
+            "state": "Selangor",
+            "district": "Klang",
+            "period": {
+              "start": "2024-09-01",
+              "end": "2024-10-31"
+            },
+            "sex": "both",
+            "age": "overall",
+            "ethnicity": "overall"
+          }
+        },
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&contains=2.5%40pollutant&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "parser_version": "malaysia-pollution-json.v1",
+        "source_version": {
+          "etag": null,
+          "last_modified": null
+        },
+        "retrieved_at": "2026-10-27T15:49:24.622Z",
+        "raw_ref": "sha256:fc22bad614a8fbd8fb96a20e856d391db861329a246a235075844d0ba3d80a13",
+        "raw_sha256": "fc22bad614a8fbd8fb96a20e856d391db861329a246a235075844d0ba3d80a13",
+        "raw_bytes": 851,
+        "media_type": "application/json",
+        "redirect_chain": [],
+        "document_published_at": null,
+        "observation_period": {
+          "start": "2024-09-01",
+          "end": "2024-10-31"
+        },
+        "evidence_origin": "external_source",
+        "stage": "validated",
+        "normalized_values": [
+          {
+            "input": "ambient_pm25",
+            "value": 15.21,
+            "unit": "ug/m3",
+            "period": {
+              "start": "2024-09-01",
+              "end": "2024-09-30"
+            },
+            "geography": {
+              "level": "country",
+              "name": "Malaysia",
+              "boundary_version": null
+            },
+            "strata": {
+              "pollutant": "PM2.5"
+            },
+            "currency": null,
+            "price_year": null,
+            "source_locator": "/8/concentration",
+            "transformation": {
+              "operation": "identity",
+              "factor": 1,
+              "original_value": 15.21,
+              "original_unit": "ug/m3"
+            }
+          },
+          {
+            "input": "ambient_pm25",
+            "value": 14.4,
+            "unit": "ug/m3",
+            "period": {
+              "start": "2024-10-01",
+              "end": "2024-10-31"
+            },
+            "geography": {
+              "level": "country",
+              "name": "Malaysia",
+              "boundary_version": null
+            },
+            "strata": {
+              "pollutant": "PM2.5"
+            },
+            "currency": null,
+            "price_year": null,
+            "source_locator": "/9/concentration",
+            "transformation": {
+              "operation": "identity",
+              "factor": 1,
+              "original_value": 14.4,
+              "original_unit": "ug/m3"
+            }
+          }
+        ],
+        "excerpt": null,
+        "gaps": [],
+        "limitations": [
+          "National monthly context is not district episode exposure or a fire counterfactual.",
+          "PM10 and Air Pollutant Index are rejected as PM2.5 concentration."
+        ]
+      },
+      "attempt": {
+        "schema_version": "haze.damage.evidence.attempt.v1",
+        "id": "b56848c1-6341-42aa-9dff-bbeb5ef2ef2d",
+        "source_id": "malaysia-monthly-pollution",
+        "request_key": "d1e073260c637cd96fa7f70db2306a9afd5a5a85e16c827da2612f225f990abe",
+        "started_at": "2026-10-27T15:55:25.871Z",
+        "finished_at": "2026-10-27T15:55:41.002Z",
+        "source_url": "https://api.data.gov.my/data-catalogue/?id=air_pollution&contains=2.5%40pollutant&date_start=2024-01-01%40date&date_end=2024-12-31%40date&sort=date&limit=201",
+        "status": "succeeded",
+        "http_status": 200,
+        "capture_id": "2f11f6ac0ada0e8f97ed8454df7e0f53ae7e3ed0da9b6daf42093384ee374e29",
+        "unchanged": true,
+        "error": null
+      },
+      "unchanged": true
+    },
+    {
+      "source_id": "koplitz-2016-fire-mortality",
+      "status": "failed",
+      "error": "Source HTTP 503",
+      "availability": {
+        "current_availability": "unavailable",
+        "last_usable_capture": null,
+        "age_seconds": null,
+        "latest_attempt": {
+          "schema_version": "haze.damage.evidence.attempt.v1",
+          "id": "ba84787a-da5c-4138-a5f4-a09093ece5a5",
+          "source_id": "koplitz-2016-fire-mortality",
+          "request_key": "18a21816ea046363f95b5a029babe1f7009489a3348f741be37f1ccea2739879",
+          "started_at": "2026-10-27T15:55:41.023Z",
+          "finished_at": "2026-10-27T15:55:44.095Z",
+          "source_url": "https://projects.iq.harvard.edu/files/acmg/files/koplitz_fires_2016.pdf",
+          "status": "failed",
+          "http_status": 503,
+          "capture_id": null,
+          "unchanged": false,
+          "error": "Source HTTP 503"
+        }
+      }
+    },
+    {
+      "source_id": "crippa-2016-acute-mortality",
+      "status": "failed",
+      "error": "Source redirect leaves the registered HTTPS host.",
+      "availability": {
+        "current_availability": "unavailable",
+        "last_usable_capture": null,
+        "age_seconds": null,
+        "latest_attempt": {
+          "schema_version": "haze.damage.evidence.attempt.v1",
+          "id": "8f63cbf2-269f-4190-8dfb-06591d3b6d92",
+          "source_id": "crippa-2016-acute-mortality",
+          "request_key": "4d53c1724b57051c1947bb124d4cd6b6fefcd92841cdd907f5d93b425320c851",
+          "started_at": "2026-10-27T15:55:44.124Z",
+          "finished_at": "2026-10-27T15:55:44.596Z",
+          "source_url": "https://www.nature.com/articles/srep37074",
+          "status": "failed",
+          "http_status": null,
+          "capture_id": null,
+          "unchanged": false,
+          "error": "Source redirect leaves the registered HTTPS host."
+        }
+      }
+    },
+    {
+      "source_id": "crippa-2016-acute-mortality-pmc",
+      "status": "acquired",
+      "capture": {
+        "schema_version": "haze.damage.evidence.capture.v1",
+        "capture_id": "02628ebd86e0ee90ab43bac0b1778c22f0e1d558e1b51772e1a394ec70bf0328",
+        "source_id": "crippa-2016-acute-mortality-pmc",
+        "request_key": "3503c0b0a6722a6da17bf66f2dd81218c40d147103562781491858355290e691",
+        "request": {
+          "source_id": "crippa-2016-acute-mortality-pmc",
+          "selection": {
+            "state": "Selangor",
+            "district": "Klang",
+            "period": {
+              "start": "2015-09-01",
+              "end": "2015-10-31"
+            },
+            "sex": "both",
+            "age": "overall",
+            "ethnicity": "overall"
+          }
+        },
+        "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5111049/",
+        "parser_version": "public-document-text.v2",
+        "source_version": {
+          "etag": null,
+          "last_modified": null
+        },
+        "retrieved_at": "2026-10-27T15:55:45.095Z",
+        "raw_ref": "sha256:3e28c17bd16c648fc92ff5344133e02c63a70adc25969c64f8cbeb96f0fe05ad",
+        "raw_sha256": "3e28c17bd16c648fc92ff5344133e02c63a70adc25969c64f8cbeb96f0fe05ad",
+        "raw_bytes": 21424,
+        "media_type": "text/html; charset=utf-8",
+        "redirect_chain": [],
+        "document_published_at": null,
+        "observation_period": null,
+        "evidence_origin": "external_source",
+        "stage": "acquired",
+        "normalized_values": [],
+        "excerpt": null,
+        "gaps": [
+          "Document access challenge or denial was returned; retained bytes are not the requested source document."
+        ],
+        "limitations": [
+          "Public full-text repository fallback for DOI 10.1038/srep37074; country-specific and acute/long-term applicability still require review."
+        ]
+      },
+      "attempt": {
+        "schema_version": "haze.damage.evidence.attempt.v1",
+        "id": "b89590f4-36dc-4d33-8ff4-47aecbf58e1c",
+        "source_id": "crippa-2016-acute-mortality-pmc",
+        "request_key": "3503c0b0a6722a6da17bf66f2dd81218c40d147103562781491858355290e691",
+        "started_at": "2026-10-27T15:55:44.635Z",
+        "finished_at": "2026-10-27T15:55:45.100Z",
+        "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5111049/",
+        "status": "succeeded",
+        "http_status": 200,
+        "capture_id": "02628ebd86e0ee90ab43bac0b1778c22f0e1d558e1b51772e1a394ec70bf0328",
+        "unchanged": false,
+        "error": null
+      },
+      "unchanged": false
+    }
+  ],
+  "limitations": [
+    "2024 numerical samples verify provider contracts; they are not the 2015 occurrence period and do not supply physical-effect inputs.",
+    "This execution does not demonstrate live model routing, scientific qualification, genuine source revision, or intervention effectiveness."
+  ]
+}

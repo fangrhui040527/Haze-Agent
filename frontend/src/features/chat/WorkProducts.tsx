@@ -5,17 +5,20 @@ import type {
 } from '../../../../app/contracts/artifacts.ts';
 import { agentService } from '../../services/agents/index.ts';
 import { EvidenceResult } from './EvidenceResult.tsx';
+import { DamageEvidenceResult } from './DamageEvidenceResult.tsx';
 import styles from './ChatPanel.module.css';
 export function WorkProducts({
   products,
   baseUrl = '',
   rejected = false,
   rejectedProducts = [],
+  stale = false,
 }: {
   products: ArtifactRef[];
   baseUrl?: string;
   rejected?: boolean;
   rejectedProducts?: ArtifactRef[];
+  stale?: boolean;
 }) {
   if (!products.length)
     return (
@@ -32,6 +35,7 @@ export function WorkProducts({
             key={`${product.id}/${product.version}`}
             product={product}
             baseUrl={baseUrl}
+            stale={stale}
             rejected={
               rejected ||
               rejectedProducts.some(
@@ -51,10 +55,12 @@ function WorkProduct({
   product,
   baseUrl,
   rejected,
+  stale,
 }: {
   product: ArtifactRef;
   baseUrl: string;
   rejected: boolean;
+  stale: boolean;
 }) {
   const { id, version, sha256 } = product;
   const [artifact, setArtifact] = useState<Artifact | null>(null);
@@ -121,6 +127,12 @@ function WorkProduct({
             </p>
             {!rejected && artifact.kind === 'pm25.analysis' && (
               <EvidenceResult content={artifact.content} />
+            )}
+            {!rejected && !stale && (
+              <DamageEvidenceResult
+                content={artifact.content}
+                baseUrl={baseUrl}
+              />
             )}
             <details>
               <summary>Artifact content</summary>

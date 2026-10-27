@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { ReadableStreamDefaultReader } from 'node:stream/web';
 
 /**
  * Bounded retrieval (Spec §13.1): each logical source operation gets at most three
@@ -50,6 +51,8 @@ export async function boundedFetch(
     /** Printed instead of the URL in errors (hides credentials in paths). */
     label: string;
     timeoutMs?: number;
+    /** Optional decoded-byte bound enforced while reading the response stream. */
+    maxBytes?: number;
   },
 ): Promise<FetchedBytes> {
   const attempts: FetchAttempt[] = [];
@@ -66,7 +69,35 @@ export async function boundedFetch(
         ...(options.body === undefined ? {} : { body: options.body }),
         signal: AbortSignal.any([options.signal, timeout]),
       });
-      const raw = Buffer.from(await response.arrayBuffer());
+      let raw: Buffer;
+      if (options.maxBytes !== undefined) {
+        const chunks: Uint8Array[] = [];
+        let size = 0;
+        const reader = response.body?.getReader() as
+          ReadableStreamDefaultReader<Uint8Array> | undefined;
+        if (reader) {
+          try {
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) break;
+              size += chunk.value.byteLength;
+              if (size > options.maxBytes) {
+                await reader.cancel();
+                attempts.push({ at, outcome: 'response_too_large' });
+                throw new SourceError(
+                  `${options.label}: response exceeds ${options.maxBytes} bytes.`,
+                  attempts,
+                  false,
+                );
+              }
+              chunks.push(chunk.value);
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+        raw = Buffer.concat(chunks, size);
+      } else raw = Buffer.from(await response.arrayBuffer());
       if (response.ok) {
         attempts.push({ at, outcome: `HTTP ${response.status}` });
         return {

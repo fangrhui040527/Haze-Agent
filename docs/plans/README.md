@@ -10,6 +10,8 @@ Plans define scope, delivery order and acceptance criteria. Check their status n
 - [Manager completion plan](orchestration/manager-completion-plan.md).
 - [Manager conversation routing and task UI plan](orchestration/manager-conversation-routing-plan.md).
 - [DamageAccountant implementation plan](damage-accountant-plan.md).
+- [Web search and public-evidence integration for damage accounts](damage-evidence-web-search-plan.md): source discovery, reviewed inputs, three shared-baseline samples and continuous updates.
+- [Sponsor technology hardening](sponsor-technology-hardening-plan.md): grounded numerical answers, verified Nightshift cloud follow-ups and H-MEM product removal.
 - [Dedicated SQLite storage integration](storage-integration-plan.md).
 
 ## World Model

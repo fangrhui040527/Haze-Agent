@@ -1,0 +1,520 @@
+{
+  "schema_version": "haze.damage.evidence.live-verification-summary.v1",
+  "task_start_date": "2026-10-27",
+  "timezone": "Asia/Singapore",
+  "generated_at": "2026-10-27T16:15:55.543Z",
+  "verification_period_local": "27–28 October 2026",
+  "latest_outcome": "failed_or_unavailable",
+  "end_to_end_live_task_passed": false,
+  "retained_live_search_capture_count": 2,
+  "normal_api_restart_retention_passed": true,
+  "total_search_attempts": 6,
+  "scientific_qualification": "not established",
+  "genuine_public_numerical_revision_reassessment": "not verified",
+  "interpretation": "Real configured model responses and Tavily searches were captured. Two live search artifacts survived a normal API restart with unchanged hashes and no new attempts. All five live task attempts failed or waited; strict contracts rejected unsupported actions. This is partial live execution and retention evidence, not a passed configured-model task release gate or scientifically qualified accounting output.",
+  "runs": [
+    {
+      "state_directory": ".state/damage-evidence-research-verification/f8943930-f692-4cce-9dd5-1af05c962314",
+      "report": ".state/damage-evidence-research-verification/f8943930-f692-4cce-9dd5-1af05c962314/report.json",
+      "started_at": "2026-10-27T15:46:25.327Z",
+      "finished_at": "2026-10-27T15:46:46.259Z",
+      "task_id": "8cd05f09-43f3-4866-a613-6d9dcabd313f",
+      "task_status": "failed",
+      "verification": "failed_or_unavailable",
+      "task_error": {
+        "code": "execution_failed",
+        "message": "[\n  {\n    \"origin\": \"string\",\n    \"code\": \"invalid_format\",\n    \"format\": \"uuid\",\n    \"pattern\": \"/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/\",\n    \"path\": [\n      \"action\",\n      \"retain_assignment_ids\",\n      0\n    ],\n    \"message\": \"Invalid UUID\"\n  }\n]"
+      },
+      "assignment_failures": [],
+      "open_questions": [],
+      "model_receipts": [
+        {
+          "attempt_id": "cac6d634-8b0e-40f2-a7b5-a9139b199cba",
+          "assignment_id": "2f102304-5b10-44f4-81fd-b6892f8b7457",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-0560aaf3-3b77-4a7d-8314-00d4565f3774",
+          "input_tokens": 4612,
+          "output_tokens": 468,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "d5b3005f-b353-4f08-8e14-bf483fcb0676",
+          "assignment_id": "2f102304-5b10-44f4-81fd-b6892f8b7457",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-e59acf12-25ba-4f76-ba3f-82c77c41ef87",
+          "input_tokens": 4672,
+          "output_tokens": 462,
+          "response_status": "stop",
+          "http_status": 200
+        }
+      ],
+      "search_attempt_count": 0,
+      "search_provider_usage": [],
+      "retained_search_captures": [],
+      "restart_retention": null
+    },
+    {
+      "state_directory": ".state/damage-evidence-research-verification/a70c6cb7-fb31-432d-b72c-6d8e5445914a",
+      "report": ".state/damage-evidence-research-verification/a70c6cb7-fb31-432d-b72c-6d8e5445914a/report.json",
+      "started_at": "2026-10-27T15:47:58.615Z",
+      "finished_at": "2026-10-27T15:48:18.387Z",
+      "task_id": "4c3c2adf-e71c-413a-9478-c0d618a9aed6",
+      "task_status": "waiting",
+      "verification": "failed_or_unavailable",
+      "task_error": "Live task ended waiting with 0 retained external search captures.",
+      "assignment_failures": [
+        {
+          "definition_id": "damage-evidence-research.discover",
+          "error": {
+            "code": "assignment_failed",
+            "message": "The bounded model context exceeds its admitted input limit."
+          }
+        }
+      ],
+      "open_questions": [
+        "Provide the exact haze-web-search tool output for query \"site:asmc.asean.org Malaysia haze September 2019\" with max_results 2, or confirm the required websearch.capture artifact is available from prior execution."
+      ],
+      "model_receipts": [
+        {
+          "attempt_id": "44065c67-5b00-4b86-8bc0-e6b435694910",
+          "assignment_id": "44454a03-33e2-4b25-9786-f720500a8176",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-222786d7-d054-4d00-bf7c-66f6bfdad184",
+          "input_tokens": 4606,
+          "output_tokens": 400,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "d09a21e4-c371-447d-b8a0-bc3db0372db0",
+          "assignment_id": "44454a03-33e2-4b25-9786-f720500a8176",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-cc56f478-146c-4c6e-8b9a-9f162432a9c6",
+          "input_tokens": 5705,
+          "output_tokens": 270,
+          "response_status": "stop",
+          "http_status": 200
+        }
+      ],
+      "search_attempt_count": 0,
+      "search_provider_usage": [],
+      "retained_search_captures": [],
+      "restart_retention": null
+    },
+    {
+      "state_directory": ".state/damage-evidence-research-verification/1483b4a2-1cbd-46b7-a4b8-8b500b50643e",
+      "report": ".state/damage-evidence-research-verification/1483b4a2-1cbd-46b7-a4b8-8b500b50643e/report.json",
+      "started_at": "2026-10-27T15:54:50.027Z",
+      "finished_at": "2026-10-27T15:55:41.248Z",
+      "task_id": "b5b66158-7997-48e6-b751-561a292191f0",
+      "task_status": "waiting",
+      "verification": "failed_or_unavailable",
+      "task_error": "Live task ended waiting with 0 retained external search captures.",
+      "assignment_failures": [
+        {
+          "definition_id": "damage-evidence-research.discover",
+          "error": {
+            "code": "assignment_failed",
+            "message": "The bounded model context exceeds its admitted input limit."
+          }
+        },
+        {
+          "definition_id": "damage-evidence-research.discover",
+          "error": {
+            "code": "assignment_failed",
+            "message": "[\n  {\n    \"code\": \"custom\",\n    \"message\": \"The action violates its granted tool input schema, recipient, retained result kind, job handle or exact output reference. Use only the supplied contract choices.\",\n    \"path\": []\n  }\n]"
+          }
+        }
+      ],
+      "open_questions": [
+        "Provide the exact bounded websearch query parameters and retention instructions needed to re-initiate the discovery assignment within the granted eight-turn budget, ensuring the search adheres to scope.search constraints and retains exactly one websearch.capture."
+      ],
+      "model_receipts": [
+        {
+          "attempt_id": "b51ee98c-0bef-4434-9e21-bb8f4f7ab8c3",
+          "assignment_id": "95ae0a95-8840-4439-acda-4dbe4a79e750",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-456f068c-5c19-47e6-a200-e0309281bd33",
+          "input_tokens": 4712,
+          "output_tokens": 457,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "af42bc82-2b84-4038-a087-85a6b9588f07",
+          "assignment_id": "8b8bad95-60b9-4135-889f-21813cb5e339",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-54828d56-8f40-4f63-8cd4-496b3e7e89b7",
+          "input_tokens": 4927,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "6900de7a-996d-4191-b63a-2ecb8e45c7f3",
+          "assignment_id": "8b8bad95-60b9-4135-889f-21813cb5e339",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-e5f202a2-e2b3-41da-979e-c06e85794f37",
+          "input_tokens": 5976,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "a01820d1-e4e6-4807-891d-418a05532e39",
+          "assignment_id": "8b8bad95-60b9-4135-889f-21813cb5e339",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-630499ed-4d23-4db0-9169-aa9c04416e4f",
+          "input_tokens": 7019,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "ea3b53ea-2d12-49cf-9786-fd8e39f267ce",
+          "assignment_id": "95ae0a95-8840-4439-acda-4dbe4a79e750",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-3488830b-8af2-4f4d-a785-b73a10da631e",
+          "input_tokens": 5812,
+          "output_tokens": 507,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "7a97c85b-ec55-4a33-be7c-af513b8aaa33",
+          "assignment_id": "df8564fe-5752-41bd-bd3c-e8ef5f756a93",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-1d05aa77-970a-4af1-9b84-8b017ef0e5e0",
+          "input_tokens": 4874,
+          "output_tokens": 170,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "446ebbca-41e4-4561-b78a-15581c8fc7cb",
+          "assignment_id": "df8564fe-5752-41bd-bd3c-e8ef5f756a93",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-d86cf9b9-1ddb-45b8-9cfc-234773c03d1c",
+          "input_tokens": 4948,
+          "output_tokens": 141,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "d1b5724d-3783-4e96-95a0-ad1cca7c93ba",
+          "assignment_id": "df8564fe-5752-41bd-bd3c-e8ef5f756a93",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-2f8e1b37-297b-4a9f-a8b5-f10af8284c3b",
+          "input_tokens": 5022,
+          "output_tokens": 178,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "7b3da11a-bcc4-4e50-8e04-bfe9e66c9a84",
+          "assignment_id": "95ae0a95-8840-4439-acda-4dbe4a79e750",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-507443be-d960-4825-8db2-feefba466742",
+          "input_tokens": 4553,
+          "output_tokens": 235,
+          "response_status": "stop",
+          "http_status": 200
+        }
+      ],
+      "search_attempt_count": 3,
+      "search_provider_usage": [
+        {
+          "attempt_id": "021680f5-1f62-4a94-9bf2-13b23235bf3e",
+          "status": "completed",
+          "provider_request_id": "e974c58d-4407-4f7a-860b-c4ee3f76c27f",
+          "usage": {
+            "credits": 1
+          }
+        },
+        {
+          "attempt_id": "36c16417-c4de-47bb-8534-b265d9a89be0",
+          "status": "completed",
+          "provider_request_id": "ccc1706e-fc4e-43c5-8fa4-6b5c93a496e7",
+          "usage": {
+            "credits": 1
+          }
+        },
+        {
+          "attempt_id": "96e47dec-d1e3-4f3a-af12-9693188b4d27",
+          "status": "completed",
+          "provider_request_id": "1dc01672-65f1-46e3-b6f4-742dd1f233be",
+          "usage": {
+            "credits": 1
+          }
+        }
+      ],
+      "retained_search_captures": [],
+      "restart_retention": null
+    },
+    {
+      "state_directory": ".state/damage-evidence-research-verification/5923356e-2f81-42c4-a71c-deb3a7f21dec",
+      "report": ".state/damage-evidence-research-verification/5923356e-2f81-42c4-a71c-deb3a7f21dec/report.json",
+      "started_at": "2026-10-27T16:05:10.984Z",
+      "finished_at": "2026-10-27T16:11:49.6865283Z",
+      "task_id": "fe637e98-3711-4a4f-a860-f7b746eb094f",
+      "task_status": "failed",
+      "verification": "failed_task_with_retained_live_captures",
+      "task_error": {
+        "code": "unsupported_final_reference",
+        "message": "Final artifacts and their dependencies require completed current producer revisions."
+      },
+      "assignment_failures": [
+        {
+          "definition_id": "damage-evidence-research.discover",
+          "error": {
+            "code": "assignment_failed",
+            "message": "The bounded model context exceeds its admitted input limit."
+          }
+        }
+      ],
+      "open_questions": [],
+      "model_receipts": [
+        {
+          "attempt_id": "b65bafae-364a-41ee-ba39-60899871345a",
+          "assignment_id": "3ad598b3-6455-4b51-b7d6-c7e1fd7a70b3",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-4b5b65a3-e0ec-4ec0-8073-019310c0a7c3",
+          "input_tokens": 4704,
+          "output_tokens": 458,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "1fce1a0d-3b87-46d5-9448-d53e5ed1aee0",
+          "assignment_id": "dfe68f98-27d3-4072-ad87-4ce53e1e3ef6",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-177594b1-0ed4-4f62-9bfe-abdb2cc2a18c",
+          "input_tokens": 4927,
+          "output_tokens": 64,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "d8f7ede3-a958-4a86-90d7-8512e70120d9",
+          "assignment_id": "dfe68f98-27d3-4072-ad87-4ce53e1e3ef6",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-1c745075-3a0a-42f4-89bc-ab728e0d16dc",
+          "input_tokens": 3685,
+          "output_tokens": 54,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "6f794677-f5f3-48db-835b-d74a3048b0a6",
+          "assignment_id": "dfe68f98-27d3-4072-ad87-4ce53e1e3ef6",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-9155b82c-25ac-44a0-8701-6dd9d242d8e3",
+          "input_tokens": 6712,
+          "output_tokens": 91,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "a83fd1c2-bbdf-40f6-b5ed-c190e5ba631a",
+          "assignment_id": "3ad598b3-6455-4b51-b7d6-c7e1fd7a70b3",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-c6575d33-5632-491c-8107-59a8c24f14e0",
+          "input_tokens": 5156,
+          "output_tokens": 566,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "abd7c4a8-8dc8-4c6e-85bc-a04abaefcdc4",
+          "assignment_id": "dfe68f98-27d3-4072-ad87-4ce53e1e3ef6",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-dead95db-586d-4b48-b052-ff069d502fbd",
+          "input_tokens": 4991,
+          "output_tokens": 51,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "853342d8-c8c0-4b52-b9bd-2b35b60599dd",
+          "assignment_id": "3ad598b3-6455-4b51-b7d6-c7e1fd7a70b3",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-8317d1e4-2ed8-4d83-8920-6aa63c247cb9",
+          "input_tokens": 5202,
+          "output_tokens": 529,
+          "response_status": "stop",
+          "http_status": 200
+        }
+      ],
+      "search_attempt_count": 2,
+      "search_provider_usage": [
+        {
+          "attempt_id": "feed55f9-a917-40d4-a30d-1c905a9f185a",
+          "status": "completed",
+          "provider_request_id": "6d67a7ce-d5bb-4f3c-ab34-aed822c51936",
+          "usage": {
+            "credits": 1
+          }
+        },
+        {
+          "attempt_id": "c5ac3cce-37dc-44d6-af50-4e8dc96d7b6f",
+          "status": "completed",
+          "provider_request_id": "eb79f52b-f27a-44d9-b41a-1d81558e98fd",
+          "usage": {
+            "credits": 1
+          }
+        }
+      ],
+      "retained_search_captures": [
+        {
+          "artifact": {
+            "id": "92760129-3234-4e6e-92c7-f6b50c6fae48",
+            "version": 1,
+            "sha256": "3006b834ec725a903b220442856fc3dfa21bf02e5349b1eb2a75843b64ed1d0b"
+          },
+          "response_sha256": "27d5aff6a7f4bb0395db56b7d448db89179f3956bea738abda868f00157b7237",
+          "provider_request_id": "6d67a7ce-d5bb-4f3c-ab34-aed822c51936",
+          "result_count": 2,
+          "usage": {
+            "credits": 1
+          }
+        },
+        {
+          "artifact": {
+            "id": "66d91425-253f-4d9c-85eb-abe0205c3b71",
+            "version": 1,
+            "sha256": "127142109c3fdcd06de4450487d3d65f2893dcfe49731a5186a41ca5f8ed33aa"
+          },
+          "response_sha256": "320685574aad2df2bda077db9a3692dcba0043be0d9c1d622ed0c03391fbfcb3",
+          "provider_request_id": "eb79f52b-f27a-44d9-b41a-1d81558e98fd",
+          "result_count": 2,
+          "usage": {
+            "credits": 1
+          }
+        }
+      ],
+      "restart_retention": {
+        "report": ".state/damage-evidence-research-verification/5923356e-2f81-42c4-a71c-deb3a7f21dec/retention-check.json",
+        "schema_version": "haze.damage.evidence.retention-check.v1",
+        "verification": "passed_normal_api_restart_retention_only",
+        "node_version": "v24.22.1",
+        "checked_at": "2026-10-27T16:14:39.145Z",
+        "verified_capture_count": 2,
+        "provider_raw_hashes_verified": 2,
+        "task_status": "failed",
+        "attempts_before": 9,
+        "limitations": [
+          "This verifies retained live bytes across normal API restart only. The configured-model task failed and remains an unmet end-to-end release gate."
+        ],
+        "attempts_after": 9
+      }
+    },
+    {
+      "state_directory": ".state/damage-evidence-research-verification/75a2f8be-93be-42c5-b02e-76687f3d7231",
+      "report": ".state/damage-evidence-research-verification/75a2f8be-93be-42c5-b02e-76687f3d7231/report.json",
+      "started_at": "2026-10-27T16:12:01.579Z",
+      "finished_at": "2026-10-27T16:12:31.420Z",
+      "task_id": "3630c6bd-4a0a-4056-ad86-c372e149dce2",
+      "task_status": "waiting",
+      "verification": "failed_or_unavailable",
+      "task_error": "Live task ended waiting with 0 retained external search captures.",
+      "assignment_failures": [
+        {
+          "definition_id": "damage-evidence-research.discover",
+          "error": {
+            "code": "assignment_failed",
+            "message": "[\n  {\n    \"code\": \"custom\",\n    \"message\": \"The action violates its granted tool input schema, recipient, retained result kind, job handle or exact output reference. Use only the supplied contract choices.\",\n    \"path\": []\n  }\n]"
+          }
+        }
+      ],
+      "open_questions": [
+        "Provide the exact websearch.capture reference and its source links as unreviewed leads, with scientific and numerical gaps explicit, for the bounded search query: site:asmc.asean.org Malaysia haze September 2019, max_results: 2."
+      ],
+      "model_receipts": [
+        {
+          "attempt_id": "b3df9a42-8f25-4b87-84c4-5434a4e514ee",
+          "assignment_id": "da3bfed9-432a-4d60-b39b-0b16a7e1db22",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-eb5ac51b-990a-475c-9bca-890fd0ae32b3",
+          "input_tokens": 4716,
+          "output_tokens": 464,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "a163e141-7500-4192-ae4e-ae9c0fbcd315",
+          "assignment_id": "7c2fa579-974a-49e9-841a-bcbc67debdcf",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-65c4e40d-9b38-4e9b-8cee-da32de827224",
+          "input_tokens": 4927,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "d3111a42-9847-4b62-b64d-b9f60cb301c4",
+          "assignment_id": "7c2fa579-974a-49e9-841a-bcbc67debdcf",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-16a81ace-d613-4018-8c4c-bae1f8bc1af7",
+          "input_tokens": 4372,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "fbb89282-ff8f-4462-ae37-e992f549f0aa",
+          "assignment_id": "7c2fa579-974a-49e9-841a-bcbc67debdcf",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-0fe40b74-9e2c-4ec5-bbaa-efdf38a7e34e",
+          "input_tokens": 4447,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "e90400c0-4b5d-4596-8be2-55edda60693f",
+          "assignment_id": "7c2fa579-974a-49e9-841a-bcbc67debdcf",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-264084a6-e393-47ca-9963-e14c2987ead4",
+          "input_tokens": 4521,
+          "output_tokens": 92,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "7bf7adf7-54e9-4f08-83d3-6415a2f52dc4",
+          "assignment_id": "da3bfed9-432a-4d60-b39b-0b16a7e1db22",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-28d99caa-1cd6-44ea-a48d-ccc170d4f0fa",
+          "input_tokens": 5863,
+          "output_tokens": 215,
+          "response_status": "stop",
+          "http_status": 200
+        },
+        {
+          "attempt_id": "634cf22a-9c46-4421-99c6-0f6de4ab7492",
+          "assignment_id": "da3bfed9-432a-4d60-b39b-0b16a7e1db22",
+          "response_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+          "response_id": "chatcmpl-1c496ad6-e19e-4c61-9b9a-5fbe782a265f",
+          "input_tokens": 5919,
+          "output_tokens": 235,
+          "response_status": "stop",
+          "http_status": 200
+        }
+      ],
+      "search_attempt_count": 1,
+      "search_provider_usage": [
+        {
+          "attempt_id": "1a60ec32-ea58-447e-a6ef-5ff8c60cce0a",
+          "status": "completed",
+          "provider_request_id": "e67196c2-fc64-4cc8-bc79-59b1e7a2ff0e",
+          "usage": {
+            "credits": 1
+          }
+        }
+      ],
+      "retained_search_captures": [],
+      "restart_retention": null
+    }
+  ]
+}

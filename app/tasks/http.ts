@@ -18,6 +18,7 @@ import {
   createModelRouteRegistry,
   createManagerConversation,
   createNightshiftJobAdapter,
+  startApplicationServices,
 } from '../composition.js';
 import {
   TaskRuntime,
@@ -141,6 +142,19 @@ export function createTaskHandler(
       }),
   });
   let dashboard: ReturnType<typeof createDashboardServices> | undefined;
+  const applicationServices = (identity: TaskIdentity) => {
+    dashboard ??= createDashboardServices({
+      store: runtime.store,
+      identity,
+      mode: runtime.executionMode,
+      env: options.env ?? process.env,
+    });
+    startApplicationServices(runtime, dashboard);
+    return dashboard;
+  };
+  // Live collectors belong to the server lifecycle. Fixture-only task APIs keep
+  // their isolated world until a dashboard is explicitly requested.
+  if (runtime.executionMode === 'live') applicationServices(localTaskIdentity);
   let closed = false;
   let closing: Promise<void> | undefined;
   const handler = (request: IncomingMessage, response: ServerResponse) => {
@@ -244,22 +258,15 @@ export function createTaskHandler(
             'runtime_closed',
             'The application is closing.',
           );
-        dashboard ??= createDashboardServices({
-          store: runtime.store,
-          identity,
-          mode: runtime.executionMode,
-          env: options.env ?? {},
-        });
-        await dashboard.hazeops.ready;
+        const application = applicationServices(identity);
+        await application.hazeops.ready;
         if (closed)
           throw new TaskError(
             503,
             'runtime_closed',
             'The application is closing.',
           );
-        dashboard.view.start();
-        dashboard.hazeops.start();
-        if (await dashboard.view.handle(request, response, url)) return;
+        if (await application.view.handle(request, response, url)) return;
         throw new TaskError(
           404,
           'route_not_found',
