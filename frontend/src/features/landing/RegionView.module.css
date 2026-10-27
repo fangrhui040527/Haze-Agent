@@ -23,6 +23,8 @@
 .canvasHost {
   position: absolute;
   inset: 0;
+  /* Contain Leaflet's pane z-indexes (400+) so the stage controls stay on top of the map. */
+  z-index: 0;
 }
 
 /* Leaflet's own background, recoloured to the night palette. */
@@ -58,6 +60,7 @@
 
 .tapCover {
   position: absolute;
+  z-index: 1;
   inset: auto var(--space-3) var(--space-3) auto;
   display: inline-flex;
   align-items: center;
@@ -74,6 +77,7 @@
 
 .stageControls {
   position: absolute;
+  z-index: 1;
   top: var(--space-3);
   left: var(--space-3);
   display: flex;
@@ -167,6 +171,19 @@
 .marker:focus-visible .windSpeed,
 .marker[aria-pressed='true'] .windSpeed {
   display: inline;
+}
+
+/* Zero-size point the globe positions; the marker inside offsets itself so its dot sits on it. */
+.globeAnchor {
+  width: 0;
+  height: 0;
+  overflow: visible;
+}
+
+.globeAnchor > .marker {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .leafletIcon {

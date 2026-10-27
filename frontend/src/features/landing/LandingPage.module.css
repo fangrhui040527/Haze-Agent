@@ -504,9 +504,93 @@
   font-size: var(--text-sm);
 }
 
+.sectionLede {
+  max-width: 60ch;
+  margin: calc(var(--space-3) - var(--space-5)) 0 var(--space-5);
+  color: var(--color-muted);
+}
+
+/* ── Sources ── */
+
+.sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+}
+
+.sourceHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sourceHead h3 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.sourceKind {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.source p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Built on ── */
+
+.builtOn {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.builtOn li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.builtOn h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.builtOn p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--space-5);
   margin: 0;
   padding: 0;
@@ -528,6 +612,78 @@
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+}
+
+/* The critique step is the one that can send work back, so it carries the accent rule. */
+.steps li.stepLoop {
+  border-top-color: var(--color-accent);
+}
+
+/* Focus target for the "How it explains" jump; the section itself carries the spacing. */
+.section h2[tabindex='-1']:focus {
+  outline: none;
+}
+
+/* ── Scroll to top ── */
+
+.toTop {
+  position: fixed;
+  right: max(var(--space-5), env(safe-area-inset-right));
+  bottom: max(var(--space-5), env(safe-area-inset-bottom));
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--hairline);
+  border-radius: 50%;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-2);
+  color: var(--color-accent);
+  backdrop-filter: blur(var(--blur-glass));
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    background var(--duration-fast);
+}
+
+.toTop[data-visible='true'] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.toTop:hover {
+  background: var(--color-accent-soft);
+}
+
+.toTop:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toTop {
+    transform: none;
+  }
+}
+
+.loopNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.loopNote svg {
+  flex: none;
+  color: var(--color-accent);
 }
 
 .closing {

@@ -7,7 +7,6 @@ import {
   compass,
   type CityReading,
   type FireResult,
-  type SatelliteLayerId,
 } from '../../shared/data/airQuality.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
@@ -61,7 +60,6 @@ export function RegionView({
     () => (satellite ? satellite.time(new Date()) : null),
     [satellite],
   );
-  const firesAvailable = fires?.status === 'ok';
 
   const View = mode === 'globe' ? RegionGlobe : RegionMap;
 
@@ -143,47 +141,6 @@ export function RegionView({
                 onChange={() => setLayers((l) => ({ ...l, primary: p.id }))}
               />
               {p.label}
-            </label>
-          ))}
-        </fieldset>
-        <fieldset className={styles.chipGroup}>
-          <legend>Overlays</legend>
-          <label className={styles.chip}>
-            <input
-              type="checkbox"
-              checked={layers.wind}
-              onChange={(e) =>
-                setLayers((l) => ({ ...l, wind: e.target.checked }))
-              }
-            />
-            Wind
-          </label>
-          <label className={styles.chip}>
-            <input
-              type="checkbox"
-              checked={layers.fires && firesAvailable}
-              disabled={!firesAvailable}
-              onChange={(e) =>
-                setLayers((l) => ({ ...l, fires: e.target.checked }))
-              }
-            />
-            Fire hotspots
-          </label>
-          {SATELLITE_LAYERS.map((s) => (
-            <label key={s.id} className={styles.chip}>
-              <input
-                type="checkbox"
-                checked={layers.satellite === s.id}
-                onChange={(e) =>
-                  setLayers((l) => ({
-                    ...l,
-                    satellite: e.target.checked
-                      ? (s.id as SatelliteLayerId)
-                      : null,
-                  }))
-                }
-              />
-              {s.label}
             </label>
           ))}
         </fieldset>
