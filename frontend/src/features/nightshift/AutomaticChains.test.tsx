@@ -135,8 +135,13 @@ it('shows unmet live gates separately from generation reachability and rejects f
   );
   expect(markup).toContain('blocked');
   expect(markup).toContain('No eligible local lane.');
-  expect(markup).toContain('Plan 3 live wait trace and interactive latency');
+  expect(markup).toContain('Live wait/wakeup trace and interactive latency');
   expect(markup).toContain('Resume cannot enable a manual-only chain');
+  // Schema v2 advertises the bounded cloud scope without a dollar ceiling.
+  expect(markup).toContain('cloud-ok only');
+  expect(markup).toContain('at most 2 total runs with 1 automatic follow-up');
+  expect(markup).toContain('30-minute absolute');
+  expect(markup).toContain('no dollar ceiling can be enforced');
   expect(
     automaticReadinessSchema.safeParse({
       ...blocked,
