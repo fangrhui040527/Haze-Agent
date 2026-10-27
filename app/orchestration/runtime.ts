@@ -162,7 +162,23 @@ export function assessArtifactReviews(
         (!item.producer_definition_ids ||
           item.producer_definition_ids.includes(producer.definition_id)),
     );
-    if (!requirement) continue;
+    if (!requirement && !artifact.external_candidates?.length) continue;
+    if (!requirement) {
+      checks.push({
+        artifact: {
+          id: artifact.id,
+          version: artifact.version,
+          sha256: artifact.sha256,
+        },
+        producer_assignment_id: producer.id,
+        producer_revision: producer.revision,
+        verdict: 'needs_review',
+        limitations: [
+          'This work product consumed an unreviewed external candidate and has no registered independent review requirement for its exact artifact kind.',
+        ],
+      });
+      continue;
+    }
     let accepted: ArtifactReviewCheck | undefined;
     for (const review of artifacts.filter(current)) {
       const reviewer = assignments.find(
@@ -249,7 +265,7 @@ export function validateArtifactClosure(
   const foreignChecks = new Map<string, ArtifactReviewCheck[]>();
   const closure = new Map<string, Artifact>();
   const visiting = new Set<string>();
-  const visit = (ref: ArtifactRef) => {
+  const visit = (ref: ArtifactRef, dependency = false) => {
     // Resolve before deduplication so a conflicting reference to an already seen ID
     // cannot inherit the validation of a different version or hash.
     const artifact = readArtifact(ref);
@@ -269,7 +285,6 @@ export function validateArtifactClosure(
         'artifact_dependency_cycle',
         'Final artifact dependencies must form a DAG.',
       );
-    if (closure.has(ref.id)) return;
     if (
       !task.artifacts.some(
         (entry) =>
@@ -309,6 +324,34 @@ export function validateArtifactClosure(
     const producer = producerTask.assignments.find(
       (item) => item.id === producerId,
     );
+    if (artifact.external_candidates?.length && !producer)
+      throw new TaskError(
+        422,
+        'independent_review_required',
+        'Candidate-derived work requires an exact assignment producer and registered independent review.',
+      );
+    if (provenance && !foreignChecks.has(producerTask.id))
+      foreignChecks.set(
+        producerTask.id,
+        assessArtifactReviews(producerTask, registry, provenance.artifacts),
+      );
+    const producerChecks = provenance
+      ? foreignChecks.get(producerTask.id)!
+      : checks;
+    // A registered independent review can support a downstream product. It is
+    // never itself selectable as a factual work product or an arbitrary opinion.
+    const supportingReview =
+      dependency &&
+      producer?.role === 'EvidenceCritic' &&
+      producerChecks.some(
+        (check) =>
+          check.verdict === 'supported' &&
+          check.reviewer_assignment_id === producer.id &&
+          check.reviewer_revision === producer.revision &&
+          check.review_artifact?.id === ref.id &&
+          check.review_artifact.version === ref.version &&
+          check.review_artifact.sha256 === ref.sha256,
+      );
     if (
       producerId &&
       (!producer ||
@@ -318,21 +361,14 @@ export function validateArtifactClosure(
         (producer.status !== 'completed' &&
           !(producer.role === 'Manager' && producer.status === 'running')) ||
         ['rejected', 'stale'].includes(producer.usability) ||
-        producer.role === 'EvidenceCritic')
+        (producer.role === 'EvidenceCritic' && !supportingReview))
     )
       throw new TaskError(
         422,
         'unsupported_final_reference',
         'Final artifacts and their dependencies require completed current producer revisions.',
       );
-    if (provenance && !foreignChecks.has(producerTask.id))
-      foreignChecks.set(
-        producerTask.id,
-        assessArtifactReviews(producerTask, registry, provenance.artifacts),
-      );
-    const review = (
-      provenance ? foreignChecks.get(producerTask.id)! : checks
-    ).find(
+    const review = producerChecks.find(
       (item) =>
         item.artifact.id === ref.id &&
         item.artifact.version === ref.version &&
@@ -344,8 +380,10 @@ export function validateArtifactClosure(
         'independent_review_required',
         'Required review does not support the exact final artifact closure.',
       );
+    if (closure.has(ref.id)) return;
     visiting.add(ref.id);
-    for (const dependency of artifact.dependencies) visit(dependency);
+    for (const dependencyRef of artifact.dependencies)
+      visit(dependencyRef, true);
     visiting.delete(ref.id);
     closure.set(ref.id, artifact);
   };

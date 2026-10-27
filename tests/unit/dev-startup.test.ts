@@ -22,6 +22,8 @@ interface Scenario {
   stdoutChunks?: number[][];
   afterReady?: boolean;
   noReady?: boolean;
+  apiFailure?: boolean;
+  consoleCommands?: string[];
 }
 
 interface SpawnCall {
@@ -48,8 +50,24 @@ async function launch(scenario: Scenario = {}, args: string[] = []) {
 import childProcess from 'node:child_process';
 import nodeModule, { syncBuiltinESMExports } from 'node:module';
 import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
 
 const scenario = ${JSON.stringify(scenario)};
+if (scenario.consoleCommands) Object.defineProperty(process, 'stdin', { value: new PassThrough() });
+globalThis.fetch = async (input) => {
+  if (scenario.apiFailure) throw new TypeError('connection refused');
+  const url = new URL(input);
+  if (url.pathname === '/') return new Response('<html>Haze app</html>', { headers: { 'content-type': 'text/html' } });
+  const responses = {
+    '/api/health': { ok: true, mode: 'fixture', watchers: [], agents: { hmem: 'not enabled; dashboard memory remains archival' }, hazeops: { scheduler: 'disabled', reason: 'fixture mode' } },
+    '/api/tasks': { tasks: [] },
+    '/api/world/records': { counts: { records: 0, relationships: 0, events: 0 } },
+    '/api/nightshift/readiness': { routes: [] },
+    '/api/nightshift/jobs/readiness': { runtime_reachable: false, ready: false, cli_available: false, reason: 'Nightshift not installed' },
+    '/api/nightshift/automation/readiness': { ready: false, released: false, reason: 'Automatic release gate closed' },
+  };
+  return new Response(JSON.stringify(responses[url.pathname] ?? {}), { headers: { 'content-type': 'application/json' } });
+};
 const originalCreateRequire = nodeModule.createRequire;
 nodeModule.createRequire = (filename) => {
   const require = originalCreateRequire(filename);
@@ -69,7 +87,9 @@ childProcess.spawn = (command, args, options) => {
   const child = new EventEmitter();
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
+  let keepAlive;
   child.kill = (signal) => {
+    clearInterval(keepAlive);
     console.log(${JSON.stringify(killMarker)} + signal);
     setImmediate(() => child.emit('close', null, signal));
     return true;
@@ -98,6 +118,13 @@ childProcess.spawn = (command, args, options) => {
       type: 'haze-dev-ready', local: ['http://localhost:5174/'], network: [],
     });
     if (scenario.afterReady) emitOutput();
+    if (index === 3 && scenario.consoleCommands) {
+      keepAlive = setInterval(() => {}, 1000);
+      scenario.consoleCommands.forEach((line, offset) => setTimeout(() => {
+        process.stdin.emit('data', Buffer.from(line + '\\n'));
+      }, 100 + offset * 100));
+      return;
+    }
     child.emit('close', scenario.failAt === index ? scenario.exitCode : 0, null);
   });
   return child;
@@ -129,6 +156,26 @@ syncBuiltinESMExports();
 }
 
 describe('root development startup', () => {
+  it('owns stdin for an explicit console and exits without stopping Compose', async () => {
+    const result = await launch({ consoleCommands: ['help', 'exit'] }, [
+      '--console',
+    ]);
+    expect(result.status).toBe(0);
+    expect(result.output).toContain('haze>');
+    expect(result.output).toContain('Haze commands');
+    expect(result.calls).toHaveLength(4);
+    expect(result.calls[3]?.stdio[0]).toBe('ignore');
+    expect(result.calls[3]?.args).not.toContain('--console');
+    expect(result.output).toContain(killMarker + 'SIGINT');
+  });
+
+  it('fails startup if the app API cannot initialize', async () => {
+    const result = await launch({ apiFailure: true });
+    expect(result.status).toBe(1);
+    expect(result.output).toContain('FAILED');
+    expect(result.output).toContain('Cannot reach the app API');
+  });
+
   it('starts Zetaris, displays its status, builds, then launches Vite with CLI options', async () => {
     const args = ['--port', '5174', '--host', '127.0.0.1'];
     const result = await launch({}, args);
@@ -161,17 +208,21 @@ describe('root development startup', () => {
       /\/vite\/bin\/vite\.js$/,
     );
     expect(result.calls[3]?.args.slice(1)).toEqual(args);
-    expect(result.output).toMatch(/Zetaris containers[^\n]*STARTED/);
-    expect(result.output).toMatch(/Backend build[^\n]*READY/);
-    expect(result.output).toMatch(/Frontend \+ backend API[^\n]*READY/);
+    expect(result.output).toMatch(/Zetaris platform[^\n]*STARTED/);
+    expect(result.output).toMatch(/Haze TypeScript build[^\n]*BUILT/);
+    expect(result.output).toMatch(/Haze web app[^\n]*READY/);
     expect(result.output).not.toContain('STARTING');
     expect(result.output).not.toContain('WAITING');
     expect(result.output).not.toContain('\u001b[');
     expect(result.output).toContain('http://localhost:5174/');
+    expect(result.output).toMatch(/World Model \(SQLite\)[^\n]*READY/);
+    expect(result.output).toMatch(/H-MEM[^\n]*DISABLED/);
+    expect(result.output).toMatch(/Nightshift runtime[^\n]*UNREACHABLE/);
+    expect(result.output).toMatch(/Nightshift local jobs[^\n]*UNAVAILABLE/);
     for (const name of [
-      'Zetaris containers',
-      'Backend build',
-      'Frontend + backend API',
+      'Zetaris platform',
+      'Haze TypeScript build',
+      'Haze web app',
     ])
       expect(result.output.split(name)).toHaveLength(2);
   });
@@ -182,7 +233,7 @@ describe('root development startup', () => {
     expect(result.status).toBe(17);
     expect(result.calls).toHaveLength(1);
     expect(result.output).toContain('FAILED');
-    expect(result.output).not.toContain('Backend build: STARTING');
+    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
   });
 
   it('reports a missing Docker executable without starting later stages', async () => {
@@ -192,7 +243,7 @@ describe('root development startup', () => {
     expect(result.calls).toHaveLength(1);
     expect(result.output).toContain('FAILED');
     expect(result.output).toContain('ENOENT');
-    expect(result.output).not.toContain('Backend build: STARTING');
+    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
   });
 
   it('stops before the build when Docker status inspection fails', async () => {
@@ -201,7 +252,7 @@ describe('root development startup', () => {
     expect(result.status).toBe(19);
     expect(result.calls).toHaveLength(2);
     expect(result.output).toContain('FAILED');
-    expect(result.output).not.toContain('Backend build: STARTING');
+    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
   });
 
   it('does not launch Vite after a failed backend build', async () => {
@@ -210,7 +261,7 @@ describe('root development startup', () => {
     expect(result.status).toBe(23);
     expect(result.calls).toHaveLength(3);
     expect(result.output).toContain('FAILED');
-    expect(result.output).not.toContain('Frontend + backend API: STARTING');
+    expect(result.output).not.toContain('Haze web app: STARTING');
   });
 
   it('propagates the Vite process exit code', async () => {
@@ -229,7 +280,7 @@ describe('root development startup', () => {
 
     expect(result.status).toBe(0);
     expect(result.output).not.toContain('Container zetaris-api-1');
-    expect(result.output).toMatch(/Zetaris containers[^\n]*STARTED/);
+    expect(result.output).toMatch(/Zetaris platform[^\n]*STARTED/);
   });
 
   it('keeps captured diagnostics visible when a startup command fails', async () => {
@@ -244,7 +295,7 @@ describe('root development startup', () => {
     expect(result.status).toBe(23);
     expect(result.output).toContain('TypeScript build diagnostic');
     expect(result.output).toContain('The backend could not compile');
-    expect(result.output).toMatch(/Backend build[^\n]*FAILED/);
+    expect(result.output).toMatch(/Haze TypeScript build[^\n]*FAILED/);
   });
 
   it('preserves runtime lines and UTF-8 characters across output chunks', async () => {
@@ -281,8 +332,8 @@ describe('root development startup', () => {
 
     expect(result.status).toBe(0);
     expect(result.output).toContain('Vite command help');
-    expect(result.output).toMatch(/Frontend \+ backend API[^\n]*STOPPED/);
-    expect(result.output).not.toMatch(/Frontend \+ backend API[^\n]*READY/);
+    expect(result.output).toMatch(/Haze web app[^\n]*STOPPED/);
+    expect(result.output).not.toMatch(/Haze web app[^\n]*READY/);
   });
 
   it.each([

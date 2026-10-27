@@ -1,5 +1,6 @@
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import { Badge, type Tone } from '../../shared/ui/Badge.tsx';
+import { ExternalWaitObserver } from '../nightshift/ExternalWaits.tsx';
 import styles from './ManagerWorkspace.module.css';
 
 const statusTone = (status: string): Tone => {
@@ -35,6 +36,7 @@ export function ManagerWorkspace({ record }: { record: TaskRecord }) {
         <h2 id="manager-workspace-title">Manager workspace</h2>
         <Badge>Plan revision {manager.plan_revision}</Badge>
       </div>
+      <ExternalWaitObserver taskId={record.id} />
       {interpretation && (
         <section
           className={styles.section}

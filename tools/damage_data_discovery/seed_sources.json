@@ -9,7 +9,14 @@
       "triage_role": "candidate_product",
       "potential_inputs": ["fire_emissions", "fire_radiative_power"],
       "known_limitations": "Product documentation is not acquired fire emissions data; verify species, units, temporal profiles, coverage, access terms, and uncertainty.",
-      "terms": ["emission", "fire radiative power", "species", "resolution", "version", "injection"]
+      "terms": [
+        "emission",
+        "fire radiative power",
+        "species",
+        "resolution",
+        "version",
+        "injection"
+      ]
     },
     {
       "id": "cams_eac4",
@@ -20,7 +27,14 @@
       "triage_role": "candidate_product",
       "potential_inputs": ["ambient_pm25_field"],
       "known_limitations": "Modeled reanalysis is not direct monitoring or fire-attributed exposure; verify variables, units, grid, time coverage, validation, and access.",
-      "terms": ["PM2.5", "particulate", "resolution", "2003", "reanalysis", "uncertainty"]
+      "terms": [
+        "PM2.5",
+        "particulate",
+        "resolution",
+        "2003",
+        "reanalysis",
+        "uncertainty"
+      ]
     },
     {
       "id": "era5_single_levels",
@@ -31,7 +45,14 @@
       "triage_role": "candidate_product",
       "potential_inputs": ["meteorology"],
       "known_limitations": "Documentation does not provide a configured transport model; verify required fields, units, grid, timestamps, domain, and retrieval requirements.",
-      "terms": ["hourly", "resolution", "ensemble", "uncertainty", "1940", "wind"]
+      "terms": [
+        "hourly",
+        "resolution",
+        "ensemble",
+        "uncertainty",
+        "1940",
+        "wind"
+      ]
     },
     {
       "id": "worldpop_population_api",
@@ -73,9 +94,35 @@
       "allowed_hosts": ["data.gov.my"],
       "purpose": "Browse official catalogue listings for health, deaths, pollution, labour and price datasets.",
       "triage_role": "catalogue_documentation",
-      "potential_inputs": ["health_baseline_discovery", "air_quality_context", "labour_context", "price_context"],
+      "potential_inputs": [
+        "health_baseline_discovery",
+        "air_quality_context",
+        "labour_context",
+        "price_context"
+      ],
       "known_limitations": "Catalogue listings are discovery leads; individual dataset definitions and data must be checked separately.",
-      "terms": ["Healthcare", "Deaths", "Pollution", "Labour", "Prices", "Health", "hospital", "respiratory", "mortality", "admission", "absence", "wage", "cause", "workplace", "worker", "haze", "smoke", "peat", "burning", "illness"]
+      "terms": [
+        "Healthcare",
+        "Deaths",
+        "Pollution",
+        "Labour",
+        "Prices",
+        "Health",
+        "hospital",
+        "respiratory",
+        "mortality",
+        "admission",
+        "absence",
+        "wage",
+        "cause",
+        "workplace",
+        "worker",
+        "haze",
+        "smoke",
+        "peat",
+        "burning",
+        "illness"
+      ]
     },
     {
       "id": "data_gov_my_deaths_district_sex",
@@ -86,7 +133,16 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["baseline_health_context"],
       "known_limitations": "Annual all-cause district counts/rates do not provide cause-specific haze outcomes, event-period rates, age strata, or a risk function.",
-      "terms": ["district", "sex", "deaths", "crude death rate", "population", "registration", "API", "license"]
+      "terms": [
+        "district",
+        "sex",
+        "deaths",
+        "crude death rate",
+        "population",
+        "registration",
+        "API",
+        "license"
+      ]
     },
     {
       "id": "data_gov_my_deaths_district_sex_api",
@@ -108,7 +164,15 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["health_service_capacity"],
       "known_limitations": "Staff counts describe service capacity, not health outcomes, treatment utilization, or cost per case.",
-      "terms": ["staff", "doctor", "nurse", "state", "date", "healthcare", "license"]
+      "terms": [
+        "staff",
+        "doctor",
+        "nurse",
+        "state",
+        "date",
+        "healthcare",
+        "license"
+      ]
     },
     {
       "id": "data_gov_my_healthcare_staff_api",
@@ -152,7 +216,15 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["labour_context"],
       "known_limitations": "General labour-market indicators do not measure haze-attributable absence, lost hours, or productivity.",
-      "terms": ["employment", "unemployment", "labour force", "monthly", "state", "survey", "license"]
+      "terms": [
+        "employment",
+        "unemployment",
+        "labour force",
+        "monthly",
+        "state",
+        "survey",
+        "license"
+      ]
     },
     {
       "id": "data_gov_my_lfs_month_api",
@@ -174,7 +246,14 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["work_valuation_context", "price_context"],
       "known_limitations": "State wage context may support valuation only with an approved method; it is not haze-attributable lost work and requires price-year compatibility.",
-      "terms": ["wages", "state", "monthly", "2010 prices", "employees", "license"]
+      "terms": [
+        "wages",
+        "state",
+        "monthly",
+        "2010 prices",
+        "employees",
+        "license"
+      ]
     },
     {
       "id": "data_gov_my_wages_real_state_api",
@@ -196,7 +275,14 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["health_service_capacity"],
       "known_limitations": "Bed counts describe public-sector capacity, not haze-related admissions, resource use, or treatment cost.",
-      "terms": ["hospital beds", "state", "district", "hospital type", "date", "license"]
+      "terms": [
+        "hospital beds",
+        "state",
+        "district",
+        "hospital type",
+        "date",
+        "license"
+      ]
     },
     {
       "id": "data_gov_my_hospital_beds_api",
@@ -229,7 +315,15 @@
       "triage_role": "catalogue_documentation",
       "potential_inputs": ["malaysia_official_statistics_discovery"],
       "known_limitations": "Portal discovery does not establish that candidate tables contain event-specific model inputs; validate each dataset independently.",
-      "terms": ["health", "labour", "wage", "salary", "price", "download", "API"]
+      "terms": [
+        "health",
+        "labour",
+        "wage",
+        "salary",
+        "price",
+        "download",
+        "API"
+      ]
     },
     {
       "id": "dosm_population_district",
@@ -262,7 +356,14 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["labour_context"],
       "known_limitations": "Labour-market dashboard indicators do not directly measure event-related absence, lost workdays, or reduced productivity.",
-      "terms": ["labour", "employment", "unemployment", "wages", "data", "download"]
+      "terms": [
+        "labour",
+        "employment",
+        "unemployment",
+        "wages",
+        "data",
+        "download"
+      ]
     },
     {
       "id": "dosm_producer_prices",
@@ -284,7 +385,14 @@
       "triage_role": "method_reference",
       "potential_inputs": ["risk_function_method_reference"],
       "known_limitations": "Guidelines are not necessarily a quantitative concentration-response function and do not establish Malaysia-specific applicability.",
-      "terms": ["health", "risk", "PM2.5", "evidence", "uncertainty", "exposure"]
+      "terms": [
+        "health",
+        "risk",
+        "PM2.5",
+        "evidence",
+        "uncertainty",
+        "exposure"
+      ]
     },
     {
       "id": "who_gho_api_documentation",
@@ -295,7 +403,14 @@
       "triage_role": "catalogue_documentation",
       "potential_inputs": ["health_baseline_discovery"],
       "known_limitations": "API documentation does not identify a suitable local cause-specific event baseline; verify indicators, definitions, dimensions, and returned coverage.",
-      "terms": ["indicator", "filter", "country", "TimeDimension", "OData", "API"]
+      "terms": [
+        "indicator",
+        "filter",
+        "country",
+        "TimeDimension",
+        "OData",
+        "API"
+      ]
     },
     {
       "id": "who_mortality_estimates",
@@ -306,7 +421,14 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["baseline_health_context"],
       "known_limitations": "Country-level estimates may not match local causes, strata, geography, event period, or official national statistics.",
-      "terms": ["mortality", "cause", "estimates", "data", "indicator", "method"]
+      "terms": [
+        "mortality",
+        "cause",
+        "estimates",
+        "data",
+        "indicator",
+        "method"
+      ]
     },
     {
       "id": "who_ncd_mortality_indicator",
@@ -317,7 +439,14 @@
       "triage_role": "supporting_context",
       "potential_inputs": ["baseline_health_context"],
       "known_limitations": "Age-standardized broad NCD rates are not event-specific attributable outcomes; check outcome definition, strata, geography, and time coverage.",
-      "terms": ["mortality rate", "age-standardized", "cause", "age", "sex", "estimates"]
+      "terms": [
+        "mortality rate",
+        "age-standardized",
+        "cause",
+        "age",
+        "sex",
+        "estimates"
+      ]
     },
     {
       "id": "who_ncd_mortality_indicator_lookup",
@@ -339,7 +468,13 @@
       "triage_role": "bounded_api_sample",
       "potential_inputs": ["health_baseline_context"],
       "known_limitations": "Life-expectancy sample does not provide cause-specific haze baseline rates; bounded response and country-level scope limit use.",
-      "terms": ["SpatialDim", "TimeDimensionBegin", "NumericValue", "MYS", "WHOSIS_000001"]
+      "terms": [
+        "SpatialDim",
+        "TimeDimensionBegin",
+        "NumericValue",
+        "MYS",
+        "WHOSIS_000001"
+      ]
     },
     {
       "id": "epa_benmap",
@@ -350,7 +485,14 @@
       "triage_role": "method_reference",
       "potential_inputs": ["health_impact_method_reference"],
       "known_limitations": "US documentation or risk functions do not establish methodological approval or population applicability in Malaysia.",
-      "terms": ["risk", "concentration-response", "health impact", "uncertainty", "BenMAP", "population"]
+      "terms": [
+        "risk",
+        "concentration-response",
+        "health impact",
+        "uncertainty",
+        "BenMAP",
+        "population"
+      ]
     }
   ]
 }

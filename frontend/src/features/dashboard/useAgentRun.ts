@@ -68,7 +68,9 @@ export interface AgentRun {
 export function useAgentRun(
   initialTaskId?: string,
   storageKey = 'haze.general.task.id',
+  options: { restoreFromStorage?: boolean } = {},
 ): AgentRun {
+  const restoreFromStorage = options.restoreFromStorage !== false;
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [status, setStatus] = useState<RunStatus>('idle');
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -218,7 +220,7 @@ export function useAgentRun(
   );
   useEffect(() => {
     let savedTaskId = initialTaskId ?? null;
-    if (initialTaskId === undefined) {
+    if (initialTaskId === undefined && restoreFromStorage) {
       try {
         savedTaskId = sessionStorage.getItem(storageKey);
       } catch {
@@ -276,7 +278,7 @@ export function useAgentRun(
       controller.abort();
       if (restorationRef.current === controller) restorationRef.current = null;
     };
-  }, [initialTaskId, observe, onTask, storageKey]);
+  }, [initialTaskId, observe, onTask, storageKey, restoreFromStorage]);
   const ask = useCallback(
     async (request: AskRequest) => {
       if (controllerRef.current)

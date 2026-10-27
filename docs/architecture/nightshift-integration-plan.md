@@ -1,90 +1,79 @@
-# Implement Nightshift in Haze
+# Nightshift integration roadmap
 
-## Summary
+Status: all four plans have implementation reports; live inference gates remain unmet.
+Plan 4 automatic chains remain behind a closed production release gate. The specifications and fixture checks
+do not establish live readiness. See the reports for
+[routing](nightshift-01-routing-implementation-report.md),
+[manual jobs](nightshift-02-local-jobs-implementation-report.md) and
+[external waits](nightshift-03-external-waits-implementation-report.md) and
+[automatic chains](nightshift-04-automatic-chains-implementation-report.md).
 
-Integrate Meterless Nightshift through two paths:
+## Delivery sequence
 
-- **Agent inference:** configurable provider and model routes for each agent.
-- **Background jobs:** durable multi-attempt generation with progress, results, cancellation and bounded automatic follow-up runs.
+Implement and verify each plan before enabling the next phase. Routing, background-job visibility and manual consumption are independently useful before automatic continuation is available.
 
-Add a dedicated Nightshift screen. Keep Haze responsible for task coordination, resource grants, schema validation and evidence acceptance.
+| Order | Implementation plan                                                                         | Delivered behavior                                                                                                       | Gate before the next phase                                                                                                     |
+| ----- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 1     | [Routing with role-specific evaluation](nightshift-01-routing-plan.md)                      | Admission-pinned provider/model routes for every Haze task and registered role, sanitized readiness and actual receipts. | Provider contracts, replay identity and captured role-specific decision quality pass.                                          |
+| 2     | [Local jobs with basic visibility and manual consumption](nightshift-02-local-jobs-plan.md) | Durable local jobs, manual-only grants, restart monitoring, historical result capture and a usable Nightshift screen.    | Acknowledged jobs recover; unknown submissions are never replayed; manual consumption preserves authority and evidence checks. |
+| 3     | [External waits and capacity handling](nightshift-03-external-waits-plan.md)                | Granted agent job tools, targeted waits, required-job dependencies, fair capacity reacquisition and durable delivery.    | Concurrent completions, restart, admission bounds and authority fences pass without automatic successors.                      |
+| 4     | [Opt-in automatic chains](nightshift-04-automatic-chains-plan.md)                           | Explicitly authorized, finite linked runs under one cumulative grant, with progress checks and stop reasons.             | Mixed manual/automatic accounting, one-successor guarantees and real end-to-end traces pass.                                   |
 
-This plan changes Haze only. Cloud jobs remain disabled until Nightshift can enforce the spending cap entered by the user.
+Each linked document has its own implementation scope, contracts, verification and exit gate. Earlier phases do not implicitly enable later behavior. The full UI grows with the phases instead of waiting until automatic chains are implemented.
 
-## Implementation
+## Intended use and evidence boundary
 
-### Per-agent model routing
+Use Nightshift background generation initially for:
 
-- Extend [agent-model.ts](../../app/adapters/agent-model.ts) with a `nightshift` provider using the local OpenAI-compatible endpoint and server-side runtime authentication.
-- Add named route profiles through `HAZE_MODEL_ROUTES_JSON`, containing provider, model, optional base URL and credential environment reference. Map the five registered agent roles to profiles through `HAZE_AGENT_ROUTES_JSON`.
-- Roles without an explicit mapping inherit the existing shared provider configuration. Explicit routes never fall back to another provider after failure.
-- Resolve routes by assignment role in [TaskRuntime](../../app/tasks/runtime.ts). Cache adapters by effective route and preserve the existing injected-model override for tests.
-- Validate configuration syntax at startup. Report missing credentials or unavailable models through readiness information without preventing the jobs screen from loading.
-- Preserve admitted input/output limits, JSON action validation, cancellation, timeout handling and actual provider receipts. Validate Nightshift's token-limit fields, JSON-mode behavior and Nemotron reasoning settings explicitly.
-- Persist the requested route separately from the returned model, response ID and usage. Snapshot route identities for each chain; configuration changes must not silently change an admitted chain's provider.
+- Evidence-linked drafts using exact Haze-provided source references.
+- Alternative explanations that retain their evidence, assumptions and uncertainty.
+- Critique candidates to inform a separately authorized review.
 
-### Durable job execution
+Source retrieval, numerical calculations, deterministic scientific methods and independent checks continue through registered Haze capabilities. Nightshift output is service-produced, derived, untrusted material. Neither best-of-N agreement nor a Nightshift judge substitutes for EvidenceCritic, establishes source authenticity, grants applicability or satisfies Haze evidence acceptance.
 
-- Introduce a server-owned `NightshiftJobPort` for submit, inspect, outcome, result and cancellation. Implement it using the installed CLI, invoked without a shell, reusing the demo's discovery and parsing behavior.
-- Initially support text `best_of_n` jobs with attempt count, configured fleet, judge, budget level and `now` or `quiet` execution. Model installation, lane administration and native schedules remain in Nightshift's cockpit.
-- Add versioned SQLite migrations for jobs, chains, resource reservations and result deliveries. Use the existing authoritative database.
-- Commit submission intent and resource reservations before contacting Nightshift. Persist the remote job ID immediately after acknowledgment.
-- Never automatically repeat an unacknowledged submission. The installed CLI's idempotency flag does not provide remote deduplication. Mark these jobs `submission_unknown` and require explicit reconciliation against a verified remote job.
-- Run a restartable supervisor that polls known jobs independently of browser sessions and active task runs. Retry reads with bounded backoff; reconnect to acknowledged jobs after restart.
-- Retain immutable outputs, actual attempt metadata and judging outcomes as service-produced, derived artifacts. Missing metadata remains unknown. Nightshift judging does not establish Haze evidence acceptance.
+Keep Haze responsible for task coordination, admission, permissions, budgets, schema validation, artifact applicability, independent review and finalization. Nightshift supplies inference and external compute.
 
-### External waits and automatic continuation
+## Required architectural boundaries
 
-- Register bounded `nightshift.submit`, `nightshift.result` and `nightshift.cancel` tools under explicit assignment grants. Agents receive local job handles, never arbitrary commands, credentials or remote endpoints.
-- Extend specialist actions with an external-job wait. Waiting releases specialist slots; verified external-only waits also release active-task capacity.
-- Make required pending jobs dependencies that prevent premature task finalization.
-- Deliver terminal results through durable, targeted events. Reuse the ledger's event-before-park protection and deduplicate delivery.
-- If the original run remains eligible, wake its waiting assignment. If its deadline expired, create a linked successor. If another run is active, retain the result in an inbox until that run becomes quiescent.
-- Extract linked-run creation from [TaskStore](../../app/tasks/store.ts) and add a server-only automatic mode. It must verify predecessor identity, objective revision, permissions, expiry, remaining resources and absence of unresolved unknown operations.
-- A continuation may submit further jobs only from the chain's remaining grant. Reserve cumulative Haze resources at admission from the existing investigation profile and admitted run count; automatic successors never replenish that grant.
-- Pause freezes new submissions and continuations. Cancel or revoke closes the grant and requests cancellation of known jobs. Objective corrections invalidate the old chain's authority; late outputs remain historical.
+| Requirement                               | Planning commitment                                                                                                                                                                                                                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One authoritative chain grant             | Plan 2 establishes the immutable manual-only envelope; plan 3 preserves it during waits and manual controls; plan 4 enforces cumulative Haze and job allowances across every manual and automatic successor. Continue and Resume never replenish a same-chain grant.                         |
+| External waits change admission policy    | Plan 3 distinguishes external-only waits from human/peer/mixed waits, releases permits only when verified, atomically reacquires capacity, bounds outstanding work and uses a durable fair ready queue.                                                                                      |
+| Capture is separate from current evidence | Plan 2 adds historical receipt ingestion with original run/objective/assignment/input identities. Plans 3-4 require current authority, applicability and review before consumption; late outputs never bypass current-execution checks.                                                      |
+| Routes are pinned for all tasks           | Plan 1 snapshots effective inherited or explicit routes for ordinary tasks as well as future chains, and binds route identity into operation fingerprints before dispatch. Configuration changes cannot silently remap admitted work.                                                        |
+| Dependency direction stays explicit       | Adapters implement transport. Tasks own policy, reservations, lifecycle and delivery. Orchestration supplies restricted interfaces and workflows. Contracts hold browser-safe schemas. Composition registers implementations. Existing graph infrastructure remains the execution mechanism. |
 
-## APIs and user interface
+Concrete Nightshift transport belongs in `app/adapters/nightshift/`. Task lifecycle and the supervisor belong in `app/tasks/`. Register tools and inject adapters through `app/composition.ts`; domain behavior stays in `app/capabilities/` and `app/agents/`. Do not give agents CLI access, credentials, database handles or arbitrary remote endpoints.
 
-Add versioned, schema-validated contracts under `/api/nightshift`:
+## Shared defaults and policies
 
-| Surface    | Purpose                                                                     |
-| ---------- | --------------------------------------------------------------------------- |
-| Readiness  | Runtime status, sanitized agent routes, capabilities and permitted policies |
-| Chains     | Create, list, inspect, pause, resume and cancel bounded chains              |
-| Jobs       | Submit, list, inspect, cancel and reconcile jobs                            |
-| Job events | Cursor-based progress and terminal-result observation                       |
+These are proposed implementation defaults, not claims about the installed daemon's current settings. Resolve and persist admitted limits; users may lower them.
 
-All mutations require an `Idempotency-Key`; controls also require the current revision. Reuse existing identity, workspace and authorization checks.
+| Limit or policy                               | Default                                                                                                                                                                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Active Haze tasks / shared specialists        | Preserve two / two; parked external waits use a distinct bounded backlog.                                                                                                                                                      |
+| Global nonterminal Haze-owned Nightshift jobs | Two, including queued, unknown-submission and cancellation-unconfirmed jobs until verified terminal or reconciled.                                                                                                             |
+| Global open chains, including parked chains   | Eight, sharing one cap; parking does not free an open-chain place.                                                                                                                                                             |
+| Total admitted runs / automatic follow-ups    | One run and zero automatic follow-ups by default. Explicit admission may authorize at most four total runs; only plan 4 opt-in permits up to three automatic follow-ups. Manual and automatic successors share the same total. |
+| Jobs / total requested attempts per chain     | At most four / sixteen; reserve before submission.                                                                                                                                                                             |
+| Absolute chain lifetime                       | At most twenty-four hours from admission; pauses, downtime and successors do not renew it.                                                                                                                                     |
+| Default job                                   | Text `best_of_n`, four attempts, accuracy judge, low budget, immediate execution and runtime-selected fleet.                                                                                                                   |
+| Job privacy and cloud spend                   | Local-only and $0. Cloud submission stays disabled until enforceable runtime caps are verified.                                                                                                                                |
 
-Every job belongs to a task and chain. Manual submission can create a new task or attach to an authorized existing task. Agents can consume an admitted grant but cannot enlarge it.
+Keep one open chain per task. A manual-only chain defaults to one run and zero automatic follow-ups; extra user-triggered runs must be explicitly included at admission. Increasing an existing grant requires separate explicit admission after closing it. Reserve cumulative Haze resources from the resolved investigation profile and admitted total run count, with per-call bounds and protected synthesis/review resources. Enrollment preserves the current run's admitted limits and existing charges. Logical budget authority is separate from active execution permits.
 
-Add `/nightshift/:jobId?` within the existing application layout:
+Unknown outcomes stay charged or reserved. The CLI's idempotency flag is not remote submission deduplication. Never automatically replay an unacknowledged submission; require explicit reconciliation against a verified remote job.
 
-- Runtime readiness and a read-only agent-route table.
-- A submission form showing attempts, fleet, judge, execution window and chain limits.
-- Persistent job list and detail view with progress, output, outcome, provenance and task linkage.
-- Chain lineage, remaining resources, follow-up status and explicit stop reasons.
-- Separate controls for stopping browser observation, cancelling one job and cancelling the chain.
+Cloud additionally requires server permission, explicit opt-in and a user-entered cap with no positive prefill. Haze must keep spent plus outstanding allocated caps within the chain cap, and Nightshift must enforce each allocation. Advertised flag support alone is insufficient. Direct agent-provider inference has separate Haze call/token limits and routing policy; the job cap must not be presented as covering those calls.
 
-Browser timers only observe state. Execution and continuation remain server-owned. Render generated text as untrusted content and distinguish cancellation requested from confirmed remote completion.
+Use versioned additive SQLite migrations in the authoritative task database, preserve existing public task protocols and replay guards, and never reinterpret historical results or silently enable new behavior on old tasks. All mutations require stable idempotency keys; controls require current revisions and existing server-owned identity/workspace authorization.
 
-## Verification
+## Readiness and rollout evidence
 
-- **Routing:** different Manager/specialist providers, inherited defaults, invalid configuration, concurrent calls, route provenance and failures without fallback.
-- **Inference:** exact output caps, strict JSON actions, malformed/truncated responses, missing usage, authentication failures, cancellation and ambiguous timeouts.
-- **Jobs:** rejected policy or budget requests, acknowledged restart recovery, unknown submission without replay, reconciliation, duplicate terminal events and cancellation races.
-- **Continuations:** released slots, event-before-wait races, simultaneous job completions, results arriving during active work, expired runs, cumulative budget exhaustion and correction/revocation fencing.
-- **UI:** submission deduplication, deep links, reconnects, progress cursors, unavailable runtime, cancellation receipts and escaped output.
-- Run repository checks and isolated crash/restart scenarios. Then capture genuine Manager, specialist and background-job traces against Nightshift. CLI schema inspection alone cannot establish live readiness.
+Distinguish CLI/schema availability, daemon reachability, supported runtime capabilities, provider compatibility and captured live behavior. The prior read-only inspection found the installed CLI schema available and the daemon unreachable. That is a historical observation, not a readiness guarantee; each phase must record fresh verification.
 
-## Defaults and rollout
+Each phase runs checks appropriate to its changes. Fixtures and isolated crash/restart checks establish control behavior; genuine Manager, specialist and background-job traces establish live integration. Role-specific evaluation must support route choices rather than assuming that more candidates or a different provider improve quality.
 
-- Maximum **3 automatic follow-up runs**, **4 jobs**, **16 total requested attempts**, and **24 hours** per chain. Users may lower these limits.
-- Default job: **4 attempts**, accuracy judge, low budget, immediate execution and runtime-selected fleet.
-- Nightshift jobs default to **local-only with $0 cloud spend**.
-- Cloud requires server permission, explicit opt-in and an entered chain cap; no positive cap is prefilled. Disable submission unless runtime capability checks establish enforceable caps. Direct agent-provider calls retain their separate Haze call/token limits.
-- Reserve requested attempts before submission. Unknown outcomes remain charged; missing receipts never release assumed unused resources.
-- Use additive migrations without rewriting historical results. Preserve existing public task protocols and replay guards.
-- Roll out inference first, then durable jobs, then continuation chains and the UI. The last inspection found the daemon unreachable, so live verification remains a release gate.
-- Jobs may continue inside Nightshift while Haze is offline. Haze resumes monitoring and eligible continuations when its server restarts; this implementation does not install an operating-system service.
+Jobs may continue inside Nightshift while Haze is offline. Monitoring, result delivery and eligible Haze execution resume when the server restarts. No phase installs an operating-system service, adds a hosted orchestration dependency or changes the existing local single-owner boundary. Model installation, lane administration and native Nightshift schedules remain in its cockpit.
+
+See the [Nightshift control demo](../Testing/nightshift-controls.md) for existing standalone inspection and synthetic/live control examples. The demo does not establish that these integration plans have been implemented.

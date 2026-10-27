@@ -217,6 +217,7 @@ export function fixtureDecision(context: ManagerContext): ManagerDecision {
   const sources = context.artifacts.filter(
     (a) =>
       a.current &&
+      !a.kind.includes('review') &&
       (originalRefs.some((r) => r.id === a.ref.id) ||
         a.kind.endsWith('.capture')),
   );

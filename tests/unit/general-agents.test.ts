@@ -19,6 +19,7 @@ import {
   type SpecialistGraphIdentity,
 } from '../../app/orchestration/specialist-graph.js';
 import type { agentActionSchema } from '../../app/orchestration/contracts.js';
+import { externalWaitActionSchema } from '../../app/contracts/external-waits.js';
 
 function identity(api: AgentExecutionServices): SpecialistGraphIdentity {
   const {
@@ -141,6 +142,186 @@ function services(actions: unknown[], toolOutput: unknown = { value: 42 }) {
 
 const specialists = [hazeOpsAgent, workerShieldAgent, evidenceCriticAgent];
 
+describe('external specialist wait topology', () => {
+  // This simulated remote job has already been acknowledged by the host.
+  const acknowledgedJobs = () => [
+    {
+      job_id: 'b39045f5-852c-4f7f-8fa0-0752a5ac08f2',
+      remote_acknowledged: true as const,
+    },
+  ];
+  const action = {
+    id: 'park-local-job',
+    type: 'external_wait' as const,
+    schema_version: 'haze.external.wait.action.v1' as const,
+    dependencies: [
+      { job_id: 'b39045f5-852c-4f7f-8fa0-0752a5ac08f2', required: true },
+    ],
+  };
+  it('commits external effects once before a pure interrupt and resumes only its cursor', async () => {
+    const test = services([
+      action,
+      {
+        id: 'done',
+        type: 'finish',
+        summary: 'The delivered candidate needs independent review.',
+        support: 'partial',
+        uncertainty: ['Candidate is not accepted evidence.'],
+        outputs: [],
+      },
+    ]);
+    test.api.acknowledgedJobs = acknowledgedJobs;
+    const saver = new MemorySaver();
+    const external: unknown[] = [];
+    const nodes: string[] = [];
+    let ordinaryParks = 0;
+    const hooks: SpecialistGraphHooks = {
+      services: () => test.api,
+      cursor: () => '17',
+      parkExternal: (value, cursor, key) =>
+        external.push({ value, cursor, key }),
+      park: () => {
+        ordinaryParks++;
+      },
+      complete: () => {},
+      trace: (node) => nodes.push(node),
+    };
+    const run = (resumeCursor?: string) =>
+      invokeSpecialistGraph(
+        createSpecialistGraph(saver, hooks),
+        identity(test.api),
+        {
+          signal: test.api.context.signal,
+          ...(resumeCursor ? { resumeCursor } : {}),
+        },
+      );
+    expect((await run()).output?.status).toBe('waiting_peer');
+    expect((await run()).output?.status).toBe('waiting_peer');
+    expect(external).toEqual([
+      { value: action, cursor: '17', key: 'turn:0:external-park' },
+    ]);
+    expect(ordinaryParks).toBe(0);
+    expect(test.accepted).toEqual(['park-local-job']);
+    expect(
+      nodes.filter((node) => node === 'prepare_external_wait'),
+    ).toHaveLength(1);
+    expect(nodes).not.toContain('wait');
+    await expect(run('18')).rejects.toThrow('wait cursor');
+    expect((await run('17')).output?.status).toBe('completed');
+    expect(external).toHaveLength(1);
+    expect(test.accepted).toEqual(['park-local-job', 'done']);
+  });
+
+  it('reuses the stable effect key after a crash before the interrupt checkpoint', async () => {
+    const test = services([action]);
+    test.api.acknowledgedJobs = acknowledgedJobs;
+    const saver = new MemorySaver();
+    const receipts = new Set<string>();
+    const calls: string[] = [];
+    let first = true;
+    const hooks: SpecialistGraphHooks = {
+      services: () => test.api,
+      cursor: () => '4',
+      park: () => {},
+      complete: () => {},
+      parkExternal: (_action, _cursor, key) => {
+        calls.push(key);
+        receipts.add(key);
+        if (first) {
+          first = false;
+          throw new Error('crash after wait commit');
+        }
+      },
+    };
+    const run = () =>
+      invokeSpecialistGraph(
+        createSpecialistGraph(saver, hooks),
+        identity(test.api),
+        {
+          signal: test.api.context.signal,
+        },
+      );
+    await expect(run()).rejects.toThrow('crash after wait commit');
+    expect((await run()).output?.status).toBe('waiting_peer');
+    expect(calls).toEqual(['turn:0:external-park', 'turn:0:external-park']);
+    expect(receipts.size).toBe(1);
+    expect(test.accepted).toEqual(['park-local-job']);
+  });
+
+  it('refuses an external wait when the host has not granted a controlled effect service', async () => {
+    const test = services([action]);
+    test.api.acknowledgedJobs = acknowledgedJobs;
+    const graph = createSpecialistGraph(new MemorySaver(), {
+      services: () => test.api,
+      park: () => {
+        throw new Error('ordinary park must not run');
+      },
+      complete: () => {},
+    });
+    await expect(
+      invokeSpecialistGraph(graph, identity(test.api), {
+        signal: test.api.context.signal,
+      }),
+    ).rejects.toThrow('controlled external-wait service');
+  });
+
+  it('bounds exact unique local handles and required flags without accepting remote endpoints', () => {
+    expect(externalWaitActionSchema.safeParse(action).success).toBe(true);
+    for (const invalid of [
+      { ...action, dependencies: [] },
+      {
+        ...action,
+        dependencies: Array.from({ length: 5 }, () => action.dependencies[0]),
+      },
+      {
+        ...action,
+        dependencies: [...action.dependencies, ...action.dependencies],
+      },
+      {
+        ...action,
+        dependencies: [
+          { job_id: 'https://remote.invalid/job', required: true },
+        ],
+      },
+      { ...action, dependencies: [{ job_id: action.dependencies[0]!.job_id }] },
+      { ...action, credentials: 'untrusted-token' },
+    ])
+      expect(externalWaitActionSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('fences a specialist.v1 checkpoint instead of interpreting it under external-wait semantics', async () => {
+    const test = services([{ id: 'wait', type: 'wait' }]);
+    const saver = new MemorySaver();
+    const graph = createSpecialistGraph(saver, {
+      services: () => test.api,
+      park: () => {},
+      complete: () => {},
+    });
+    await invokeSpecialistGraph(graph, identity(test.api), {
+      signal: test.api.context.signal,
+    });
+    const config = {
+      configurable: { thread_id: specialistThreadId(identity(test.api)) },
+    };
+    const tuple = (await saver.getTuple(config))!;
+    await saver.put(
+      tuple.config,
+      {
+        ...tuple.checkpoint,
+        channel_values: {
+          ...tuple.checkpoint.channel_values,
+          topology: 'specialist.v1',
+        },
+      },
+      tuple.metadata!,
+    );
+    await expect(graph.getState(config)).rejects.toThrow(
+      'explicit linked continuation',
+    );
+    expect(test.accepted).toEqual(['wait']);
+  });
+});
+
 describe('agent role contracts', () => {
   it('gives every role a distinct, non-boilerplate definition', () => {
     const texts = [...specialists, managerAgent].map(
@@ -204,6 +385,7 @@ describe('declarative agents executed by the specialist graph', () => {
           outputs: [],
         },
       ]);
+      test.api.toolCards = [{ id: 'registered.lookup' }];
       const output = await executeAgent(agent, test.api);
       expect(test.accepted).toEqual(['retrieve', 'finish']);
       expect(test.tools).toEqual(['registered.lookup']);
@@ -232,12 +414,18 @@ describe('declarative agents executed by the specialist graph', () => {
           type: 'finish',
           summary: 'Retained the exact selection.',
           support: 'partial',
-          uncertainty: [],
+          uncertainty: [
+            'The retained selection has not been independently checked.',
+          ],
           outputs: [],
         },
       ],
       capture,
     );
+    test.api.toolCards = [
+      { id: 'zetaris-smokeledger-pm25', output_artifact_kind: 'pm25.capture' },
+    ];
+    test.api.artifactKinds = ['pm25.capture'];
     await executeAgent(hazeOpsAgent, test.api);
     expect(test.saved).toEqual([{ kind: 'pm25.capture', content: capture }]);
     // The retained content is the provider response, not a retyping of it.
@@ -265,29 +453,43 @@ describe('declarative agents executed by the specialist graph', () => {
             type: 'finish',
             summary: 'Retained.',
             support: 'partial',
-            uncertainty: [],
+            uncertainty: [
+              'Provenance labeling does not establish evidence validity.',
+            ],
             outputs: [],
           },
         ],
         output,
       );
+      test.api.toolCards = [
+        { id: 'src', output_artifact_kind: 'pm25.capture' },
+      ];
+      test.api.artifactKinds = ['pm25.capture'];
       await executeAgent(hazeOpsAgent, test.api);
       expect(test.saved[0]?.origin).toBe(expected);
     }
   });
 
   it('refuses to persist a tool result that was never dispatched', async () => {
+    const action = {
+      id: 'keep',
+      type: 'save_tool_result',
+      kind: 'pm25.capture',
+      tool_action_id: 'never-called',
+    };
     const test = services([
-      {
-        id: 'keep',
-        type: 'save_tool_result',
-        kind: 'pm25.capture',
-        tool_action_id: 'never-called',
-      },
+      action,
+      { ...action, id: 'keep-correction-1' },
+      { ...action, id: 'keep-correction-2' },
     ]);
+    test.api.artifactKinds = ['pm25.capture'];
+    // The contextual schema now refuses this before the save node is entered.
+    // Three fresh proposals exhaust the existing correction allowance.
     await expect(executeAgent(hazeOpsAgent, test.api)).rejects.toThrow(
-      'No dispatched tool action produced that result.',
+      'Action save_tool_result is not granted',
     );
+    expect(test.rejected).toHaveLength(3);
+    expect(test.accepted).toEqual([]);
     expect(test.saved).toEqual([]);
   });
 
@@ -301,6 +503,7 @@ describe('declarative agents executed by the specialist graph', () => {
         sql: 'SELECT * FROM arbitrary',
       },
     ]);
+    test.api.toolCards = [{ id: 'registered.lookup' }];
     await expect(executeAgent(hazeOpsAgent, test.api)).rejects.toThrow();
     expect(test.tools).toEqual([]);
     expect(test.accepted).toEqual([]);
@@ -353,7 +556,7 @@ describe('declarative agents executed by the specialist graph', () => {
         type: 'finish',
         summary: 'Corrected after the refusal.',
         support: 'partial',
-        uncertainty: [],
+        uncertainty: ['Independent evidence review remains incomplete.'],
         outputs: [],
       },
     ]);
@@ -400,6 +603,7 @@ describe('declarative agents executed by the specialist graph', () => {
     const test = services([
       { id: 'one', type: 'tool', tool: 'lookup', input: {} },
     ]);
+    test.api.toolCards = [{ id: 'lookup' }];
     test.api.maxTurns = 1;
     await expect(executeAgent(hazeOpsAgent, test.api)).rejects.toThrow(
       'bounded local turns',
@@ -430,7 +634,7 @@ describe('independent specialist graph recovery', () => {
         type: 'finish',
         summary: 'Peer reply received.',
         support: 'partial',
-        uncertainty: [],
+        uncertainty: ['Peer clarification is not independent evidence review.'],
         outputs: [],
       },
     ]);
@@ -521,7 +725,9 @@ describe('independent specialist graph recovery', () => {
           status: 'completed',
           summary: 'Two controlled operations completed.',
           support: 'partial',
-          uncertainty: [],
+          uncertainty: [
+            'Controlled receipts do not establish evidence support.',
+          ],
           outputs: [
             {
               id: '980df35c-7f64-41d1-841b-f5e1c8189270',
@@ -589,7 +795,7 @@ describe('independent specialist graph recovery', () => {
         type: 'finish',
         summary: 'The authorized answer is now available.',
         support: 'partial',
-        uncertainty: [],
+        uncertainty: ['Independent source verification remains incomplete.'],
         outputs: [],
       },
     ]);
@@ -668,7 +874,7 @@ describe('independent specialist graph recovery', () => {
       status: 'completed',
       summary: 'Late result.',
       support: 'partial',
-      uncertainty: [],
+      uncertainty: ['The late result was cancelled before acceptance.'],
       outputs: [],
     });
     await remote;

@@ -1,0 +1,156 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin-bottom: var(--space-2);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-btn-hover);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+
+.table caption {
+  padding: var(--space-4);
+  text-align: left;
+  font-weight: 800;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3);
+  vertical-align: top;
+  border-top: 1px solid var(--color-muted);
+}
+
+.table td span {
+  display: block;
+  margin-top: var(--space-2);
+}
+
+.table td strong {
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  min-width: 12rem;
+  max-width: 22rem;
+  margin-bottom: 0;
+}
+
+.checked,
+.note {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.panel {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  min-width: 0;
+}
+
+.panel h2,
+.panel h3 {
+  overflow-wrap: anywhere;
+}
+
+.panel label {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-weight: 700;
+}
+
+.panel input,
+.panel textarea,
+.panel select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+  font-weight: 400;
+  padding: var(--space-2);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: inherit;
+}
+
+.panel textarea {
+  resize: vertical;
+}
+
+.panel input[type='checkbox'] {
+  width: auto;
+  justify-self: start;
+}
+
+.formGrid,
+.fields,
+.grant {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+}
+
+.fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.grant dd {
+  margin-left: 0;
+  overflow-wrap: anywhere;
+}
+
+.grant dt {
+  font-weight: 700;
+}
+
+.output {
+  max-height: 32rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+}
+
+.inlineForm {
+  margin-top: var(--space-4);
+}
+
+.events {
+  max-height: 24rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}

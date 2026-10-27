@@ -43,6 +43,38 @@ import {
   createEvidenceCollectionCapability,
   createEvidenceCollectionTools,
 } from './capabilities/evidence-collection/index.js';
+import { ModelRouteRegistry } from './adapters/model-routes.js';
+import type { ModelRouteService } from './orchestration/model-service.js';
+import { CliNightshiftJobAdapter } from './adapters/nightshift/jobs.js';
+import type { NightshiftJobPort } from './orchestration/ports.js';
+import { NIGHTSHIFT_TOOL_IDS } from './tasks/nightshift-tools.js';
+
+export function createNightshiftJobAdapter(
+  env: NodeJS.ProcessEnv,
+): NightshiftJobPort {
+  return new CliNightshiftJobAdapter(env);
+}
+import {
+  createDamageReductionAssignments,
+  createDamageReductionCapability,
+  createDamageReductionSelectionTool,
+  createDamageReductionTools,
+} from './capabilities/damage-reduction-planning/index.js';
+import { createDamageReductionClaimTool } from './capabilities/damage-reduction-planning/claims.js';
+import { createConditionalPlanningTools } from './capabilities/damage-reduction-planning/preview-workflow.js';
+import { readDamageReductionPreview } from './capabilities/damage-reduction-planning/view.js';
+import { createReductionProgrammeExtension } from './capabilities/damage-reduction-programmes/index.js';
+import {
+  createPilotTools,
+  readPilotTaskView,
+} from './capabilities/damage-reduction-planning/pilot-workflow.js';
+
+/** Concrete provider routing stays registered at the application boundary. */
+export function createModelRouteRegistry(
+  env: NodeJS.ProcessEnv,
+): ModelRouteService {
+  return new ModelRouteRegistry(env);
+}
 
 /** Both application surfaces use the task runtime's single SQLite owner. */
 export function createDashboardServices(options: {
@@ -76,8 +108,16 @@ export function createExecutionRegistry(options: {
   env?: NodeJS.ProcessEnv;
 }): ExecutionRegistry {
   const registry = new ExecutionRegistry();
+  registry.registerExtension(createReductionProgrammeExtension);
+  registry.registerTaskView('reduction-preview', readDamageReductionPreview);
+  registry.registerTaskView('reduction-pilot', readPilotTaskView);
   registry.registerStoreTools((store, mode) => [
     createWorldModelDamageInputTool(store, mode, damageWorldInputPolicy),
+    createDamageReductionSelectionTool(store, mode),
+    ...createDamageReductionTools({ store, mode }),
+    createDamageReductionClaimTool(store, mode),
+    ...createConditionalPlanningTools(store, mode),
+    ...createPilotTools(store, mode),
   ]);
   for (const agent of [
     managerAgent,
@@ -87,11 +127,14 @@ export function createExecutionRegistry(options: {
     damageAccountantAgent,
   ])
     registry.registerAgent(agent);
+  const reduction = createDamageReductionCapability();
+  registry.registerCapability(reduction);
   const calculatedDamage = createDamageAppraisalCapability();
   registry.registerCapability({
     ...calculatedDamage,
     // Supplied manifest scopes belong to the separate account-intake workflow.
     matches: (request) =>
+      !reduction.matches(request) &&
       !damageAccountScopeSchema.safeParse(request.scope).success &&
       calculatedDamage.matches(request),
   });
@@ -101,13 +144,17 @@ export function createExecutionRegistry(options: {
   registry.registerCapability({
     ...pm25,
     // Explicit fresh collection is separate from summarizing stored samples.
-    matches: (request) => !collection.matches(request) && pm25.matches(request),
+    matches: (request) =>
+      !reduction.matches(request) &&
+      !collection.matches(request) &&
+      pm25.matches(request),
   });
   const componentIntake = createDamageAccountIntakeCapability();
   registry.registerCapability({
     ...componentIntake,
     // Manifest intake and calculation advertise different starting plans.
     matches: (request) =>
+      !reduction.matches(request) &&
       componentIntake.matches(request) &&
       (!calculatedDamage.matches(request) ||
         damageAccountScopeSchema.safeParse(request.scope).success),
@@ -115,6 +162,7 @@ export function createExecutionRegistry(options: {
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
+    ...createDamageReductionAssignments(),
     ...createDamageAppraisalAssignments(),
     ...createPm25Assignments(),
     ...createEvidenceCollectionAssignments(),
@@ -122,7 +170,14 @@ export function createExecutionRegistry(options: {
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ])
-    registry.registerAssignment(assignment);
+    registry.registerAssignment({
+      ...assignment,
+      ...(['HazeOps', 'WorkerShield', 'EvidenceCritic'].includes(
+        assignment.agent,
+      )
+        ? { optional_tools: [...NIGHTSHIFT_TOOL_IDS] }
+        : {}),
+    });
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
   for (const tool of createEvidenceCollectionTools(options))
     registry.registerTool(tool);

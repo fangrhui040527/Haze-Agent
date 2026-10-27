@@ -101,6 +101,31 @@ describe('general task browser service (fixture wiring)', () => {
       scope: { topic: 'forest' },
     });
   });
+  it('sends an explicit Nightshift task grant only when requested', async () => {
+    const fetcher = completedFetch();
+    await new HttpAgentService('', fetcher, 0).ask(
+      {
+        ...request,
+        nightshiftTools: [
+          'nightshift.submit',
+          'nightshift.result',
+          'nightshift.cancel',
+        ],
+      },
+      () => {},
+      new AbortController().signal,
+    );
+    expect(JSON.parse(fetcher.mock.calls[0][1]!.body as string)).toMatchObject({
+      nightshift_tools: [
+        'nightshift.submit',
+        'nightshift.result',
+        'nightshift.cancel',
+      ],
+    });
+    expect(fetcher.mock.calls[0][1]!.headers).toMatchObject({
+      'Idempotency-Key': request.idempotencyKey,
+    });
+  });
   it('drains global receipt cursor gaps through a terminal status race', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

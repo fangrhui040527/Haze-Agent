@@ -100,6 +100,39 @@ function service(options: ConstructorParameters<typeof HazeOpsService>[0]) {
 }
 
 describe('shared application HazeOps service', () => {
+  it('reports scheduler execution separately from configured collectors', async () => {
+    const database = store();
+    const live = service({
+      store: database,
+      world: world(),
+      identity,
+      mode: 'live',
+      env: {},
+      adapters: [],
+      locations: [],
+    });
+    await live.ready;
+    expect(live.status().scheduler).toBe('stopped');
+    live.start();
+    await vi.waitFor(() => expect(live.status().scheduler).toBe('running'));
+    await live.close();
+    expect(live.status().scheduler).toBe('stopped');
+    const disabled = service({
+      store: database,
+      world: world(),
+      identity,
+      mode: 'live',
+      env: { HAZEOPS_SCHEDULER: 'off' },
+      adapters: [],
+      locations: [],
+    });
+    disabled.start();
+    expect(disabled.status()).toEqual({
+      scheduler: 'disabled',
+      reason: 'HAZEOPS_SCHEDULER=off',
+    });
+  });
+
   it('bounds collection to two jobs, coalesces scans and durably replays operator receipts', async () => {
     const database = store();
     const sink = world();

@@ -67,7 +67,7 @@ describe('shared server environment configuration', () => {
     );
   });
 
-  it('preserves process settings and root values, including empty values, while filling missing legacy settings', async () => {
+  it('preserves process settings and root values, including empty values, while filling missing legacy settings', () => {
     vi.stubEnv('HAZE_ENV_TEST_PROCESS', 'process');
     writeEnv(join(root, '.env'), {
       HAZE_ENV_TEST_PROCESS: 'root',
@@ -89,7 +89,7 @@ describe('shared server environment configuration', () => {
     expect(process.env.HAZE_ENV_TEST_LEGACY).toBe('legacy');
   });
 
-  it('loads existing adapter settings when the root file is absent', async () => {
+  it('loads existing adapter settings when the root file is absent', () => {
     writeEnv(join(root, 'app/adapters/zetaris/.env.local'), {
       HAZE_ENV_TEST_LEGACY: 'legacy',
     });

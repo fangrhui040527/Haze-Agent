@@ -224,7 +224,7 @@ describe('registered Manager decision layer', () => {
         }),
     });
     expect(result.action.type).toBe('question');
-    expect(managerAgent.version).toBe('manager.v4');
+    expect(managerAgent.version).toBe('manager.v5');
   });
   it.each([
     'run_id',
@@ -573,5 +573,162 @@ describe('registered Manager decision layer', () => {
     );
     expect(registry.tools.get(lookupIds[0]!)?.description).toBe(description);
     expect(state).toEqual(originalState);
+  });
+  it('compacts unrelated phases within the same capability before displacing exact starting-plan evidence', async () => {
+    const { task, registry, store } = await setup();
+    const source = store.importArtifact(
+      {
+        schema_version: 'haze.artifact.import.v3',
+        filename: 'exact-context.txt',
+        media_type: 'text/plain',
+        content_base64: Buffer.from('Retained exact evidence.').toString(
+          'base64',
+        ),
+      },
+      identity,
+      'same-capability-context',
+    ).artifact;
+    const ref = {
+      id: source.id,
+      version: source.version,
+      sha256: source.sha256,
+    };
+    store.recordApplicability(
+      task.id,
+      identity,
+      ref,
+      true,
+      'Exact retained evidence.',
+      'User',
+    );
+    const supplied = store.read(task.id, identity);
+    supplied.original_request.context_refs = [ref];
+    supplied.original_request.scope = {
+      exact_scope: 'Keep this complete original scope.',
+    };
+    supplied.permissions.tools = ['test.source.lookup'];
+    supplied.corrections.push({
+      id: randomUUID(),
+      objective_revision: supplied.objective_revision,
+      kind: 'clarification',
+      passage: 'Preserve the original source and every correction.',
+      affected_assignment_ids: [],
+      created_at: source.created_at,
+      context_refs: [ref],
+    });
+    const capability = registry.capabilities.get('test.source')!;
+    registry.registerAssignment({
+      id: 'test.source.review',
+      version: '1',
+      capability: 'test.source',
+      agent: 'EvidenceCritic',
+      tools: ['test.source.lookup'],
+      instructions: 'Exact review metadata.',
+    });
+    const templates = [
+      {
+        key: 'produce',
+        definition_id: 'test.source.inspect',
+        brief: 'Inspect the exact supplied source.',
+        depends_on: [],
+      },
+      {
+        key: 'review',
+        definition_id: 'test.source.review',
+        brief: 'Review this exact product independently.',
+        depends_on: ['produce'],
+      },
+    ];
+    const inactive = Array.from(
+      { length: 80 },
+      (_, index) => `test.source.future-phase-${index}`,
+    );
+    for (const id of inactive)
+      registry.registerAssignment({
+        id,
+        version: '1',
+        capability: 'test.source',
+        agent: 'HazeOps',
+        tools: ['test.source.lookup'],
+        instructions: 'Unselected future phase metadata.',
+      });
+    registry.capabilities.set('test.source', {
+      ...capability,
+      assignments: () => templates,
+      prerequisites: [
+        {
+          definition_id: 'test.source.review',
+          depends_on_definitions: ['test.source.inspect'],
+        },
+        ...inactive.map((id) => ({
+          definition_id: id,
+          depends_on_definitions: ['test.source.inspect'],
+        })),
+      ],
+      review_requirements: [
+        {
+          artifact_kind: 'test.finding',
+          review_definition_id: 'test.source.review',
+          producer_definition_ids: ['test.source.inspect'],
+        },
+        ...inactive.map((id) => ({
+          artifact_kind: `${id}.finding`,
+          review_definition_id: id,
+          producer_definition_ids: [id],
+        })),
+      ],
+    });
+    const originalRequest = structuredClone(supplied.original_request),
+      originalCorrections = structuredClone(supplied.corrections);
+    const context = assembleManagerContext(
+      supplied,
+      registry,
+      store.managerState(task.id, identity)!,
+      { events: [], artifacts: [source], maxBytes: 6000 },
+    );
+    expect(context.request).toEqual(originalRequest);
+    expect(context.corrections).toEqual(originalCorrections);
+    expect(context.artifacts).toContainEqual(
+      expect.objectContaining({ ref, current: true }),
+    );
+    expect(context.source_applicability).toContainEqual({
+      id: source.id,
+      current: true,
+    });
+    const selected = context.capabilities.find(
+      (item) => item.card.id === 'test.source',
+    )!;
+    expect(selected.templates).toEqual(templates);
+    expect(selected.prerequisites).toEqual([
+      {
+        definition_id: 'test.source.review',
+        depends_on_definitions: ['test.source.inspect'],
+      },
+    ]);
+    expect(selected.review_requirements).toEqual([
+      {
+        artifact_kind: 'test.finding',
+        review_definition_id: 'test.source.review',
+        producer_definition_ids: ['test.source.inspect'],
+      },
+    ]);
+    expect(
+      context.definitions.every(
+        (definition) => !inactive.includes(definition.id),
+      ),
+    ).toBe(true);
+    expect(context.capabilities.map((item) => item.card.id)).toEqual([
+      ...registry.capabilities.keys(),
+    ]);
+    expect(context.lookups.map((lookup) => lookup.id)).toEqual([
+      'test.source.lookup',
+    ]);
+    expect(context.context_status.omitted_artifacts).toBe(0);
+    expect(Buffer.byteLength(JSON.stringify(context))).toBeLessThanOrEqual(
+      6000,
+    );
+    expect(
+      registry.capabilities.get('test.source')!.prerequisites,
+    ).toHaveLength(81);
   });
 });

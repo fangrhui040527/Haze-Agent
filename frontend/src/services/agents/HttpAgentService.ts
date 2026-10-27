@@ -147,6 +147,9 @@ export class HttpAgentService implements AgentService {
             ? { context_refs: request.contextRefs }
             : {}),
           ...(request.scope !== undefined ? { scope: request.scope } : {}),
+          ...(request.nightshiftTools?.length
+            ? { nightshift_tools: request.nightshiftTools }
+            : {}),
         },
         request.idempotencyKey ?? crypto.randomUUID(),
         signal,
@@ -187,6 +190,23 @@ export class HttpAgentService implements AgentService {
         false,
       );
     return record;
+  }
+  async readReductionPreview(taskId: string, signal?: AbortSignal) {
+    const { reductionPreviewViewSchema } =
+      await import('../../../../app/contracts/damage-reduction-view.ts');
+    const view = reductionPreviewViewSchema.parse(
+      await this.read(
+        `/api/tasks/${encodeURIComponent(taskId)}/views/reduction-preview`,
+        {},
+        signal,
+      ),
+    );
+    if (view.task_id !== taskId)
+      throw new AgentRunError(
+        'The planning preview belongs to another saved task.',
+        false,
+      );
+    return view;
   }
   async watchTask(
     taskId: string,

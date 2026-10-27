@@ -10,6 +10,7 @@ import type {
   ArtifactImport,
 } from '../../../../app/contracts/artifacts.ts';
 import type { CapabilityCard } from '../../../../app/contracts/capabilities.ts';
+import type { ReductionPreviewView } from '../../../../app/contracts/damage-reduction-view.ts';
 import type {
   ControlReceipt,
   TaskControl,
@@ -35,6 +36,10 @@ export interface AgentService {
     onTask?: (task: AgentTaskHandle) => void,
   ): Promise<AgentAnswer>;
   readTask?(taskId: string, signal?: AbortSignal): Promise<TaskRecord>;
+  readReductionPreview?(
+    taskId: string,
+    signal?: AbortSignal,
+  ): Promise<ReductionPreviewView>;
   updateTask?(
     taskId: string,
     update: TaskUpdate,

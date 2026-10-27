@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { MANAGER_TOPOLOGY } from '../dist/tasks/graph-ledger.js';
 import { fork } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -194,7 +195,7 @@ try {
     const dispatched = await calls(directory);
     const managerNodes = new Set(
       final.graph_nodes
-        .filter((event) => event.topology === 'manager.v1')
+        .filter((event) => event.topology === MANAGER_TOPOLOGY)
         .map((event) => event.node),
     );
     for (const node of [

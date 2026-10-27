@@ -83,6 +83,22 @@ function Header() {
             Memory
           </NavLink>
           <NavLink
+            to="/nightshift"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Nightshift
+          </NavLink>
+          <NavLink
+            to="/damage-reduction"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Damage reduction
+          </NavLink>
+          <NavLink
             to="/demo-data"
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`

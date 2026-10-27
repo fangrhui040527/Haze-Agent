@@ -2,7 +2,7 @@
 
 The v3 task facade remains in `app/tasks/runtime.ts`. Execution is split into independently checkpointed Manager and assignment workflows. SQLite task records remain authoritative for identity, permissions, resources, leases, artifacts, reviews and results. A graph checkpoint never grants authority to publish an effect.
 
-This change preserves the model selection, agent instructions and roles, tool registrations, deterministic scientific methods, public v3 schemas and HTTP routes. The configured limits remain two active tasks and two globally shared specialist slots. It adds no hosted LangGraph dependency or alternative agent framework.
+The configured limits remain two active tasks and two globally shared specialist slots. Deterministic scientific methods and public v3 task controls retain their existing authority checks. Nightshift adds explicitly granted candidate-generation tools and an additive external-wait view; it adds no hosted LangGraph dependency or alternative agent framework.
 
 ## Execution boundaries
 
@@ -20,21 +20,27 @@ Dispatcher invocations enter an independent `AsyncResource` context. This detach
 
 `storage-format.json` identifies `haze.general.sqlite.v2`. Application data remains in `tasks.sqlite`. Executable graph checkpoints use a fresh `execution-checkpoints-v1.sqlite` database, separate from archived reference checkpoints. Each graph invocation uses `durability: 'sync'`.
 
-| Internal ledger             | Responsibility                                                         |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `run_execution`             | Engine ownership and Manager/specialist topology versions per run      |
-| `graph_jobs`                | Durable invocation delivery with thread and event-cursor deduplication |
-| `graph_waits`               | Persisted wait cursor and matching wakeup state                        |
-| `graph_operations`          | Stable operation identity, request fingerprint, authority and status   |
-| `graph_operation_attempts`  | Links between logical operations and charged attempts                  |
-| `graph_effect_receipts`     | Accepted results returned during replay                                |
-| `legacy_checkpoint_archive` | Historical execution metadata retained without interpretation          |
+| Internal ledger                   | Responsibility                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------- |
+| `run_execution`                   | Engine ownership and Manager/specialist topology versions per run                     |
+| `graph_jobs`                      | Durable invocation delivery with thread and event-cursor deduplication                |
+| `graph_waits`                     | Persisted wait cursor and matching wakeup state                                       |
+| `graph_operations`                | Stable operation identity, request fingerprint, authority and status                  |
+| `graph_operation_attempts`        | Links between logical operations and charged attempts                                 |
+| `graph_effect_receipts`           | Accepted results returned during replay                                               |
+| `legacy_checkpoint_archive`       | Historical execution metadata retained without interpretation                         |
+| `external_waits`                  | Exact job dependencies and target task/run/generation/assignment authority            |
+| `external_result_deliveries`      | Unique terminal result delivery and the event cursor committed with it                |
+| `external_delivery_targets`       | Database uniqueness for each job and exact target thread across separate wait batches |
+| `external_dependency_resolutions` | Explicit current-authority candidate, partial-result, failure or replanning decisions |
+| `task_capacity_permits`           | Durable admission ownership, independent of the public run status                     |
+| `external_ready_queue`            | Bounded FIFO eligibility for results waiting for Haze task capacity                   |
 
 Thread identity includes the engine/topology version, run ID and generation. Assignment threads additionally include assignment ID and revision. The runtime derives these IDs and validates topology before executing. Caller-provided checkpoint namespaces do not establish isolation.
 
 Logical operation identity is stable across a recovery generation; execution authority is checked separately. An operation is prepared before dispatch. Remote operations reserve their budget and record dispatch before contacting the adapter. Accepted responses are retained before graph advancement. A completed operation returns its persisted response during replay. Local effects and their receipts share one application transaction.
 
-There is no distributed transaction between SQLite and an external model or source. A dispatched remote operation with no accepted receipt has an unknown outcome. It remains charged and cannot automatically run again. Explicit Resume may admit its replacement with the existing deadline and remaining budget; Continue admits a linked successor with fresh bounded resources. An effect-node retry must never substitute for that user control.
+There is no distributed transaction between SQLite and an external model or source. A dispatched remote operation with no accepted receipt has an unknown outcome. It remains charged and cannot automatically run again. Unenrolled tasks retain their explicit replacement controls; an enrolled chain blocks further dispatch until its outcome is verified. Continue admits a linked successor under bounded authority, and an enrolled chain supplies only its remaining cumulative allowance. An effect-node retry must never substitute for that user control.
 
 ## Waiting and recovery
 
@@ -43,6 +49,30 @@ Only side-effect-free graph wait nodes call `interrupt()`. The dispatcher resume
 LangGraph restarts an interrupted node from its beginning, so an effect before `interrupt()` could otherwise repeat. Keeping effects in receipt-backed nodes and interrupts in separate wait nodes makes that replay boundary explicit. See [LangGraph interrupt rules](https://docs.langchain.com/oss/javascript/langgraph/interrupts).
 
 Events and wakeups commit together. Parking a wait rechecks events after its cursor in the same transaction, covering an event that committed immediately before parking. Repeated delivery of the same thread/cursor reuses the job. The current task, generation, assignment revision, grant and deadline remain authoritative when the job executes.
+
+### External-only waits and capacity
+
+An authorized specialist can submit a bounded Nightshift job through the existing receipt-backed tool path, then emit `haze.external.wait.action.v1` with one to four unique local job handles and explicit required flags. The external-wait effect node commits those exact dependencies and releases the specialist lease before the separate pure interrupt node. An unacknowledged submission remains charged and cannot establish an external wait.
+
+A waiting run can release its durable task permit only when the Manager is parked, every unfinished specialist is blocked directly or through assignment dependencies on acknowledged external jobs, and no specialist lease, open human question, runnable assignment or outstanding Haze operation remains. A queued reviewer behind an externally waiting producer qualifies only while its unresolved dependencies are all blocked on verified external work. Human, peer and mixed waits keep the permit. The public run status can remain `waiting`; the additive view separately reports compute, Haze-capacity, human and stopped states.
+
+The independent supervisor retains receipts under their original provenance. A terminal delivery targets only the intended assignment revision and generation. Its delivery and `external_result` audit event commit together; that audit event cannot wake execution. An `external_result_ready` event becomes eligible only after all required dependencies are terminal. Duplicates reuse the delivery, and simultaneous readiness events coalesce into one pending thread wake. Required dependencies continue blocking finalization until controlled execution records an explicit supported decision. A Nightshift judge and a `use_candidate` decision never establish evidence acceptance or applicability.
+
+All paths starting execution acquire a task permit; specialist execution also acquires a shared specialist lease. When both task permits are occupied, eligible result wakes enter the persisted bounded ready queue. The first eligible sequence and a stable thread identity determine order. Duplicate delivery retains its place; new task admissions cannot jump eligible queued work. Dispatch rechecks the original deadline, grant and exact target revisions before acquiring capacity. Paused work is suspended; fenced or expired entries retain a recorded reason. Capacity release does not expand Nightshift's separate default caps of two nonterminal jobs and eight open chains.
+
+Manual-only grants require explicit Continue after run expiry. An explicitly opted-in chain may admit a successor only through the released automatic policy described below. Every successor consumes the same remaining immutable grant and absolute lifetime; Continue never replenishes that grant. Native Nightshift schedules are not created.
+
+### Finite automatic chains
+
+`LinkedRunService` owns shared user/automatic successor admission. Its transaction checks the predecessor, original grant, current purpose, canonical terminal result, topology, routes, unknown outcomes, unanswered questions and remaining resources. It claims a ticket in the same FIFO capacity queue as external wakes, enrolls at most one successor per predecessor/objective, delegates required and optional inbox dependencies, records the service or user actor and enqueues the Manager graph before commit. The coordinator asks this service to admit work; it never invokes a graph or submits a remote job itself.
+
+Delegated results keep their original job and artifact provenance. A Manager names exact local handles in a specialist assignment's `input.nightshift_job_ids`; the current leased specialist still checks source applicability and independent review. Required dependencies block finalization until consumed, explicitly withdrawn, or named in `nightshift_unresolved_jobs` with an unfinished deliverable. Reporting a gap does not consume a pending result; a later terminal result remains eligible within the same grant. Local result decisions, tool charges and graph receipts are atomic.
+
+Old v1 chain grants stay manual-only. V2 explicitly bounds total and automatic runs separately; exhausting automatic follow-ups leaves separately authorized manual runs usable. Increasing authority needs a separately admitted task and explicit new grant, optionally linked to a closed historical grant. There is no environment enable switch. Production automatic release remains blocked until genuine prerequisite and chain evidence passes; fixture evidence is explicitly labelled and cannot release ordinary live-provider execution.
+
+### Topology compatibility
+
+The current topology versions are `manager.v3.automatic-chains` and `specialist.v3.automatic-chains`. New execution records and thread identities use these versions. Existing v1/v2 checkpoints remain historical and are never interpreted as the new topology. Incompatible unfinished execution requires explicit linked continuation; it preserves existing charges, unknown-operation fences, route snapshots and historical checkpoints. Accepted application records can reconstruct a fenced generation only under the current supported topology and current authority. Neither a graph replay nor a supervisor wake can replay an unknown remote submission.
 
 ## Cancellation and publication
 

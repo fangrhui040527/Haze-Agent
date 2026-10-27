@@ -8,9 +8,20 @@ import {
 } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { ModelRouteStore } from './model-route-store.js';
+import { NightshiftStore } from './nightshift-store.js';
+import { ExternalWaitStore } from './external-wait-store.js';
+import { LinkedRunService } from './linked-run-service.js';
+import { NightshiftTransferStore } from './nightshift-transfer-store.js';
+import {
+  createOfflineRouteSnapshot,
+  type ModelRouteSnapshot,
+} from '../contracts/model-routes.js';
 import {
   GraphLedger,
   graphThreadId,
+  MANAGER_TOPOLOGY,
+  SPECIALIST_TOPOLOGY,
   type GraphAuthority,
 } from './graph-ledger.js';
 import {
@@ -276,6 +287,11 @@ export interface StoreDefinitions {
 export class TaskStore {
   readonly db: DatabaseSync;
   readonly graph: GraphLedger;
+  readonly modelRoutes: ModelRouteStore;
+  readonly nightshift: NightshiftStore;
+  readonly externalWaits: ExternalWaitStore;
+  readonly linkedRuns: LinkedRunService;
+  readonly nightshiftTransfers: NightshiftTransferStore;
   readonly directory: string;
   readonly world: WorldModelStore;
   readonly worldAcceptancePolicy: WorldAcceptancePolicy;
@@ -283,6 +299,9 @@ export class TaskStore {
   private transactionDepth = 0;
   private readonly worldListeners = new Set<(event: WorldEvent) => void>();
   private readonly pendingWorldEvents: WorldEvent[] = [];
+  private readonly commitCallbacks: (() => void)[] = [];
+  private savepointSequence = 0;
+  private commitCallbackFailures = 0;
   constructor(
     directory = '.state/general-v2',
     options: {
@@ -343,6 +362,7 @@ export class TaskStore {
       .exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
       CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY,principal TEXT NOT NULL,workspace TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS task_run_results(run_id TEXT NOT NULL,objective_revision INTEGER NOT NULL,task_id TEXT NOT NULL,body TEXT NOT NULL,PRIMARY KEY(run_id,objective_revision));
       CREATE INDEX IF NOT EXISTS runs_task ON runs(task_id);
       CREATE TABLE IF NOT EXISTS assignments(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,run_id TEXT NOT NULL,body TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS assignments_run ON assignments(run_id);
@@ -363,9 +383,24 @@ export class TaskStore {
       CREATE TABLE IF NOT EXISTS manager_state(run_id TEXT PRIMARY KEY,task_id TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS manager_state_history(run_id TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,PRIMARY KEY(run_id,fingerprint));
       CREATE TABLE IF NOT EXISTS manager_decisions(id TEXT PRIMARY KEY,task_id TEXT NOT NULL,run_id TEXT NOT NULL,fingerprint TEXT NOT NULL,body TEXT NOT NULL,receipt TEXT);
-      CREATE TABLE IF NOT EXISTS assignment_history(assignment_id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(assignment_id,revision));`);
+      CREATE TABLE IF NOT EXISTS assignment_history(assignment_id TEXT NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(assignment_id,revision));
+      INSERT OR IGNORE INTO task_run_results(run_id,objective_revision,task_id,body)
+        SELECT json_extract(body,'$.current_run_id'),json_extract(body,'$.objective_revision'),id,json_extract(body,'$.result') FROM tasks
+        WHERE json_type(body,'$.result')='object' AND json_extract(body,'$.result.currency')='current';`);
     try {
       migrateWorldSchema(this.db);
+      this.modelRoutes = new ModelRouteStore(this.db);
+      this.nightshift = new NightshiftStore(this.db, {
+        atomic: (operation) => this.atomic(operation),
+        read: (id, identity) => this.read(id, identity),
+        artifact: (ref, identity) => this.artifact(ref.id, identity, ref),
+        historicalArtifact: (ref, identity) =>
+          this.artifactMetadata(ref.id, identity, ref),
+        insertHistoricalArtifact: (artifact) => this.insertArtifact(artifact),
+        routes: (runId) => this.modelRoutes.snapshot(runId),
+        applicable: (taskId, ref, objective) =>
+          this.applicability(taskId, ref.id, objective)?.current === true,
+      });
     } catch (error) {
       this.db.close();
       throw error;
@@ -375,6 +410,77 @@ export class TaskStore {
       (operation) => this.atomic(operation),
       (authority) => this.assertGraphAuthority(authority),
     );
+    this.nightshiftTransfers = new NightshiftTransferStore(this.db, {
+      atomic: (operation) => this.atomic(operation),
+      read: (id, identity) => this.read(id, identity),
+      nightshift: this.nightshift,
+    });
+    this.externalWaits = new ExternalWaitStore(this.db, {
+      atomic: (operation) => this.atomic(operation),
+      read: (id, identity) => this.read(id, identity),
+      graph: this.graph,
+      job: (id, identity) => this.nightshift.job(id, identity),
+      chain: (id, identity) => this.nightshift.chain(id, identity),
+      artifact: (ref, identity) => this.artifact(ref.id, identity, ref),
+      delegated: (authority, job, identity) =>
+        this.nightshiftTransfers.authorized(authority, job, identity),
+      applicable: (id, ref, objective) =>
+        this.applicability(id, ref.id, objective)?.current === true,
+      emit: (authority, type, message, data) => {
+        const event = {
+          schema_version: 'haze.task.event.v3',
+          task_id: authority.task_id,
+          run_id: authority.run_id,
+          generation: authority.generation,
+          objective_revision: authority.objective_revision,
+          ...(authority.assignment_id
+            ? { assignment_id: authority.assignment_id }
+            : {}),
+          at: now(),
+          type,
+          actor: 'Runtime',
+          message,
+          data,
+        };
+        const inserted = this.db
+          .prepare('INSERT INTO events(task_id,body) VALUES(?,?)')
+          .run(authority.task_id, JSON.stringify(event));
+        const cursor = Number(inserted.lastInsertRowid);
+        this.graph.wake(authority.task_id, cursor, type);
+        return cursor;
+      },
+    });
+    this.linkedRuns = new LinkedRunService(this.db, {
+      atomic: (operation) => this.atomic(operation),
+      read: (id, identity) => this.read(id, identity),
+      graph: this.graph,
+      capacity: this.externalWaits,
+      routes: this.modelRoutes,
+      nightshift: this.nightshift,
+      preparePredecessor: (task, automatic) => {
+        const run = this.run(task.current_run_id);
+        run.generation++;
+        if (!terminal(run.status))
+          run.status = automatic ? 'timed_out' : 'cancelled';
+        this.putRun(run);
+        this.closeChannels(run.id);
+        this.markUnknown(run.id);
+        for (const assignment of this.allAssignments(run.id))
+          if (!terminal(assignment.status)) {
+            assignment.status = automatic ? 'timed_out' : 'cancelled';
+            delete assignment.lease_token;
+            this.putAssignment(assignment);
+          }
+      },
+      initialize: (id, runId) => {
+        this.initializeManager(id, runId);
+      },
+      staleSources: (id, identity) => this.staleLinkedSources(id, identity),
+      emit: (id, type, actor, message, data) =>
+        this.appendEvent(id, type, actor, message, data).cursor,
+      attach: (request, runId) =>
+        this.nightshiftTransfers.attach(request, runId),
+    });
     for (const row of this.db.prepare('SELECT id FROM runs').all() as {
       id: string;
     }[])
@@ -895,6 +1001,16 @@ export class TaskStore {
             expanded = true;
           }
       }
+      this.externalWaits.replanAssignments(
+        taskId,
+        [...changed],
+        decision.explanation,
+      );
+      this.nightshiftTransfers.replanAssignments(
+        taskId,
+        [...changed],
+        decision.explanation,
+      );
       for (const item of previous) {
         const revision = changes.revise?.find((entry) => entry.id === item.id);
         if (!changed.has(item.id)) continue;
@@ -1626,6 +1742,72 @@ export class TaskStore {
       );
     return owner;
   }
+  /** Exact operator-admitted context can retain producer lineage without granting World Model acceptance. */
+  admittedEvidenceOwner(
+    taskId: string,
+    identity: TaskIdentity,
+    ref: ArtifactRef,
+  ): TaskRecord | undefined {
+    const requester = this.read(taskId, identity);
+    const matches = (value: ArtifactRef) =>
+      value.id === ref.id &&
+      value.version === ref.version &&
+      value.sha256 === ref.sha256;
+    const explicit = [
+      ...requester.original_request.context_refs,
+      ...requester.corrections.flatMap(
+        (correction) => correction.context_refs ?? [],
+      ),
+    ];
+    if (
+      !explicit.some(matches) ||
+      !requester.artifacts.some(
+        (entry) =>
+          entry.current &&
+          entry.objective_revision === requester.objective_revision &&
+          matches(entry.artifact),
+      )
+    )
+      return undefined;
+    const artifact = this.artifact(ref.id, identity, ref);
+    if (!artifact.task_id || artifact.task_id === taskId) return undefined;
+    this.requireWorldSupportAccess(this.core(taskId, identity), [ref]);
+    const scope = { ...identity, mode: requester.mode };
+    const records = this.world.lookup(scope, {
+      kind: 'artifact_reference',
+      external_id: `artifact:${ref.id}:${ref.version}`,
+      limit: 2,
+    });
+    if (
+      records.length > 1 ||
+      records.some(
+        (record) => this.world.activeHolds(scope, record.ref.id).length,
+      )
+    )
+      fail(
+        'artifact_not_applicable',
+        'Admitted source evidence is held or withdrawn.',
+        422,
+      );
+    const owner = this.read(artifact.task_id, identity);
+    if (
+      owner.mode !== requester.mode ||
+      artifact.run_id !== owner.current_run_id ||
+      artifact.objective_revision !== owner.objective_revision ||
+      !owner.artifacts.some(
+        (entry) =>
+          entry.current &&
+          entry.objective_revision === owner.objective_revision &&
+          matches(entry.artifact),
+      )
+    )
+      fail(
+        'artifact_not_applicable',
+        'Admitted producer evidence is no longer current in this mode.',
+        422,
+      );
+    return owner;
+  }
   worldTaskView(taskId: string, identity: TaskIdentity) {
     const task = this.core(taskId, identity);
     const refs = new Map<string, ArtifactRef>();
@@ -2125,6 +2307,7 @@ export class TaskStore {
   private atomic<T>(operation: () => T): T {
     if (this.transactionDepth) return operation();
     const eventOffset = this.pendingWorldEvents.length;
+    const callbackOffset = this.commitCallbacks.length;
     let committed = false;
     this.db.exec('BEGIN IMMEDIATE');
     this.transactionDepth++;
@@ -2136,6 +2319,7 @@ export class TaskStore {
     } catch (error) {
       this.db.exec('ROLLBACK');
       this.pendingWorldEvents.splice(eventOffset);
+      this.commitCallbacks.splice(callbackOffset);
       throw error;
     } finally {
       this.transactionDepth--;
@@ -2150,8 +2334,75 @@ export class TaskStore {
               /* Reconnect reads authoritative state. */
             }
           }
+        for (const callback of this.commitCallbacks.splice(callbackOffset))
+          this.invokeCommitted(callback);
       }
     }
+  }
+
+  /** Domain transactions share this connection and nest with rollback savepoints. */
+  transaction<T>(operation: () => T): T {
+    const invoke = () => {
+      const result = operation();
+      if (result && typeof result === 'object' && 'then' in result)
+        throw new Error('Task-store transactions must be synchronous.');
+      return result;
+    };
+    if (!this.transactionDepth) return this.atomic(invoke);
+    const savepoint = `haze_extension_${++this.savepointSequence}`;
+    const eventOffset = this.pendingWorldEvents.length;
+    const callbackOffset = this.commitCallbacks.length;
+    this.db.exec(`SAVEPOINT ${savepoint}`);
+    try {
+      const result = invoke();
+      this.db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      return result;
+    } catch (error) {
+      this.db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+      this.db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      this.pendingWorldEvents.splice(eventOffset);
+      this.commitCallbacks.splice(callbackOffset);
+      throw error;
+    }
+  }
+  afterCommit(callback: () => void): void {
+    if (this.transactionDepth) this.commitCallbacks.push(callback);
+    else this.invokeCommitted(callback);
+  }
+  private invokeCommitted(callback: () => void): void {
+    try {
+      callback();
+    } catch {
+      this
+        .commitCallbackFailures++; /* Durable queued work remains recoverable. */
+    }
+  }
+  get failedAfterCommitCallbacks() {
+    return this.commitCallbackFailures;
+  }
+
+  /** Read a committed result for an exact run, without following the current pointer. */
+  runResult(
+    taskId: string,
+    runId: string,
+    identity: TaskIdentity,
+    objectiveRevision?: number,
+  ): TaskResult | undefined {
+    const task = this.read(taskId, identity);
+    const run = task.runs.find((run) => run.id === runId);
+    if (!run) fail('run_not_found', 'Run is not part of this task.', 404);
+    const objective = objectiveRevision ?? run!.objective_revision;
+    const row = this.db
+      .prepare(
+        'SELECT body FROM task_run_results WHERE task_id=? AND run_id=? AND objective_revision=?',
+      )
+      .get(taskId, runId, objective) as Row | undefined;
+    if (row) return taskResultSchema.parse(decode(row.body));
+    return task.current_run_id === runId &&
+      task.objective_revision === objective &&
+      task.result?.currency === 'current'
+      ? copy(task.result)
+      : undefined;
   }
 
   subscribeWorld(listener: (event: WorldEvent) => void): () => void {
@@ -2198,6 +2449,18 @@ export class TaskStore {
     this.db
       .prepare('UPDATE runs SET body=? WHERE id=?')
       .run(JSON.stringify(run), run.id);
+    if (this.externalWaits) {
+      const task = this.core(run.task_id);
+      if (terminal(run.status) || run.status === 'paused')
+        this.externalWaits.onAuthorityChange(run.task_id, run.status);
+      else
+        this.externalWaits.retainPermit({
+          task_id: run.task_id,
+          run_id: run.id,
+          generation: run.generation,
+          objective_revision: task.objective_revision,
+        });
+    }
   }
   private assignment(id: string, taskId?: string): Assignment {
     const row = this.db
@@ -2261,6 +2524,94 @@ export class TaskStore {
       )
       .map((task) => this.read(task.id, task.identity));
   }
+  /** Bounded local inbox; never returns another principal's task content. */
+  listTaskSummaries(
+    identity: TaskIdentity,
+    options: { limit?: number; cursor?: string; status?: string } = {},
+  ) {
+    const limit = options.limit ?? 50;
+    const cursor = options.cursor ?? String(Number.MAX_SAFE_INTEGER);
+    const status = options.status ?? 'all';
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !/^\d{1,16}$/u.test(cursor) ||
+      !Number.isSafeInteger(Number(cursor)) ||
+      !['all', 'active', 'failed'].includes(status)
+    )
+      throw new TaskError(400, 'invalid_query', 'Invalid task inbox query.');
+    const rows = this.db
+      .prepare(
+        `SELECT t.rowid AS cursor, t.body AS task, r.body AS run
+         FROM tasks t JOIN runs r ON r.id=json_extract(t.body,'$.current_run_id')
+         WHERE t.principal=? AND t.workspace=? AND t.rowid<?
+         AND (?='all' OR (?='active' AND json_extract(r.body,'$.status') IN ('queued','running','waiting','paused'))
+           OR (?='failed' AND json_extract(r.body,'$.status') IN ('failed','timed_out')))
+         ORDER BY t.rowid DESC LIMIT ?`,
+      )
+      .all(
+        identity.principal,
+        identity.workspace,
+        Number(cursor),
+        status,
+        status,
+        status,
+        limit + 1,
+      ) as {
+      cursor: number;
+      task: string;
+      run: string;
+    }[];
+    const page = rows.slice(0, limit);
+    return {
+      tasks: page.map((row) => {
+        const task = decode<TaskCore>(row.task);
+        const run = decode<RunRecord>(row.run);
+        return {
+          id: task.id,
+          objective: task.original_request.objective.slice(0, 1600),
+          status: run.status,
+          current_run_id: run.id,
+          updated_at: run.updated_at,
+          usage: run.usage,
+        };
+      }),
+      has_more: rows.length > limit,
+      ...(rows.length > limit
+        ? { next_cursor: String(page.at(-1)!.cursor) }
+        : {}),
+    };
+  }
+  activeAssignmentSummaries(identity: TaskIdentity) {
+    const rows = this.db
+      .prepare(
+        `SELECT a.body FROM assignments a JOIN tasks t ON t.id=a.task_id
+         WHERE t.principal=? AND t.workspace=?
+         AND a.run_id=json_extract(t.body,'$.current_run_id')
+         AND json_extract(a.body,'$.status') IN ('queued','running','waiting','paused')
+         ORDER BY a.rowid DESC LIMIT 257`,
+      )
+      .all(identity.principal, identity.workspace) as Row[];
+    const assignments = rows.slice(0, 256).map((row) => {
+      const assignment = assignmentSchema.parse(decode(row.body));
+      return {
+        id: assignment.id,
+        task_id: assignment.task_id,
+        role: assignment.role,
+        definition_id: assignment.definition_id,
+        status: assignment.status,
+      };
+    });
+    return { assignments, has_more: rows.length > 256 };
+  }
+  /** Active execution authority includes external waits with a released permit. */
+  listCapacityTasks(): TaskRecord[] {
+    return (this.db.prepare('SELECT body FROM tasks').all() as Row[])
+      .map((row) => decode<TaskCore>(row.body))
+      .map((task) => this.read(task.id, task.identity))
+      .filter((task) => ['queued', 'running', 'waiting'].includes(task.status));
+  }
   private operation<T>(
     identity: TaskIdentity,
     scope: string,
@@ -2308,6 +2659,7 @@ export class TaskStore {
       mode?: TaskRecord['mode'];
       limits?: Partial<ResourceLimits>;
       tools?: string[];
+      routeSnapshot?: ModelRouteSnapshot;
     } = {},
   ): { task: TaskRecord; reused: boolean } {
     const parsed = taskRequestSchema.parse(request);
@@ -2318,21 +2670,11 @@ export class TaskStore {
         key,
         parsed,
         () => {
-          const active = (
-            this.db.prepare('SELECT body FROM runs').all() as Row[]
-          )
-            .map((row) => decode<RunRecord>(row.body))
-            .filter((run) =>
-              ['queued', 'running', 'waiting'].includes(run.status),
-            );
-          if (active.length >= 2)
-            fail(
-              'active_task_limit',
-              'Two active tasks are already admitted.',
-              429,
-            );
-          for (const ref of parsed.context_refs)
+          this.externalWaits.assertCanAdmit();
+          for (const ref of parsed.context_refs) {
             this.artifact(ref.id, identity, ref);
+            this.nightshift.assertOrdinaryInput(ref);
+          }
           const limits = resourceLimitsSchema.parse({
             // Investigation profile (docs/architecture/general-agent-refactor-plan.md).
             // Model-driven specialists each spend turns, so the short-lookup
@@ -2401,6 +2743,20 @@ export class TaskStore {
             .prepare('INSERT INTO runs VALUES(?,?,?)')
             .run(runId, id, JSON.stringify(run));
           this.graph.register(runId);
+          this.modelRoutes.admit(
+            id,
+            runId,
+            options.routeSnapshot ?? createOfflineRouteSnapshot(),
+          );
+          this.externalWaits.acquire(
+            {
+              task_id: id,
+              run_id: runId,
+              generation: run.generation,
+              objective_revision: task.objective_revision,
+            },
+            'new admission',
+          );
           this.initializeManager(task.id, runId);
           for (const ref of parsed.context_refs)
             this.recordApplicability(
@@ -2580,6 +2936,7 @@ export class TaskStore {
         run.limits.max_assignments
       )
         fail('assignment_limit', 'Assignment reservation exhausted.', 422);
+      this.nightshift.assertResource(run.id, 'assignments', definitions.length);
       const prior = this.allAssignments(runId),
         ids = new Set(prior.map((item) => item.id));
       if (
@@ -2686,10 +3043,13 @@ export class TaskStore {
         visited.add(id);
       };
       for (const item of [...prior, ...created]) visit(item.id);
-      for (const item of created)
+      for (const item of created) {
         this.db
           .prepare('INSERT INTO assignments VALUES(?,?,?,?)')
           .run(item.id, taskId, runId, JSON.stringify(item));
+        this.modelRoutes.bindAssignment(item);
+        this.nightshiftTransfers.bindAssignment(item);
+      }
       run.usage.assignments += created.length;
       this.putRun(run);
       this.appendEvent(
@@ -2708,6 +3068,12 @@ export class TaskStore {
         run = this.run(task.current_run_id),
         assignment = this.assignment(assignmentId, taskId);
       this.assertCurrent(task, run);
+      this.externalWaits.assertPermit({
+        task_id: taskId,
+        run_id: run.id,
+        generation: run.generation,
+        objective_revision: task.objective_revision,
+      });
       this.checkDefinitions(assignment);
       if (
         assignment.run_id !== run.id ||
@@ -2753,7 +3119,16 @@ export class TaskStore {
         this.artifact(ref.id, task.identity, ref);
         if (
           assignment.definition_id !== 'core.manager.coordinator' &&
-          !this.applicability(taskId, ref.id, task.objective_revision)?.current
+          !this.applicability(taskId, ref.id, task.objective_revision)
+            ?.current &&
+          !this.nightshift.isSelectedReviewDependency(
+            taskId,
+            run.id,
+            run.generation,
+            task.objective_revision,
+            assignment,
+            ref,
+          )
         )
           fail(
             'artifact_not_applicable',
@@ -2765,6 +3140,7 @@ export class TaskStore {
       assignment.acknowledged_revision = assignment.revision;
       assignment.status = 'running';
       assignment.lease_token = randomUUID();
+      this.nightshiftTransfers.bindAssignment(assignment);
       this.putAssignment(assignment);
       run.status = 'running';
       this.putRun(run);
@@ -2815,6 +3191,10 @@ export class TaskStore {
         assignment = this.assignment(assignmentId, taskId);
       this.assertCurrent(task, run, assignment);
       this.expectLease(assignment, expected);
+      this.nightshift.assertResource(
+        run.id,
+        kind === 'model' ? 'model_calls' : 'tool_calls',
+      );
       if (kind === 'model') {
         if (assignment.usage.model_calls >= assignment.max_model_calls)
           fail(
@@ -3505,16 +3885,66 @@ export class TaskStore {
         fail('stale_execution', 'Assignment revision fenced.');
       if (run.usage.artifacts >= run.limits.max_artifacts)
         fail('artifact_limit', 'Artifact reservation exhausted.', 422);
+      if (
+        run.usage.artifacts + this.nightshift.retentionForRun(run.id) >=
+        run.limits.max_artifacts
+      )
+        fail(
+          'artifact_limit',
+          'Artifact capacity is reserved for original Nightshift receipts.',
+          422,
+        );
+      this.nightshift.assertResource(run.id, 'artifacts');
       for (const ref of options.dependencies ?? []) {
         this.artifact(ref.id, identity, ref);
         if (
-          !this.applicability(taskId, ref.id, task.objective_revision)?.current
+          !this.applicability(taskId, ref.id, task.objective_revision)
+            ?.current &&
+          !this.nightshift.isSelectedReviewDependency(
+            taskId,
+            run.id,
+            run.generation,
+            task.objective_revision,
+            assignment,
+            ref,
+          )
         )
           fail(
             'artifact_not_applicable',
             'Dependency has no current applicability check.',
           );
       }
+      const externalCandidates = [
+        ...new Map(
+          [
+            ...(assignment
+              ? this.externalWaits
+                  .candidateContext(
+                    {
+                      task_id: taskId,
+                      run_id: run.id,
+                      generation: run.generation,
+                      objective_revision: task.objective_revision,
+                      assignment_id: assignment.id,
+                      assignment_revision: assignment.revision,
+                    },
+                    identity,
+                  )
+                  .map((item) => item.artifact)
+              : []),
+            ...(options.dependencies ?? []).flatMap(
+              (ref) =>
+                this.artifact(ref.id, identity, ref).external_candidates ?? [],
+            ),
+          ].map((ref) => [`${ref.id}:${ref.version}:${ref.sha256}`, ref]),
+        ).values(),
+      ];
+      if (externalCandidates.length > 4)
+        fail(
+          'external_candidate_limit',
+          'Candidate provenance exceeds the bounded exact-reference limit.',
+          422,
+        );
       const artifact: Artifact = {
         schema_version: 'haze.artifact.v3',
         id: randomUUID(),
@@ -3535,9 +3965,13 @@ export class TaskStore {
         producer: options.producer,
         created_at: now(),
         dependencies: options.dependencies ?? [],
+        ...(externalCandidates.length
+          ? { external_candidates: externalCandidates }
+          : {}),
         required_tools: [
           ...new Set([
             ...(assignment?.tools ?? []),
+            ...(externalCandidates.length ? ['nightshift.result'] : []),
             ...(options.required_tools ?? []),
             ...(options.dependencies ?? []).flatMap(
               (ref) => this.artifact(ref.id, identity, ref).required_tools,
@@ -3593,6 +4027,7 @@ export class TaskStore {
     // dependency graphs are re-walked once per path (exponential).
     projectedKeys = new Set<string>(),
   ): void {
+    if (this.nightshift.isCandidate(artifact)) return;
     if (
       artifact.task_id &&
       this.core(artifact.task_id, artifact.identity).mode !== mode
@@ -3624,6 +4059,8 @@ export class TaskStore {
     if (artifact.kind === 'evidence.collection.capture')
       ingestCollectionCapture(this.world, artifact, mode);
     for (const dependency of dependencies) {
+      // A selected review dependency is still an unreviewed service candidate.
+      if (this.nightshift.isCandidate(dependency)) continue;
       const projectedDependency = this.world.projectArtifact(
         dependency,
         mode,
@@ -3661,6 +4098,7 @@ export class TaskStore {
   ): ArtifactApplicability {
     return this.atomic(() => {
       const task = this.core(taskId, identity);
+      if (current) this.nightshift.assertOrdinaryInput(ref);
       if (current) this.artifact(ref.id, identity, ref);
       else this.artifactMetadata(ref.id, identity, ref);
       const body: ArtifactApplicability = {
@@ -3748,6 +4186,33 @@ export class TaskStore {
         run = this.run(runId);
       this.assertCurrent(task, run, undefined, generation);
       const result = taskResultSchema.parse(input);
+      this.nightshiftTransfers.assertFinalizable({
+        task_id: taskId,
+        run_id: run.id,
+        generation: run.generation,
+        objective_revision: task.objective_revision,
+      });
+      this.externalWaits.assertFinalizable({
+        task_id: taskId,
+        run_id: run.id,
+        generation: run.generation,
+        objective_revision: task.objective_revision,
+      });
+      if (
+        result.review.status !== 'supported' &&
+        [
+          ...result.work_products,
+          ...result.sources.map((source) => source.artifact),
+        ].some(
+          (ref) =>
+            this.artifact(ref.id, task.identity, ref).external_candidates
+              ?.length,
+        )
+      )
+        fail(
+          'external_candidate_review_required',
+          'Candidate-derived products require independent review before final selection.',
+        );
       if (
         result.review.status === 'supported' &&
         !result.review.reviewer_assignment_id
@@ -3923,6 +4388,11 @@ export class TaskStore {
         records: projectedByCapability,
       });
       task.result = result;
+      this.db
+        .prepare(
+          'INSERT INTO task_run_results(run_id,objective_revision,task_id,body) VALUES(?,?,?,?) ON CONFLICT(run_id,objective_revision) DO NOTHING',
+        )
+        .run(run.id, task.objective_revision, taskId, JSON.stringify(result));
       delete task.error;
       this.putCore(task);
       run.status = 'completed';
@@ -4508,8 +4978,11 @@ export class TaskStore {
               run = this.run(task.current_run_id);
             this.assertGraphExecution(run.id);
             this.expect(task, run, update);
-            for (const ref of update.context_refs ?? [])
+            this.nightshift.onTaskControl(taskId, 'correction');
+            for (const ref of update.context_refs ?? []) {
               this.artifact(ref.id, identity, ref);
+              this.nightshift.assertOrdinaryInput(ref);
+            }
             const assignments = this.allAssignments(run.id),
               affected = new Set(
                 (update.affected_assignment_ids?.length
@@ -4689,8 +5162,31 @@ export class TaskStore {
             )
               run.status = 'paused';
             this.closeChannels(run.id);
+            if (
+              this.nightshift.chainForRun(run.id, identity)?.status ===
+              'invalidated'
+            ) {
+              run.status = 'paused';
+              for (const assignment of this.allAssignments(run.id))
+                if (!terminal(assignment.status)) {
+                  assignment.status = 'paused';
+                  delete assignment.lease_token;
+                  this.putAssignment(assignment);
+                }
+            }
             this.putCore(task);
             this.putRun(run);
+            this.externalWaits.onAuthorityChange(taskId, 'correction', false);
+            if (['queued', 'running'].includes(run.status))
+              this.externalWaits.acquire(
+                {
+                  task_id: taskId,
+                  run_id: run.id,
+                  generation: run.generation,
+                  objective_revision: task.objective_revision,
+                },
+                'objective correction',
+              );
             for (const ref of update.context_refs ?? [])
               this.recordApplicability(
                 taskId,
@@ -4747,17 +5243,55 @@ export class TaskStore {
       remote_termination_confirmed: false,
     };
   }
+  private staleLinkedSources(taskId: string, identity: TaskIdentity) {
+    for (const row of this.db
+      .prepare(
+        'SELECT artifact_id,objective_revision,body FROM applicability WHERE task_id=?',
+      )
+      .all(taskId) as (Row & {
+      artifact_id: string;
+      objective_revision: number;
+    })[]) {
+      const value = decode<ArtifactApplicability>(row.body);
+      value.current = false;
+      value.reason =
+        'Historical artifact requires fresh applicability and support checks in the linked successor.';
+      this.db
+        .prepare(
+          'UPDATE applicability SET body=? WHERE task_id=? AND artifact_id=? AND objective_revision=?',
+        )
+        .run(
+          JSON.stringify(value),
+          taskId,
+          row.artifact_id,
+          row.objective_revision,
+        );
+    }
+    for (const ref of this.core(taskId, identity).original_request.context_refs)
+      this.recordApplicability(
+        taskId,
+        identity,
+        ref,
+        false,
+        'Source permission and hash revalidated; the new Manager must inspect applicability for this continuation.',
+        'Runtime',
+      );
+  }
   control(
     taskId: string,
     identity: TaskIdentity,
     key: string,
     control: TaskControl,
+    routeSnapshot?: ModelRouteSnapshot,
+    serviceActor?: { kind: 'service'; id: string },
   ): ControlReceipt {
     return this.atomic(
       () =>
         this.operation(
           identity,
-          `POST /api/tasks/${taskId}/control`,
+          serviceActor
+            ? `SERVICE ${serviceActor.id} /api/tasks/${taskId}/control`
+            : `POST /api/tasks/${taskId}/control`,
           key,
           control,
           () => {
@@ -4765,104 +5299,30 @@ export class TaskStore {
             let run = this.run(task.current_run_id);
             this.expect(task, run, control);
             if (control.action === 'continue') {
-              if (!terminal(run.status) && run.status !== 'paused')
-                fail(
-                  'run_still_active',
-                  'Pause or finish predecessor before continuation.',
-                );
-              const active = (
-                this.db.prepare('SELECT body FROM runs').all() as Row[]
-              )
-                .map((row) => decode<RunRecord>(row.body))
-                .filter((item) =>
-                  ['queued', 'running', 'waiting'].includes(item.status),
-                );
-              if (active.length >= 2)
-                fail(
-                  'active_task_limit',
-                  'Two active tasks are admitted.',
-                  429,
-                );
-              const previous = run,
-                duration =
-                  Date.parse(previous.limits.deadline) -
-                  Date.parse(previous.created_at),
-                at = now();
-              previous.generation++;
-              if (!terminal(previous.status)) previous.status = 'cancelled';
-              this.putRun(previous);
-              this.closeChannels(previous.id);
-              this.markUnknown(previous.id);
-              for (const assignment of this.allAssignments(previous.id))
-                if (!terminal(assignment.status)) {
-                  assignment.status = 'cancelled';
-                  delete assignment.lease_token;
-                  this.putAssignment(assignment);
-                }
-              run = {
-                id: randomUUID(),
+              const result = this.linkedRuns.admit({
                 task_id: taskId,
-                predecessor_run_id: previous.id,
+                identity,
+                predecessor_run_id: run.id,
                 objective_revision: task.objective_revision,
-                generation: previous.generation,
-                state_revision: 1,
-                status: 'queued',
-                limits: {
-                  ...previous.limits,
-                  deadline: new Date(
-                    Date.now() + Math.max(1, duration),
-                  ).toISOString(),
-                },
-                usage: {
-                  model_calls: 0,
-                  tool_calls: 0,
-                  artifacts: 0,
-                  assignments: 0,
-                },
-                created_at: at,
-                updated_at: at,
-              };
-              this.db
-                .prepare('INSERT INTO runs VALUES(?,?,?)')
-                .run(run.id, taskId, JSON.stringify(run));
-              this.graph.register(run.id);
-              task.current_run_id = run.id;
-              this.initializeManager(taskId, run.id);
-              if (task.result) task.result.currency = 'stale';
-              for (const row of this.db
-                .prepare(
-                  'SELECT artifact_id,objective_revision,body FROM applicability WHERE task_id=?',
-                )
-                .all(taskId) as (Row & {
-                artifact_id: string;
-                objective_revision: number;
-              })[]) {
-                const applicability = decode<ArtifactApplicability>(row.body);
-                applicability.current = false;
-                applicability.reason =
-                  'Historical artifact requires fresh applicability and support checks in the linked successor.';
-                this.db
-                  .prepare(
-                    'UPDATE applicability SET body=? WHERE task_id=? AND artifact_id=? AND objective_revision=?',
-                  )
-                  .run(
-                    JSON.stringify(applicability),
-                    taskId,
-                    row.artifact_id,
-                    row.objective_revision,
-                  );
-              }
-              for (const ref of task.original_request.context_refs)
-                this.recordApplicability(
-                  taskId,
-                  identity,
-                  ref,
-                  false,
-                  'Source permission and hash revalidated; the new Manager must inspect applicability for this continuation.',
-                  'Runtime',
-                );
+                actor: { kind: 'user', id: identity.principal },
+                mode: 'manual',
+                trigger_cursor: this.events(taskId, identity, 0).next_cursor,
+                delivery_ids: [],
+                reason: control.reason ?? 'Explicit user Continue.',
+                ...(routeSnapshot ? { routeSnapshot } : {}),
+              });
+              if ('waiting' in result)
+                return fail('active_task_limit', result.reason, 429);
+              Object.assign(task, this.core(taskId, identity));
+              run = this.run(result.run_id);
             } else if (control.action === 'resume') {
+              this.nightshift.assertResumeAuthority(run.id);
               this.assertGraphExecution(run.id);
+              if (!this.modelRoutes.snapshot(run.id))
+                fail(
+                  'model_route_upgrade_required',
+                  'This run predates immutable model routes. Explicitly Continue to admit a linked run with a new route snapshot.',
+                );
               if (this.managerState(taskId, identity)?.upgrade_required)
                 fail(
                   'manager_upgrade_required',
@@ -4878,21 +5338,6 @@ export class TaskStore {
                   'deadline_expired',
                   'Resume preserves expired deadline; explicitly continue for a new run.',
                   422,
-                );
-              const active = (
-                this.db.prepare('SELECT body FROM runs').all() as Row[]
-              )
-                .map((row) => decode<RunRecord>(row.body))
-                .filter(
-                  (item) =>
-                    item.id !== run.id &&
-                    ['queued', 'running', 'waiting'].includes(item.status),
-                );
-              if (active.length >= 2)
-                fail(
-                  'active_task_limit',
-                  'Two active tasks are admitted.',
-                  429,
                 );
               const open = (
                 this.db
@@ -4967,15 +5412,31 @@ export class TaskStore {
               if (control.action === 'cancel' || control.action === 'revoke')
                 this.closeChannels(run.id);
             }
+            this.nightshift.onTaskControl(taskId, control.action);
             this.putCore(task);
             this.putRun(run);
-            this.appendEvent(
-              taskId,
-              `control_${control.action}`,
-              'User',
-              control.reason ??
-                `Requested ${control.action}; local work fenced. Remote termination unconfirmed.`,
-            );
+            const authority = {
+              task_id: taskId,
+              run_id: run.id,
+              generation: run.generation,
+              objective_revision: task.objective_revision,
+            };
+            if (control.action === 'resume' || control.action === 'continue') {
+              this.externalWaits.acquire(authority, control.action);
+              if (control.action === 'resume')
+                this.externalWaits.rebind(authority, 'resume');
+            } else this.externalWaits.onAuthorityChange(taskId, control.action);
+            if (control.action !== 'continue')
+              this.appendEvent(
+                taskId,
+                `control_${control.action}`,
+                serviceActor ? 'Runtime' : 'User',
+                control.reason ??
+                  `Requested ${control.action}; local work fenced. Remote termination unconfirmed.`,
+                serviceActor
+                  ? { actor_kind: 'service', actor_id: serviceActor.id }
+                  : undefined,
+              );
             return this.receipt(task, run, control.action);
           },
         ).value,
@@ -5044,6 +5505,31 @@ export class TaskStore {
         const task = decode<TaskCore>(row.body),
           run = this.run(task.current_run_id);
         if (terminal(run.status)) continue;
+        const topology = this.executionVersion(run.id);
+        if (
+          topology?.engine === 'langgraph' &&
+          (topology.manager_topology !== MANAGER_TOPOLOGY ||
+            topology.specialist_topology !== SPECIALIST_TOPOLOGY)
+        ) {
+          const state = this.managerState(task.id, task.identity);
+          if (state) {
+            state.upgrade_required =
+              'This run uses an earlier graph topology. Explicit Continue creates a linked run; historical checkpoints, charges and unknown operations remain retained.';
+            this.putManager(state);
+          }
+          run.generation++;
+          run.status = 'paused';
+          for (const assignment of this.allAssignments(run.id))
+            if (!terminal(assignment.status)) {
+              assignment.status = 'paused';
+              delete assignment.lease_token;
+              this.putAssignment(assignment);
+            }
+          this.markUnknown(run.id);
+          this.closeChannels(run.id);
+          this.putRun(run);
+          continue;
+        }
         if (this.executionVersion(run.id)?.engine === 'legacy') {
           let manager = this.managerState(task.id, task.identity);
           if (!manager) {
@@ -5073,6 +5559,7 @@ export class TaskStore {
           continue;
         }
         let manager = this.managerState(task.id, task.identity);
+        const requiresRouteUpgrade = !this.modelRoutes.snapshot(run.id);
         const requiresUpgrade = !manager;
         if (requiresUpgrade) {
           const raw = this.db
@@ -5089,6 +5576,11 @@ export class TaskStore {
             'This unfinished run was created by the previous Manager. Explicit continuation starts a linked run under manager.v4; historical decisions remain unchanged.';
           this.putManager(manager);
         }
+        if (requiresRouteUpgrade && manager) {
+          manager.upgrade_required =
+            'This unfinished run predates immutable model routes. Explicitly Continue to admit a linked run with a new route snapshot; historical operations retain unknown requested routes.';
+          this.putManager(manager);
+        }
         const started = (
           this.db
             .prepare('SELECT body FROM attempts WHERE task_id=?')
@@ -5097,14 +5589,21 @@ export class TaskStore {
           .map((item) => decode<AttemptRecord>(item.body))
           .some((item) => item.run_id === run.id && item.status === 'started');
         run.generation++;
-        if (started || requiresUpgrade || manager?.upgrade_required)
+        if (
+          started ||
+          requiresUpgrade ||
+          requiresRouteUpgrade ||
+          manager?.upgrade_required
+        )
           run.status = 'paused';
         else if (run.status === 'running') run.status = 'queued';
         for (const assignment of this.allAssignments(run.id)) {
           assignment.generation = run.generation;
           if (assignment.status === 'running') {
             assignment.status =
-              started || requiresUpgrade ? 'paused' : 'queued';
+              started || requiresUpgrade || requiresRouteUpgrade
+                ? 'paused'
+                : 'queued';
             assignment.acknowledged_revision = 0;
           }
           delete assignment.lease_token;
@@ -5121,11 +5620,26 @@ export class TaskStore {
           },
           run.status !== 'paused',
         );
+        if (run.status !== 'paused')
+          this.externalWaits.rebind(
+            {
+              task_id: task.id,
+              run_id: run.id,
+              generation: run.generation,
+              objective_revision: task.objective_revision,
+            },
+            'recovery',
+            true,
+          );
         this.appendEvent(
           task.id,
-          requiresUpgrade ? 'manager_upgrade_required' : 'restart_recovered',
+          requiresRouteUpgrade
+            ? 'model_route_upgrade_required'
+            : requiresUpgrade
+              ? 'manager_upgrade_required'
+              : 'restart_recovered',
           'Runtime',
-          requiresUpgrade
+          requiresUpgrade || requiresRouteUpgrade
             ? manager!.upgrade_required!
             : started
               ? 'Interrupted outcome unknown and charged; explicit resume admits replacement.'
@@ -5133,6 +5647,7 @@ export class TaskStore {
         );
       }
       this.graph.recover();
+      this.externalWaits.recover();
     });
   }
   saveCheckpoint(
@@ -5499,6 +6014,51 @@ export class TaskStore {
         this.putRun(run);
       }
       return assignment;
+    });
+  }
+  /** A targeted inbox delivery may reactivate its own run only after admission. */
+  wakeExternalTask(authority: GraphAuthority): TaskRecord {
+    return this.atomic(() => {
+      const task = this.core(authority.task_id),
+        run = this.run(task.current_run_id);
+      this.externalWaits.assertPermit(authority);
+      if (
+        run.id !== authority.run_id ||
+        run.generation !== authority.generation ||
+        task.objective_revision !== authority.objective_revision
+      )
+        fail('stale_execution', 'External delivery target has been fenced.');
+      const wait = this.graph.wait(graphThreadId('assignment', authority));
+      if (
+        !wait ||
+        wait.status !== 'ready' ||
+        !wait.event_types?.includes('external_result_ready')
+      )
+        fail(
+          'external_delivery_not_ready',
+          'External delivery requires an exact ready assignment wait.',
+        );
+      if (Date.parse(run.limits.deadline) <= Date.now())
+        fail(
+          'deadline_expired',
+          'Original run deadline expired; explicitly Continue.',
+          422,
+        );
+      if (
+        this.read(task.id, task.identity).questions.some(
+          (q) => q.run_id === run.id && q.status === 'open',
+        )
+      )
+        fail(
+          'question_unanswered',
+          'An external delivery cannot bypass a human wait.',
+        );
+      if (run.status === 'waiting') {
+        run.status = 'queued';
+        this.putRun(run);
+      } else if (!['queued', 'running'].includes(run.status))
+        fail('execution_fenced', 'The target run is stopped.');
+      return this.read(task.id, task.identity);
     });
   }
   reviseAssignmentInput(
