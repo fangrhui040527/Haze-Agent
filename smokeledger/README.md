@@ -68,7 +68,7 @@ really execute. Zetaris and hosted inference are reported as **skipped**, never 
 
 1. Start Zetaris and Nightshift (see the hackathon setup guide). `cp .env.example .env` and fill in the keys.
 2. `docker compose up -d` (evidence store on port 5433), then `npm run sl -- db:init`.
-3. In the Zetaris SQL Editor, run `sql/02_zetaris_register.sql` one statement at a time.
+3. In the Zetaris SQL Editor, run `sql/02_zetaris_register.sql` one statement at a time. From the Haze root, `npm run dev` does steps 2 and 3 for you: it registers `sl_pg` once the sidecar is healthy.
 4. Load your data (see **DATA.md**), then run `npm run sl -- check`. Every line should say PASS.
 5. `npm start`. Every claim-bearing query now goes through Zetaris; every narrative and judge call goes through Nightshift.
 

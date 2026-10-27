@@ -3,12 +3,14 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { runDevTool, terminateDevChild } from './dev-process.mjs';
+import { registerSmokeLedgerDatasource } from './dev-smokeledger-register.mjs';
 
 const READY_TIMEOUT_MS = 120_000;
 
 /**
  * Run the SmokeLedger sidecar next to the dev app: wait for its Postgres, install it on
- * first use, then start scripts/serve-smokeledger.mjs and report /health. Never fatal:
+ * first use, then start scripts/serve-smokeledger.mjs and report /health. Once it answers,
+ * its schema exists, so its Postgres is registered in Zetaris as sl_pg. Never fatal:
  * Haze runs without SmokeLedger, and its tools report the sidecar as unreachable.
  */
 export function createSmokeLedgerSidecar({
@@ -18,6 +20,7 @@ export function createSmokeLedgerSidecar({
   onStatus = () => {},
   onOutput = () => {},
   env = process.env,
+  register = registerSmokeLedgerDatasource,
 }) {
   const port = env.SMOKELEDGER_PORT || '8100';
   const healthUrl = `http://127.0.0.1:${port}/health`;
@@ -48,28 +51,51 @@ export function createSmokeLedgerSidecar({
       const value = await health();
       const starting = value?.reasons?.includes('starting');
       if (value && !starting) {
-        if (value.status === 'ready') onStatus('READY', describe(value));
+        if (value.status === 'ready') report('READY', describe(value));
         else
-          onStatus(
+          report(
             'DEGRADED',
             `${(value.reasons ?? []).join('; ')} | ${describe(value)}`,
           );
-        return;
+        return true;
       }
       await new Promise((done) => setTimeout(done, 1000).unref());
     }
     if (!signal.aborted && !exited)
       onStatus('UNREACHABLE', `No healthy response from ${healthUrl}`);
+    return false;
+  }
+
+  let last = ['STARTING', ''];
+  function report(status, detail) {
+    last = [status, detail];
+    onStatus(status, detail);
+  }
+
+  async function registerInZetaris() {
+    const [status, detail] = last;
+    onStatus(status, `${detail} | Zetaris sl_pg: waiting for Zetaris`);
+    try {
+      const result = await register({ root, signal, env });
+      if (!signal.aborted && !exited) onStatus(status, `${detail} | ${result}`);
+    } catch (error) {
+      if (signal.aborted || exited) return;
+      onStatus(
+        'DEGRADED',
+        `${detail} | Zetaris sl_pg not registered: ${error.message.split('\n')[0]}`,
+      );
+    }
   }
 
   async function start() {
     onStatus('STARTING');
     const existing = await health();
     if (existing) {
-      onStatus(
+      report(
         existing.status === 'ready' ? 'READY' : 'DEGRADED',
         `Already running outside npm run dev; ${describe(existing)}`,
       );
+      await registerInZetaris();
       return;
     }
     try {
@@ -125,14 +151,14 @@ export function createSmokeLedgerSidecar({
     child.once('exit', (code, exitSignal) => {
       exited = true;
       child = undefined;
-      if (signal.aborted) return;
+      if (signal.aborted || exited) return;
       const last = tail.trim().split(/\r?\n/).at(-1) ?? '';
       onStatus(
         'FAILED',
         `Exited ${exitSignal ?? `with code ${code}`}${last ? `: ${last}` : ''}`,
       );
     });
-    await waitUntilReady();
+    if (await waitUntilReady()) await registerInZetaris();
   }
 
   function stop(killSignal = 'SIGTERM') {
