@@ -5,6 +5,11 @@ pinned Meterless H-MEM and World Model engines, SQLite checkpoints and an
 explicitly selected model provider. It verifies that a small workflow can save
 real engine records, exit and resume them in a fresh process.
 
+The coupled wrappers live in [meterless](meterless/) solely for this isolated
+probe and conformance checks. They are not opened by the product runtime. H-MEM
+historical stores remain archival; this relocation does not change the probe
+contract or dependency pins.
+
 ## What the probe does
 
 1. Captures a labeled synthetic correction through H-MEM.

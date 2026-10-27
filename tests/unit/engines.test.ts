@@ -12,8 +12,8 @@ import { describe, expect, it } from 'vitest';
 import {
   openHazeEngines,
   type Observation,
-} from '../../app/adapters/meterless/index.js';
-import { loadPinnedEngines } from '../../app/adapters/meterless/loader.js';
+} from '../../app/compatibility/meterless/index.js';
+import { loadPinnedEngines } from '../../app/compatibility/meterless/loader.js';
 
 describe('pinned engine adapters', () => {
   it('uses starter-vendored H-MEM for mining, ranked recall, feedback and durable audit', async () => {

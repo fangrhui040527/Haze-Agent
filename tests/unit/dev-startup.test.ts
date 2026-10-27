@@ -65,7 +65,7 @@ globalThis.fetch = async (input) => {
   const url = new URL(input);
   if (url.pathname === '/') return new Response('<html>Haze app</html>', { headers: { 'content-type': 'text/html' } });
   const responses = {
-    '/api/health': { ok: true, mode: 'fixture', watchers: [], agents: { hmem: 'not enabled; dashboard memory remains archival' }, hazeops: { scheduler: 'disabled', reason: 'fixture mode' } },
+    '/api/health': { ok: true, mode: 'fixture', watchers: [], hazeops: { scheduler: 'disabled', reason: 'fixture mode' } },
     '/api/tasks': { tasks: [] },
     '/api/world/records': { counts: { records: 0, relationships: 0, events: 0 } },
     '/api/nightshift/readiness': { routes: [] },
@@ -222,7 +222,7 @@ describe('root development startup', () => {
     expect(result.output).not.toContain('\u001b[');
     expect(result.output).toContain('http://localhost:5174/');
     expect(result.output).toMatch(/World Model \(SQLite\)[^\n]*READY/);
-    expect(result.output).toMatch(/H-MEM[^\n]*DISABLED/);
+    expect(result.output).not.toContain('H-MEM');
     expect(result.output).toMatch(/Nightshift runtime[^\n]*UNREACHABLE/);
     expect(result.output).toMatch(/Nightshift candidate jobs[^\n]*UNAVAILABLE/);
     for (const name of [

@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +9,8 @@ import {
   parseNightshiftEnvelope,
   runNightshiftCli,
   inspectCloudCompute,
+  inspectCloudLanes,
+  cloudRosterFingerprint,
   inspectLocalCompute,
   reviewedNightshiftJobSourceHashes,
   type NightshiftCliInvocation,
@@ -480,6 +483,46 @@ describe('Nightshift job transport contracts', () => {
       expect(inspectCloudCompute(null)).toBe(false);
     },
   );
+
+  it('retains only uniquely identified ready cloud lane/model pairs and fingerprints the sorted roster', () => {
+    const ready = {
+      id: 'cloud1',
+      kind: 'cloud',
+      provider: 'nvidia',
+      model: 'nvidia/nemotron',
+      state: 'ready',
+    };
+    const status = {
+      lanes: [
+        { ...ready, id: 'cloud2', model: 'nvidia/other' },
+        { ...ready, id: 'local1', kind: 'local' },
+        { ...ready, id: 'disabled', disabled: true },
+        { ...ready, id: 'unnamed', provider: undefined },
+        ready,
+      ],
+    };
+    expect(inspectCloudLanes(status)).toEqual([
+      { lane: 'cloud1', provider: 'nvidia', model: 'nvidia/nemotron' },
+      { lane: 'cloud2', provider: 'nvidia', model: 'nvidia/other' },
+    ]);
+    expect(cloudRosterFingerprint(status)).toBe(
+      createHash('sha256')
+        .update(
+          JSON.stringify([
+            ['cloud1', 'nvidia', 'nvidia/nemotron'],
+            ['cloud2', 'nvidia', 'nvidia/other'],
+          ]),
+        )
+        .digest('hex'),
+    );
+    expect(cloudRosterFingerprint({ lanes: [...status.lanes].reverse() })).toBe(
+      cloudRosterFingerprint(status),
+    );
+    expect(inspectCloudLanes({ lanes: [ready, ready] })).toEqual([]);
+    expect(
+      cloudRosterFingerprint({ lanes: [{ ...ready, kind: 'local' }] }),
+    ).toBeNull();
+  });
 
   it.each([
     [undefined, 'local-only', 0],

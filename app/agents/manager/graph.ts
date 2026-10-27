@@ -43,7 +43,28 @@ export const createManagerGraph: ManagerGraphFactory = (
     (name: string, fn: (s: ManagerGraphState) => Update | Promise<Update>) =>
     async (s: ManagerGraphState) => {
       hooks.trace?.(name);
-      return (await fn(s)) ?? {};
+      const started = performance.now();
+      let outcome: 'ok' | 'error' = 'ok';
+      try {
+        return (await fn(s)) ?? {};
+      } catch (error) {
+        outcome = 'error';
+        throw error;
+      } finally {
+        const timing = {
+          duration_ms: Math.max(0, performance.now() - started),
+          outcome,
+        };
+        if (outcome === 'error') {
+          try {
+            hooks.traceCompleted?.(name, timing);
+          } catch {
+            // Preserve the execution error if its diagnostic receipt also fails.
+          }
+        } else {
+          hooks.traceCompleted?.(name, timing);
+        }
+      }
     };
   return (
     new StateGraph(state)

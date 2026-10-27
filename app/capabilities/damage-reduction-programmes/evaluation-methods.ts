@@ -89,7 +89,7 @@ export const EVALUATION_LIMITATIONS = [
   'Haze reproduces supplied residual point-estimate subtraction and exact threshold comparison only; it does not reproduce the external causal estimator, identification design, data collection or uncertainty calculation.',
   'External scientific review, reviewer identity, credentials, conflicts and local adoption are retained human attestations. Arithmetic and model agreement cannot grant scientific qualification.',
   'Bound and probability criteria are unsupported by this registered method. No point-estimate fallback substitutes for a requested uncertainty criterion.',
-  'Digital receipts and delivery verification do not by themselves establish adherence, reduced exposure or achieved damage reduction. World Model acceptance and H-MEM publication remain separate.',
+  'Digital receipts and delivery verification do not by themselves establish adherence, reduced exposure or achieved damage reduction. World Model acceptance remains separate; H-MEM is retired from the product.',
 ];
 const SUBTRACTION_REPRODUCTION =
   'Exact subtraction of the supplied canonical residual quantities, using the Plan 01 fixed-decimal comparison kernel.';

@@ -15,7 +15,7 @@ in [Active v3 World Model](#active-v3-world-model).
 ## Where it lives
 
 - **Engine:** the pinned Meterless World Model reference (revision `1742dec`), loaded through
-  `app/adapters/meterless/loader.ts` (hash-checked). Namespace **`haze`**, separate from any
+  `app/compatibility/meterless/loader.ts` (hash-checked). Namespace **`haze`**, separate from any
   crew-scheduling data.
 - **File:** `.state/haze/world/.world/haze.json` (git-ignored).
 - **One writer:** only the Haze server process opens this file. The reference engine keeps

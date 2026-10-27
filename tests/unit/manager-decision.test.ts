@@ -109,7 +109,7 @@ async function setup(objective = 'Explain the supplied source.') {
 }
 function response(context: ManagerContext) {
   return managerDecisionSchema.parse({
-    id: 'decision',
+    id: context.decision_id ?? 'decision',
     run_id: context.run_id,
     generation: context.generation,
     objective_revision: context.objective_revision,
@@ -205,7 +205,7 @@ describe('registered Manager decision layer', () => {
   it('registers a controlled decide entry with no storage or unrestricted adapters', async () => {
     const { context, registry } = await setup();
     expect(context.decision_id).toBe(
-      `${context.run_id}:${context.generation}:${context.plan_revision}:${context.event_cursor}`,
+      `${context.run_id}:${context.generation}:${context.plan_revision}:${context.event_cursor}:0`,
     );
     expect([...registry.agents.keys()]).toEqual(['Manager']);
     expect(
@@ -227,7 +227,33 @@ describe('registered Manager decision layer', () => {
         }),
     });
     expect(result.action.type).toBe('question');
-    expect(managerAgent.version).toBe('manager.v15');
+    expect(managerAgent.version).toBe('manager.v16');
+  });
+  it('keeps replay IDs stable and admits distinct decisions at the same material cursor', async () => {
+    const { store, task, registry, context } = await setup();
+    const assemble = () =>
+      assembleManagerContext(
+        store.read(task.id, identity),
+        registry,
+        store.managerState(task.id, identity)!,
+        { events: [], artifacts: [], maxBytes: 100000 },
+      );
+    expect(assemble().decision_id).toBe(context.decision_id);
+    const wait = {
+      ...response(context),
+      action: { type: 'wait' as const, reason: 'Wait for material evidence.' },
+    };
+    store.applyManagerDecision(task.id, wait);
+    const next = assemble();
+    expect(next.event_cursor).toBe(context.event_cursor);
+    expect(next.plan_revision).toBe(context.plan_revision);
+    expect(next.decision_id).not.toBe(context.decision_id);
+    expect(assemble().decision_id).toBe(next.decision_id);
+    store.applyManagerDecision(task.id, {
+      ...response(next),
+      action: { type: 'wait', reason: 'A distinct admitted checkpoint.' },
+    });
+    expect(store.managerState(task.id, identity)!.decisions).toHaveLength(2);
   });
   it('requests one changed model turn for a source-backed answer missing its citation', async () => {
     const { context } = await setup();
@@ -274,6 +300,66 @@ describe('registered Manager decision layer', () => {
       sources: [source],
     });
   });
+  it.each([true, false])(
+    'bounds correction of citation markers outside selected sources (repaired=%s)',
+    async (repair) => {
+      const { context } = await setup();
+      const source = { id: randomUUID(), version: 1, sha256: 'b'.repeat(64) };
+      const product = { id: randomUUID(), version: 1, sha256: 'e'.repeat(64) };
+      context.artifacts = [
+        { ref: source, kind: 'source.import', current: true },
+        { ref: product, kind: 'test.finding', current: true },
+      ];
+      const inputs: unknown[] = [];
+      const pending = decide({
+        context,
+        model(input) {
+          inputs.push(input);
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer:
+                  repair && inputs.length === 2
+                    ? 'The source supports this bounded finding. [S1]'
+                    : 'The work product [E1] and review [E2] cite the source. [S1]',
+                work_products: [product],
+                sources: [source],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      if (repair)
+        expect((await pending).action).toMatchObject({
+          sources: [source],
+          work_products: [product],
+          answer: 'The source supports this bounded finding. [S1]',
+        });
+      else
+        await expect(pending).rejects.toMatchObject({
+          code: 'invalid_source_citation',
+        });
+      expect(inputs).toHaveLength(2);
+      expect(inputs[1]).toMatchObject({
+        decision_id: context.decision_id,
+        decision_feedback: {
+          correction: 1,
+          code: 'invalid_source_citation',
+          message: expect.stringContaining('[S1]') as unknown,
+        },
+      });
+    },
+  );
   it.each(['id', 'version', 'sha256'])(
     'requests a complete supplied artifact reference when %s is missing',
     async (field) => {
@@ -480,97 +566,137 @@ describe('registered Manager decision layer', () => {
       expect(calls).toBe(1);
     },
   );
-  it('corrects duplicate queued work using only an exact missing required peer channel hint', async () => {
-    const { context } = await setup();
-    context.plan_objective_revision = context.objective_revision;
-    const first = { id: randomUUID(), revision: 2 };
-    const second = { id: randomUUID(), revision: 3 };
-    context.assignments = [
-      {
-        ...first,
-        role: 'HazeOps',
-        definition_id: 'test.produce',
-        status: 'queued',
-        support: 'unknown',
-        usability: 'needs_review',
-      },
-      {
-        ...second,
-        role: 'EvidenceCritic',
-        definition_id: 'test.review',
-        status: 'queued',
-        support: 'unknown',
-        usability: 'needs_review',
-      },
-    ];
-    context.capabilities[0]!.peer_requirements = [
-      {
-        definitions: ['test.produce', 'test.review'],
-        purpose: 'independent-check',
-      },
-    ];
-    const participants: [
-      { assignment_id: string; revision: number },
-      { assignment_id: string; revision: number },
-    ] = [
-      { assignment_id: first.id, revision: first.revision },
-      { assignment_id: second.id, revision: second.revision },
-    ];
-    const inputs: unknown[] = [];
-    const result = await decide({
-      context,
-      model(input) {
-        inputs.push(input);
-        return Promise.resolve({
-          text: JSON.stringify({
-            ...response(context),
-            action:
-              inputs.length === 1
-                ? {
-                    type: 'apply_plan',
-                    assignments: [
-                      {
-                        key: first.id,
-                        definition_id: 'test.produce',
-                        brief: 'Duplicate existing work.',
-                        depends_on: [],
-                      },
-                    ],
-                    retain_assignment_ids: [first.id, second.id],
-                    reason: 'This repeats queued work.',
-                  }
-                : {
-                    type: 'coordinate',
-                    participants,
-                    purpose: 'independent-check',
-                  },
-          }),
-          receipt: {
-            response_model: null,
-            response_id: null,
-            input_tokens: null,
-            output_tokens: null,
-          },
-        });
-      },
-    });
-    expect(inputs[1]).toMatchObject({
-      decision_feedback: {
-        code: 'duplicate_active_assignment',
-        peer_prerequisite: {
-          type: 'coordinate',
-          participants,
+  it.each(['duplicate_work', 'wait'] as const)(
+    'corrects %s using only an exact missing required peer channel hint',
+    async (proposal) => {
+      const { context } = await setup();
+      context.plan_objective_revision = context.objective_revision;
+      const first = { id: randomUUID(), revision: 2 };
+      const second = { id: randomUUID(), revision: 3 };
+      context.assignments = [
+        {
+          ...first,
+          role: 'HazeOps',
+          definition_id: 'test.produce',
+          status: 'queued',
+          support: 'unknown',
+          usability: 'needs_review',
+        },
+        {
+          ...second,
+          role: 'EvidenceCritic',
+          definition_id: 'test.review',
+          status: 'queued',
+          support: 'unknown',
+          usability: 'needs_review',
+        },
+      ];
+      context.capabilities[0]!.peer_requirements = [
+        {
+          definitions: ['test.produce', 'test.review'],
           purpose: 'independent-check',
         },
-      },
-    });
-    expect(result.action).toEqual({
-      type: 'coordinate',
-      participants,
-      purpose: 'independent-check',
-    });
-    expect(context.peer_grants).toEqual([]);
-  });
+      ];
+      const participants: [
+        { assignment_id: string; revision: number },
+        { assignment_id: string; revision: number },
+      ] = [
+        { assignment_id: first.id, revision: first.revision },
+        { assignment_id: second.id, revision: second.revision },
+      ];
+      const inputs: unknown[] = [];
+      const result = await decide({
+        context,
+        model(input) {
+          inputs.push(input);
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action:
+                inputs.length === 1
+                  ? proposal === 'wait'
+                    ? { type: 'wait', reason: 'Wait for queued work.' }
+                    : {
+                        type: 'apply_plan',
+                        assignments: [
+                          {
+                            key: first.id,
+                            definition_id: 'test.produce',
+                            brief: 'Duplicate existing work.',
+                            depends_on: [],
+                          },
+                        ],
+                        retain_assignment_ids: [first.id, second.id],
+                        reason: 'This repeats queued work.',
+                      }
+                  : {
+                      type: 'coordinate',
+                      participants,
+                      purpose: 'independent-check',
+                    },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(inputs[1]).toMatchObject({
+        decision_feedback: {
+          code:
+            proposal === 'wait'
+              ? 'missing_peer_coordination'
+              : 'duplicate_active_assignment',
+          peer_prerequisite: {
+            type: 'coordinate',
+            participants,
+            purpose: 'independent-check',
+          },
+        },
+      });
+      expect(result.action).toEqual({
+        type: 'coordinate',
+        participants,
+        purpose: 'independent-check',
+      });
+      expect(context.peer_grants).toEqual([]);
+      expect(inputs[1]).toMatchObject({ decision_id: context.decision_id });
+      if (proposal === 'wait') {
+        let calls = 0;
+        const waiting = () => {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'wait',
+                reason: 'Still waiting for queued work.',
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        };
+        await expect(decide({ context, model: waiting })).rejects.toMatchObject(
+          { code: 'missing_peer_coordination' },
+        );
+        expect(calls).toBe(2);
+        context.peer_grants = [{ participants, purpose: 'independent-check' }];
+        calls = 0;
+        expect((await decide({ context, model: waiting })).action.type).toBe(
+          'wait',
+        );
+        expect(calls).toBe(1);
+      }
+    },
+  );
   it.each([
     'run_id',
     'generation',

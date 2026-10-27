@@ -13,7 +13,7 @@ import {
   MEMORY_TEXT,
 } from '../../app/compatibility/graph.js';
 import type { runCompatibilityPhase } from '../../app/compatibility/worker.js';
-import { openHazeEngines } from '../../app/adapters/meterless/index.js';
+import { openHazeEngines } from '../../app/compatibility/meterless/index.js';
 import versions from '../../app/workflow_versions.json' with { type: 'json' };
 
 type PhaseReport = Awaited<ReturnType<typeof runCompatibilityPhase>>;

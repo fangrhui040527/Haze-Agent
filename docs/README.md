@@ -34,7 +34,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 - **Guides:** [Damage account demo](guides/damage-account-demo.md), [damage reduction browser demo](guides/damage-reduction-demo.md).
 - **Infrastructure:** [Engine pins](infrastructure/engine-pins.md), [compatibility probe](infrastructure/compatibility-probe.md).
 - **Evidence:** [PM2.5 evidence source](evidence/pm25-evidence-source.md), [v0.14 PM2.5 milestone](evidence/milestone-v014.md), [Haze Damage Account Report](evidence/Haze_Damage_Account_Report.pdf).
-- **Frontend:** [01 - Project understanding](frontend/01-project-understanding.md), [02 - Critique and reality check](frontend/02-critique.md), [03 - UI design](frontend/03-ui-design.md), [HMem memory page](frontend/hmem-memory-page.md).
+- **Frontend:** [01 - Project understanding](frontend/01-project-understanding.md), [02 - Critique and reality check](frontend/02-critique.md), [03 - UI design](frontend/03-ui-design.md), [Retired memory-page design](frontend/hmem-memory-page.md).
 
 ## Organization conventions
 

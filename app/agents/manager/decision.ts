@@ -71,7 +71,11 @@ function decisionFeedback(invalid: InvalidOutput) {
         ? 'Return the full decision. Cite selected sources in action.answer with matching [S1]/[E1] markers.'
         : invalid.code === 'incomplete_artifact_reference'
           ? 'Copy each full artifact ref (id, version, sha256) from supplied canonical refs. Never infer a hash.'
-          : invalid.code === 'invalid_decision_schema'
+          : [
+                'invalid_decision_schema',
+                'invalid_source_citation',
+                'missing_peer_coordination',
+              ].includes(invalid.code)
             ? invalid.message
             : 'Do not repeat queued work. Coordinate the exact missing peer channel or wait.',
     ...(invalid.peer_prerequisite
@@ -145,8 +149,51 @@ function knownInvalidOutput(
       message:
         'The proposed action.sources is nonempty but action.answer has no citation marker. Return the complete decision again with an answer supported by exactly those selected sources and matching markers in action.answer: [S1] for the first imported source, [S2] for the second, [E1] for the first external capture. Do not invent sources or change checkpoint values.',
     };
+  if (action.type === 'finalize') {
+    const cited = [...action.answer.matchAll(/\[([A-Za-z]+\d+)\]/g)].map(
+      (match) => match[1],
+    );
+    const declaredRefs = [
+      ...context.request.context_refs,
+      ...context.corrections.flatMap(
+        (correction) => correction.context_refs ?? [],
+      ),
+    ];
+    const compactImports = (
+      context.current_import_context_ref_indices ?? []
+    ).flatMap((index) => (declaredRefs[index] ? [declaredRefs[index]] : []));
+    const sameRef = (
+      left: (typeof action.sources)[number],
+      right: (typeof action.sources)[number],
+    ) =>
+      left.id === right.id &&
+      left.version === right.version &&
+      left.sha256 === right.sha256;
+    let sourceIndex = 0,
+      captureIndex = 0;
+    const markers = action.sources.map((source) => {
+      const artifact = context.artifacts.find((entry) =>
+        sameRef(entry.ref, source),
+      );
+      if (
+        artifact?.kind === 'source.import' ||
+        compactImports.some((ref) => sameRef(ref, source))
+      )
+        return `S${++sourceIndex}`;
+      // A compacted/unknown source is not enough to infer its marker class.
+      return artifact ? `E${++captureIndex}` : undefined;
+    });
+    if (
+      !markers.includes(undefined) &&
+      cited.some((marker) => !markers.includes(marker))
+    )
+      return {
+        code: 'invalid_source_citation',
+        message: `Return the full decision. Citation markers are assigned only to action.sources, not work_products or retained reviews. Use only ${markers.length ? markers.map((marker) => `[${marker}]`).join(', ') : 'no citation markers'} for the selected sources; preserve exact references and checkpoint values.`,
+      };
+  }
   if (
-    action.type !== 'apply_plan' ||
+    !['apply_plan', 'wait'].includes(action.type) ||
     context.plan_objective_revision !== context.objective_revision
   )
     return null;
@@ -154,6 +201,7 @@ function knownInvalidOutput(
     ['queued', 'running'].includes(assignment.status),
   );
   if (
+    action.type === 'apply_plan' &&
     !action.assignments.some((proposal) =>
       active.some((assignment) => assignment.id === proposal.key),
     )
@@ -193,6 +241,15 @@ function knownInvalidOutput(
     }
     if (peerPrerequisite) break;
   }
+  if (action.type === 'wait')
+    return peerPrerequisite
+      ? {
+          code: 'missing_peer_coordination',
+          message:
+            'Return the full decision. Queued assignments cannot progress while their required peer channel is missing. Propose coordinate using the exact supplied missing participants and purpose before waiting. Keep checkpoint values unchanged; this hint grants no authority.',
+          peer_prerequisite: peerPrerequisite,
+        }
+      : null;
   return {
     code: 'duplicate_active_assignment',
     message:

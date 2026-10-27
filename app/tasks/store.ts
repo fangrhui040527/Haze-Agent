@@ -3442,7 +3442,7 @@ export class TaskStore {
         'attempt_charged',
         assignment.role,
         `${kind} attempt charged before dispatch.`,
-        { attempt_id: attempt.id },
+        { attempt_id: attempt.id, kind: attempt.kind },
         assignmentId,
       );
       return attempt;
@@ -3489,6 +3489,7 @@ export class TaskStore {
       this.db
         .prepare('UPDATE attempts SET body=? WHERE id=?')
         .run(JSON.stringify(attempt), attemptId);
+      const completedAt = now();
       this.appendEvent(
         taskId,
         attempt.accepted ? 'attempt_completed' : 'late_receipt_recorded',
@@ -3496,7 +3497,19 @@ export class TaskStore {
         attempt.accepted
           ? 'Current attempt receipt persisted.'
           : 'Historical receipt retained; output excluded by execution fence.',
-        { attempt_id: attempt.id, accepted: attempt.accepted },
+        {
+          attempt_id: attempt.id,
+          accepted: attempt.accepted,
+          kind: attempt.kind,
+          status: attempt.status,
+          started_at: attempt.charged_at,
+          completed_at: completedAt,
+          duration_ms: Math.max(
+            0,
+            Date.parse(completedAt) - Date.parse(attempt.charged_at),
+          ),
+          ...(typeof tool === 'string' ? { tool } : {}),
+        },
         assignment.id,
       );
       return attempt;
@@ -5647,6 +5660,19 @@ export class TaskStore {
         const task = decode<TaskCore>(row.body),
           run = this.run(task.current_run_id);
         if (terminal(run.status)) continue;
+        // Stop expired work before rebinding waits can reject its old authority.
+        if (
+          run.status !== 'paused' &&
+          Date.parse(run.limits.deadline) <= Date.now()
+        ) {
+          this.stop(
+            task.id,
+            'timed_out',
+            'deadline_exceeded',
+            'Original run deadline expired before restart; explicitly Continue with a new bounded run.',
+          );
+          continue;
+        }
         const topology = this.executionVersion(run.id);
         if (
           topology?.engine === 'langgraph' &&

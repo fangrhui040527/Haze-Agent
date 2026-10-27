@@ -4,6 +4,8 @@
 
 Status: proposed implementation plan. Saving this plan does not establish that implementation, scientific qualification or live verification is complete.
 
+Implementation continued on **28 October 2026**. See the [change and verification report](../reports/sponsor-technology-hardening-report-2026-10-28.md) for completed changes and outstanding release gates. The real damage input package remains outstanding; automatic production release remains blocked.
+
 Date: **27 October 2026, Asia/Singapore**.
 
 ## 1. Summary and agreed defaults

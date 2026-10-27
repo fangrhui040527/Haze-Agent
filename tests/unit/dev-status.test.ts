@@ -212,13 +212,12 @@ describe('development startup status display', () => {
     for (const [index, status] of [
       [3, 'READY'],
       [4, 'READY'],
-      [5, 'DISABLED'],
-      [6, 'RUNNING'],
-      [7, 'UNVERIFIED'],
-      [8, 'UNREACHABLE'],
-      [9, 'BLOCKED'],
-      [10, 'UNCONFIGURED'],
-      [11, 'BLOCKED'],
+      [5, 'RUNNING'],
+      [6, 'UNVERIFIED'],
+      [7, 'UNREACHABLE'],
+      [8, 'BLOCKED'],
+      [9, 'UNCONFIGURED'],
+      [10, 'BLOCKED'],
     ] as const)
       display.update(index, status);
     display.urls(['http://localhost:5173/'], [], 3.5);
@@ -231,7 +230,7 @@ describe('development startup status display', () => {
     expect(visible).toContain('STARTED  2.0s');
     expect(visible).not.toMatch(/STARTING|WAITING/);
     expect(visible).toMatch(/World Model \(SQLite\)[^\n]*READY/);
-    expect(visible).toMatch(/H-MEM[^\n]*DISABLED/);
+    expect(visible).not.toContain('H-MEM');
     expect(visible).toMatch(/Nightshift candidate jobs[^\n]*BLOCKED/);
     expect(visible).toContain('http://localhost:5173/');
     expect(visible).toContain('Started in 3.5s');

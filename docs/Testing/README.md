@@ -9,6 +9,7 @@ Verification guides describe commands, fixture scope and any live prerequisites.
 - [Test the Manager in isolation](manager-testing.md).
 - [World Model control plane](world-model-control-plane.md).
 - [Model routing verification and evaluation](model-route-evaluation.md).
+- [Sponsor hardening numerical and release verification](sponsor-hardening-verification.md).
 
 ## Nightshift
 
