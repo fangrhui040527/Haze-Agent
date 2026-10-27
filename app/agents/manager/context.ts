@@ -71,6 +71,18 @@ export function assembleManagerContext(
       )
       .map((capability) => capability.card.id),
   );
+  // Ordering highlights relevant catalog entries without selecting an action
+  // or hiding other registered capabilities from the Manager.
+  const capabilityCatalogue = [...registry.capabilities.values()].toSorted(
+    (left, right) =>
+      Number(relevantCapabilities.has(right.card.id)) -
+      Number(relevantCapabilities.has(left.card.id)),
+  );
+  const definitionCatalogue = [...registry.definitions.values()].toSorted(
+    (left, right) =>
+      Number(relevantCapabilities.has(right.capability)) -
+      Number(relevantCapabilities.has(left.capability)),
+  );
   const eventCursor = Math.max(
     state.last_handled_event_cursor,
     ...options.events.map((event) => event.cursor),
@@ -102,7 +114,7 @@ export function assembleManagerContext(
     request,
     corrections: structuredClone(task.corrections),
     ...(state.interpretation ? { interpretation: state.interpretation } : {}),
-    capabilities: [...registry.capabilities.values()].map((capability) => {
+    capabilities: capabilityCatalogue.map((capability) => {
       const relevant = relevantCapabilities.has(capability.card.id);
       const denied = capability.card.required_tools.filter(
         (tool) => !task.permissions.tools.includes(tool),
@@ -137,7 +149,7 @@ export function assembleManagerContext(
           : [],
       };
     }),
-    definitions: [...registry.definitions.values()].map((d) => ({
+    definitions: definitionCatalogue.map((d) => ({
       id: d.id,
       capability: d.capability,
       agent: d.agent,

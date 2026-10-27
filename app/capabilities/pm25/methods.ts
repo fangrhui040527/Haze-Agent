@@ -59,7 +59,7 @@ export const captureSchema = z.strictObject({
     .max(1500),
   raw: z.string().min(1).max(524_288),
   selection: z.strictObject({
-    backend: z.literal('zetaris-rest'),
+    backend: z.enum(['zetaris-rest', 'sample-file']),
     query: z.string().min(1).max(16_000),
     request_id: z.string().min(1).max(200),
     row_limit: z.number().int().min(1).max(1500),

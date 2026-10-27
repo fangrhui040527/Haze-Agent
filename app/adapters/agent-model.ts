@@ -1,5 +1,17 @@
 import { NIGHTSHIFT_CONTRACT_FAILURE } from './nightshift/runtime.js';
+import {
+  sampleModelAllowsNoCredential,
+  sampleModelEnvironment,
+  sampleModelUsesBuiltinFallback,
+  prepareSampleModel,
+} from './sample-model.js';
 
+/** Server-only cache identity; never serialized into provider messages. */
+export interface AgentModelCacheContext {
+  version: 'haze.model-cache-bindings.v1';
+  bindings: { actual: string; canonical: string }[];
+  evidence: { artifact: string; semantic_sha256: string }[];
+}
 export interface AgentModelInput {
   role: string;
   instruction: string;
@@ -10,6 +22,7 @@ export interface AgentModelInput {
   json_mode?: boolean;
   /** Runtime-owned schema; the adapter negotiates its provider representation. */
   output_schema?: unknown;
+  cache_context?: AgentModelCacheContext;
 }
 
 /** Provider-returned metadata; absent fields remain unknown, not inferred. */
@@ -23,6 +36,19 @@ export interface AgentModelReceipt {
   /** Optional for historical receipts; values come from this response only. */
   response_status?: string | null;
   http_status?: number;
+  /** A recorded reply was reused; this is not a fresh provider response. */
+  cache?: {
+    version: 1;
+    key_sha256: string;
+    recorded_at: string;
+    original_route: {
+      provider: string;
+      model: string;
+      base_url?: string | null;
+      capability_contract: { version: number; id: string; hash: string };
+    };
+    original_receipt: Omit<AgentModelReceipt, 'cache'>;
+  };
 }
 
 export interface AgentModelCompletion {
@@ -186,8 +212,12 @@ function assistantText(body: unknown, outputTokens: number): string {
 
 function receiptText(value: unknown, apiKey: string): string | null {
   if (typeof value !== 'string') return null;
-  const redacted = value.trim().replaceAll(apiKey, '[redacted]');
+  const redacted = redactCredential(value.trim(), apiKey);
   return redacted && redacted.length <= 256 ? redacted : null;
+}
+
+function redactCredential(value: string, apiKey: string): string {
+  return apiKey ? value.replaceAll(apiKey, '[redacted]') : value;
 }
 
 function receiptTokens(value: unknown): number | null {
@@ -223,12 +253,10 @@ export function resolveAgentModel(
   env: NodeJS.ProcessEnv,
   fetcher: typeof fetch = fetch,
 ): AgentModel {
-  const sampleMode = env.SAMPLE_MODE?.trim().toLowerCase();
-  if (sampleMode && sampleMode !== '0' && sampleMode !== 'false') {
-    throw new Error(
-      'SAMPLE_MODE disables model requests. Set SAMPLE_MODE=false to run the office agents.',
-    );
-  }
+  const sampleEnvironment = env;
+  const localSampleDefault = sampleModelUsesBuiltinFallback(env);
+  const timeoutMs = localSampleDefault ? 300_000 : TIMEOUT_MS;
+  env = sampleModelEnvironment(env);
   const provider = env.HAZE_PROVIDER?.trim() || 'offline';
   if (provider === 'nightshift') {
     // Nightshift requires the registry's authenticated asynchronous negotiation.
@@ -251,8 +279,12 @@ export function resolveAgentModel(
   if (!model) throw new Error('HAZE_MODEL is required to run office agents.');
   const apiKey =
     env.HAZE_PROVIDER_API_KEY?.trim() ||
-    (provider === 'nvidia' ? env.NVIDIA_API_KEY?.trim() : undefined);
-  if (!apiKey) {
+    (provider === 'nvidia' ? env.NVIDIA_API_KEY?.trim() : undefined) ||
+    '';
+  if (
+    !apiKey &&
+    !sampleModelAllowsNoCredential(env, provider, env.HAZE_PROVIDER_BASE_URL)
+  ) {
     throw new Error(
       provider === 'nvidia'
         ? 'NVIDIA_API_KEY or HAZE_PROVIDER_API_KEY is required to run office agents.'
@@ -323,7 +355,9 @@ export function resolveAgentModel(
                 ? { chat_template_kwargs: { enable_thinking: false } }
                 : {}),
             }
-          : { max_completion_tokens: outputTokens }),
+          : localSampleDefault
+            ? { max_tokens: outputTokens }
+            : { max_completion_tokens: outputTokens }),
         stream: false,
         ...(input.json_mode
           ? {
@@ -349,8 +383,10 @@ export function resolveAgentModel(
       );
     }
 
+    if (localSampleDefault)
+      await prepareSampleModel(sampleEnvironment, fetcher, signal);
     const deadline = new AbortController();
-    const timer = setTimeout(() => deadline.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => deadline.abort(), timeoutMs);
     const requestSignal = AbortSignal.any([signal, deadline.signal]);
     let onAbort: (() => void) | undefined;
     const aborted = new Promise<never>((_resolve, reject) => {
@@ -365,7 +401,7 @@ export function resolveAgentModel(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
           },
           body,
           signal: requestSignal,
@@ -411,9 +447,10 @@ export function resolveAgentModel(
           const message = isRecord(first) ? first.message : undefined;
           const content =
             isRecord(message) && typeof message.content === 'string'
-              ? message.content
-                  .slice(0, MAX_TEXT_CHARACTERS)
-                  .replaceAll(apiKey, '[redacted]')
+              ? redactCredential(
+                  message.content.slice(0, MAX_TEXT_CHARACTERS),
+                  apiKey,
+                )
               : null;
           throw new AgentModelResponseError(
             error instanceof Error
@@ -424,7 +461,7 @@ export function resolveAgentModel(
           );
         }
         return {
-          text: text.replaceAll(apiKey, '[redacted]'),
+          text: redactCredential(text, apiKey),
           receipt,
         };
       };
@@ -439,7 +476,7 @@ export function resolveAgentModel(
       if (deadline.signal.aborted) {
         // Upstream causes may contain credentials; retain only the safe outcome classification.
         throw new AgentModelOutcomeUnknownError(
-          `Agent model request timed out after ${TIMEOUT_MS / 1000} seconds.`,
+          `Agent model request timed out after ${timeoutMs / 1000} seconds.`,
         );
       }
       if (error instanceof ModelError) throw error;

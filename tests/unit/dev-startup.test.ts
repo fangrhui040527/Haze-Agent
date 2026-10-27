@@ -11,6 +11,7 @@ const callMarker = '__DEV_STARTUP_CALL__';
 const killMarker = '__DEV_STARTUP_KILL__';
 
 interface Scenario {
+  sampleMode?: string;
   tty?: boolean;
   failAt?: number;
   errorAt?: number;
@@ -33,6 +34,8 @@ interface SpawnCall {
   cwd: string;
   stdio: string[];
   banner?: string;
+  sampleMode?: string;
+  taskState?: string;
 }
 
 afterEach(async () => {
@@ -65,7 +68,7 @@ globalThis.fetch = async (input) => {
   const url = new URL(input);
   if (url.pathname === '/') return new Response('<html>Haze app</html>', { headers: { 'content-type': 'text/html' } });
   const responses = {
-    '/api/health': { ok: true, mode: 'fixture', watchers: [], hazeops: { scheduler: 'disabled', reason: 'fixture mode' } },
+    '/api/health': { ok: true, mode: scenario.sampleMode ? 'live' : 'fixture', sampleMode: ['true', '1'].includes(scenario.sampleMode), watchers: [], hazeops: { scheduler: 'disabled', reason: 'fixture mode' } },
     '/api/tasks': { tasks: [] },
     '/api/world/records': { counts: { records: 0, relationships: 0, events: 0 } },
     '/api/nightshift/readiness': { routes: [] },
@@ -89,6 +92,8 @@ childProcess.spawn = (command, args, options) => {
   console.log(${JSON.stringify(callMarker)} + JSON.stringify({
     command, args, cwd: options.cwd, stdio: options.stdio,
     banner: options.env?.HAZE_DEV_BANNER,
+    sampleMode: options.env?.SAMPLE_MODE,
+    taskState: options.env?.HAZE_TASK_STATE_DIR,
   }));
   const child = new EventEmitter();
   child.stdout = new EventEmitter();
@@ -120,11 +125,12 @@ childProcess.spawn = (command, args, options) => {
       child.emit('close', -2, null);
       return;
     }
-    if (index === 3 && scenario.failAt !== index && !scenario.noReady) child.emit('message', {
+    const viteIndex = ['true', '1'].includes(scenario.sampleMode) ? 1 : 3;
+    if (index === viteIndex && scenario.failAt !== index && !scenario.noReady) child.emit('message', {
       type: 'haze-dev-ready', local: ['http://localhost:5174/'], network: [],
     });
     if (scenario.afterReady) emitOutput();
-    if (index === 3 && scenario.consoleCommands) {
+    if (index === viteIndex && scenario.consoleCommands) {
       keepAlive = setInterval(() => {}, 1000);
       scenario.consoleCommands.forEach((line, offset) => setTimeout(() => {
         process.stdin.emit('data', Buffer.from(line + '\\n'));
@@ -148,7 +154,13 @@ syncBuiltinESMExports();
     ],
     {
       cwd: root,
-      env: { ...process.env, npm_execpath: join(directory, 'npm-cli.cjs') },
+      env: {
+        ...process.env,
+        SAMPLE_MODE: scenario.sampleMode ?? 'false',
+        // Test the default independently of an operator's root .env override.
+        ...(scenario.sampleMode ? { HAZE_TASK_STATE_DIR: '' } : {}),
+        npm_execpath: join(directory, 'npm-cli.cjs'),
+      },
       encoding: 'utf8',
       timeout: 10_000,
     },
@@ -162,6 +174,24 @@ syncBuiltinESMExports();
 }
 
 describe('root development startup', () => {
+  it('builds and starts the real-model app without Docker in sample mode', async () => {
+    const result = await launch({ sampleMode: 'true' });
+    expect(result.status).toBe(0);
+    expect(result.calls).toHaveLength(2);
+    expect(result.calls.every((call) => call.command !== 'docker')).toBe(true);
+    expect(result.calls[0]?.args.slice(1)).toEqual([
+      '--silent',
+      'run',
+      'build',
+    ]);
+    expect(result.calls[1]).toMatchObject({
+      sampleMode: 'true',
+      taskState: '.state/sample-mode',
+    });
+    expect(result.output).toMatch(/Zetaris platform[^\n]*SKIPPED/);
+    expect(result.output).toContain('sample evidence; configured models');
+    expect(result.output).not.toContain('Sample mode disables model calls');
+  });
   it('owns stdin for an explicit console and exits without stopping Compose', async () => {
     const result = await launch({ consoleCommands: ['help', 'exit'] }, [
       '--console',

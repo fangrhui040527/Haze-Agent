@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { createTaskHandler } from '../dist/tasks/http.js';
+import { sampleStateDirectory } from '../dist/adapters/sample-mode.js';
 
 const flags = process.argv.slice(2);
 if (flags.some((flag) => flag !== '--fixture'))
@@ -9,11 +10,7 @@ if (flags.some((flag) => flag !== '--fixture'))
   );
 const fixture = flags.includes('--fixture');
 const handler = createTaskHandler({
-  stateDirectory: resolve(
-    process.env.HAZE_TASK_STATE_DIR ??
-      process.env.STATE_DIR ??
-      '.state/general-v2',
-  ),
+  stateDirectory: resolve(sampleStateDirectory(process.env)),
   env: process.env,
   mode: fixture ? 'fixture' : 'live',
   acceptancePolicy: process.env.HAZE_WORLD_ACCEPTANCE_POLICY,

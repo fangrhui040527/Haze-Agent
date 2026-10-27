@@ -10,6 +10,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 - [Test the Manager in isolation](testing/manager-testing.md) and [inspect the World Model control plane](testing/world-model-control-plane.md).
 - [View the damage account demo](guides/damage-account-demo.md).
 - [View the damage reduction demo](guides/damage-reduction-demo.md).
+- [Run sample-mode inputs through the configured LLM](guides/sample-mode.md).
 - [Zetaris installation and connection guides](zetaris/README.md).
 
 ## Directory map

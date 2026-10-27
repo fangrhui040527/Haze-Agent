@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import { sampleModeEnabled } from '../adapters/sample-mode.js';
 import {
   loadPinnedQueries,
   type PinnedQuery,
@@ -39,7 +40,7 @@ export function loadDashboardConfig(
   const queryFile = text('HAZEOPS_ZETARIS_QUERIES_FILE');
   return {
     coverage,
-    sampleMode: text('SAMPLE_MODE') === 'true',
+    sampleMode: sampleModeEnabled(env),
     operatorToken: text('HAZE_OPERATOR_TOKEN'),
     schedulerEnabled: text('HAZEOPS_SCHEDULER') !== 'off',
     keys: {

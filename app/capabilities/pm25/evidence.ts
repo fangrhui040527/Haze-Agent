@@ -40,7 +40,7 @@ export interface EvidenceCapture {
   /** Exact HTTP response text; the task artifact pins its immutable hash. */
   raw: string;
   selection: {
-    backend: 'zetaris-rest';
+    backend: 'zetaris-rest' | 'sample-file';
     query: string;
     request_id: string;
     row_limit: number;
@@ -59,6 +59,7 @@ export interface EvidenceCapture {
 
 export interface EvidenceSource {
   readonly id: string;
+  readonly description?: string;
   retrieve(scope: EvidenceScope, signal: AbortSignal): Promise<EvidenceCapture>;
 }
 

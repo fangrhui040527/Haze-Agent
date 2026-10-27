@@ -1,0 +1,8 @@
+{
+  "schema_version": "haze.sample.request.v1",
+  "scenario_id": "damage-account",
+  "request": {
+    "schema_version": "haze.task.request.v3",
+    "objective": "Build a damage account from the exact supplied synthetic quantities and compatible CU unit values using the registered damage-appraisal capability for Sample Coastal District during 2026-10-01 to 2026-10-07. Keep physical outcomes, financial incidence and selected social welfare separate; identify internal transfers and avoid double counting. Report mortality and direct source-fire losses as unestimated. Retain exact calculation components and obtain independent accounting review, keeping synthetic applicability and scientific limits visible."
+  }
+}

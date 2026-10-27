@@ -1,0 +1,15 @@
+{
+  "schema_version": "haze.model-cache.manifest.v1",
+  "routes": [
+    {
+      "provider": "nvidia",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "capability_contract": {
+        "version": 1,
+        "id": "nvidia-chat-v1",
+        "hash": "090c54accaf4151242851852dc36ea5a46a35ccf92cc52a553bdf31296e73df9"
+      }
+    }
+  ]
+}

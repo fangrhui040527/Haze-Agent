@@ -95,6 +95,8 @@ import {
 import { pm25FinalRenderer } from './capabilities/pm25/final-answer.js';
 import { damageAccountFinalRenderer } from './capabilities/damage-appraisal/final-answer.js';
 import { reductionFinalRenderer } from './capabilities/damage-reduction-planning/final-answer.js';
+import { sampleModeEnabled } from './adapters/sample-mode.js';
+import { createSamplePm25Source } from './sample-data/pm25-source.js';
 
 /** Concrete provider routing stays registered at the application boundary. */
 export function createModelRouteRegistry(
@@ -146,6 +148,8 @@ export function createExecutionRegistry(options: {
   mode: ExecutionMode;
   env?: NodeJS.ProcessEnv;
 }): ExecutionRegistry {
+  if (sampleModeEnabled(options.env ?? {}))
+    options = { ...options, env: { ...options.env, SAMPLE_MODE: 'true' } };
   const registry = new ExecutionRegistry();
   registry.registerExtension(createReductionProgrammeExtension);
   registry.registerExtension(
@@ -254,7 +258,13 @@ export function createExecutionRegistry(options: {
       ...(optional.length ? { optional_tools: optional } : {}),
     });
   }
-  for (const tool of createPm25Tools(options)) registry.registerTool(tool);
+  for (const tool of createPm25Tools({
+    ...options,
+    ...(options.mode === 'live' && sampleModeEnabled(options.env ?? {})
+      ? { source: createSamplePm25Source(options.env) }
+      : {}),
+  }))
+    registry.registerTool(tool);
   for (const tool of createEvidenceCollectionTools(options))
     registry.registerTool(tool);
   for (const tool of createWebSearchTools(options)) registry.registerTool(tool);

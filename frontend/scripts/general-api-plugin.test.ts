@@ -136,6 +136,20 @@ afterEach(() => {
 });
 
 describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
+  it('isolates sample evidence state when .env retains the live state default', async () => {
+    vi.stubEnv('SAMPLE_MODE', undefined);
+    vi.stubEnv('HAZE_TASK_STATE_DIR', undefined);
+    vi.stubEnv('STATE_DIR', undefined);
+    vi.stubEnv('HAZE_WORLD_ACCEPTANCE_POLICY', undefined);
+    environmentFiles.set(
+      'haze-root.env',
+      'SAMPLE_MODE=true\nSTATE_DIR=.state/general-v2\n',
+    );
+    await requestTo(mode, '/api/health', true);
+    expect(taskDirectories).toEqual([
+      resolve(import.meta.dirname, '../..', '.state/sample-mode'),
+    ]);
+  });
   it('preserves the actual state owner diagnostic when another runtime holds the lock', async () => {
     const message =
       'This state directory already has a runtime owner (PID 12345): test-state. Set HAZE_TASK_STATE_DIR to a separate directory.';
@@ -231,6 +245,7 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
     expect(taskRequests).toEqual([]);
   });
   it('uses the shared application override without changing a legacy directory setting', async () => {
+    vi.stubEnv('SAMPLE_MODE', 'true');
     vi.stubEnv('STATE_DIR', '.state/legacy-dashboard');
     vi.stubEnv('HAZE_TASK_STATE_DIR', '.state/separate-general-tasks');
     await requestTo(mode, '/api/capabilities');

@@ -120,6 +120,67 @@ Reuse an idempotency key only for identical redelivery. Mutations require a matc
 
 ## 7. Sample mode
 
+`SAMPLE_MODE=true` runs the normal Manager and specialist workflows over raw
+synthetic evidence in `data/sample-scenarios/`. Individual LLM turns first check
+`data/llm-cache/` for genuine recorded model responses matching the complete
+semantic request. Typed normalization rebinds only validated runtime references;
+changed objectives, evidence, scope or constraints require a matching new entry
+or actual model inference. The runtime still executes tools, calculations,
+independent reviews and final synthesis. It never loads a completed answer from
+`output_examples/`.
+
+The default sample cache mode is `read-only`: use matching responses and let
+misses reach the configured LLM. Matching cache hits need no live credentials or
+new inference. An allowlist manifest permits the bundled NVIDIA recordings for
+the automatic local fallback; it does not allow arbitrary provider substitution.
+With no configured provider, a miss uses local Ollama and an installed
+`qwen2.5:7b` model. Install Ollama and run `ollama pull qwen2.5:7b` if you need
+that fallback. The runtime prepares a dedicated 16,384-token alias from cached
+weights without downloading weights or altering the original model. New inputs
+without a matching response still need a working configured or local model.
+No Zetaris or external evidence credentials are needed, and the dev launcher
+skips Docker.
+
+Run the three sample requests and generate their matching outputs:
+
+For the bundled credential-free run, leave `.env` empty. Explicit provider
+settings take precedence and may require fresh inference on a cache miss.
+
+```sh
+npm run samples:run -- --all
+```
+
+Or run one request:
+
+```sh
+npm run samples:run -- input_examples/example_1.json
+```
+
+After building, `SAMPLE_MODE=true npm start -- input_examples/example_1.json`
+also runs the real sample workflow. In PowerShell set
+`$env:SAMPLE_MODE='true'` before `npm start -- input_examples/example_1.json`.
+
+The runner enables sample mode, starts fresh isolated state, imports the raw
+inputs and submits ordinary v3 tasks. It writes newly generated results to
+`output_examples/example_1_output.json`, `example_2_output.json` and
+`example_3_output.json`; it never reads those files to answer a request. See the
+[sample walkthrough](docs/guides/sample-mode.md) for the three scenarios and
+saved execution evidence. The normal sample-mode app defaults to
+`.state/sample-mode`; an explicit `HAZE_TASK_STATE_DIR` overrides that location.
+Set `HAZE_MODEL_CACHE_MODE` to `read-write` to record successful misses,
+`record-only` to refresh every model turn, `off` to always use inference, or
+`cache-only` to fail on a miss without contacting a model. Set
+`HAZE_MODEL_CACHE_DIR` for another server-side cache directory. Custom local
+model settings use `HAZE_SAMPLE_MODEL` and `HAZE_SAMPLE_MODEL_BASE_URL`.
+Cache-hit receipts identify the recorded producer and original receipt; they
+do not claim fresh HTTP responses or token usage. Sample HTTP tasks allow up to
+65,536 input bytes per model turn, subject to explicit host limits.
+
+The [verification record](docs/reports/sample-mode-verification.md) covers all
+three runs from a fresh checkout with an empty `.env`, blocked model/external
+network access, and a changed-input test that changed the calculated result.
+
+Deterministic integration fixtures are separate from sample mode.
 Run deterministic fixture workflows without live model or source credentials:
 
 ```sh
@@ -129,9 +190,12 @@ npm run damage:verify -- --fixture
 
 These build and exercise orchestration, review, persistence and restart/readback with synthetic adapters. Fixture model decisions and evidence are deterministic; they verify integration behavior, not live reasoning or source readiness.
 
-For a fixture API, build first and run `npm run tasks:serve -- --fixture` with `HAZE_TASK_STATE_DIR` set to a separate directory. The frontend's `/demos/damage-account` and `/demos/damage-reduction` pages show bundled synthetic recordings; see the [demo guide](docs/guides/damage-account-demo.md).
+For a fixture API, build first and run `npm run tasks:serve -- --fixture` with `HAZE_TASK_STATE_DIR` set to a separate directory.
 
-`SAMPLE_MODE=true` enforces offline provider behavior; it does **not** select fixture orchestration adapters.
+`--fixture` substitutes deterministic agent decisions for integration testing.
+Sample mode uses raw local evidence and recorded or newly inferred LLM turns
+inside the ordinary runtime; its cache never supplies completed tool results or
+independent-review artifacts.
 
 The smaller offline infrastructure example runs a checkpoint graph and prints metadata, with JSONL traces in `logs/`:
 

@@ -71,6 +71,70 @@ afterEach(() => {
 });
 
 describe('office agent model adapter', () => {
+  it('runs credential-free sample inference locally and retains unaltered response text and receipts', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation((url) =>
+      Promise.resolve(
+        new URL(String(url)).pathname === '/api/show'
+          ? Response.json({ parameters: 'num_ctx 16384' })
+          : Response.json({
+              id: 'local-response',
+              model: 'qwen2.5:7b',
+              usage: { prompt_tokens: 10, completion_tokens: 4 },
+              choices: [
+                {
+                  finish_reason: 'stop',
+                  message: { role: 'assistant', content: '{"type":"finish"}' },
+                },
+              ],
+            }),
+      ),
+    );
+    const result = await resolveAgentModel({ SAMPLE_MODE: 'true' }, fetcher)
+      .completeWithReceipt!(
+      { ...input, max_output_tokens: 191 },
+      new AbortController().signal,
+    );
+    expect(result.text).toBe('{"type":"finish"}');
+    expect(result.receipt).toMatchObject({
+      response_id: 'local-response',
+      response_model: 'qwen2.5:7b',
+      response_status: 'stop',
+      input_tokens: 10,
+      output_tokens: 4,
+    });
+    expect(result.receipt.synthetic).toBeUndefined();
+    expect(fetcher).toHaveBeenCalledWith(
+      new URL('http://127.0.0.1:11434/v1/chat/completions'),
+      expect.objectContaining({
+        headers: { 'Content-Type': 'application/json' },
+        redirect: 'error',
+      }),
+    );
+    const inference = fetcher.mock.calls.find(
+      ([url]) => new URL(String(url)).pathname === '/v1/chat/completions',
+    );
+    expect(JSON.parse(inference?.[1]?.body as string)).toMatchObject({
+      max_tokens: 191,
+    });
+    expect(inference?.[1]?.body).not.toContain('max_completion_tokens');
+  });
+
+  it('requires credentials for a hosted sample model and for non-sample local inference', () => {
+    expect(() =>
+      resolveAgentModel({
+        ...selected,
+        SAMPLE_MODE: 'true',
+        HAZE_PROVIDER_API_KEY: '',
+      }),
+    ).toThrow('API_KEY');
+    expect(() =>
+      resolveAgentModel({
+        ...selected,
+        HAZE_PROVIDER_BASE_URL: 'http://localhost:11434/v1',
+        HAZE_PROVIDER_API_KEY: '',
+      }),
+    ).toThrow('API_KEY');
+  });
   it('distinguishes an interrupted request without a receipt from a known HTTP rejection', async () => {
     const interrupted = vi
       .fn<typeof fetch>()
@@ -351,21 +415,54 @@ describe('office agent model adapter', () => {
   );
 
   it.each(['true', '1', 'yes'])(
-    'enforces SAMPLE_MODE=%s before checking credentials',
-    (sampleMode) => {
-      const fetcher = vi.fn<typeof fetch>();
-      expect(() =>
-        resolveAgentModel(
-          { HAZE_PROVIDER: 'nvidia', SAMPLE_MODE: sampleMode },
-          fetcher,
-        ),
-      ).toThrow('SAMPLE_MODE disables model requests');
-      expect(fetcher).not.toHaveBeenCalled();
+    'retains configured model inference with SAMPLE_MODE=%s',
+    async (sampleMode) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          id: 'configured-response',
+          model: 'selected-model',
+          usage: { prompt_tokens: 11, completion_tokens: 5 },
+          choices: [
+            {
+              finish_reason: 'stop',
+              message: { role: 'assistant', content: '{"type":"finish"}' },
+            },
+          ],
+        }),
+      );
+      const model = resolveAgentModel(
+        { ...selected, SAMPLE_MODE: sampleMode },
+        fetcher,
+      );
+      const result = await model.completeWithReceipt!(
+        input,
+        new AbortController().signal,
+      );
+      expect(result.text).toBe('{"type":"finish"}');
+      expect(result.receipt).toMatchObject({
+        response_model: 'selected-model',
+        response_id: 'configured-response',
+        input_tokens: 11,
+        output_tokens: 5,
+        http_status: 200,
+      });
+      expect(result.receipt.synthetic).toBeUndefined();
+      expect(fetcher).toHaveBeenCalledExactlyOnceWith(
+        new URL('https://example.com/v1/chat/completions'),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-server-secret',
+          },
+          redirect: 'error',
+        }),
+      );
     },
   );
 
   it.each([
     { HAZE_PROVIDER: 'nvidia' },
+    { HAZE_PROVIDER: 'nvidia', SAMPLE_MODE: 'true' },
     { ...selected, HAZE_PROVIDER_API_KEY: '' },
   ])('rejects a missing key before network access for %j', (env) => {
     const fetcher = vi.fn<typeof fetch>();

@@ -1,0 +1,44 @@
+{
+  "id": "sample-alert-schedule-service",
+  "version": "1",
+  "name": "Proposed exposure-alert and work-schedule service",
+  "kind": "exposure_alert",
+  "description": "A proposed synthetic service that would notify supervisors of exposure alerts and support work-schedule decisions. No service has been delivered.",
+  "rule_owner": null,
+  "trigger_rule": null,
+  "action_rule": null,
+  "approval": {
+    "status": "proposed",
+    "approver": null,
+    "approved_at": null,
+    "evidence": []
+  },
+  "constraints": [
+    {
+      "id": "worker-income-protection",
+      "description": "Changing schedules must not reduce worker income; contractual protection has not been demonstrated.",
+      "hard": true,
+      "status": "unknown",
+      "evidence": []
+    }
+  ],
+  "costs": [
+    {
+      "id": "deployment-and-operations",
+      "description": "Deployment, messaging and staffing cost",
+      "amount": null,
+      "unit": "CU at 2026 prices; unpriced",
+      "evidence": [],
+      "prerequisite": "Obtain a scoped cost estimate and budget decision before delivery."
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "authorized-alert-delivery",
+      "description": "Authorized source triggers, supervisors and delivery capacity",
+      "status": "unknown",
+      "evidence": []
+    }
+  ],
+  "claims": []
+}

@@ -47,6 +47,10 @@ const interactive =
       process.env.TERM !== 'dumb',
     ));
 const config = createDevConfig({ root });
+const launchEnvironment = config.launchEnvironment();
+const sampleMode = !['', '0', 'false'].includes(
+  launchEnvironment.SAMPLE_MODE?.trim().toLowerCase() ?? '',
+);
 const api = createDevApi({ getUrl: () => appUrl });
 const display = createStartupDisplay({ commands: interactive });
 const log = (text) => {
@@ -225,43 +229,50 @@ async function main() {
   process.once('SIGTERM', onTerminate);
   try {
     starting(0);
-    // Capture Compose progress so the panel is the only terminal renderer.
-    // Whole-project --wait does not handle the standalone bootstrap job.
-    const docker = await runCommand('docker', [
-      'compose',
-      '--progress',
-      'plain',
-      'up',
-      '--detach',
-    ]);
-    if (stopping) return;
-    const status = await runCommand('docker', [
-      'compose',
-      'ps',
-      '--all',
-      '--format',
-      'json',
-    ]);
-    if (stopping) return;
-    const text = status.stdout.trim();
-    const containers = !text
-      ? []
-      : text.startsWith('[')
-        ? JSON.parse(text)
-        : text.split(/\r?\n/).map((line) => JSON.parse(line));
-    const counts = new Map();
-    for (const container of containers) {
-      const state = container.Health || composeServiceState(container);
-      if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+    if (sampleMode) {
+      finished(
+        'SKIPPED',
+        'Sample evidence from data/; Docker and Zetaris are not required',
+      );
+    } else {
+      // Capture Compose progress so the panel is the only terminal renderer.
+      // Whole-project --wait does not handle the standalone bootstrap job.
+      const docker = await runCommand('docker', [
+        'compose',
+        '--progress',
+        'plain',
+        'up',
+        '--detach',
+      ]);
+      if (stopping) return;
+      const status = await runCommand('docker', [
+        'compose',
+        'ps',
+        '--all',
+        '--format',
+        'json',
+      ]);
+      if (stopping) return;
+      const text = status.stdout.trim();
+      const containers = !text
+        ? []
+        : text.startsWith('[')
+          ? JSON.parse(text)
+          : text.split(/\r?\n/).map((line) => JSON.parse(line));
+      const counts = new Map();
+      for (const container of containers) {
+        const state = container.Health || composeServiceState(container);
+        if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+      }
+      finished(
+        'STARTED',
+        [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
+      );
+      const warnings = docker.stderr
+        .split(/\r?\n/)
+        .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
+      if (warnings.length) log(warnings.join('\n'));
     }
-    finished(
-      'STARTED',
-      [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
-    );
-    const warnings = docker.stderr
-      .split(/\r?\n/)
-      .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
-    if (warnings.length) log(warnings.join('\n'));
 
     starting(1);
     const build = await runCommand(process.execPath, [
@@ -394,7 +405,7 @@ async function main() {
           frontendOutput = (frontendOutput + text).slice(-10 * 1024 * 1024);
       },
       env: {
-        ...process.env,
+        ...launchEnvironment,
         HAZE_DEV_BANNER: 'true',
         HAZE_DEV_STARTED_AT: String(startedAt),
       },
@@ -419,7 +430,7 @@ async function main() {
     probeController.abort();
     consoleSession?.close();
     clearTimeout(stopTimer);
-    if (stopContainers) {
+    if (stopContainers && !sampleMode) {
       log("Stopping this project's Zetaris containers…");
       try {
         log(

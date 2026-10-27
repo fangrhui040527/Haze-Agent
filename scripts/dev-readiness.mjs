@@ -19,6 +19,12 @@ const text = (value) =>
 const row = (id, status, detail) => ({ id, status, detail: text(detail) });
 
 export function collectorsReadiness(health) {
+  if (health.sampleMode === true)
+    return row(
+      'hazeops',
+      'DISABLED',
+      'Sample evidence from data/; live data collectors are disabled',
+    );
   const watchers = health.watchers ?? [];
   const enabled = watchers.filter((watcher) => watcher.enabled === true);
   const failed = enabled.filter((watcher) => watcher.lastOutcome === 'failed');
@@ -123,7 +129,12 @@ export async function checkStartupComponents({
       throw new Error('Haze health check did not report ready.');
     return [];
   });
-  const mode = health?.mode === 'fixture' ? ' (fixture)' : '';
+  const mode =
+    health?.mode === 'fixture'
+      ? ' (fixture)'
+      : health?.sampleMode === true
+        ? ' (sample evidence; configured models)'
+        : '';
   await Promise.all([
     check(['web'], async () => {
       await probeWeb(signal);
@@ -169,21 +180,6 @@ export async function checkStartupComponents({
       const nightshiftRoutes = value.routes.filter(
         (route) => route.provider === 'nightshift',
       );
-      if (health?.sampleMode === true)
-        return [
-          row(
-            'agents',
-            'DISABLED',
-            'Sample mode disables model calls and network inspection',
-          ),
-          nightshiftRoutes.length
-            ? row(
-                'nightshift-inference',
-                'DISABLED',
-                'Sample mode disables Nightshift inference',
-              )
-            : modelReadiness('nightshift-inference', nightshiftRoutes),
-        ];
       return [
         modelReadiness('agents', value.routes),
         modelReadiness('nightshift-inference', nightshiftRoutes),
@@ -196,19 +192,6 @@ export async function checkStartupComponents({
         typeof value.ready !== 'boolean'
       )
         throw new Error('Invalid Nightshift jobs readiness response.');
-      if (health?.sampleMode === true)
-        return [
-          row(
-            'nightshift-runtime',
-            'DISABLED',
-            'Sample mode disables Nightshift network inspection',
-          ),
-          row(
-            'nightshift-jobs',
-            'DISABLED',
-            'Sample mode disables Nightshift requests',
-          ),
-        ];
       const ready =
         value.ready === true &&
         value.runtime_reachable === true &&

@@ -10,7 +10,7 @@
   },
   "packageManager": "npm@11.8.0",
   "scripts": {
-    "start": "node scripts/run-example.mjs",
+    "start": "node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/start.mjs",
     "dev": "node scripts/dev.mjs",
     "tasks:serve": "node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/serve-tasks.mjs",
     "tasks:verify": "npm run build && node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/verify-general.mjs",
@@ -44,6 +44,7 @@
     "planning:verify": "npm run build && node --env-file-if-exists=.env scripts/verify-damage-planning.mjs",
     "damage:demo": "npm run build && node scripts/demo-damage-account.mjs",
     "reduction:demo": "npm run build && node scripts/demo-damage-reduction.mjs",
+    "samples:run": "npm run build && node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/run-samples.mjs",
     "reduction:verify": "npm run build && node scripts/verify-damage-reduction.mjs --fixture",
     "reduction:capacity:verify": "npm run build && node scripts/verify-damage-reduction.mjs --fixture --capacity",
     "reduction:sensitivity": "npm run build && node scripts/analyze-reduction-sensitivity.mjs",
