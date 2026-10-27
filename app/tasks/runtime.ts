@@ -4,6 +4,7 @@ import type {
   ManagerConversationService,
   ManagerConversationResolution,
 } from '../orchestration/conversation.js';
+import { readManagerConversationLimits } from '../orchestration/conversation-limits.js';
 import {
   managerChatRequestSchema,
   managerChatResponseSchema,
@@ -222,6 +223,7 @@ export class TaskRuntime {
   private readonly modelRouteRegistry: ModelRouteService;
   private closed = false;
   private conversation: ManagerConversationService | undefined;
+  private readonly conversationTimeoutMs: number;
   private conversationTurns: ConversationTurnStore | undefined;
   private readonly conversationAbort = new AbortController();
   private readonly conversationPending = new Map<
@@ -235,6 +237,9 @@ export class TaskRuntime {
     (taskId: string, identity: TaskIdentity) => unknown
   >();
   constructor(private readonly options: TaskRuntimeOptions) {
+    this.conversationTimeoutMs = readManagerConversationLimits(
+      options.env ?? process.env,
+    ).timeoutMs;
     validateNightshiftConfiguration(
       options.env ?? process.env,
       options.nightshiftPollIntervalMs,
@@ -653,7 +658,7 @@ export class TaskRuntime {
               identity,
               AbortSignal.any([
                 this.conversationAbort.signal,
-                AbortSignal.timeout(120_000),
+                AbortSignal.timeout(this.conversationTimeoutMs),
               ]),
             );
       if (this.closed)

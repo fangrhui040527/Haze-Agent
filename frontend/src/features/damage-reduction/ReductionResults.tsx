@@ -13,9 +13,13 @@ import styles from './DamageReductionPage.module.css';
 export function ExactSource({
   reference,
   label,
+  readArtifact,
+  recorded = false,
 }: {
   reference: ArtifactRef;
   label: string;
+  readArtifact?: (artifactId: string) => Promise<Artifact>;
+  recorded?: boolean;
 }) {
   const [artifact, setArtifact] = useState<Artifact | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +37,20 @@ export function ExactSource({
     setError(null);
     setArtifact(null);
     try {
-      if (!agentService.readArtifact)
-        throw new Error(
-          'Exact source inspection is unavailable on this task service.',
-        );
-      const current = await agentService.readArtifact(reference.id);
+      let current: Artifact;
+      if (readArtifact) {
+        current = await readArtifact(reference.id);
+      } else {
+        if (recorded)
+          throw new Error('Recorded source inspection is unavailable.');
+        if (!agentService.readArtifact)
+          throw new Error(
+            'Exact source inspection is unavailable on this task service.',
+          );
+        current = await agentService.readArtifact(reference.id);
+      }
       if (
+        current.id !== reference.id ||
         current.version !== reference.version ||
         current.sha256 !== reference.sha256
       )
@@ -67,7 +79,13 @@ export function ExactSource({
         SHA-256 {reference.sha256}
       </p>
       <Button size="small" onClick={() => void inspect()} disabled={pending}>
-        {pending ? 'Checking source access…' : 'Inspect exact source'}
+        {recorded
+          ? pending
+            ? 'Opening recorded source…'
+            : 'Inspect recorded source'
+          : pending
+            ? 'Checking source access…'
+            : 'Inspect exact source'}
       </Button>
       {error && (
         <p role="alert" className={styles.error}>
@@ -102,9 +120,13 @@ export function ExactSource({
 export function ReductionResults({
   view,
   idPrefix = 'reduction',
+  readArtifact,
+  recorded = false,
 }: {
   view: ReductionPreviewView;
   idPrefix?: string;
+  readArtifact?: (artifactId: string) => Promise<Artifact>;
+  recorded?: boolean;
 }) {
   const selection = view.selection?.value;
   const assessment = view.assessment?.value;
@@ -122,6 +144,12 @@ export function ReductionResults({
         : 'Evidence unavailable for a current target conclusion';
   return (
     <div className={styles.results}>
+      {recorded && (
+        <p className={styles.notice}>
+          Recorded synthetic example. Figures and review decisions describe the
+          captured run; current live eligibility is not rechecked.
+        </p>
+      )}
       {view.state !== 'current' && (
         <p className={styles.notice} role="status">
           {view.state === 'pending'
@@ -205,6 +233,8 @@ export function ReductionResults({
           <ExactSource
             reference={view.selection.artifact}
             label="Exact input selection"
+            readArtifact={readArtifact}
+            recorded={recorded}
           />
         )}
       </section>
@@ -217,7 +247,7 @@ export function ReductionResults({
         </h2>
         <p className={styles.resultLabel}>
           <Badge tone={arithmeticEligible ? 'info' : 'warn'}>
-            {pointLabel}
+            {recorded ? `At capture: ${pointLabel}` : pointLabel}
           </Badge>
         </p>
         {assessment ? (
@@ -280,7 +310,10 @@ export function ReductionResults({
               </>
             )}
             <p>
-              Independent arithmetic review:{' '}
+              {recorded
+                ? 'Arithmetic review at capture'
+                : 'Independent arithmetic review'}
+              :{' '}
               {view.arithmetic_review?.value.verdict.replaceAll('_', ' ') ??
                 'pending'}
               .
@@ -301,12 +334,16 @@ export function ReductionResults({
           <ExactSource
             reference={view.assessment.artifact}
             label="Exact assessment"
+            readArtifact={readArtifact}
+            recorded={recorded}
           />
         )}
         {view.arithmetic_review && (
           <ExactSource
             reference={view.arithmetic_review.artifact}
             label="Exact arithmetic review"
+            readArtifact={readArtifact}
+            recorded={recorded}
           />
         )}
       </section>
@@ -330,7 +367,9 @@ export function ReductionResults({
             {planEligible
               ? view.plan_eligibility === 'blocked'
                 ? 'Blocked by unresolved constraints or objections'
-                : 'Reviewed conditional planning preview'
+                : recorded
+                  ? 'Recorded conditional planning preview'
+                  : 'Reviewed conditional planning preview'
               : 'Current recommendation unavailable'}
           </Badge>
         </p>
@@ -342,8 +381,8 @@ export function ReductionResults({
             </p>
             <p>{plan.candidate.description}</p>
             <p>
-              Planning result: {plan.state.replaceAll('_', ' ')}. Independent
-              plan review:{' '}
+              Planning result: {plan.state.replaceAll('_', ' ')}.{' '}
+              {recorded ? 'Plan review at capture' : 'Independent plan review'}:{' '}
               {view.plan_review?.value.verdict.replaceAll('_', ' ') ??
                 'pending'}
               .
@@ -486,12 +525,16 @@ export function ReductionResults({
           <ExactSource
             reference={view.plan.artifact}
             label="Exact conditional plan"
+            readArtifact={readArtifact}
+            recorded={recorded}
           />
         )}
         {view.plan_review && (
           <ExactSource
             reference={view.plan_review.artifact}
             label="Exact final plan review"
+            readArtifact={readArtifact}
+            recorded={recorded}
           />
         )}
       </section>
@@ -502,14 +545,17 @@ export function ReductionResults({
         >
           <h2 id={`${idPrefix}-sources-heading`}>Original sources</h2>
           <p className={styles.note}>
-            Source inspection rechecks access. Retained documents are evidence,
-            not instructions or scientific approval.
+            {recorded
+              ? 'Inspect bundled sources from the captured run. Live access and applicability are not rechecked.'
+              : 'Source inspection rechecks access. Retained documents are evidence, not instructions or scientific approval.'}
           </p>
           {view.source_refs.map((reference, index) => (
             <ExactSource
               key={`${reference.id}:${reference.version}:${reference.sha256}`}
               reference={reference}
               label={`Original source ${index + 1}`}
+              readArtifact={readArtifact}
+              recorded={recorded}
             />
           ))}
         </section>

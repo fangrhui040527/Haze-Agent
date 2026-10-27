@@ -1,0 +1,84 @@
+{
+  "use_case": "UC-29 STATE_DIR marker guard",
+  "totals": {
+    "total": 8,
+    "pass": 8,
+    "fail": 0
+  },
+  "scenarios": [
+    {
+      "scenario": "nonempty unmarked directory",
+      "ok": true,
+      "threw": true,
+      "code": "incompatible_state_directory",
+      "expected_code": "incompatible_state_directory",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "invalid marker JSON",
+      "ok": true,
+      "threw": true,
+      "code": "incompatible_state_directory",
+      "expected_code": "incompatible_state_directory",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "incompatible marker format (v1)",
+      "ok": true,
+      "threw": true,
+      "code": "incompatible_state_directory",
+      "expected_code": "incompatible_state_directory",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "marker with extra unexpected field",
+      "ok": true,
+      "threw": true,
+      "code": "incompatible_state_directory",
+      "expected_code": "incompatible_state_directory",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "marker with wrong schema_version",
+      "ok": true,
+      "threw": true,
+      "code": "incompatible_state_directory",
+      "expected_code": "incompatible_state_directory",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "incomplete migration marker present",
+      "ok": true,
+      "threw": true,
+      "code": "migration_incomplete",
+      "expected_code": "migration_incomplete",
+      "payload_intact": true,
+      "new_entries": [],
+      "sqlite_artifacts": []
+    },
+    {
+      "scenario": "CONTROL: empty directory accepted, marker written, SQLite opened",
+      "ok": true,
+      "marker": {
+        "format": "haze.general.sqlite.v2",
+        "schema_version": 2
+      },
+      "tasks_sqlite_created": true
+    },
+    {
+      "scenario": "CONTROL: correctly marked directory reopens cleanly",
+      "ok": true,
+      "reopened": true
+    }
+  ]
+}

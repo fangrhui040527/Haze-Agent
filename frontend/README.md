@@ -83,13 +83,19 @@ archived history; new questions always use the evidence task API.
 
 ## 2. What's on screen
 
-| Page             | URL           | Purpose                                                                                                    |
-| ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
-| Dashboard        | `/`           | Live table (top), chat (bottom left), agent office (bottom right)                                          |
-| Detail           | `/item/:id`   | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline |
-| Task report      | `/task/:id`   | Saved general task, live receipts, clarification, controls and results                                     |
-| Dashboard report | `/report/:id` | Archived report link with guidance to the durable general task workflow                                    |
-| Demo Data        | `/demo-data`  | Developer tool: view, regenerate, import/export data and simulate dashboard updates                        |
+| Page             | URL           | Purpose                                                                                                       |
+| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| Dashboard        | `/`           | Live table (top), chat (bottom left), agent office (bottom right)                                             |
+| Detail           | `/item/:id`   | Everything about one item: summary, numbers, why ranked, sources, evidence checks, agent results, timeline    |
+| Task report      | `/task/:id`   | Saved general task, live receipts, clarification, controls and results                                        |
+| Dashboard report | `/report/:id` | Archived report link with guidance to the durable general task workflow                                       |
+| Demo Data        | `/demo-data`  | Developer tool: view, regenerate, import/export data and simulate dashboard updates                           |
+| Demos            | `/demos`      | Completed synthetic damage account and reduction examples with recorded exact sources and independent reviews |
+
+Choose **Demos** in the main navigation or on the landing page. The account
+example is at `/demos/damage-account`; the reduction preview is at
+`/demos/damage-reduction`. These read-only recordings are included in the static
+frontend build and need no separate demo commands or model provider.
 
 Things worth trying on the Demo Data page:
 

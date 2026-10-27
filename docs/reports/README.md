@@ -10,6 +10,7 @@ These reports retain executed checks, evidence limits and follow-up findings. En
 - [General engine evidence (JSON)](orchestration/general-engine-evidence.json).
 - [LangGraph implementation and verification](orchestration/langgraph-implementation-report.md).
 - [Manager implementation and verification](orchestration/manager-completion-report.md).
+- [Manager conversational routing implementation and verification](orchestration/manager-conversation-routing-report.md).
 - [DamageAccountant implementation](orchestration/damage-accountant-implementation-report.md).
 - [World Model damage input adapter](orchestration/world-model-damage-input-adapter-report.md).
 

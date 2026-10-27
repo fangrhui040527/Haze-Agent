@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -19,6 +20,7 @@ interface FirmsModule {
     env: NodeJS.ProcessEnv,
   ): { locationIds: string[]; dayRange: number; container: string };
   parseCsv(text: string): unknown[];
+  getCsvFiles(dir: string): Promise<string[]>;
   fetchFirmsData(
     directory: string,
     locations: {
@@ -169,6 +171,36 @@ describe('canonical Zetaris FIRMS ingestion', () => {
     );
     expect(firms.REGISTER_SQL).toContain(
       'PATH "/home/zetaris/customer-data/shared/firms_flat"',
+    );
+  });
+
+  it('reports a missing cache directory as empty instead of throwing ENOENT', async () => {
+    // --skip-api guards on `getCsvFiles(CSV_DIR).length === 0` so it can raise
+    // the actionable "No cached FIRMS CSV snapshot exists" message. When the
+    // directory has never been created, a readdir that throws ENOENT defeats
+    // that guard and surfaces a raw filesystem error instead.
+    const missing = join(temporaryDirectory(), 'never-created');
+    await expect(firms.getCsvFiles(missing)).resolves.toEqual([]);
+  });
+
+  it('still enumerates cached CSVs recursively when the directory exists', async () => {
+    const root = temporaryDirectory();
+    const nested = join(root, 'region');
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(
+      join(root, 'top.csv'),
+      `${header}
+`,
+    );
+    writeFileSync(
+      join(nested, 'inner.csv'),
+      `${header}
+`,
+    );
+    writeFileSync(join(root, 'notes.txt'), 'ignored');
+    const found = await firms.getCsvFiles(root);
+    expect(found.sort()).toEqual(
+      [join(nested, 'inner.csv'), join(root, 'top.csv')].sort(),
     );
   });
 });

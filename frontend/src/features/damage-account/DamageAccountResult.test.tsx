@@ -154,6 +154,28 @@ describe('schema-validated damage account rendering', () => {
     expect(markup).toContain('No ecosystem quantities supplied.');
     expect(markup).not.toContain('current supported subtotal');
   });
+  it('links recorded components and sources to the bundled snapshot while retaining exact review gates', () => {
+    const account = accountFixture();
+    const options = {
+      recorded: true,
+      artifactHref: (reference: { id: string }) =>
+        `/demos/damage-account/artifacts/${reference.id}`,
+    };
+    const markup = renderAccount(account, options);
+    expect(markup).toContain('Recorded component.');
+    expect(markup).toContain('Review at capture');
+    expect(markup).not.toContain('Current component.');
+    expect(markup).not.toContain('/api/artifacts/');
+    for (const reference of [
+      artifactRef,
+      ...account.component_refs.map((component) => component.artifact),
+    ])
+      expect(markup).toContain(options.artifactHref(reference));
+    expect(markup).toContain('21530000');
+    const unreviewed = renderAccount(account, { ...options, checks: [] });
+    expect(unreviewed).toContain('Account totals withheld');
+    expect(unreviewed).not.toContain('21530000');
+  });
   it('withholds numerical totals for rejected, unreviewed or wrongly pinned component dependencies', () => {
     const account = accountFixture();
     const checks = checksFor(account);

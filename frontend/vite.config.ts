@@ -19,6 +19,8 @@ export default defineConfig({
   plugins: [react(), generalApiPlugin(), devDisplayPlugin()],
   server: {
     open: false,
+    // A fallback port would start a second runtime against the same state.
+    strictPort: true,
     proxy: firmsProxy,
   },
   preview: {

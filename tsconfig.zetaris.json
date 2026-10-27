@@ -22,6 +22,8 @@
     "app/adapters/zetaris/sources/air_quality/**/*.ts",
     "app/adapters/zetaris/sources/wind/**/*.ts",
     "app/adapters/zetaris/sources/nasa_firms/**/*.ts",
+    "app/adapters/zetaris/usl/bootstrap_usl.ts",
+    "app/adapters/zetaris/usl/bootstrap_usl_and_verify.ts",
     "app/adapters/zetaris/usl/bootstrap_sources.ts"
   ]
 }

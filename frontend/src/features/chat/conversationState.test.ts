@@ -35,6 +35,44 @@ function waitingTask() {
 }
 
 describe('Manager transcript reconciliation', () => {
+  it('keeps Clear chat empty after a detached restored task delivers again, including reload', () => {
+    const oldTask = fixtureTask();
+    const oldTranscript = reconcileTaskMessages([], oldTask);
+    expect(oldTranscript.some((message) => message.taskCard)).toBe(true);
+    const cleared: ChatMessage[] = [];
+    // Clear persists detached-restore permission as false before clearing text.
+    const allowDetachedRestore = JSON.parse(JSON.stringify(false)) as boolean;
+    expect(
+      reconcileTaskMessages(cleared, oldTask, new Set(), allowDetachedRestore),
+    ).toBe(cleared);
+    const reloaded = JSON.parse(JSON.stringify(cleared)) as ChatMessage[];
+    expect(
+      reconcileTaskMessages(reloaded, oldTask, new Set(), allowDetachedRestore),
+    ).toBe(reloaded);
+    const pending: ChatMessage = {
+      id: 'next-turn',
+      role: 'agents',
+      state: 'pending',
+      at,
+    };
+    const admitted = applyTurnResponse([pending], 'next-turn', {
+      schema_version: 'haze.manager.chat.response.v1',
+      kind: 'task_admitted',
+      paragraphs: ['New task started.'],
+      citations: [],
+      task: {
+        task_id: oldTask.id,
+        title: 'Explicitly selected task',
+        summary: 'Queued.',
+        status_url: `/api/tasks/${oldTask.id}`,
+      },
+    });
+    expect(
+      reconcileTaskMessages(admitted, oldTask, new Set(), false).some(
+        (message) => message.workspaceTaskId === oldTask.id,
+      ),
+    ).toBe(true);
+  });
   it('retains compact task access and never republishes evicted questions or results after reload', () => {
     const task = waitingTask();
     const initial = reconcileTaskMessages([], task);

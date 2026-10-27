@@ -141,7 +141,15 @@ export function reconcileTaskMessages(
   messages: ChatMessage[],
   record: TaskRecord,
   seenEventKeys: ReadonlySet<string> = new Set(),
+  allowDetachedRestore = true,
 ): ChatMessage[] {
+  // Clearing a conversation revokes its import of a detached dashboard task.
+  // Late readbacks may update only tasks admitted into the new transcript.
+  if (
+    !allowDetachedRestore &&
+    !messages.some((message) => message.taskCard?.task_id === record.id)
+  )
+    return messages;
   const taskUrl = `/api/tasks/${record.id}`;
   let next = messages.map((message) => {
     if (message.taskCard?.task_id === record.id)

@@ -29,6 +29,13 @@ bootstrapped with its source feeds registered:
 npm run zetaris:bootstrap:smokeledger
 ```
 
+The standard bootstrap skips post-bootstrap entity verification queries. To
+run the same SmokeLedger bootstrap and then verify the entities explicitly:
+
+```powershell
+node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl_and_verify.ts --smokeledger-only
+```
+
 Use `--dry-run` to preview the SQL without connecting to Zetaris.
 
 The bootstrap is intended for first-time setup. If an earlier four-entity

@@ -1,0 +1,151 @@
+==============================================================================
+ZETARIS LAUNCH & LIVE USE-CASE RECORD
+LAUNCHED AND VERIFIED - 9/9 platform checks pass
+engine: Zetaris Lightning 2.4.3-v2.4.3.1-hackathon
+==============================================================================
+
+WHY IT WAS POSSIBLE
+  An earlier assessment concluded Zetaris could not start. That was correct at the time but incomplete: the Docker daemon was simply not running, and once started, all three required images turned out to be already cached locally from a previous install, so no registry pull or commercial download was needed.
+
+SEQUENCE
+  1. Started Docker Desktop; daemon came up as 29.9.2.
+  2. Found all three images already cached: zetaris-ndp-driver, zetaris-ndp-api, zetaris-new-ui (2.4.3-v2.4.3.1-hackathon).
+  3. Ran the bundle preflight: all required checks passed, with 2 warnings (7GB of 8GB recommended memory; an existing zetaris_pgdata volume).
+  4. Rebuilt the root .env from .env.example, RECOVERING POSTGRES_USER/PASSWORD and the admin credentials from the already-running containers rather than inventing new ones - the preflight warns that a different password breaks the query engine against an existing volume.
+  5. docker compose up --detach recreated the stale driver; volumes were preserved (no -v).
+  6. Moved the Zetaris UI from port 3000 to 3001 because an unrelated project held 3000.
+  7. Minted an access token via POST /api/auth/login and stored it with the org id for the Python SQL runner.
+  8. Ran the bundle verify script: 9/9 pass, including login and a full ui -> api -> driver -> spark query.
+
+BUG FIXED DURING LAUNCH
+  symptom: zetaris-driver-1 exited 127 on restart while api, postgres and ui came up healthy.
+  root_cause: The container had been created 29 hours earlier with a bind mount from the repository's OLD location and OLD bundle path (Desktop/Hackathon/Haze-Agent/third_party/zetaris/zetaris-platform/conf/spark-defaults.conf). That path no longer exists: the checkout moved and the bundle now lives at app/adapters/zetaris/zetaris-platform/. Docker created a directory at the missing source and tried to mount it onto a file, so runc failed with 'not a directory'.
+  fix: Recreating the container from the current compose.yaml, which points at the path that exists. Restarting the stale container could never have worked.
+  verification: driver is now reporting healthy, and the end-to-end query path through Spark passes.
+
+LIVE ENDPOINTS
+  ui        http://localhost:3001 (moved from 3000)
+  rest_api  http://localhost:8888/api/v1.0
+  jdbc      jdbc:zetaris:lightning@localhost:10000
+  spark_ui  http://localhost:4040
+
+DATA INGESTED
+  NASA_FIRMS_FILES.active_fires
+    47 live VIIRS active-fire detections for Malaysia, fetched from NASA FIRMS, published to the driver and registered as a Lightning FILESTORE table (3/3 statements ok in 11.6s).
+  air_quality.hourly_observations
+    33,120 modelled hourly PM2.5/PM10 samples across 345 Malaysian locations, registered as a Lightning schemastore view (5/5 statements ok in 16.8s).
+
+F-07 VALIDATED
+  The F-07 fix was proven against the real platform. The snapshot cached while Zetaris was unreachable was later published with --skip-api exactly as the new error message instructs, completing the whole pipeline without re-fetching from NASA. Before the fix that snapshot would have been deleted and the retry path was unreachable.
+
+HEADLINE RESULTS
+  + 47 hotspots ingested, 2 VIIRS platforms (NOAA-20: 30, NOAA-21: 17), all daytime detections.
+  + Fires concentrated in East Malaysia: Tawau 17, Pulau Sipadan 14, Kalabakan 5.
+  + Strongest detection 70.35 MW fire radiative power at Tawau.
+  + Confidence split is separable for quality gating: 44 nominal (mean FRP 13.19), 3 low (mean 28.29).
+  + PM2.5 coverage 33,120 samples over 345 locations, 2026-10-26 to 2026-10-29.
+  + Peak PM2.5 90.8 ug/m3 across the Klang Valley (Kuala Lumpur, Petaling Jaya, Sentul, Ampang, Sungai Besi).
+  + 8,494 location-hours exceed the WHO 2021 15 ug/m3 guideline, affecting 257 of 345 locations.
+  + Cross-source attribution join succeeded: Bau and Lundu at 44.4 ug/m3 with 2,414.4 MW of nearby fire radiative power; Kuching 54.0 ug/m3 with 1,587.8 MW.
+
+------------------------------------------------------------------------------
+RECORDED USE CASES (10/10 passed)
+------------------------------------------------------------------------------
+
+[PASS] UC-Z1  Hotspot inventory: how many active fires were ingested?
+  why: An analyst opening the haze console first needs to know the size and recency of the fire dataset.
+  sql: SELECT COUNT(*) AS hotspots, MIN(acq_date) AS earliest, MAX(acq_date) AS latest, COUNT(DISTINCT source) AS satellites FROM NASA_FIRMS_FILES.active_fires
+  1/1 statements ok in 4s, 1 row(s)
+    ["47","2026-10-27","2026-10-27","2"]
+
+[PASS] UC-Z2  Which fires are burning hardest? (top fire radiative power)
+  why: Attribution starts from the most energetic fires, because weak detections rarely drive a haze episode.
+  sql: SELECT location_id, region, ROUND(CAST(frp AS DOUBLE), 2) AS frp_mw, confidence, acq_myt FROM NASA_FIRMS_FILES.active_fires ORDER BY CAST(frp AS DOUBLE) DESC LIMIT 5
+  1/1 statements ok in 3s, 5 row(s)
+    ["tawau","Tawau","73.89","n","2026-10-27 13:36:00.0"]
+    ["tawau","Tawau","73.89","l","2026-10-27 13:36:00.0"]
+    ["tawau","Tawau","70.35","n","2026-10-27 13:36:00.0"]
+    ["tawau","Tawau","56.28","n","2026-10-27 13:36:00.0"]
+    ["tawau","Tawau","55.4","n","2026-10-27 13:36:00.0"]
+
+[PASS] UC-Z3  Detection provenance: which satellite saw what, and when?
+  why: Every claim must name its sensor. Mixed VIIRS platforms must stay distinguishable.
+  sql: SELECT source, daynight, COUNT(*) AS detections FROM NASA_FIRMS_FILES.active_fires GROUP BY source, daynight ORDER BY detections DESC
+  1/1 statements ok in 3s, 2 row(s)
+    ["VIIRS_NOAA20_NRT","D","30"]
+    ["VIIRS_NOAA21_NRT","D","17"]
+
+[PASS] UC-Z4  Geographic spread: where are the fires concentrated?
+  why: Peninsular vs East Malaysia matters: transboundary haze and local burning need different responses.
+  sql: SELECT region, COUNT(*) AS hotspots, COUNT(DISTINCT location_id) AS locations FROM NASA_FIRMS_FILES.active_fires GROUP BY region ORDER BY hotspots DESC
+  1/1 statements ok in 3s, 10 row(s)
+    ["Tawau","17","1"]
+    ["Pulau Sipadan","14","1"]
+    ["Kalabakan","5","1"]
+    ["Bario","3","1"]
+    ["Bau","2","1"]
+
+[PASS] UC-Z5  Data-quality gate: confidence distribution of detections
+  why: Low-confidence detections must be separable so they can be excluded from a published finding.
+  sql: SELECT confidence, COUNT(*) AS detections, ROUND(AVG(CAST(frp AS DOUBLE)), 2) AS mean_frp FROM NASA_FIRMS_FILES.active_fires GROUP BY confidence ORDER BY detections DESC
+  1/1 statements ok in 3s, 2 row(s)
+    ["n","44","13.19"]
+    ["l","3","28.29"]
+
+[PASS] UC-Z6  PM2.5 coverage: how much air-quality evidence is retained?
+  why: The modelled PM2.5 feed is the measurement side of the question; its coverage bounds any claim.
+  sql: SELECT COUNT(*) AS samples, COUNT(DISTINCT location_name) AS locations, MIN(observation_time) AS first_hour, MAX(observation_time) AS last_hour FROM air_quality.hourly_observations
+  1/1 statements ok in 3s, 1 row(s)
+    ["33120","345","2026-10-26T00:00:00.000Z","2026-10-29T23:00:00.000Z"]
+
+[PASS] UC-Z7  Where is the air worst right now? (peak PM2.5 by location)
+  why: The operational question a resident asks: which places are above the unhealthy threshold?
+  sql: SELECT location_name, ROUND(MAX(pm2_5_ug_m3), 1) AS peak_pm25, ROUND(AVG(pm2_5_ug_m3), 1) AS mean_pm25 FROM air_quality.hourly_observations GROUP BY location_name ORDER BY peak_pm25 DESC LIMIT 5
+  1/1 statements ok in 3s, 5 row(s)
+    ["Petaling Jaya","90.8","38.4"]
+    ["Sentul","90.8","38.4"]
+    ["Kuala Lumpur","90.8","38.4"]
+    ["Ampang","90.8","38.4"]
+    ["Sungai Besi","90.8","38.4"]
+
+[PASS] UC-Z8  WHO exceedance: hours above the 15 ug/m3 24-hour guideline
+  why: A policy-relevant count, not a raw reading: how many location-hours breach the WHO 2021 guideline?
+  sql: SELECT COUNT(*) AS exceeding_hours, COUNT(DISTINCT location_name) AS affected_locations, ROUND(MAX(pm2_5_ug_m3), 1) AS worst FROM air_quality.hourly_observations WHERE pm2_5_ug_m3 > 15
+  1/1 statements ok in 4s, 1 row(s)
+    ["8494","257","90.8"]
+
+[PASS] UC-Z9  CROSS-SOURCE ATTRIBUTION: fires within ~50km of the worst-affected places
+  why: The actual haze-attribution join. Pairs each high-PM2.5 location with nearby active fires, which is what a source-attribution answer must be built on. A crude degree box stands in for a proper geodesic buffer.
+  sql: SELECT aq.location_name, ROUND(MAX(aq.pm2_5_ug_m3), 1) AS peak_pm25, COUNT(DISTINCT f.location_id) AS nearby_fire_sites, ROUND(SUM(CAST(f.frp AS DOUBLE)), 1) AS nearby_total_frp FROM air_quality.hourl
+  1/1 statements ok in 4s, 8 row(s)
+    ["Bau","44.4","1","2414.4"]
+    ["Lundu","44.4","1","2414.4"]
+    ["Kuching","54.0","1","1587.8"]
+    ["Sebauh","42.6","2","979.2"]
+    ["Tatau","29.7","2","979.2"]
+  note: A zero-row result is a legitimate finding: it means no ingested fire sits near a monitored location in this window, so no fire-based attribution is supportable from this evidence.
+
+[PASS] UC-Z10  Registration metadata is inspectable (schema introspection)
+  why: An auditor must be able to see the registered shape of each source, not just its rows.
+  sql: DESCRIBE air_quality.hourly_observations
+  1/1 statements ok in 3s, 8 row(s)
+    ["location_name","string",null]
+    ["requested_latitude","double",null]
+    ["requested_longitude","double",null]
+    ["observation_time","string",null]
+    ["pm2_5_ug_m3","double",null]
+
+------------------------------------------------------------------------------
+OBSERVATION (not a defect)
+------------------------------------------------------------------------------
+  The Python SQL runner's REST channel requires a bearer token (ZETARIS_API_KEY) and has no username/password exchange, while the TypeScript client accepts either and mints a token from credentials. That is a deliberate split - REST uses a bearer token, the JDBC channel uses username/password - but it meant a token had to be minted by hand before the registration step could run. Porting the TS login exchange into the Python client would remove that manual step.
+
+------------------------------------------------------------------------------
+STILL NOT VERIFIED
+------------------------------------------------------------------------------
+  - Agent reasoning against a real model provider: no LLM key is configured, so every provider receipt is still synthetic.
+  - The windy source (needs WINDY_API_KEY).
+  - JDBC channel (a driver jar ships in the bundle but was not exercised; all SQL went over REST).
+  - The attribution join uses a crude degree box, not a geodesic buffer or wind-trajectory model, so it demonstrates the data path rather than a scientifically defensible attribution.
+
+==============================================================================

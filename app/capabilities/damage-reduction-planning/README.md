@@ -127,6 +127,12 @@ every reuse. Use `npm run reduction:preview:verify` for the complete synthetic
 planning/review/restart trace. See the [Plan 02 report](../../../docs/reports/damage-reduction/damage-reduction-02-implementation-report.md)
 for scope, test evidence and the limits of the computational benchmark.
 
+Choose **Demos → Damage reduction** in the frontend to view the bundled
+completed example at `/demos/damage-reduction`, including recorded exact sources
+and reviews. Run `npm run reduction:demo` to execute a fresh synthetic preview
+on an isolated fixture server, normally at port 5175. See the
+[browser demo guide](../../../docs/guides/damage-reduction-demo.md) for both paths.
+
 Programmes also support an explicitly started `pilot` phase after the current
 reviewed plan. WorkerShield `reduction.pilot-draft` retains supplied feasibility
 findings and an exact protocol; EvidenceCritic `reduction.pilot-check` checks

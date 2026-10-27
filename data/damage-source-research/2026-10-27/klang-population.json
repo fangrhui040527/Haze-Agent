@@ -1,0 +1,29 @@
+[
+  {
+    "state": "Selangor",
+    "district": "Klang",
+    "date": "2026-01-01",
+    "sex": "both",
+    "age": "overall",
+    "ethnicity": "overall",
+    "population": 1191.2
+  },
+  {
+    "state": "Selangor",
+    "district": "Klang",
+    "date": "2025-01-01",
+    "sex": "both",
+    "age": "overall",
+    "ethnicity": "overall",
+    "population": 1183.2
+  },
+  {
+    "state": "Selangor",
+    "district": "Klang",
+    "date": "2024-01-01",
+    "sex": "both",
+    "age": "overall",
+    "ethnicity": "overall",
+    "population": 1174.7
+  }
+]

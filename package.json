@@ -5,8 +5,8 @@
   "description": "Local TypeScript workflow infrastructure for Haze Agent",
   "type": "module",
   "engines": {
-    "node": "24.22.1",
-    "npm": "11.8.0"
+    "node": ">=24.22.1 <25",
+    "npm": ">=11.8.0"
   },
   "packageManager": "npm@11.8.0",
   "scripts": {
@@ -23,11 +23,12 @@
     "zetaris:fetch:wind": "node --experimental-strip-types app/adapters/zetaris/sources/wind/fetch_wind.ts",
     "zetaris:fetch:pm25": "node --experimental-strip-types app/adapters/zetaris/sources/air_quality/fetch_air_quality.ts",
     "zetaris:bootstrap:smokeledger": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --smokeledger-only",
+    "zetaris:bootstrap:verify": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl_and_verify.ts",
     "zetaris:bootstrap:sources": "node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_sources.ts",
     "build": "npm run vendor:engines && node scripts/build.mjs",
     "vendor:engines": "node scripts/vendor-engines.mjs",
     "verify:pins": "node scripts/verify-pins.mjs",
-    "test:engines": "node scripts/test-engines.mjs",
+    "test:engines": "npm run vendor:engines && node scripts/test-engines.mjs",
     "probe:compatibility": "npm run build && node --env-file-if-exists=.env scripts/probe-compatibility.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.zetaris.json",
     "lint": "eslint . --max-warnings 0",
@@ -39,6 +40,7 @@
     "test:integration": "npm run build && node --env-file-if-exists=app/adapters/zetaris/.env.local --env-file-if-exists=.env scripts/verify-general.mjs --fixture && node scripts/verify-damage-account.mjs --fixture && node scripts/verify-damage-reduction.mjs --fixture && node scripts/verify-damage-reduction-preview.mjs --fixture && node scripts/verify-damage-reduction-programmes.mjs --fixture && node scripts/verify-damage-reduction-pilot.mjs --fixture && node scripts/verify-damage-reduction-evaluation.mjs --fixture && npm run test:crashes",
     "damage:verify": "npm run build && node --env-file-if-exists=.env scripts/verify-damage-account.mjs",
     "damage:demo": "npm run build && node scripts/demo-damage-account.mjs",
+    "reduction:demo": "npm run build && node scripts/demo-damage-reduction.mjs",
     "reduction:verify": "npm run build && node scripts/verify-damage-reduction.mjs --fixture",
     "reduction:capacity:verify": "npm run build && node scripts/verify-damage-reduction.mjs --fixture --capacity",
     "reduction:sensitivity": "npm run build && node scripts/analyze-reduction-sensitivity.mjs",
@@ -64,7 +66,14 @@
     "tasks:test": "vitest run --project unit tests/unit/general-store.test.ts tests/unit/general-runtime.test.ts tests/unit/general-http.test.ts tests/unit/pm25-methods.test.ts",
     "test:crashes": "node scripts/verify-langgraph-crashes.mjs",
     "test:rollback": "node scripts/verify-langgraph-rollback.mjs",
-    "state:migrate": "node scripts/migrate-general-state.mjs"
+    "state:migrate": "node scripts/migrate-general-state.mjs",
+    "test:zetaris-scripts": "python -m unittest discover -s app/adapters/zetaris/scripts -t app/adapters/zetaris/scripts -p \"test_*.py\"",
+    "qa:suite": "node qa/run-usecases.mjs",
+    "testrail:report": "vitest run --project unit --reporter=json --outputFile=qa/vitest-results.json",
+    "testrail:status": "node qa/testrail/cli.mjs status",
+    "testrail:import": "node qa/testrail/cli.mjs import",
+    "testrail:run": "node qa/testrail/cli.mjs run",
+    "testrail:push": "node qa/testrail/cli.mjs push"
   },
   "dependencies": {
     "@langchain/core": "1.2.20",

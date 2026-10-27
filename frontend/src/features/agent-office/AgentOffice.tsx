@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { Link } from 'react-router';
 import {
   useLocalStorageState,
   useReducedMotion,
@@ -61,7 +62,10 @@ export function AgentOffice({
     [run.events, run.task?.status],
   );
   const levelB = run.events.some((e) => e.type === 'run_state');
-  const taskEvents = run.events.filter((event) => event.type === 'task_event');
+  const taskId =
+    run.task?.id ??
+    run.events.findLast((event) => event.type === 'task_event')?.receipt
+      .task_id;
   const toggle = (id: AgentId) => onSelect(selected === id ? null : id);
 
   return (
@@ -99,58 +103,12 @@ export function AgentOffice({
           steps are not shown.
         </p>
       )}
-      {taskEvents.length > 0 && (
-        <details className={styles.note}>
-          <summary>
-            Actual task execution receipts ({taskEvents.length})
-          </summary>
-          <ol>
-            {taskEvents.map((event) => (
-              <li key={event.receipt.cursor}>
-                <time dateTime={event.at}>
-                  {new Date(event.at).toISOString().slice(11, 19)} UTC
-                </time>
-                {' · '}
-                {event.receipt.actor}: {event.message}
-                {'assignment_id' in event.receipt &&
-                  event.receipt.assignment_id && (
-                    <span> · Assignment {event.receipt.assignment_id}</span>
-                  )}
-              </li>
-            ))}
-          </ol>
-        </details>
-      )}
-      {run.task?.record && (
-        <section className={styles.assignments} aria-label="Actual assignments">
-          <h3>Assignments</h3>
-          {run.task.record.assignments.length === 0 ? (
-            <p>No specialist assignments have been admitted.</p>
-          ) : (
-            <ol>
-              {run.task.record.assignments.map((assignment) => (
-                <li key={assignment.id}>
-                  <strong>{assignment.role}</strong> ? {assignment.capability} ?{' '}
-                  {assignment.status}
-                  <p>{assignment.brief}</p>
-                  <small>
-                    Revision {assignment.revision}; brief acknowledged at
-                    revision {assignment.acknowledged_revision}. Evidence
-                    support: {assignment.support}. Output:{' '}
-                    {assignment.usability}.
-                  </small>
-                  {assignment.gaps.length > 0 && (
-                    <ul>
-                      {assignment.gaps.map((gap, index) => (
-                        <li key={index}>{gap}</li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
+      {taskId && (
+        <p className={styles.note}>
+          <Link to={`/manager/${encodeURIComponent(taskId)}`}>
+            Open Manager workspace
+          </Link>
+        </p>
       )}
       <div className={styles.legendRegion}>
         <ul

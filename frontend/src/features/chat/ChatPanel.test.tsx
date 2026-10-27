@@ -203,6 +203,31 @@ describe('chat after crew demo retirement', () => {
       'Explain the difference between modeled PM2.5 estimates',
     );
   });
+  it('shows the fresh conversation after Clear even if the dashboard retains a restored task', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) =>
+        key === 'haze.chat.detached-task-restore.v1'
+          ? 'false'
+          : key === 'haze.chat.v1'
+            ? '[]'
+            : null,
+      setItem: vi.fn(),
+    });
+    const run = idleRun();
+    run.status = 'completed';
+    run.task = {
+      id: taskId,
+      schemaVersion: 'haze.task.v3',
+      taskUrl: `/api/tasks/${taskId}`,
+      status: 'completed',
+      record: fixtureTask(),
+    };
+    const markup = renderChat(run);
+    expect(markup).toContain('Latest haze information for Singapore');
+    expect(markup).not.toContain('Open Manager workspace');
+    expect(markup).not.toContain('The task is complete');
+    expect(markup).not.toContain('Clear chat');
+  });
 
   it('shows task questions as Manager messages answerable in chat', () => {
     const run = idleRun();

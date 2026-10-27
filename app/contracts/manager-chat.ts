@@ -2,6 +2,9 @@ import { z } from 'zod';
 import { timestampSchema } from './common.js';
 import { mutationExpectationSchema } from './controls.js';
 
+/** Browser waits must accommodate every supported server-side chat deadline. */
+export const MANAGER_CHAT_MAX_TIMEOUT_MS = 1_800_000;
+
 export const managerChatQuestionSchema = z.strictObject({
   task_id: z.uuid(),
   question_id: z.uuid(),

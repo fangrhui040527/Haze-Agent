@@ -7,7 +7,8 @@ Start with the [project README](../README.md) for setup and current behavior.
 - [General task engine](orchestration/general-engine.md): execution, ownership, controls and recovery.
 - [Architecture and specifications](architecture/README.md): runtime, World Model, schemas and supplied references.
 - [Test the Manager in isolation](testing/manager-testing.md) and [inspect the World Model control plane](testing/world-model-control-plane.md).
-- [Run the damage account demo](guides/damage-account-demo.md).
+- [View the damage account demo](guides/damage-account-demo.md).
+- [View the damage reduction demo](guides/damage-reduction-demo.md).
 - [Zetaris installation and connection guides](zetaris/README.md).
 
 ## Directory map
@@ -29,7 +30,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 ## Other guides and references
 
 - **Orchestration:** [General task engine](orchestration/general-engine.md), [LangGraph cutover and rollback](orchestration/langgraph-cutover-runbook.md).
-- **Guides:** [Damage account demo](guides/damage-account-demo.md).
+- **Guides:** [Damage account demo](guides/damage-account-demo.md), [damage reduction browser demo](guides/damage-reduction-demo.md).
 - **Infrastructure:** [Engine pins](infrastructure/engine-pins.md), [compatibility probe](infrastructure/compatibility-probe.md).
 - **Evidence:** [PM2.5 evidence source](evidence/pm25-evidence-source.md), [v0.14 PM2.5 milestone](evidence/milestone-v014.md), [Haze Damage Account Report](evidence/Haze_Damage_Account_Report.pdf).
 - **Frontend:** [01 - Project understanding](frontend/01-project-understanding.md), [02 - Critique and reality check](frontend/02-critique.md), [03 - UI design](frontend/03-ui-design.md), [HMem memory page](frontend/hmem-memory-page.md).

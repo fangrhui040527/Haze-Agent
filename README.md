@@ -29,6 +29,13 @@ backend changes to rebuild them. The standalone `tasks:serve` command is an
 alternative API entry point and must not run alongside Vite using the same state
 directory.
 
+Only one server can own a state directory. Vite stops if its port is already in
+use instead of selecting another port. Stop the earlier dev command with `Ctrl+C`
+before restarting. A state ownership conflict reports the owner PID and directory;
+for an independent instance, set `HAZE_TASK_STATE_DIR` to another directory and
+pass a different `--port`. `HAZE_TASK_STATE_DIR` takes precedence over `STATE_DIR`.
+Do not delete the state databases or lock files to resolve a running owner.
+
 After startup, an interactive terminal shows a `haze>` command prompt. The launcher
 leaves the browser closed; use `open` to launch the frontend when needed. It
 initializes the shared API and HazeOps watchers before reporting the app ready;
@@ -72,6 +79,31 @@ their sources. `config set` validates and saves to root `.env`, preserves unrela
 settings, and reports overrides and restart requirements. Existing task routes
 remain pinned. `logs zetaris --follow` streams this project's Compose output;
 `tasks watch` and `nightshift show JOB_ID` inspect durable work history.
+
+Manager chat limits can be configured in the same console or root `.env`:
+
+| Setting                          | Default | Allowed range    |
+| -------------------------------- | ------- | ---------------- |
+| `HAZE_MANAGER_MAX_MODEL_CALLS`   | 6       | 1–64 per message |
+| `HAZE_MANAGER_MAX_RETRIEVALS`    | 4       | 0–32 per message |
+| `HAZE_MANAGER_TIMEOUT_MS`        | 120000  | 1000–1800000 ms  |
+| `HAZE_MANAGER_MAX_OUTPUT_TOKENS` | 2400    | 1–32768 per call |
+| `HAZE_MANAGER_MAX_CORRECTIONS`   | 1       | 0–8 per message  |
+
+For example, `config set HAZE_MANAGER_MAX_MODEL_CALLS 12`,
+`config set HAZE_MANAGER_MAX_RETRIEVALS 8`, then `config validate` and
+`app restart`. Values must be whole numbers within these ranges; invalid server
+settings fail startup validation. All decisions share the model-call budget,
+including retrieval requests, malformed-output corrections and the final reply.
+Increasing a retrieval or correction limit does not increase the model-call
+limit. These controls govern quick Manager chat; tracked task budgets remain
+separate. Backend source edits require `app restart --rebuild`. If the dev
+launcher was already running when its console code changed, stop it and rerun
+`npm run dev` once to load the updated console.
+
+Historical comparisons also need evidence covering the requested dates. See
+[Compare historical haze days](docs/guides/historical-haze-comparison.md) for the
+Kuala Lumpur workflow, timezone boundaries, source imports and current limits.
 
 During a watch or command, `Ctrl+C` ends that command and returns to the prompt.
 When idle, `Ctrl+C`, `Ctrl+D`, or `exit` stops the app and preserves Zetaris.
@@ -190,6 +222,8 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/reports/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/reports/orchestration/damage-accountant-implementation-report.md).
 
 Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/testing/world-model-control-plane.md) for configuration and isolated checks.
+
+Choose **Demos** in the frontend to browse the [damage account example](docs/guides/damage-account-demo.md) at `/demos/damage-account` and [damage reduction example](docs/guides/damage-reduction-demo.md) at `/demos/damage-reduction`. These bundled synthetic recordings include exact sources and reviews and need no separate demo commands, provider, or task server. To execute a fresh fixture workflow instead, use `npm run damage:demo` or `npm run reduction:demo`; the isolated servers default to ports 5174 and 5175 respectively.
 
 The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
 

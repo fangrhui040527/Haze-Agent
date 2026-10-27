@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  ManagerChatQuestion,
-  ManagerChatRequest,
+import {
+  MANAGER_CHAT_MAX_TIMEOUT_MS,
+  type ManagerChatQuestion,
+  type ManagerChatRequest,
 } from '../../../../app/contracts/manager-chat.ts';
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import { agentService, AgentRunError } from '../../services/agents/index.ts';
@@ -38,6 +39,11 @@ export function useManagerConversation(
       crypto.randomUUID(),
   );
   const [sending, setSending] = useState(false);
+  const [allowDetachedRestore, setAllowDetachedRestore] = useLocalStorageState(
+    'haze.chat.detached-task-restore.v1',
+    true,
+  );
+  const detachedRestoreRef = useRef(allowDetachedRestore);
   const [observationErrors, setObservationErrors] = useState<
     Record<string, string>
   >({});
@@ -66,6 +72,13 @@ export function useManagerConversation(
 
   const receiveTask = useCallback(
     (record: TaskRecord) => {
+      if (
+        !detachedRestoreRef.current &&
+        !messagesRef.current.some(
+          (message) => message.taskCard?.task_id === record.id,
+        )
+      )
+        return;
       const previous = recordsRef.current.get(record.id);
       const handle = (value: TaskRecord): AgentTaskHandle => ({
         id: value.id,
@@ -83,6 +96,7 @@ export function useManagerConversation(
         messagesRef.current,
         record,
         seenEventsRef.current,
+        detachedRestoreRef.current,
       );
       if (next !== messagesRef.current) save(next);
     },
@@ -117,7 +131,13 @@ export function useManagerConversation(
       ...messages.flatMap((message) =>
         message.taskCard ? [message.taskCard.task_id] : [],
       ),
-      ...(restoredTask ? [restoredTask.id] : []),
+      ...(restoredTask &&
+      (allowDetachedRestore ||
+        messages.some(
+          (message) => message.taskCard?.task_id === restoredTask.id,
+        ))
+        ? [restoredTask.id]
+        : []),
     ]),
   ]
     .sort()
@@ -185,7 +205,10 @@ export function useManagerConversation(
         );
       const response = await agentService.managerChat(
         request,
-        AbortSignal.any([controller.signal, AbortSignal.timeout(130_000)]),
+        AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(MANAGER_CHAT_MAX_TIMEOUT_MS + 10_000),
+        ]),
       );
       if (
         controller.signal.aborted ||
@@ -305,6 +328,8 @@ export function useManagerConversation(
     await deliver(request.turn_id, request);
   };
   const clear = () => {
+    detachedRestoreRef.current = false;
+    setAllowDetachedRestore(false);
     requestRef.current?.abort();
     requestRef.current = null;
     const nextId = crypto.randomUUID();
@@ -318,6 +343,7 @@ export function useManagerConversation(
   };
   return {
     messages,
+    allowDetachedRestore,
     seenEvents: seenEventsRef.current,
     sending,
     observationErrors,
