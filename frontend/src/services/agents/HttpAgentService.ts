@@ -1,6 +1,10 @@
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import type { ArtifactImport } from '../../../../app/contracts/artifacts.ts';
 import {
+  tracePageSchema,
+  type TracePage,
+} from '../../../../app/contracts/trace-export.ts';
+import {
   MANAGER_CHAT_MAX_TIMEOUT_MS,
   type ManagerChatRequest,
 } from '../../../../app/contracts/manager-chat.ts';
@@ -63,6 +67,46 @@ export class HttpAgentService implements AgentService {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
   private readonly pollMs: number;
+  traceDownloadUrl(
+    taskId: string,
+    runId: string,
+    format: 'jsonl' | 'bundle',
+  ): string {
+    const path = `${this.baseUrl}/api/tasks/${encodeURIComponent(taskId)}/runs/${encodeURIComponent(runId)}`;
+    return format === 'jsonl'
+      ? `${path}/trace?format=jsonl`
+      : `${path}/evidence-bundle`;
+  }
+  async readTrace(
+    taskId: string,
+    runId: string,
+    after = 0,
+    signal?: AbortSignal,
+  ): Promise<TracePage> {
+    const value = tracePageSchema.parse(
+      await this.read(
+        `/api/tasks/${encodeURIComponent(taskId)}/runs/${encodeURIComponent(runId)}/trace?after=${after}&limit=100`,
+        {},
+        signal,
+      ),
+    );
+    if (
+      value.task_id !== taskId ||
+      value.run_id !== runId ||
+      value.records.some(
+        (record) =>
+          record.task_id !== taskId ||
+          record.run_id !== runId ||
+          record.cursor <= after,
+      )
+    )
+      throw new AgentRunError(
+        'The trace response does not match the selected task and run.',
+        false,
+        { category: 'response_validation' },
+      );
+    return value;
+  }
   constructor(
     baseUrl = '',
     fetcher: typeof fetch = (input, init) => fetch(input, init),

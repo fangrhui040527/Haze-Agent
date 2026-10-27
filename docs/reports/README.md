@@ -9,6 +9,7 @@ These reports retain executed checks, evidence limits and follow-up findings. En
 
 ## Orchestration and World Model
 
+- [Execution trace logging implementation and verification](orchestration/trace-logging-implementation-report.md).
 - [General engine verification](orchestration/general-engine-verification.md).
 - [General engine evidence (JSON)](orchestration/general-engine-evidence.json).
 - [LangGraph implementation and verification](orchestration/langgraph-implementation-report.md).

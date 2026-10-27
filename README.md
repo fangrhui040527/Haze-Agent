@@ -1,293 +1,194 @@
 # Haze Agent
 
-Haze accepts natural-language objectives through a local chat and one durable `haze.task.request.v3` API. A registered Manager chooses a direct response or a dependency graph of specialist assignments. The registered capabilities cover source-backed explanations, episode investigations, modeled PM2.5 methods and damage accounting from retained World Model evidence.
+> **Track:** 02 — The Agent That Can Explain Why  
+> **Sponsor technology:** Zetaris, Meterless, NVIDIA Nemotron  
+> **Run:** `npm run dev`, then open `http://localhost:5173`; task intake is `POST /api/tasks`
 
-The reusable engine separates browser-safe contracts, authoritative SQLite state, bounded agent execution, typed tools and domain capabilities. Corrections, questions, imported sources, controls, immutable work products and independent numerical review are visible in the application. See the [general engine guide](docs/orchestration/general-engine.md) and [Architecture v0.14](docs/architecture/Haze_Agent_Architecture_v0.14.pdf).
+## 1. Problem
 
-The v1/v2 task paths and routing flags are retired. Old protocol tags are rejected with v3 guidance. Historical databases and checkpoint directories remain archival and are never automatically migrated or served by the new API. The earlier crew scheduling backend also remains retired; see the [retirement record](docs/history/legacy-retirement.md).
+Policy analysts and journalists investigating haze in Malaysia need to connect air-quality evidence, episode context, damage estimates and mitigation options. Those sources cover different periods and often mix observations with modeled values, making explanations hard to verify.
 
-## Develop locally
+Haze investigates scoped PM2.5 questions, explains supplied evidence and compiles damage accounts from retained accounting inputs. It preserves sources, calculation inputs, independent reviews and coverage gaps so users can inspect how a result was produced.
 
-Use Node **24.22.1** and npm **11.8.0**, as pinned in [.nvmrc](.nvmrc) and [package.json](package.json):
+## 2. Agents
+
+The Manager selects the specialists a request needs; every request does not run all five roles.
+
+| Agent            | Responsibility                                                                                | Can block or retry?                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Manager          | Chooses a direct answer, clarification, lookup or specialist plan; supervises and synthesizes | Can replan, wait or request clarification within admitted budgets                |
+| HazeOps          | Retrieves and retains evidence through granted tools                                          | Reports gaps and asks for missing scope; no silent fixture fallback              |
+| WorkerShield     | Assesses evidence support and develops conditional mitigation plans                           | Can downgrade support and retain prerequisites; does not block evidence delivery |
+| EvidenceCritic   | Independently checks exact source and calculation artifacts                                   | Rejects unsupported or inconsistent numerical work; cannot review its own work   |
+| DamageAccountant | Compiles physical, financial-incidence and social-welfare views                               | Requests missing inputs or boundaries; can return explicitly partial accounts    |
+
+## 3. What makes this an agent system
+
+- The Manager chooses and revises a dependency plan from the objective, specialist findings and user corrections.
+- Independently checkpointed LangGraph workflows let specialists progress while the Manager decides its next action.
+- Registered tools validate arguments, results, grants and budgets. Models do not submit SQL or executable code.
+- Independent review binds exact artifact versions and hashes; finalization checks their dependencies before selecting numerical products.
+- Human questions and bounded peer messages support durable waits. Corrections fence old work and require evidence applicability checks.
+- Shared SQLite records retain tasks, charged attempts, immutable artifacts, World Model evidence and decision events across restarts.
+
+See the [task engine guide](docs/orchestration/general-engine.md) and [LangGraph architecture](docs/architecture/langgraph-runtime.md).
+
+## 4. Tech stack
+
+| Component            | Technology                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| Application and API  | TypeScript, Node.js, shared local HTTP APIs                                                  |
+| Frontend             | React, Vite                                                                                  |
+| Orchestration        | LangGraph Manager and specialist workflows                                                   |
+| Contracts            | Zod; `haze.task.request.v3` and related schemas                                              |
+| Persistence          | SQLite task/World Model records and separate execution checkpoints                           |
+| External evidence    | Zetaris REST API and registered source collectors                                            |
+| Model inference      | Nightshift with NVIDIA Nemotron; direct NVIDIA and OpenAI-compatible adapters also supported |
+| Reference components | Checksum-pinned Meterless starter, H-MEM and World Model sources                             |
+| Logging              | Durable SQLite task events; offline example JSONL traces in `logs/`                          |
+| Containers           | Docker Compose for Zetaris; root Dockerfile for the offline metadata example                 |
+
+## 5. Setup
+
+Use **Node 24.22.1** and **npm 11.8.0**, as pinned in [.nvmrc](.nvmrc) and [package.json](package.json). The full dev launcher also needs running Docker Desktop and access to the issued Zetaris images.
 
 ```sh
+cp .env.example .env
 npm ci
 npm --prefix frontend ci
+```
+
+On PowerShell, use `Copy-Item .env.example .env`. Keep `.env` private and use your own credentials; server keys must stay out of browser `VITE_*` variables.
+
+Configure the Zetaris image references, `POSTGRES_PASSWORD` and `ZETARIS_ADMIN_PASSWORD` using the [platform guide](app/adapters/zetaris/zetaris-platform/README.md). For direct NVIDIA inference, set `HAZE_PROVIDER=nvidia`, supply `NVIDIA_API_KEY` and clear `HAZE_PROVIDER_BASE_URL`. The template defaults to a local Nightshift runtime, which needs configured model access. Provider and role-routing settings are in [.env.example](.env.example).
+
+Live PM2.5 retrieval also needs `ZETARIS_API_KEY` and published evidence snapshots; follow the [source guide](docs/evidence/pm25-evidence-source.md) or [historical comparison workflow](docs/guides/historical-haze-comparison.md). Tasks read published data rather than refreshing it automatically.
+
+```sh
 npm run dev
 ```
 
-`npm run dev` first runs `docker compose up --detach` to start Zetaris,
-checks its container status, builds the backend, then starts Vite
-with the frontend and the shared dashboard, task and World Model APIs, usually at
-`http://localhost:5173`. Docker Desktop must be running, with root `.env` and image
-registry access configured as described below. A failed startup step stops the
-command before the next step runs.
+This starts Zetaris through Compose, builds the backend and starts Vite with shared APIs, normally at `http://localhost:5173`. At `haze>`, use `open` for the browser, `status` for readiness and `help` for commands. `Ctrl+C` at the idle prompt stops the app; `docker compose stop` stops Zetaris.
 
-Keep this terminal running; when the console is idle, `Ctrl+C` stops the app and leaves the Zetaris containers
-running. Use `docker compose stop` to stop Zetaris. Run the dev command again after
-backend changes to rebuild them. The standalone `tasks:serve` command is an
-alternative API entry point and must not run alongside Vite using the same state
-directory.
-
-Only one server can own a state directory. Vite stops if its port is already in
-use instead of selecting another port. Stop the earlier dev command with `Ctrl+C`
-before restarting. A state ownership conflict reports the owner PID and directory;
-for an independent instance, set `HAZE_TASK_STATE_DIR` to another directory and
-pass a different `--port`. `HAZE_TASK_STATE_DIR` takes precedence over `STATE_DIR`.
-Do not delete the state databases or lock files to resolve a running owner.
-
-After startup, an interactive terminal shows a `haze>` command prompt. The launcher
-leaves the browser closed; use `open` to launch the frontend when needed. It
-initializes the shared API and HazeOps watchers before reporting the app ready;
-registered agents execute when work is admitted. Type `help` or `help tasks` for
-usage. Tab completes commands and setting names; Up/Down recalls this session's
-commands. Configuration writes are excluded from history and credentials are
-redacted from console output.
-Routine Vite optimizer and restart messages are hidden; warnings and errors
-remain visible.
-
-```text
-haze> status
-haze> status agents --watch
-haze> agents show Manager
-haze> tasks run "Explain the evidence needed to investigate a haze episode"
-haze> tasks list --active
-haze> tasks watch TASK_ID
-haze> tasks pause TASK_ID
-haze> tasks resume TASK_ID
-haze> nightshift status
-haze> nightshift jobs
-haze> config get HAZE_MODEL
-haze> config set HAZE_MODEL "your-model"
-haze> config validate
-haze> app restart --rebuild
-haze> logs app --follow
-haze> doctor
-haze> open world
-```
-
-`status` supports `app`, `agents`, `nightshift`, `zetaris`, `world`, and `hazeops`. Task
-commands also support `show`, `cancel`, `continue`, and `reply`; `help tasks`
-explains their arguments. Resume retains the run's deadline and remaining budget;
-Continue creates a fresh linked run. Local cancellation does not establish that a
-remote provider stopped. Nightshift status reports separate job, direct inference,
-and automatic-chain readiness. It does not install models or start Nightshift's
-operating-system service.
-
-`config` shows setup guidance; `config show` lists supported effective settings and
-their sources. `config set` validates and saves to root `.env`, preserves unrelated
-settings, and reports overrides and restart requirements. Existing task routes
-remain pinned. `logs zetaris --follow` streams this project's Compose output;
-`tasks watch` and `nightshift show JOB_ID` inspect durable work history.
-
-Manager chat limits can be configured in the same console or root `.env`:
-
-| Setting                          | Default | Allowed range    |
-| -------------------------------- | ------- | ---------------- |
-| `HAZE_MANAGER_MAX_MODEL_CALLS`   | 6       | 1–64 per message |
-| `HAZE_MANAGER_MAX_RETRIEVALS`    | 4       | 0–32 per message |
-| `HAZE_MANAGER_TIMEOUT_MS`        | 120000  | 1000–1800000 ms  |
-| `HAZE_MANAGER_MAX_OUTPUT_TOKENS` | 2400    | 1–32768 per call |
-| `HAZE_MANAGER_MAX_CORRECTIONS`   | 1       | 0–8 per message  |
-
-For example, `config set HAZE_MANAGER_MAX_MODEL_CALLS 12`,
-`config set HAZE_MANAGER_MAX_RETRIEVALS 8`, then `config validate` and
-`app restart`. Values must be whole numbers within these ranges; invalid server
-settings fail startup validation. All decisions share the model-call budget,
-including retrieval requests, malformed-output corrections and the final reply.
-Increasing a retrieval or correction limit does not increase the model-call
-limit. These controls govern quick Manager chat; tracked task budgets remain
-separate. Backend source edits require `app restart --rebuild`. If the dev
-launcher was already running when its console code changed, stop it and rerun
-`npm run dev` once to load the updated console.
-
-Historical comparisons also need evidence covering the requested dates. See
-[Compare historical haze days](docs/guides/historical-haze-comparison.md) for the
-Kuala Lumpur workflow, timezone boundaries, source imports and current limits.
-
-During a watch or command, `Ctrl+C` ends that command and returns to the prompt.
-When idle, `Ctrl+C`, `Ctrl+D`, or `exit` stops the app and preserves Zetaris.
-`shutdown --all` stops the app and then this project's Compose services, retaining
-their data. Redirected output keeps plain startup logs without a prompt; use
-`npm run dev -- --console` to explicitly enable command input through a pipe, or
-`npm run dev -- --no-console` to disable the console in a terminal. Other options
-continue to pass through to Vite.
-
-The root dev command names the actual components: Zetaris, the Haze TypeScript
-build, React web app, LangGraph task engine, SQLite World Model, HazeOps
-collectors, agent model routes, and Nightshift runtime, candidate jobs, inference,
-and automation. They share the Haze process where applicable; these rows do not
-imply separate operating-system services. Each starting or checking component has a live
-elapsed timer that refreshes every 0.1 seconds and freezes when the step finishes.
-Compose progress and successful build output are captured so they do not print repeated status
-lines. Warnings, failure diagnostics and app runtime logs remain visible. Redirected
-output prints each component's final startup status once, without terminal escape
-codes. `BUILT` confirms compilation. `READY` for the web app, task API, and World
-Model requires a successful request, including actual task-store and World Model
-reads. HazeOps reports its scheduler's execution state and enabled source count.
-Model routes stay `UNVERIFIED` until their live-inference readiness reports prove
-otherwise; startup submits no model calls or Nightshift jobs. Optional components
-can be `DISABLED`, `BLOCKED`, `UNCONFIGURED`, or `UNAVAILABLE` while the app starts.
-A reachable Nightshift runtime is
-shown separately from usable candidate jobs and released automation. New candidate
-chains allow cloud models with no monetary cap; explicit local-only grants retain
-$0 cloud spend. Job, attempt and lifetime limits still apply. Normal agent
-inference and background candidate generation are separate Nightshift APIs. Use
-`status hazeops` or `nightshift status` to inspect the current state.
-
-`STARTED` means Compose started the containers; the Zetaris row summarizes their
-current health and completed one-shot jobs. Check `docker compose ps --all` for
-individual container details. Successful `init` and `bootstrap` jobs normally show
-`Exited (0)`. The panel includes the actual app URL and total startup time, including
-Docker startup and the backend build. Edit `scripts/dev-status.mjs` to customize the
-panel. Use `npm run --silent dev` to also hide npm's initial script header. Vite
-options still work, for example `npm run dev -- --port 5174`.
-
-Zetaris is a separate service for external evidence retrieval. The root dev command
-starts the included local platform automatically. To start Zetaris independently,
-configure root `.env` as described below, start Docker Desktop and then run:
+For the standalone API at `http://127.0.0.1:8787`:
 
 ```sh
-docker compose up -d
+npm run build
+npm run tasks:serve
 ```
 
-Allow Zetaris to finish starting before making requests that use it. See the
-[platform setup guide](app/adapters/zetaris/zetaris-platform/README.md) for its
-first-time image registry and configuration requirements. The root
-[compose.yaml](compose.yaml) starts Zetaris, including its metastore database.
-The separate legacy SmokeLedger database and its tooling have been removed.
+One application process can own a state directory. Stop the dev server first or set a different `HAZE_TASK_STATE_DIR`, which overrides `STATE_DIR`. The default is `.state/general-v2`; incompatible existing state fails without modification. See [sample mode](#7-sample-mode) to run without live services.
 
-Copy [.env.example](.env.example) to root `.env`. This gitignored file holds
-the server-side Haze, Zetaris deployment and ingestion settings. For a local
-Zetaris deployment, fill in the issued image references, `POSTGRES_PASSWORD` and
-`ZETARIS_ADMIN_PASSWORD` before running Compose. Retain existing values when
-moving an installation; the `zetaris` project name reuses its existing volumes.
-For live agent requests, set your own `NVIDIA_API_KEY` (or use
-`HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
-`HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
-requires an existing Zetaris instance and your own `ZETARIS_API_KEY`; configure
-its `ZETARIS_REST_URL` and `ZETARIS_ORG_ID` if they differ from the documented
-defaults. Keep credentials out of browser `VITE_*` variables. API keys are
-personal and must never be added to a committed example file.
+## 6. Usage
 
-The optional data-ingestion scripts need their own keys: `FIRMS_MAP_KEY` for
-NASA FIRMS and `WINDY_API_KEY` for Windy. They belong in root `.env`;
-Open-Meteo and Data.gov.my fetchers do not
-require keys.
+In the web app, submit an objective and import text, Markdown, CSV or JSON when it needs your source material. Use `/damage-account` for scoped accounts from compatible retained accounting evidence; missing inputs are reported explicitly.
 
-The examples provide configuration names and local development defaults, not
-hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
-Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
-have their own source folders alongside air quality. These commands publish
-directly to Zetaris without a separate ingestion database. Preview a bounded
-setup from the repository root before applying it:
+**API request** to the dev server (POSIX shell):
 
 ```sh
-npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
-npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
+curl -X POST http://localhost:5173/api/tasks \
+  -H "Origin: http://localhost:5173" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: readme-pm25-001" \
+  -d '{
+    "schema_version": "haze.task.request.v3",
+    "objective": "Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps."
+  }'
 ```
 
-After reviewing the plan, rerun the selected command without `--dry-run` to
-fetch and register the source snapshots. A task reads the published snapshot;
-it does not refresh it. Removing the old SmokeLedger tooling does not delete
-existing Docker volumes or registered Zetaris objects. Historical database rows
-are not migrated automatically; saved task captures remain readable.
+**Admission response (HTTP 202; example ID):**
 
-The USL bootstrap also supports a read-only SmokeLedger view over current
-Environmental locations, fire, PM2.5, and wind feeds. It does not require
-PostgreSQL; run `npm run zetaris:bootstrap:smokeledger` after publishing the
-Environmental sources and compiling the Environmental USL.
+```json
+{
+  "task_id": "3f5cb017-b838-42a4-9fc0-fac595ce725e",
+  "status_url": "/api/tasks/3f5cb017-b838-42a4-9fc0-fac595ce725e",
+  "events_url": "/api/tasks/3f5cb017-b838-42a4-9fc0-fac595ce725e/events",
+  "reused": false
+}
+```
 
-Existing `app/adapters/zetaris/.env.local`
-files remain a fallback for task commands, the frontend task server and Zetaris
-helpers. Process variables take precedence; root `.env` values win over the
-legacy adapter file, including empty values. Move any settings you still use
-into root `.env` without overwriting existing values. The Zetaris helpers also
-look in the main checkout when run from a Git worktree.
-External API keys are not needed for the
-fixture checks (`npm run tasks:verify -- --fixture`), but are needed for live
-model or Zetaris requests.
-
-A general request needs only its objective. Import text, Markdown, CSV or JSON when the answer needs your source material. For example:
-
-> Explain the supplied report and identify what its evidence does and does not establish.
-
-A PM2.5 investigation additionally needs a domain scope, either explicitly or through a bounded phrase such as:
-
-> Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
-
-[damage-appraisal](app/capabilities/damage-appraisal/README.md) builds and reviews calculated damage accounts from retained evidence. [damage-account-intake](app/capabilities/damage-account-intake/README.md) validates supplied manifests and component completeness. These capabilities were previously named `damage-account` and `damage-accounting`.
-
-Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/reports/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/reports/orchestration/damage-accountant-implementation-report.md).
-
-Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/testing/world-model-control-plane.md) for configuration and isolated checks.
-
-Choose **Demos** in the frontend to browse the [damage account example](docs/guides/damage-account-demo.md) at `/demos/damage-account` and [damage reduction example](docs/guides/damage-reduction-demo.md) at `/demos/damage-reduction`. These bundled synthetic recordings include exact sources and reviews and need no separate demo commands, provider, or task server. To execute a fresh fixture workflow instead, use `npm run damage:demo` or `npm run reduction:demo`; the isolated servers default to ports 5174 and 5175 respectively.
-
-The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
-
-The dashboard, HazeOps watchers, general tasks and `/world-model` now use one
-application backend and the same SQLite World Model. Vite dev and preview serve
-all `/api` routes locally; a separate dashboard server is unnecessary.
-`HAZE_TASK_STATE_DIR` remains a Vite override for the whole application store.
-Use a compatible `.state/general-v2` directory; existing legacy directories remain
-archival until explicitly imported. See the [dashboard migration guide](app/dashboard/README.md).
-
-## Verify general execution
-
-To test the Manager independently, run `npm run manager:test`. It uses a fresh isolated build and task state with deterministic specialist stubs. Use `npm run manager:test:live` to test only the Manager's configured model against the same stubs. To talk to that model with your own prompts and follow-ups, run `npm run manager:chat`. See [isolated Manager testing](docs/testing/manager-testing.md) for focused cases, interactive chat, traces and the limits of a passing result.
+Execution is asynchronous. Replace `TASK_ID` with the returned ID:
 
 ```sh
-npm run check
+curl http://localhost:5173/api/tasks/TASK_ID
+curl "http://localhost:5173/api/tasks/TASK_ID/events?after=0"
+```
+
+The task response includes state, questions and assignments. When available, `result` contains the answer, completion status, sources, work products, uncertainty, review status and next requirements. Events return `next_cursor` for polling. Read artifacts through `GET /api/artifacts/ARTIFACT_ID`.
+
+Reuse an idempotency key only for identical redelivery. Mutations require a matching `Origin`; with the standalone server, change both the URL and `Origin` to `http://127.0.0.1:8787`. See the [API guide](docs/orchestration/general-engine.md#api) for controls, corrections and source imports.
+
+## 7. Sample mode
+
+Run deterministic fixture workflows without live model or source credentials:
+
+```sh
 npm run tasks:verify -- --fixture
 npm run damage:verify -- --fixture
-npm run tasks:verify -- --live Klang 2026-10-24T00:00:00Z 2026-10-25T00:00:00Z
 ```
 
-`check` includes root formatting, types, lint, build, unit and engine checks, frontend build/tests, and fresh-process general and damage-account fixture verification. Use `npm run tasks:test` for focused engine/domain tests. For an explicitly synthetic development server, build first and run `node scripts/serve-tasks.mjs --fixture`. Normal execution never substitutes fixtures, switches providers or retries automatically.
+These build and exercise orchestration, review, persistence and restart/readback with synthetic adapters. Fixture model decisions and evidence are deterministic; they verify integration behavior, not live reasoning or source readiness.
 
-The fixture verifier imports a source, completes a general explanation and a PM2.5 investigation, checks duplicate delivery, captures exact artifacts/events and verifies unchanged readback after process restart. A fixture pass establishes integration behavior only. Live readiness requires a captured configured model and source-tool trace; missing access or a failed attempt never advances readiness. See the [implementation record](docs/reports/orchestration/general-engine-verification.md).
+For a fixture API, build first and run `npm run tasks:serve -- --fixture` with `HAZE_TASK_STATE_DIR` set to a separate directory. The frontend's `/demos/damage-account` and `/demos/damage-reduction` pages show bundled synthetic recordings; see the [demo guide](docs/guides/damage-account-demo.md).
 
-## Repository layout
+`SAMPLE_MODE=true` enforces offline provider behavior; it does **not** select fixture orchestration adapters.
 
-Browse the [documentation index](docs/README.md) for guides grouped by topic.
-
-| Path                                                                | Purpose                                                                                           |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API                |
-| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries        |
-| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                        |
-| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                                      |
-| `app/adapters/`                                                     | Provider integrations, World Model damage-input bridge and Zetaris deployment/data-source tooling |
-| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                                   |
-| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                                |
-| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                                   |
-| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                                |
-| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                               |
-| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                                     |
-| `third_party/`                                                      | Pinned engine sources                                                                             |
-| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records                  |
-
-## Offline infrastructure and engine pins
-
-The metadata graph uses TypeScript `StateGraph` from `@langchain/langgraph` in this process; no hosted LangGraph service is required. After building, run an offline example:
+The smaller offline infrastructure example runs a checkpoint graph and prints metadata, with JSONL traces in `logs/`:
 
 ```sh
+npm run build
 npm start -- input_examples/01-minimal.json
 ```
 
-It prints deterministic execution metadata and writes an ignored JSONL trace under `logs/`. Matching expected outputs are in `output_examples/`. Its numeric `schemaVersion: 2` is an infrastructure metadata version, separate from the task request versions.
+Or run that same metadata example in Docker:
 
-[engine_sources.json](engine_sources.json) binds immutable Meterless source revisions, complete file inventories and SHA-256 checksums. The build verifies those sources before generating ignored `vendor/` and `dist/` output. Preserve upstream lockfiles, licenses and notices; see [engine pins](docs/infrastructure/engine-pins.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The [Dockerfile](Dockerfile) uses a digest-pinned Node image and runs the first offline metadata example by default.
+```sh
+docker build -t haze-agent .
+docker run --rm haze-agent
+```
 
-`npm run probe:compatibility` separately tests pinned engines, a selected provider and fresh-process SQLite checkpoint readback. Its [original infrastructure scope](docs/infrastructure/compatibility-probe.md) remains useful independently of task execution.
+The root image runs the offline example only; it does not start the web app or task API.
 
-## Persistence and current limits
+## 8. Failure handling
 
-Task records, assignments, charged attempts, actions, control receipts, questions, peer messages and immutable artifacts use local SQLite under `.state/general-v2` by default. The storage-format marker is checked before opening SQLite. One application process owns a directory. LangGraph checkpoints hold record references and bounded execution state, including context, logical steps, decisions and responses. Application records remain authoritative for permissions, charges, accepted effects and results.
+| Failure                                                     | Behaviour                                                                                    |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Malformed JSON, invalid v3 input or missing idempotency key | HTTP 400 with a structured error                                                             |
+| Missing or mismatched mutation `Origin`                     | HTTP 403                                                                                     |
+| Idempotency key reused with different content               | HTTP 409; preserves the prior request                                                        |
+| Source failure or missing evidence                          | Retains a failure or coverage gap; never silently substitutes fixtures                       |
+| Unsupported numerical work                                  | Review gates prevent selecting affected products                                             |
+| Invalid model action                                        | Bounded schema/action correction; provider failures have no automatic spending retry         |
+| Deadline or execution failure                               | Recorded in task/assignment state                                                            |
+| Restart during a dispatched call with no receipt            | Attempt stays charged with unknown outcome; replacement requires explicit Resume or Continue |
 
-Restart fences old workers. Accepted completed work remains available, while calls interrupted without a receipt retain their charge and unknown outcome. Explicit resume requests a replacement attempt under the original deadline and remaining budget; expired work requires an explicitly linked continuation run with fresh reservations. No automatic retry occurs.
+Resume retains the deadline and remaining budget; Continue creates a fresh linked run. Local cancellation does not prove a remote provider stopped. See [persistence and recovery](docs/orchestration/general-engine.md#persistence-and-restart).
 
-The application retains a local single-user boundary, two active tasks and two shared specialist slots. It supports configurable bounded resources and one purpose-bound peer channel per run. Source attribution is not proof of authenticity. World Model acceptance is disabled by default and requires an explicit supported policy. HazeOps can run bounded recurring evidence collection; `HAZEOPS_SCHEDULER=off` disables it. External effects, memory capture, publication, alerts and scheduled operational monitoring remain disabled. Fixture checks, model prose and engine conformance do not confer scientific or operational qualification.
+## 9. Data and licensing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and review conventions.
+Fixtures and bundled demo recordings use explicitly synthetic data. The repository also contains [real public source samples](data/damage-source-research/2026-10-27/README.md) with URLs, retrieval times, hashes, attribution and limitations. Their observation periods differ; they are not a matched episode or complete damage account.
+
+Preserve dataset attribution and usage terms. See [data/README.md](data/README.md), the [sample manifest](data/damage-source-research/2026-10-27/sample-manifest.json) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Component licenses are retained beside their sources; the repository currently has no root project license.
+
+## 10. Limitations
+
+- Local single-user application, with two active tasks and two shared specialist slots by default.
+- Results depend on source coverage, freshness, access and compatible scope. Attribution does not establish authenticity or causation.
+- Damage appraisal uses supplied physical quantities and compatible unit values. It does not infer attributable health effects or intervention effectiveness from raw PM2.5 data.
+- Numerical and citation checks do not establish scientific qualification. World Model acceptance is disabled by default and requires an explicit supported policy.
+- HazeOps supports bounded recurring collection while the app runs. Full unattended acquisition, recalculation and mitigation remain subject to the [product acceptance criteria](docs/architecture/haze-core-goals.md).
+- External publication, alerts and operational actions remain disabled.
+
+For development checks, use `npm run check`; see [CONTRIBUTING.md](CONTRIBUTING.md) and the [verification record](docs/reports/orchestration/general-engine-verification.md) for scope and live-readiness requirements.
+
+## 11. Pre-existing components
+
+| Component                                                      | Provenance and use                                                                                                                                         |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Meterless Agentathon starter, H-MEM and World Model references | Commit `1742dec56a66e58eef9dda2d2b865823758ca8cd`, Apache-2.0. H-MEM is retained for compatibility/conformance, without active product memory integration. |
+| Meterless browser World Model control plane                    | Same pinned revision; retained reference and isolated sandbox alongside Haze's application control plane.                                                  |
+| LangChain Core, LangGraph and checkpoint packages              | Upstream execution/checkpoint libraries, retaining their MIT licenses.                                                                                     |
+
+[engine_sources.json](engine_sources.json) records Meterless source inventories and checksums, verified before generating `vendor/` and `dist/`. Haze's task engine, capabilities and frontend integrate these components; the project does not claim all dependencies were written during the build window.
+
+Browse the [documentation index](docs/README.md) for detailed guides. The [previous README](docs/history/readme-2026-10-28.md) is archived with its original content and rebased links.
