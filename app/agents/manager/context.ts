@@ -132,6 +132,7 @@ export function assembleManagerContext(
                 .assignments(templateRequest)
                 .map((plan) => managerAssignmentPlanSchema.parse(plan))
             : [],
+        ...(capability.exact_templates ? { exact_templates: true } : {}),
         peer_requirements: relevant ? (capability.peer_requirements ?? []) : [],
         prerequisites: relevant ? (capability.prerequisites ?? []) : [],
         review_requirements: relevant
@@ -207,6 +208,11 @@ export function assembleManagerContext(
         ),
         excerpt: summary ?? content.slice(0, 1600),
         truncated: summary !== undefined || content.length > 1600,
+        // Same rule as final-synthesis citation numbering: S for imports, E for captures.
+        citation_marker:
+          artifact.producer.kind === 'user' || artifact.kind === 'source.import'
+            ? 'S'
+            : 'E',
       };
     }),
     inspections: structuredClone(
@@ -277,9 +283,12 @@ export function assembleManagerContext(
       );
       status.truncated = true;
     }
-    const starting = context.capabilities.find(
+    // A capability whose templates are its exact plan keeps them over looser starting points.
+    const offered = context.capabilities.filter(
       (capability) => capability.available && capability.templates?.length,
     );
+    const starting =
+      offered.find((capability) => capability.exact_templates) ?? offered[0];
     for (const capability of context.capabilities)
       if (capability !== starting) capability.templates = [];
     for (const capability of context.capabilities)

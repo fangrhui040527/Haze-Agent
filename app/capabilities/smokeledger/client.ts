@@ -121,7 +121,8 @@ export function createSmokeLedgerClient(
     claimCheck: (body: unknown, signal: AbortSignal) =>
       request('POST', '/api/claims/check', signal, {
         body,
-        timeoutMs: 120_000,
+        // Above the sidecar's 180 s model limit, so its own timeout reports first.
+        timeoutMs: 210_000,
         mayHaveExecuted: false,
       }),
   };

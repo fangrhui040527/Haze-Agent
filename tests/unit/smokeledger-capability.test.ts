@@ -203,6 +203,26 @@ describe('smokeledger scope framing', () => {
     ).toEqual(klang);
   });
 
+  // The live chat Manager rewrites the objective and adds a scope in its own shape.
+  it.each([
+    'Assess evidence for haze over Batu Pahat on 6–7 October 2026, identify likely smoke sources.',
+    'Assess haze evidence and recommend data for the specified Batu Pahat 6–7 October 2026.',
+    'Identify the smoke sources for haze observed over Batu Pahat, Johor, on 6–7 October 2026.',
+  ])('reads a Manager rewrite %j and ignores a foreign scope', (objective) => {
+    expect(
+      frameSmokeLedgerScope({
+        objective,
+        scope: {
+          location: 'Batu Pahat',
+          period: {
+            start: '2026-10-06T00:00:00Z',
+            end: '2026-10-07T23:59:59Z',
+          },
+        },
+      }),
+    ).toEqual(scope);
+  });
+
   it.each([
     'What is the haze like?',
     'Investigate the haze over Batu Pahat on 31 February 2026.',
@@ -242,8 +262,9 @@ describe('smokeledger scope framing', () => {
   });
 
   it('plans community message drafts only when the question asks for them', () => {
+    // Before the window: the outlook still looks forward.
     const plan = (objective: string) =>
-      createSmokeLedgerCapability()
+      createSmokeLedgerCapability(() => new Date('2026-10-05T00:00:00Z'))
         .assignments({
           schema_version: 'haze.task.request.v3',
           objective,
@@ -265,6 +286,22 @@ describe('smokeledger scope framing', () => {
       ['trace-sources', []],
       ['review', ['air-outlook', 'trace-sources', 'message-previews']],
       ['message-previews', ['air-outlook']],
+    ]);
+  });
+
+  it('only traces sources back for a window that has already ended', () => {
+    const plan = createSmokeLedgerCapability(
+      () => new Date('2026-10-08T00:00:00+08:00'),
+    )
+      .assignments({
+        schema_version: 'haze.task.request.v3',
+        objective:
+          'Investigate the haze over Batu Pahat on 6–7 October 2026 and draft notices for parents.',
+      } as never)
+      .map((p) => [p.key, p.depends_on]);
+    expect(plan).toEqual([
+      ['trace-sources', []],
+      ['review', ['trace-sources']],
     ]);
   });
 });

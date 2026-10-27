@@ -143,6 +143,13 @@ it('round-trips compact current import references across request and correction 
   expect(context.context_status.truncated).toBe(true);
 });
 
+it('labels imported artifacts with the S citation marker used by final synthesis', async () => {
+  const { context } = await inputContext();
+  expect(context.artifacts.length).toBeGreaterThan(0);
+  for (const artifact of context.artifacts)
+    expect(artifact.citation_marker).toBe('S');
+});
+
 it('preserves a unique material starting-template brief verbatim when imported envelopes are compacted', async () => {
   const brief =
     'Require the declared component Q audit before accepting this material workflow step. This instruction exists only in the starting template; retain the exact requirement and its input.';

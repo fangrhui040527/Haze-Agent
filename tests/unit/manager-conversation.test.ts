@@ -163,6 +163,32 @@ describe('Manager conversational routing', () => {
     expect(injected.complete).toHaveBeenCalledTimes(2);
   });
 
+  it('treats blank optional retrieval fields as not given', async () => {
+    const injected = model((_input, call) =>
+      call === 0
+        ? {
+            type: 'retrieve',
+            operation: 'world_lookup',
+            query: '',
+            kind: '',
+            record_id: '',
+            location: '',
+            provider: null,
+            period: null,
+          }
+        : reply('Nothing is stored yet.'),
+    );
+    const { service, store } = await setup({ model: injected });
+    const lookup = vi.spyOn(store.world, 'lookup');
+    const result = await resolve(service, 'Look up stored information');
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      kind: 'reply',
+      paragraphs: ['Nothing is stored yet.'],
+    });
+    expect(result).not.toHaveProperty('error');
+  });
+
   it('bounds repeated retrieval to four actual operations', async () => {
     const injected = model(() => ({
       type: 'retrieve',

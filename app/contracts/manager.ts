@@ -190,6 +190,7 @@ export interface ManagerContext {
     available: boolean;
     reasons?: string[];
     templates?: AssignmentPlan[];
+    exact_templates?: boolean;
     peer_requirements?: { definitions: [string, string]; purpose: string }[];
     prerequisites?: {
       definition_id: string;
@@ -233,6 +234,8 @@ export interface ManagerContext {
     current: boolean;
     excerpt?: string;
     truncated?: boolean;
+    /** Final-synthesis citation letter: S for imported sources, E for captures. */
+    citation_marker?: 'S' | 'E';
   }[];
   inspections: ManagerInspection[];
   peer_grants: {

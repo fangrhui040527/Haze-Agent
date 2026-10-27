@@ -358,7 +358,9 @@ export function createSmokeLedgerTools(
   ];
 }
 
-export function createSmokeLedgerCapability(): CapabilityDefinition {
+export function createSmokeLedgerCapability(
+  now: () => Date = () => new Date(),
+): CapabilityDefinition {
   return {
     card: {
       id: SMOKELEDGER_CAPABILITY,
@@ -400,6 +402,8 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
     ],
     // Reviewed findings are recorded in the team World Model, the single fact authority.
     worldModel: smokeLedgerWorldModelAdapter,
+    // Live Managers rewrote the plan (wrong input shape, extra reviews); the templates are the plan.
+    exact_templates: true,
     normalizeReview(artifact) {
       if (artifact.kind !== 'review') return undefined;
       const content = z
@@ -436,16 +440,26 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
       } catch {
         input = { needs_scope: true };
       }
-      const wantsMessages = MESSAGE_REQUEST.test(request.objective);
+      // A window that has already ended is traced back only: an outlook looks forward,
+      // and community messages warn about air that is still to come.
+      const scope = smokeLedgerScopeSchema.safeParse(input);
+      const upcoming =
+        !scope.success || Date.parse(scope.data.window.end) > now().getTime();
+      const wantsMessages =
+        upcoming && MESSAGE_REQUEST.test(request.objective);
       return [
-        {
-          key: 'air-outlook',
-          definition_id: 'smokeledger.air_outlook',
-          brief:
-            'Assess the air over the town for the window from hashed SmokeLedger evidence.',
-          depends_on: [],
-          input,
-        },
+        ...(upcoming
+          ? [
+              {
+                key: 'air-outlook',
+                definition_id: 'smokeledger.air_outlook',
+                brief:
+                  'Assess the air over the town for the window from hashed SmokeLedger evidence.',
+                depends_on: [],
+                input,
+              },
+            ]
+          : []),
         {
           key: 'trace-sources',
           definition_id: 'smokeledger.trace_sources',
@@ -460,7 +474,7 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
           brief:
             'Independently re-run decisive evidence and check every claim before synthesis.',
           depends_on: [
-            'air-outlook',
+            ...(upcoming ? ['air-outlook'] : []),
             'trace-sources',
             ...(wantsMessages ? ['message-previews'] : []),
           ],
@@ -484,6 +498,10 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
     },
   };
 }
+
+// Live Managers re-planned other SmokeLedger steps to "load data"; no step can.
+const NO_IN_TASK_FIX =
+  'No assignment in this task can load more data: report this as a data gap in the answer.';
 
 const sponsorSchema = z.looseObject({
   zetaris: z
@@ -594,7 +612,7 @@ async function runOperation(
     services.context.signal.throwIfAborted();
     if (error instanceof SmokeLedgerError && error.outcome === 'unknown')
       throw error;
-    const reason = error instanceof Error ? error.message : 'Tool failed.';
+    const reason = `${error instanceof Error ? error.message : 'Tool failed.'} ${NO_IN_TASK_FIX}`;
     const gap = services.save('evidence.gap', {
       source: tool,
       reason,
@@ -611,8 +629,9 @@ async function runOperation(
   const { response } = output;
   if (response.status === 'error') {
     // Unsupported town or window, or a failed sidecar run: a scoped gap, never a server error.
-    const reason =
-      response.error?.message ?? `SmokeLedger run ${response.run_id} failed.`;
+    const reason = `${
+      response.error?.message ?? `SmokeLedger run ${response.run_id} failed.`
+    } ${NO_IN_TASK_FIX}`;
     const gap = services.save('evidence.gap', {
       source: tool,
       operation: output.operation,

@@ -2808,7 +2808,7 @@ export class TaskStore {
             max_assignments: 16,
             max_artifacts: 64,
             max_model_input_bytes: 16_384,
-            max_model_output_tokens: 1200,
+            max_model_output_tokens: 4000,
             reserved_model_calls: 2,
             ...options.limits,
           });

@@ -187,6 +187,12 @@ const TOWN_AND_DAYS = new RegExp(
   String.raw`\b(?:over|in|for|at)\s+${TOWN}\s+(?:on|during|between|from)\s+${DAYS}`,
   'u',
 );
+// Rewritten objectives may drop the prepositions ("for the specified Batu Pahat 26–27
+// October 2026"); then the town is the run of capitalised words right before the days.
+const TITLED_TOWN_AND_DAYS = new RegExp(
+  String.raw`\b((?:[A-Z][\p{L}'-]*)(?:\s+[A-Z][\p{L}'-]*)*)\s+(?:(?:on|during|between|from)\s+)?${DAYS}`,
+  'u',
+);
 // Verbs may start a sentence; the town itself must still be capitalised.
 const CHANGE = String.raw`\b(?:[Cc]hange|[Ss]witch|[Mm]ove|[Ss]et)\s+(?:the\s+)?`;
 const TOWN_CHANGE = new RegExp(
@@ -197,6 +203,47 @@ const DAYS_CHANGE = new RegExp(
   String.raw`${CHANGE}(?:dates?|days?|window|period)\s+to\s+${DAYS}`,
   'u',
 );
+
+/**
+ * Towns the SmokeLedger database holds (its `towns` table). Rewritten objectives add
+ * states and punctuation ("over Batu Pahat, Johor, on 24–25 October 2026"), so a
+ * line naming exactly one of these towns and a date range frames the scope.
+ */
+const SUPPORTED_TOWNS = [
+  'Batu Pahat',
+  'Ipoh',
+  'Johor Bahru',
+  'Klang',
+  'Kuala Lumpur',
+  'Kuantan',
+  'Kuching',
+  'Melaka',
+  'Miri',
+  'Muar',
+  'Seremban',
+  'Serian',
+  'Shah Alam',
+  'Sibu',
+  'Sri Aman',
+];
+const DAYS_ANYWHERE = new RegExp(DAYS, 'u');
+function namedTownAndDays(
+  line: string,
+): { town: string; window: SmokeLedgerScope['window'] } | undefined {
+  const towns = SUPPORTED_TOWNS.filter((name) =>
+    new RegExp(String.raw`\b${name}\b`, 'iu').test(line),
+  );
+  const days = DAYS_ANYWHERE.exec(line);
+  if (towns.length !== 1 || !days) return undefined;
+  try {
+    return {
+      town: towns[0]!,
+      window: wholeDays(days[1]!, days[2], days[3]!, days[4]!),
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 /** Whole Malaysian days [first 00:00, last + 1 day 00:00) +08:00. */
 function wholeDays(
@@ -222,7 +269,9 @@ function wholeDays(
 }
 
 /**
- * Explicit scope (the request's or a correction's revised scope) wins. Otherwise
+ * An explicit SmokeLedger scope (the request's or a correction's revised scope) wins;
+ * a scope in another shape (the Manager's own `{location, period}`) is not trusted to
+ * mean whole Malaysian days, so the user's words in the objective decide. Otherwise
  * read the objective line by line (the task runtime appends each correction as a
  * new line) so the latest "over TOWN on D[–D] Month YYYY", "change the area to
  * TOWN" or "change the dates to D[–D] Month YYYY" wins. Anything else needs an
@@ -232,13 +281,17 @@ export function frameSmokeLedgerScope(request: {
   objective: string;
   scope?: unknown;
 }): SmokeLedgerScope {
-  if (request.scope !== undefined)
-    return smokeLedgerScopeSchema.parse(request.scope);
+  const explicit = smokeLedgerScopeSchema.safeParse(request.scope);
+  if (explicit.success) return explicit.data;
   let town: string | undefined;
   let window: SmokeLedgerScope['window'] | undefined;
   for (const line of request.objective.split('\n')) {
-    const both = TOWN_AND_DAYS.exec(line);
-    if (both) {
+    const both = TOWN_AND_DAYS.exec(line) ?? TITLED_TOWN_AND_DAYS.exec(line);
+    const named = namedTownAndDays(line);
+    if (named) {
+      town = named.town;
+      window = named.window;
+    } else if (both) {
       town = both[1]!.trim();
       window = wholeDays(both[2]!, both[3], both[4]!, both[5]!);
     }

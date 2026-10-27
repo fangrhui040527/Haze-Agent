@@ -276,6 +276,11 @@ export interface CapabilityDefinition {
   card: CapabilityCard;
   matches(request: TaskRequest): boolean;
   assignments(request: TaskRequest): AssignmentPlan[];
+  /**
+   * The starting templates are the plan, not a suggestion: the Manager's first plan for an
+   * objective revision must keep their keys, definitions, dependencies and input verbatim.
+   */
+  exact_templates?: boolean;
   prerequisites?: { definition_id: string; depends_on_definitions: string[] }[];
   availability?(request: TaskRequest): {
     available: boolean;
