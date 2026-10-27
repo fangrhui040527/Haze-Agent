@@ -64,9 +64,11 @@ export function damageArtifactReview(
 function Sources({
   references,
   baseUrl,
+  artifactHref,
 }: {
   references: readonly ArtifactRef[];
   baseUrl: string;
+  artifactHref?: (reference: ArtifactRef) => string;
 }) {
   if (!references.length) return <p>No exact sources were supplied.</p>;
   return (
@@ -74,7 +76,10 @@ function Sources({
       {references.map((reference) => (
         <li key={`${reference.id}/${reference.version}/${reference.sha256}`}>
           <a
-            href={`${baseUrl}/api/artifacts/${encodeURIComponent(reference.id)}`}
+            href={
+              artifactHref?.(reference) ??
+              `${baseUrl}/api/artifacts/${encodeURIComponent(reference.id)}`
+            }
             target="_blank"
             rel="noreferrer"
           >
@@ -219,6 +224,8 @@ export function DamageAccountResult({
   reviewStatus = 'needs_review',
   checks = [],
   stale = false,
+  artifactHref,
+  recorded = false,
 }: {
   content: JsonValue;
   kind?: string;
@@ -226,16 +233,20 @@ export function DamageAccountResult({
   reviewStatus?: ReviewStatus;
   checks?: readonly ArtifactReviewCheck[];
   stale?: boolean;
+  artifactHref?: (reference: ArtifactRef) => string;
+  recorded?: boolean;
 }) {
   if (!kind.startsWith('damage.')) return null;
   const publish = reviewStatus === 'supported';
   const banner = (
     <p className={styles.status} role="status">
-      {stale
-        ? 'Historical component — stale for the current task.'
-        : 'Current component.'}{' '}
-      Review: {words(reviewStatus)}.
-      {stale && publish
+      {recorded
+        ? 'Recorded component.'
+        : stale
+          ? 'Historical component — stale for the current task.'
+          : 'Current component.'}{' '}
+      {recorded ? 'Review at capture' : 'Review'}: {words(reviewStatus)}.
+      {!recorded && stale && publish
         ? ' Values are historical, not a current supported subtotal.'
         : ''}
     </p>
@@ -400,7 +411,10 @@ export function DamageAccountResult({
               {account.component_refs.map((component) => (
                 <li key={component.kind}>
                   <a
-                    href={`${baseUrl}/api/artifacts/${encodeURIComponent(component.artifact.id)}`}
+                    href={
+                      artifactHref?.(component.artifact) ??
+                      `${baseUrl}/api/artifacts/${encodeURIComponent(component.artifact.id)}`
+                    }
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -855,7 +869,11 @@ export function DamageAccountResult({
       {uniqueReferences.length > 0 && (
         <section>
           <h5>Exact input sources</h5>
-          <Sources references={uniqueReferences} baseUrl={baseUrl} />
+          <Sources
+            references={uniqueReferences}
+            baseUrl={baseUrl}
+            artifactHref={artifactHref}
+          />
         </section>
       )}
     </div>

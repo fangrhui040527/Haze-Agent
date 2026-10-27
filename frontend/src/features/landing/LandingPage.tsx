@@ -69,6 +69,7 @@ export function LandingPage() {
         <nav className={styles.topnav} aria-label="Primary">
           <Link to="/world-model">World Model</Link>
           <Link to="/damage-account">Damage appraisal</Link>
+          <Link to="/demos">Demos</Link>
           <Link to="/dashboard" className={buttonClass('primary')}>
             Open app
           </Link>
