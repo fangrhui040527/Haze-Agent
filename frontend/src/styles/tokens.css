@@ -82,6 +82,7 @@
   --fog-color: #cfc6b2;
   --sun-color: #e0902f;
   --grain-opacity: 0.035;
+  --gradient-sky: linear-gradient(180deg, #ddd6c6 0%, #e9e4d8 45%, #e4ddce 100%);
 
   /* Spacing (4 px scale) */
   --space-1: 4px;
@@ -203,6 +204,19 @@
 }
 
 [data-theme='night'] {
+  /* Smog sky shared by every page: deep night above, a long amber-ash horizon band, smoke below. */
+  --gradient-sky:
+    radial-gradient(120% 55% at 70% 0%, rgb(224 144 47 / 0.16), transparent 60%),
+    radial-gradient(90% 60% at 0% 35%, rgb(93 107 115 / 0.22), transparent 65%),
+    radial-gradient(110% 50% at 100% 100%, rgb(166 58 74 / 0.1), transparent 60%),
+    linear-gradient(
+      180deg,
+      #0e0d0b 0%,
+      #16140f 22%,
+      #221c14 42%,
+      #1b1813 62%,
+      #14130f 100%
+    );
   color-scheme: dark;
   --color-bg: #14130f;
   --color-bg-deep: #0e0d0b;

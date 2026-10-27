@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   GIBS_BASE_MAX_ZOOM,
   GIBS_BASE_TEMPLATE,
-  MALAYSIA_VIEW,
+  MALAYSIA_BOUNDS,
   REGION_BBOX,
   SATELLITE_LAYERS,
   gibsImageUrl,
@@ -18,7 +18,10 @@ const BOUNDS: L.LatLngBoundsExpression = [
   [REGION_BBOX.south, REGION_BBOX.west],
   [REGION_BBOX.north, REGION_BBOX.east],
 ];
-const START_ZOOM = 5;
+const START_BOUNDS: L.LatLngBoundsExpression = [
+  [MALAYSIA_BOUNDS.south, MALAYSIA_BOUNDS.west],
+  [MALAYSIA_BOUNDS.north, MALAYSIA_BOUNDS.east],
+];
 
 /**
  * Flat 2D fallback (no WebGL needed): same layers and markers as the globe.
@@ -46,8 +49,6 @@ export default function RegionMap({
     const host = hostRef.current;
     if (!host) return;
     const map = L.map(host, {
-      center: [MALAYSIA_VIEW.lat, MALAYSIA_VIEW.lng],
-      zoom: START_ZOOM,
       minZoom: 3,
       maxZoom: 8,
       maxBounds: [
@@ -57,6 +58,7 @@ export default function RegionMap({
       zoomControl: true,
       attributionControl: true,
     });
+    map.fitBounds(START_BOUNDS);
     L.tileLayer(GIBS_BASE_TEMPLATE, {
       maxNativeZoom: GIBS_BASE_MAX_ZOOM,
       attribution: 'Imagery: NASA GIBS / EOSDIS',
@@ -79,7 +81,7 @@ export default function RegionMap({
 
   useEffect(() => {
     if (resetKey === 0) return;
-    mapRef.current?.setView([MALAYSIA_VIEW.lat, MALAYSIA_VIEW.lng], START_ZOOM);
+    mapRef.current?.fitBounds(START_BOUNDS);
   }, [resetKey]);
 
   useEffect(() => {

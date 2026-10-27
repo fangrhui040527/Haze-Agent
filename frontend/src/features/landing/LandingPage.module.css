@@ -4,16 +4,11 @@
   overflow-y: auto;
   overflow-x: hidden;
   isolation: isolate;
-  background: linear-gradient(
-    180deg,
-    var(--color-bg-deep) 0%,
-    var(--color-bg) 40%,
-    var(--color-bg) 100%
-  );
+  background: var(--gradient-sky);
   color: var(--color-text);
 }
 
-/* ── Atmosphere: dim sun + drifting fog. Static (and still complete) at --motion-scale 0. ── */
+/* ── Atmosphere: drifting fog over the shared smog sky. Static (and still complete) at --motion-scale 0. ── */
 
 .atmosphere {
   position: absolute;
@@ -22,26 +17,6 @@
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-}
-
-.sun {
-  position: absolute;
-  top: 6vh;
-  left: 38%;
-  width: clamp(160px, 22vw, 300px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--sun-color) 85%, var(--color-on-scrim) 15%) 0%,
-    var(--sun-color) 40%,
-    color-mix(in srgb, var(--sun-color) 0%, transparent) 70%
-  );
-  /* Denser haze dims the sun further. */
-  opacity: calc(0.55 - var(--haze-density) * 0.35);
-  filter: blur(2px);
-  animation: sun-pulse calc(9s / max(var(--motion-scale), 0.001)) ease-in-out
-    infinite alternate;
 }
 
 .fog {
@@ -86,17 +61,7 @@
   }
 }
 
-@keyframes sun-pulse {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.04);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .sun,
   .fog {
     animation: none;
   }

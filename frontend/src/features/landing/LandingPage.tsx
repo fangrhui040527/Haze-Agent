@@ -237,7 +237,6 @@ export function LandingPage() {
       style={{ '--haze-density': density } as CSSProperties}
     >
       <div className={styles.atmosphere} aria-hidden="true">
-        <span className={styles.sun} />
         <span className={`${styles.fog} ${styles.fogA}`} />
         <span className={`${styles.fog} ${styles.fogB}`} />
       </div>
@@ -248,9 +247,9 @@ export function LandingPage() {
           Haze
         </Link>
         <nav className={styles.topnav} aria-label="Primary">
-          <Link to="/world-model">World Model</Link>
-          <Link to="/damage-account">Damage appraisal</Link>
-          <Link to="/dashboard" className={buttonClass('primary', 'small')}>
+          <Link viewTransition to="/world-model">World Model</Link>
+          <Link viewTransition to="/damage-account">Damage appraisal</Link>
+          <Link viewTransition to="/dashboard" className={buttonClass('primary', 'small')}>
             Open app
           </Link>
         </nav>
@@ -272,10 +271,10 @@ export function LandingPage() {
               gaps instead of filling them.
             </p>
             <div className={styles.ctas}>
-              <Link to="/dashboard" className={buttonClass('primary')}>
+              <Link viewTransition to="/dashboard" className={buttonClass('primary')}>
                 Start a task <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <Link to="/world-model" className={buttonClass()}>
+              <Link viewTransition to="/world-model" className={buttonClass()}>
                 <Database size={18} aria-hidden="true" /> Browse the World Model
               </Link>
             </div>
@@ -444,7 +443,7 @@ export function LandingPage() {
             When the data is not there, Haze reports an explicit acquisition gap
             rather than guessing.
           </p>
-          <Link to="/dashboard" className={buttonClass('primary')}>
+          <Link viewTransition to="/dashboard" className={buttonClass('primary')}>
             Open the dashboard <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </section>

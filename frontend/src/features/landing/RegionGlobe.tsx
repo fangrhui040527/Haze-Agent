@@ -17,7 +17,7 @@ import { markerVar, readToken, type RegionViewProps } from './regionLayers.ts';
 import styles from './RegionView.module.css';
 
 const GLOBE_RADIUS = 100;
-const SWAY_DEG = 5;
+const SWAY_DEG = 2.5;
 const SWAY_MS = 14_000;
 
 interface OverlayTile {

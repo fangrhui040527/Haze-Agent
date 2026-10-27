@@ -18,17 +18,7 @@ body {
   flex-direction: column;
   background-color: var(--color-bg);
   /* Soft fog: two diffuse gradients, no pattern */
-  background-image:
-    radial-gradient(
-      ellipse 80% 60% at 85% -10%,
-      color-mix(in srgb, var(--sun-color) 10%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 90% 70% at 0% 110%,
-      color-mix(in srgb, var(--fog-color) 55%, transparent),
-      transparent 65%
-    );
+  background-image: var(--gradient-sky);
   background-attachment: fixed;
   color: var(--color-text);
   font-family: var(--font-ui);
@@ -181,4 +171,39 @@ pre {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* ── Page transitions (React Router viewTransition): fog-like cross-fade with a slight lift ── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: vt-out calc(220ms * var(--motion-scale)) var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-in calc(420ms * var(--motion-scale)) var(--ease-out) both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
 }

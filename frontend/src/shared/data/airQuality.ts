@@ -38,7 +38,10 @@ export const CITIES: readonly City[] = [
   { id: 'palangkaraya', name: 'Palangkaraya', country: 'ID', lat: -2.21, lng: 113.92 },
 ];
 
-export const MALAYSIA_VIEW = { lat: 3.5, lng: 104, altitude: 1.8 } as const;
+/** Opening view: all of Malaysia (peninsula + Sabah/Sarawak) first, with Singapore and nearby Indonesia. */
+export const MALAYSIA_VIEW = { lat: 3.2, lng: 109, altitude: 0.95 } as const;
+/** Same framing for the flat map: Malaysia's extent plus a margin for Singapore and Sumatra/Kalimantan. */
+export const MALAYSIA_BOUNDS = { south: -1.5, west: 98.5, north: 7.8, east: 119.5 } as const;
 /** Region box for satellite overlays and fire detections: lat -10..12, lng 92..120. */
 export const REGION_BBOX = { south: -10, west: 92, north: 12, east: 120 } as const;
 
