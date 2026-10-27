@@ -1,4 +1,5 @@
 import { mkdtemp, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -11,6 +12,7 @@ import type {
 } from '../../app/adapters/agent-model.js';
 import { scriptedAgentModel } from './scripted-model.js';
 import { TaskStore } from '../../app/tasks/store.js';
+import { canonicalJson } from '../../app/contracts/json.js';
 
 const cleanups: (() => Promise<void>)[] = [];
 /** Small scripted answers still exercise the current strict decision envelope and fences. */
@@ -764,10 +766,12 @@ describe('general runtime', () => {
   });
   it('passes output-token ceilings and preserves actual provider receipts on direct responses', async () => {
     let ceiling = 0;
+    let captured: AgentModelInput | undefined;
     const model: AgentModel = {
       selection: { provider: 'test-provider', model: 'configured-route' },
       complete: () => Promise.resolve(''),
       completeWithReceipt: (input) => {
+        captured = input;
         ceiling = input.max_output_tokens!;
         return Promise.resolve({
           text: JSON.stringify({
@@ -797,6 +801,50 @@ describe('general runtime', () => {
       'actual-response-model',
     );
     expect(task.usage.model_calls).toBe(1);
+    const snapshot = instance.store.modelRoutes.snapshot(task.current_run_id)!;
+    const manager = task.assignments.find(
+      (assignment) => assignment.role === 'Manager',
+    )!;
+    expect(snapshot.routes.Manager.provider).toBe('injected');
+    expect(snapshot.routes.Manager.requested_model).toBe('configured-route');
+    expect(instance.store.modelRoutes.assignmentRoute(manager)).toEqual(
+      snapshot.routes.Manager,
+    );
+    const operation = instance.store.db
+      .prepare(
+        "SELECT id,fingerprint FROM graph_operations WHERE run_id=? AND json_extract(body,'$.kind')='model'",
+      )
+      .get(task.current_run_id) as { id: string; fingerprint: string };
+    const route = snapshot.routes.Manager;
+    expect(
+      instance.store.modelRoutes.operationRoute(operation.id)?.route_id,
+    ).toBe(route.route_id);
+    expect(operation.fingerprint).toBe(
+      createHash('sha256')
+        .update(
+          canonicalJson({
+            requested_route: {
+              version: route.version,
+              route_id: route.route_id,
+              capability_contract: route.capability_contract,
+            },
+            agent: manager.agent_version,
+            definition: manager.definition_version,
+            instruction: captured!.instruction,
+            purpose: 'decision',
+          }),
+        )
+        .digest('hex'),
+    );
+    expect(
+      instance.store.attempts(task.id, localTaskIdentity)[0]?.receipt,
+    ).toMatchObject({
+      synthetic: true,
+      response_model: 'actual-response-model',
+      response_id: 'response-123',
+      input_tokens: 10,
+      output_tokens: 20,
+    });
   });
   it('fences paused calls, retains late receipts, and charges explicit replacement without resetting resources', async () => {
     let release: ((value: string) => void) | undefined;

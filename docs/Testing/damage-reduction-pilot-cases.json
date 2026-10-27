@@ -1,0 +1,62 @@
+{
+  "schema_version": "haze.reduction.pilot-verification-cases.v1",
+  "frozen_on": "2026-10-27",
+  "origin": "synthetic",
+  "milestone": "Imported and simulated pilot recordkeeping; live service adapter remains deferred.",
+  "scientific_qualification": "unqualified",
+  "achieved_reduction": false,
+  "cases": [
+    {
+      "id": "complete-engineering-draft",
+      "expected": "An explicit bounded pilot phase retains exact current assessment, planning, scientific input and rule references, feasibility prerequisites, protocol draft and independent review."
+    },
+    {
+      "id": "missing-comparator-or-baseline",
+      "expected": "Missing usable comparator or baseline data prevents a damage-evaluation-capable label and remains an explicit prerequisite."
+    },
+    {
+      "id": "precision-or-latency-inadequate",
+      "expected": "Unsupported supplied precision or outcome timing yields a conditional or delivery/exposure/feasibility-limited pilot; no universal power estimate is invented."
+    },
+    {
+      "id": "registration-timing",
+      "expected": "Server registration time remains actual local retention time. Late or unknown outcome-access timing cannot gain a prespecified-target label through an earlier external date."
+    },
+    {
+      "id": "outcome-aware-amendment",
+      "expected": "An amendment retains the original immutable protocol and analysis, declared outcome availability and affected fields; outcome-aware target/comparator changes remain exploratory."
+    },
+    {
+      "id": "post-outcome-target-change",
+      "expected": "New arithmetic, a new review or a programme target revision cannot restore prespecification for an already observed outcome."
+    },
+    {
+      "id": "receipts-and-rule-scope",
+      "expected": "Receipts bind exact action ID/version, permitted action, rule/version, operating scope, trigger references and confirmation level. Missing, duplicate or mismatched evidence cannot inflate confirmed delivery."
+    },
+    {
+      "id": "unknown-and-failed-actions",
+      "expected": "Failed and unknown outcomes remain visible. Reconciliation appends evidence to the original action; no automatic replay or new agent run occurs."
+    },
+    {
+      "id": "simulation-and-human-report",
+      "expected": "Simulated actions never become live delivery; human reports cannot replace service confirmation or establish adherence, exposure or damage reduction."
+    },
+    {
+      "id": "partial-verification-and-deviation",
+      "expected": "Independent verification identifies exact covered actions. Partial coverage and material deviations remain explicit and cannot imply all delivery was independently verified."
+    },
+    {
+      "id": "wrapped-synthetic-proof-and-atomic-verification",
+      "expected": "Supplied wrappers cannot promote synthetic raw receipts, rule proofs or external registration metadata. Future or pre-action verification timestamps and a later missing proof cannot leave an earlier action independently verified."
+    },
+    {
+      "id": "freshness-and-restart",
+      "expected": "Source holds, revoked grants, material input changes and exact-run binding affect current eligibility; all originals, amendments, actions and reviews reopen after restart."
+    },
+    {
+      "id": "governed-admission-and-persistence",
+      "expected": "Identity/mode isolation, idempotency, optimistic revisions, rollback, one-active-phase limits and existing programme/run budgets apply to the new pilot phase and records."
+    }
+  ]
+}

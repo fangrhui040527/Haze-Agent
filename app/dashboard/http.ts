@@ -25,6 +25,10 @@ export interface DashboardHazeOps {
   watchers(): readonly { spec: WatcherSpec; state: unknown }[];
   lastRunMs(): Map<string, number>;
   jobs(): unknown[];
+  status?(): {
+    scheduler: 'running' | 'starting' | 'disabled' | 'stopped';
+    reason: string | null;
+  };
   tick(key?: string): string[] | Promise<string[]>;
 }
 
@@ -267,6 +271,7 @@ export class DashboardService {
           id: spec.id,
           source: spec.source.name,
         })),
+        hazeops: hazeops.status?.() ?? null,
         agents: {
           manager: 'registered in task engine',
           hazeops: 'registered; shared collector and watchers',

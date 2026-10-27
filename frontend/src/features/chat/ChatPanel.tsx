@@ -55,6 +55,7 @@ interface ChatMessage {
   idempotencyKey?: string;
   contextRefs?: AskRequest['contextRefs'];
   scope?: AskRequest['scope'];
+  nightshiftTools?: AskRequest['nightshiftTools'];
 }
 
 const EXAMPLE_PROMPTS = [
@@ -97,6 +98,7 @@ export function ChatPanel({
   );
   const [draft, setDraft] = useState('');
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
+  const [nightshiftEnabled, setNightshiftEnabled] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const historyRef = useRef<HTMLDivElement | HTMLOListElement>(null);
@@ -190,13 +192,21 @@ export function ChatPanel({
     question: string,
     focus: string | null,
     submissionKey?: string,
-    savedContext?: Pick<AskRequest, 'contextRefs' | 'scope'>,
+    savedContext?: Pick<
+      AskRequest,
+      'contextRefs' | 'scope' | 'nightshiftTools'
+    >,
   ) => {
     const trimmed = question.trim();
     if (!trimmed || ['running', 'waiting', 'paused'].includes(run.status))
       return;
     const pendingId = newId();
     const idempotencyKey = submissionKey ?? crypto.randomUUID();
+    const nightshiftTools: AskRequest['nightshiftTools'] = savedContext
+      ? savedContext.nightshiftTools
+      : nightshiftEnabled
+        ? ['nightshift.submit', 'nightshift.result', 'nightshift.cancel']
+        : undefined;
     save([
       ...messagesRef.current,
       {
@@ -216,10 +226,12 @@ export function ChatPanel({
         idempotencyKey,
         contextRefs: savedContext?.contextRefs,
         scope: savedContext?.scope,
+        nightshiftTools,
       },
     ]);
     setDraft('');
     setFocusItemId(null);
+    setNightshiftEnabled(false);
 
     const finish = (patch: Partial<ChatMessage>) =>
       save(
@@ -239,6 +251,7 @@ export function ChatPanel({
         ...(savedContext?.scope !== undefined
           ? { scope: savedContext.scope }
           : {}),
+        ...(nightshiftTools ? { nightshiftTools } : {}),
       });
       finish({
         state: 'done',
@@ -362,7 +375,11 @@ export function ChatPanel({
                     m.question,
                     m.focusItemId ?? null,
                     m.idempotencyKey,
-                    { contextRefs: m.contextRefs, scope: m.scope },
+                    {
+                      contextRefs: m.contextRefs,
+                      scope: m.scope,
+                      nightshiftTools: m.nightshiftTools,
+                    },
                   )
                 }
                 retryDisabled={running}
@@ -444,6 +461,23 @@ export function ChatPanel({
           Send
         </Button>
       </form>
+      <div className={styles.nightshiftGrant}>
+        <label>
+          <input
+            type="checkbox"
+            checked={nightshiftEnabled}
+            disabled={running}
+            onChange={(event) => setNightshiftEnabled(event.target.checked)}
+          />{' '}
+          Allow Nightshift candidate tools for this task
+        </label>
+        <p>
+          Optional local-only candidate drafts and critiques with $0 cloud
+          spend. A separate bounded chain grant is required in{' '}
+          <Link to="/nightshift">Nightshift</Link>. No automatic successor runs
+          are authorized.
+        </p>
+      </div>
       {focusItemId && (
         <p className={styles.focusNote}>
           Asking about one item.{' '}

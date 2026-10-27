@@ -10,9 +10,11 @@ import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import type { z } from 'zod';
 import type { AgentModelCompletion } from '../adapters/agent-model.js';
 import { parseContractJson } from '../contracts/json.js';
+import { artifactRefSchema } from '../contracts/artifacts.js';
 import { TaskError } from '../contracts/tasks.js';
 import { VersionedCheckpointer } from '../graph.js';
-import { graphThreadId } from '../tasks/graph-ledger.js';
+import { graphThreadId, SPECIALIST_TOPOLOGY } from '../tasks/graph-ledger.js';
+import type { ExternalWaitAction } from '../contracts/external-waits.js';
 import {
   agentActionSchema,
   assignmentOutputSchema,
@@ -24,8 +26,9 @@ import type {
   ToolContext,
 } from './ports.js';
 import { boundedExecution } from './ports.js';
+import { createSpecialistActionContract } from './action-contract.js';
 
-export const SPECIALIST_TOPOLOGY_VERSION = 'specialist.v1';
+export const SPECIALIST_TOPOLOGY_VERSION = SPECIALIST_TOPOLOGY;
 
 /**
  * How many malformed responses a specialist may correct before the assignment
@@ -89,7 +92,7 @@ function remedyFor(reason: string): string {
   if (reason.includes('unexpected_json_suffix'))
     return 'The response carried text after the JSON object. Send the object alone, with no prose and no code fences.';
   if (reason.includes('No matching discriminator') || reason.includes('type'))
-    return 'The "type" field must be exactly one of tool, save, save_tool_result, question, message, wait or finish, at the top level of the object.';
+    return 'Choose a type listed in context.action_contract.allowed_actions and return exactly the keys in its supplied schema. Use no ungranted action or finish-only keys in another variant.';
   if (reason.includes('unrecognized_keys') || reason.includes('Unrecognized'))
     return 'The response carried keys the chosen variant does not define. Include only that variant’s keys.';
   if (reason.includes('Invalid option') || reason.includes('invalid_value'))
@@ -119,6 +122,12 @@ export interface SpecialistGraphHooks {
   cursor?(): string;
   /** Commit the waiting status and release capacity before the pure interrupt node. */
   park(output: AssignmentOutput, cursor: string, operationKey: string): void;
+  /** Persist exact external dependencies and release the lease before interrupt. */
+  parkExternal?(
+    action: ExternalWaitAction,
+    cursor: string,
+    operationKey: string,
+  ): void;
   /** Atomically persist the summary, completion and their receipt. */
   complete(output: AssignmentOutput, operationKey: string): void;
   trace?(node: string): void;
@@ -289,6 +298,7 @@ export function createSpecialistGraph(
     })
     .addNode('context', (state) => {
       const services = enter('context', state);
+      const inbox = services.inbox();
       return {
         waitCursor: hooks.cursor?.() ?? String(state.turn),
         modelContext: {
@@ -311,10 +321,67 @@ export function createSpecialistGraph(
           // Named peer instances: a message recipient is an assignment id,
           // never an agent role, so the context must disclose them.
           peers: services.context.peers,
-          inbox: services.inbox(),
+          message_peers: services.messagePeers ?? services.context.peers,
+          inbox,
+          shared_refs: inbox.flatMap((message) => {
+            try {
+              const content = parseContractJson(message.text) as {
+                artifact?: unknown;
+              };
+              const ref = artifactRefSchema.safeParse(content?.artifact);
+              return ref.success ? [ref.data] : [];
+            } catch {
+              return [];
+            }
+          }),
           outputs: services.context.outputs,
+          owned_outputs: services.context.outputs,
           history: state.history,
           tools: services.toolCards,
+          artifact_kinds: services.artifactKinds ?? [],
+          acknowledged_jobs: services.acknowledgedJobs?.() ?? [],
+          escalation_available: typeof services.escalate === 'function',
+          peer_wait_available: services.peerWaitAvailable ?? false,
+          tool_results: (state.history ?? []).flatMap((entry) => {
+            if (
+              typeof entry !== 'object' ||
+              entry === null ||
+              !('action' in entry)
+            )
+              return [];
+            const action = entry.action as AgentAction;
+            if (action?.type !== 'tool' || !(action.id in state.retained))
+              return [];
+            const card = services.toolCards.find(
+              (card) =>
+                typeof card === 'object' &&
+                card !== null &&
+                'id' in card &&
+                card.id === action.tool,
+            );
+            const kind =
+              typeof card === 'object' &&
+              card !== null &&
+              'output_artifact_kind' in card
+                ? card.output_artifact_kind
+                : undefined;
+            return [
+              {
+                action_id: action.id,
+                tool: action.tool,
+                status: 'completed',
+                ...(typeof kind === 'string' ? { artifact_kind: kind } : {}),
+              },
+            ];
+          }),
+          external_wait_contract: {
+            schema_version: 'haze.external.wait.action.v1',
+            action: 'external_wait',
+            dependencies:
+              'One to four unique acknowledged local job handles with explicit required flags, owned by this assignment revision.',
+            resolution:
+              'Read nightshift.result after delivery. Resolve required jobs explicitly with use_candidate, partial_result, replan or supported_failure. A Nightshift judge never establishes evidence acceptance.',
+          },
         },
       };
     })
@@ -332,9 +399,10 @@ export function createSpecialistGraph(
       const services = enter('validate', state);
       let action: AgentAction;
       try {
-        action = (hooks.schema ?? agentActionSchema).parse(
-          parseContractJson(state.response.text),
-        );
+        action = createSpecialistActionContract(
+          state.modelContext,
+          hooks.schema ?? agentActionSchema,
+        ).schema.parse(parseContractJson(state.response.text));
       } catch (error) {
         // A rejected response is never accepted and never dispatched, and its
         // attempt stays charged and recorded. The specialist is told exactly
@@ -454,6 +522,29 @@ export function createSpecialistGraph(
         ),
       };
     })
+    .addNode('prepare_external_wait', (state) => {
+      enter('prepare_external_wait', state);
+      const action = state.action;
+      if (action.type !== 'external_wait')
+        throw new Error('Invalid external wait graph route.');
+      if (!hooks.parkExternal)
+        throw new TaskError(
+          422,
+          'external_wait_unavailable',
+          'This assignment has no controlled external-wait service.',
+        );
+      hooks.parkExternal(
+        action,
+        state.waitCursor,
+        `turn:${state.turn}:external-park`,
+      );
+      return {
+        output: waiting(
+          'waiting_peer',
+          'Waiting for acknowledged external jobs.',
+        ),
+      };
+    })
     .addNode('finish', (state) => {
       enter('finish', state);
       const action = state.action;
@@ -524,7 +615,11 @@ export function createSpecialistGraph(
       // rather than failing the assignment on the first malformed action.
       if (state.correction) return 'context';
       const type = state.action.type;
-      return type === 'wait' ? 'peer_wait' : type;
+      return type === 'wait'
+        ? 'peer_wait'
+        : type === 'external_wait'
+          ? 'prepare_external_wait'
+          : type;
     })
     .addEdge('tool', 'context')
     .addEdge('save', 'context')
@@ -533,6 +628,7 @@ export function createSpecialistGraph(
     .addEdge('escalate', 'prepare_wait')
     .addEdge('question', 'prepare_wait')
     .addEdge('peer_wait', 'prepare_wait')
+    .addEdge('prepare_external_wait', 'wait')
     .addEdge('finish', 'completion')
     .addConditionalEdges('deterministic', (state) =>
       state.output?.status === 'completed' ? 'completion' : 'prepare_wait',

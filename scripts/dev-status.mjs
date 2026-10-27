@@ -1,15 +1,14 @@
 import { stripVTControlCharacters } from 'node:util';
+import { STARTUP_COMPONENTS } from './dev-readiness.mjs';
 
-const labels = [
-  'Zetaris containers',
-  'Backend build',
-  'Frontend + backend API',
-];
+const labels = STARTUP_COMPONENTS.map(({ label }) => label);
+const activeStatuses = new Set(['STARTING', 'CHECKING']);
 
 /** Keep startup progress in one terminal panel, or emit final rows to a log. */
 export function createStartupDisplay({
   output = process.stdout,
   now = Date.now,
+  commands = false,
 } = {}) {
   const interactive = Boolean(output.isTTY && process.env.TERM !== 'dumb');
   const startedAt = now();
@@ -31,14 +30,14 @@ export function createStartupDisplay({
   const elapsed = (start) =>
     `${(Math.max(0, now() - start) / 1000).toFixed(1)}s`;
   const rowText = ({ label, status, detail, startedAt: rowStartedAt }) => {
-    const timing = status === 'STARTING' ? elapsed(rowStartedAt) : '';
+    const timing = activeStatuses.has(status) ? elapsed(rowStartedAt) : '';
     const description = [detail, timing].filter(Boolean).join(' | ');
     return `  ${label.padEnd(24)} ${status}${description ? `  ${description}` : ''}`;
   };
 
   function syncTimer() {
     const running =
-      interactive && rows.some((row) => row.status === 'STARTING');
+      interactive && rows.some((row) => activeStatuses.has(row.status));
     if (running && !timer) {
       timer = setInterval(render, 100);
       timer.unref();
@@ -71,18 +70,20 @@ export function createStartupDisplay({
     if (!row) throw new RangeError(`Unknown startup component: ${index}`);
     const nextStatus = plain(status);
     const frozenTime =
-      row.status === 'STARTING' && !['STARTING', 'WAITING'].includes(nextStatus)
+      activeStatuses.has(row.status) &&
+      !activeStatuses.has(nextStatus) &&
+      nextStatus !== 'WAITING'
         ? elapsed(row.startedAt)
         : '';
-    if (nextStatus === 'STARTING' && row.status !== 'STARTING')
+    if (activeStatuses.has(nextStatus) && !activeStatuses.has(row.status))
       row.startedAt = now();
-    else if (nextStatus !== 'STARTING') row.startedAt = undefined;
+    else if (!activeStatuses.has(nextStatus)) row.startedAt = undefined;
     row.status = nextStatus;
     row.detail = plain(detail || frozenTime);
     syncTimer();
     if (interactive) render();
     else if (
-      !['WAITING', 'STARTING'].includes(row.status) &&
+      !['WAITING', 'STARTING', 'CHECKING'].includes(row.status) &&
       !emitted.has(index)
     ) {
       emitted.add(index);
@@ -98,7 +99,9 @@ export function createStartupDisplay({
       ...local.map((url) => `  App      ${plain(url)}`),
       ...network.map((url) => `  Network  ${plain(url)}`),
       `  Started in ${plain(seconds)}s`,
-      '  Ctrl+C: stop app | docker compose stop: stop Zetaris',
+      commands
+        ? '  help: commands | Ctrl+C: stop command, or app when idle'
+        : '  Ctrl+C: stop app | docker compose stop: stop Zetaris',
     ];
     if (interactive) render();
     else if (!urlsEmitted) {
@@ -124,10 +127,16 @@ export function createStartupDisplay({
     if (interactive) output.removeListener('resize', render);
   }
 
+  function skipPending(from = 0) {
+    for (let index = from; index < rows.length; index++)
+      if (['WAITING', 'STARTING', 'CHECKING'].includes(rows[index].status))
+        update(index, 'SKIPPED');
+  }
+
   if (interactive) {
     output.on('resize', render);
     render();
   } else output.write('  Haze Agent\n');
 
-  return { update, urls, log, close };
+  return { update, urls, log, close, skipPending };
 }

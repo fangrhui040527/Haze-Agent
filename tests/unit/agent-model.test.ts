@@ -609,6 +609,45 @@ describe('office agent model adapter', () => {
     ).resolves.toBe('Echo [redacted]');
   });
 
+  it.each([
+    { status: 401, body: 'provider-secret', responseStatus: null },
+    { status: 200, body: 'invalid JSON', responseStatus: null },
+    {
+      status: 200,
+      body: JSON.stringify({
+        choices: [
+          {
+            finish_reason: 'length',
+            message: { role: 'assistant', content: 'partial' },
+          },
+        ],
+      }),
+      responseStatus: 'length',
+    },
+  ])(
+    'retains safe known response status for rejected or malformed replies $status/$responseStatus',
+    async ({ status, body, responseStatus }) => {
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(body, { status }));
+      const failure: unknown = await run(fetcher).catch(
+        (error: unknown) => error,
+      );
+      expect(failure).toMatchObject({
+        receipt: {
+          http_status: status,
+          response_status: responseStatus,
+          response_id: null,
+          response_model: null,
+          input_tokens: null,
+          output_tokens: null,
+        },
+      });
+      expect(JSON.stringify(failure)).not.toContain('provider-secret');
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('returns the actual provider model and usage receipt from the same completion', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       Response.json({
@@ -637,6 +676,8 @@ describe('office agent model adapter', () => {
         response_id: 'response-123',
         input_tokens: 219,
         output_tokens: 37,
+        response_status: 'stop',
+        http_status: 200,
       },
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
@@ -654,6 +695,8 @@ describe('office agent model adapter', () => {
       response_id: null,
       input_tokens: null,
       output_tokens: null,
+      response_status: 'stop',
+      http_status: 200,
     });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
@@ -686,6 +729,8 @@ describe('office agent model adapter', () => {
         response_id: 'echo-[redacted]',
         input_tokens: null,
         output_tokens: null,
+        response_status: 'stop',
+        http_status: 200,
       },
     });
     expect(JSON.stringify(result)).not.toContain(
@@ -716,6 +761,8 @@ describe('office agent model adapter', () => {
       response_id: null,
       input_tokens: 0,
       output_tokens: null,
+      response_status: 'stop',
+      http_status: 200,
     });
   });
 

@@ -13,6 +13,7 @@ import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
+import { ExternalWaitObserver } from '../nightshift/ExternalWaits.tsx';
 
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
@@ -113,6 +114,7 @@ export function GeneralTaskReport({
           </>
         )}
         {record && worldModel && <WorldModelStatus state={worldModel} />}
+        {record && <ExternalWaitObserver taskId={record.id} />}
       </div>
       {record && (
         <p className={styles.back}>

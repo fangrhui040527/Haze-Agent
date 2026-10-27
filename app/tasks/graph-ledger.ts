@@ -4,8 +4,8 @@ import { canonicalJson } from '../contracts/json.js';
 import { TaskError } from '../contracts/tasks.js';
 import type { JsonValue } from '../contracts/artifacts.js';
 
-export const MANAGER_TOPOLOGY = 'manager.v1';
-export const SPECIALIST_TOPOLOGY = 'specialist.v1';
+export const MANAGER_TOPOLOGY = 'manager.v3.automatic-chains';
+export const SPECIALIST_TOPOLOGY = 'specialist.v3.automatic-chains';
 export interface GraphAuthority {
   task_id: string;
   run_id: string;
@@ -341,6 +341,9 @@ export class GraphLedger {
   }
   wake(taskId: string, cursor: number, eventType?: string) {
     return this.atomic(() => {
+      // Terminal receipts are retained independently. Only complete dependency
+      // readiness creates an executable targeted wake.
+      if (eventType === 'external_result') return;
       const eventRow = this.db
         .prepare('SELECT body FROM events WHERE task_id=? AND cursor=?')
         .get(taskId, cursor) as Body | undefined;
@@ -348,13 +351,32 @@ export class GraphLedger {
         ? parse<{
             run_id: string;
             objective_revision: number;
-            data?: { recipient?: string; recipient_revision?: number };
+            generation: number;
+            data?: {
+              recipient?: string;
+              recipient_revision?: number;
+              retained_only?: boolean;
+            };
           }>(eventRow)
         : undefined;
       for (const row of this.db
         .prepare('SELECT body FROM graph_waits WHERE task_id=?')
         .all(taskId) as Body[]) {
         const wait = parse<GraphWait>(row);
+        if (
+          ['external_result', 'external_result_ready'].includes(
+            eventType ?? '',
+          ) &&
+          event?.data?.retained_only
+        )
+          continue;
+        if (eventType === 'external_result_ready' && !wait.assignment_id)
+          continue;
+        if (
+          eventType === 'external_result_ready' &&
+          event?.data?.recipient_revision !== wait.assignment_revision
+        )
+          continue;
         if (wait.status === 'retired') continue;
         if (
           wait.after_cursor >= cursor ||
@@ -370,11 +392,20 @@ export class GraphLedger {
         )
           continue;
         if (
-          eventType === 'peer_message_sent' &&
+          (eventType === 'peer_message_sent' ||
+            eventType === 'external_result' ||
+            eventType === 'external_result_ready') &&
           wait.assignment_id &&
           (event?.data?.recipient !== wait.assignment_id ||
             (event.data.recipient_revision !== undefined &&
               event.data.recipient_revision !== wait.assignment_revision))
+        )
+          continue;
+        if (
+          ['external_result', 'external_result_ready'].includes(
+            eventType ?? '',
+          ) &&
+          event?.generation !== wait.generation
         )
           continue;
         if (this.version(wait.run_id)?.engine !== 'langgraph') continue;
@@ -386,11 +417,30 @@ export class GraphLedger {
           !Array.isArray(wait.payload)
             ? wait.payload
             : {};
-        this.enqueue({
+        const delivery = {
           ...wait,
           cursor,
           payload: { ...payload, resume: { cursor } },
-        });
+        };
+        const pending =
+          eventType === 'external_result_ready'
+            ? (this.db
+                .prepare(
+                  "SELECT body FROM graph_jobs WHERE thread_id=? AND status='pending' ORDER BY rowid LIMIT 1",
+                )
+                .get(wait.thread_id) as Body | undefined)
+            : undefined;
+        if (pending) {
+          const prior = parse<GraphJob>(pending);
+          const merged = {
+            ...prior,
+            cursor: Math.max(prior.cursor, cursor),
+            payload: delivery.payload,
+          };
+          this.db
+            .prepare('UPDATE graph_jobs SET cursor=?,body=? WHERE id=?')
+            .run(merged.cursor, JSON.stringify(merged), merged.id);
+        } else this.enqueue(delivery);
         this.db
           .prepare('UPDATE graph_waits SET body=? WHERE thread_id=?')
           .run(JSON.stringify(wait), wait.thread_id);
@@ -402,6 +452,7 @@ export class GraphLedger {
     input: unknown,
     authority: GraphAuthority,
     kind: GraphOperation['kind'],
+    linkAuthority?: (operation: GraphOperation) => void,
   ): GraphOperation {
     return this.atomic(() => {
       this.assertAuthority(authority);
@@ -432,6 +483,7 @@ export class GraphLedger {
           prior.generation = authority.generation;
           this.putOperation(prior);
         }
+        linkAuthority?.(prior);
         return prior;
       }
       const operation: GraphOperation = {
@@ -451,6 +503,7 @@ export class GraphLedger {
           fingerprint,
           JSON.stringify(operation),
         );
+      linkAuthority?.(operation);
       return operation;
     });
   }

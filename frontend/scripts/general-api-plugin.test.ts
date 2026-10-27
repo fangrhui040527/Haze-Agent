@@ -213,12 +213,15 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
   it('lets the current task handler answer task requests before the API fallback', async () => {
     for (const path of [
       '/api/tasks',
+      '/api/tasks?limit=50&status=active',
+      '/api/agents',
       '/api/tasks/current/events?after=2',
       '/api/tasks/current/updates',
       '/api/tasks/current/control',
       '/api/artifacts',
       '/api/artifacts/current',
       '/api/capabilities',
+      '/api/nightshift/readiness',
       '/api/world/records',
       '/api/world/records/example?view=detail',
       '/api/world/projections/rebuild',
@@ -233,12 +236,15 @@ describe.each(['dev', 'preview'] as const)('local task plugin (%s)', (mode) => {
     }
     expect(taskRequests).toEqual([
       '/api/tasks',
+      '/api/tasks?limit=50&status=active',
+      '/api/agents',
       '/api/tasks/current/events?after=2',
       '/api/tasks/current/updates',
       '/api/tasks/current/control',
       '/api/artifacts',
       '/api/artifacts/current',
       '/api/capabilities',
+      '/api/nightshift/readiness',
       '/api/world/records',
       '/api/world/records/example?view=detail',
       '/api/world/projections/rebuild',

@@ -28,6 +28,7 @@ async function boot() {
       env: {
         ...process.env,
         STATE_DIR: root,
+        HAZE_TASK_STATE_DIR: root,
         HAZE_TASK_PORT: '0',
         HAZE_WORLD_ACCEPTANCE_POLICY: 'research-v1',
       },

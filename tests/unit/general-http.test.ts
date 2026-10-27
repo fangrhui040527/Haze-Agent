@@ -16,11 +16,12 @@ async function listen(server: Server) {
     throw new Error('No local server');
   return `http://127.0.0.1:${address.port}`;
 }
-async function api() {
+async function api(env: NodeJS.ProcessEnv = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'haze-general-http-'));
   const handler = createTaskHandler({
     stateDirectory: directory,
     mode: 'fixture',
+    env,
   });
   const server = createServer(handler);
   const origin = await listen(server);
@@ -43,6 +44,78 @@ async function api() {
     });
   return { origin, post, handler };
 }
+it('serves read-only route readiness through the local identity boundary', async () => {
+  const { origin, post } = await api();
+  const response = await fetch(origin + '/api/nightshift/readiness');
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  const text = await response.text();
+  const readiness = JSON.parse(text) as {
+    version: number;
+    routes: { role: string; live_verified: boolean; role_evaluation: string }[];
+  };
+  expect(readiness.version).toBe(1);
+  expect(readiness.routes.map((route) => route.role).sort()).toEqual(
+    [
+      'Manager',
+      'HazeOps',
+      'WorkerShield',
+      'EvidenceCritic',
+      'DamageAccountant',
+    ].sort(),
+  );
+  expect(
+    readiness.routes.every(
+      (route) => !route.live_verified && route.role_evaluation === 'unverified',
+    ),
+  ).toBe(true);
+  expect(text).not.toMatch(/credential_ref|base_url|api_key|authorization/i);
+  expect((await post('/api/nightshift/readiness', {})).status).toBe(405);
+  expect(
+    (await fetch(origin + '/api/nightshift/readiness?route=Manager')).status,
+  ).toBe(400);
+  expect(
+    (
+      await fetch(origin + '/api/nightshift/readiness', {
+        headers: { origin: 'https://foreign.example' },
+      })
+    ).status,
+  ).toBe(403);
+  expect(
+    (
+      await fetch(origin + '/api/nightshift/readiness', {
+        headers: { 'sec-fetch-site': 'cross-site' },
+      })
+    ).status,
+  ).toBe(403);
+});
+it('keeps unavailable route details server-owned while readiness remains readable', async () => {
+  const { origin } = await api({
+    HAZE_MODEL_ROUTES_JSON: JSON.stringify({
+      version: 1,
+      profiles: {
+        specialist: {
+          provider: 'openai-compatible',
+          model: 'requested-model',
+          base_url: 'https://private-host.example/private-path',
+          credential_env: 'SUPER_PRIVATE_ROUTE_SECRET',
+        },
+      },
+    }),
+    HAZE_AGENT_ROUTES_JSON: JSON.stringify({
+      version: 1,
+      routes: { HazeOps: 'specialist' },
+    }),
+  });
+  const response = await fetch(origin + '/api/nightshift/readiness');
+  expect(response.status).toBe(200);
+  const text = await response.text();
+  expect(text).toContain('requested-model');
+  expect(text).toContain('blocked');
+  expect(text).not.toMatch(
+    /SUPER_PRIVATE_ROUTE_SECRET|private-host|private-path|credential_ref|base_url/,
+  );
+});
 it('serves one general API and immutable source imports with idempotency', async () => {
   const { origin, post } = await api();
   const capabilities = (await fetch(origin + '/api/capabilities').then(

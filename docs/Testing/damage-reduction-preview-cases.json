@@ -1,0 +1,73 @@
+{
+  "schema_version": "haze.reduction.preview-evaluation-cases.v1",
+  "frozen_on": "2026-10-27",
+  "purpose": "Freeze synthetic engineering cases before Plan 02 prompt or routing tuning.",
+  "origin": "synthetic",
+  "scientific_qualification": "unqualified",
+  "achieved_reduction": false,
+  "common": {
+    "target_fraction": "0.1",
+    "relation": "at_least",
+    "assessment_rule": "point_estimate",
+    "intervention": "Synthetic proposed exposure-alert and schedule service",
+    "scope_fixture": "SYNTHETIC_REDUCTION_SCOPE",
+    "required_outputs": [
+      "exact selection",
+      "assessment",
+      "independent arithmetic review",
+      "conditional plan",
+      "independent plan review"
+    ],
+    "required_limits": [
+      "Synthetic provenance remains visible",
+      "Scientific applicability is unqualified",
+      "Rules require human approval",
+      "Live digital delivery is deferred",
+      "No achieved reduction claim"
+    ],
+    "comparison_caveat": "Fixture-only sequence and runtime measurements do not establish live-model usefulness, scientific applicability, provider cost, or an empirical superiority claim."
+  },
+  "cases": [
+    {
+      "id": "supported-conditional-preview",
+      "baseline": "1000",
+      "intervention": "880",
+      "expected_assessment": "supported",
+      "expected_absolute_reduction": "120",
+      "expected_target_met": true,
+      "expected_plan_support": "conditional",
+      "expected_behavior": "Retain a conditional option, exact checked arithmetic, and outstanding scientific and human rule approval prerequisites."
+    },
+    {
+      "id": "below-target-conditional-preview",
+      "baseline": "1000",
+      "intervention": "950",
+      "expected_assessment": "supported",
+      "expected_absolute_reduction": "50",
+      "expected_target_met": false,
+      "expected_plan_support": "conditional",
+      "expected_behavior": "State that this assessed point estimate does not meet the target; do not claim no intervention can work or silently replace the candidate."
+    },
+    {
+      "id": "insufficient-evidence-preview",
+      "baseline": "1000",
+      "intervention": null,
+      "expected_assessment": "gap",
+      "expected_absolute_reduction": null,
+      "expected_target_met": null,
+      "expected_plan_support": "gap",
+      "expected_behavior": "Retain the exact unknown-quantity evidence gap and withhold unsupported numerical or operational recommendations."
+    },
+    {
+      "id": "hard-subgroup-constraint-violated",
+      "baseline": "1000",
+      "intervention": "880",
+      "hard_constraint_state": "violated",
+      "expected_assessment": "supported",
+      "expected_absolute_reduction": "120",
+      "expected_target_met": true,
+      "expected_plan_support": "blocked",
+      "expected_behavior": "Do not turn a numerically successful scenario into an admissible recommendation when a hard subgroup protection constraint is violated."
+    }
+  ]
+}

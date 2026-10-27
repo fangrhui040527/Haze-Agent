@@ -4,7 +4,7 @@ import { damageAccountantInstructions } from './instructions.js';
 
 export const damageAccountantAgent: AgentDefinition = {
   id: 'DamageAccountant',
-  version: 'damage-accountant.v1',
+  version: 'damage-accountant.v2',
   instructions: damageAccountantInstructions,
   schemas: { specialist: agentActionSchema },
 };

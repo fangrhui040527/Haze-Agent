@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { timestampSchema } from './common.js';
 import { boundedJsonSchema, artifactRefSchema } from './artifacts.js';
 
+/** Optional authority for a composition-provided task coordinator. */
+export const taskCoordinationSchema = z.strictObject({
+  owner_id: z.uuid(),
+  expected_revision: z.number().int().positive(),
+});
+
 export const mutationExpectationSchema = z.strictObject({
   expected_objective_revision: z.number().int().positive(),
   expected_run_id: z.uuid(),
@@ -17,6 +23,7 @@ export const taskUpdateSchema = z.strictObject({
   question_id: z.uuid().optional(),
   affected_assignment_ids: z.array(z.uuid()).max(16).optional(),
   context_refs: z.array(artifactRefSchema).max(64).optional(),
+  coordination: taskCoordinationSchema.optional(),
 });
 export const taskControlSchema = z.strictObject({
   schema_version: z.literal('haze.task.control.v3'),
@@ -24,6 +31,7 @@ export const taskControlSchema = z.strictObject({
   action: z.enum(['pause', 'cancel', 'resume', 'continue', 'revoke']),
   reason: z.string().max(4096).optional(),
   revoked_tools: z.array(z.string().min(1).max(128)).max(64).optional(),
+  coordination: taskCoordinationSchema.optional(),
 });
 export const controlReceiptSchema = z.strictObject({
   schema_version: z.literal('haze.task.control.receipt.v3'),

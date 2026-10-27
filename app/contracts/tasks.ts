@@ -22,6 +22,13 @@ export const taskRequestSchema = z.strictObject({
   context_refs: z.array(artifactRefSchema).max(64).default([]),
   constraints: z.array(text).max(32).default([]),
   desired_deliverables: z.array(text).max(32).default([]),
+  /** Explicit opt-in; registration alone grants no external job authority. */
+  nightshift_tools: z
+    .array(
+      z.enum(['nightshift.submit', 'nightshift.result', 'nightshift.cancel']),
+    )
+    .max(3)
+    .optional(),
 });
 export const taskStatusSchema = z.enum([
   'queued',

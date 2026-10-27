@@ -17,6 +17,7 @@ interface Display {
   urls(local?: string[], network?: string[], elapsedSeconds?: number): void;
   log(text: string): void;
   close(): void;
+  skipPending(from?: number): void;
 }
 
 const { createStartupDisplay } = (await import(
@@ -72,6 +73,24 @@ afterEach(() => {
 });
 
 describe('development startup status display', () => {
+  it('shows elapsed time while checking World Model readiness and freezes it afterward', () => {
+    vi.stubEnv('TERM', 'xterm');
+    vi.useFakeTimers();
+    let time = 0;
+    const output = new Output();
+    const display = createStartupDisplay({ output, now: () => time });
+    display.update(4, 'CHECKING');
+    time = 1700;
+    vi.advanceTimersByTime(1700);
+    expect(screen(output)).toMatch(
+      /World Model \(SQLite\)[^\n]*CHECKING.*1\.7s/,
+    );
+    display.update(4, 'READY');
+    expect(screen(output)).toMatch(/World Model \(SQLite\)[^\n]*READY.*1\.7s/);
+    expect(vi.getTimerCount()).toBe(0);
+    display.close();
+  });
+
   it('advances each starting component timer and freezes it while the next component starts', () => {
     vi.stubEnv('TERM', 'xterm');
     vi.useFakeTimers();
@@ -84,32 +103,32 @@ describe('development startup status display', () => {
         .find((line) => line.includes(label));
 
     display.update(0, 'STARTING');
-    expect(row('Zetaris containers')).toMatch(/STARTING.*0\.0s/);
+    expect(row('Zetaris platform')).toMatch(/STARTING.*0\.0s/);
     expect(vi.getTimerCount()).toBe(1);
 
     time += 1200;
     vi.advanceTimersByTime(1200);
-    expect(row('Zetaris containers')).toMatch(/STARTING.*1\.2s/);
-    expect(row('Backend build')).toContain('WAITING');
-    expect(row('Backend build')).not.toMatch(/\d+\.\ds/);
+    expect(row('Zetaris platform')).toMatch(/STARTING.*1\.2s/);
+    expect(row('Haze TypeScript build')).toContain('WAITING');
+    expect(row('Haze TypeScript build')).not.toMatch(/\d+\.\ds/);
 
     display.update(0, 'STARTED');
     display.update(1, 'STARTING');
-    expect(row('Backend build')).toMatch(/STARTING.*0\.0s/);
+    expect(row('Haze TypeScript build')).toMatch(/STARTING.*0\.0s/);
     time += 2300;
     vi.advanceTimersByTime(2300);
 
-    expect(row('Zetaris containers')).toMatch(/STARTED.*1\.2s/);
-    expect(row('Backend build')).toMatch(/STARTING.*2\.3s/);
+    expect(row('Zetaris platform')).toMatch(/STARTED.*1\.2s/);
+    expect(row('Haze TypeScript build')).toMatch(/STARTING.*2\.3s/);
     for (const label of [
-      'Zetaris containers',
-      'Backend build',
-      'Frontend + backend API',
+      'Zetaris platform',
+      'Haze TypeScript build',
+      'Haze web app',
     ])
       expect(screen(output).split(label)).toHaveLength(2);
 
     display.update(1, 'READY');
-    expect(row('Backend build')).toMatch(/READY.*2\.3s/);
+    expect(row('Haze TypeScript build')).toMatch(/READY.*2\.3s/);
     expect(vi.getTimerCount()).toBe(0);
     const writes = output.chunks.length;
     time += 5000;
@@ -129,10 +148,10 @@ describe('development startup status display', () => {
     time = 1000;
     vi.advanceTimersByTime(1000);
     display.update(0, 'STARTING');
-    expect(screen(output)).toMatch(/Zetaris containers[^\n]*STARTING.*1\.0s/);
+    expect(screen(output)).toMatch(/Zetaris platform[^\n]*STARTING.*1\.0s/);
     time = 1500;
     vi.advanceTimersByTime(500);
-    expect(screen(output)).toMatch(/Zetaris containers[^\n]*STARTING.*1\.5s/);
+    expect(screen(output)).toMatch(/Zetaris platform[^\n]*STARTING.*1\.5s/);
 
     display.update(0, 'READY', '4 healthy | 1.5s');
     const visible = screen(output);
@@ -190,17 +209,47 @@ describe('development startup status display', () => {
     display.update(1, 'STARTING');
     display.update(1, 'READY');
     display.update(2, 'READY');
+    for (const [index, status] of [
+      [3, 'READY'],
+      [4, 'READY'],
+      [5, 'DISABLED'],
+      [6, 'RUNNING'],
+      [7, 'UNVERIFIED'],
+      [8, 'UNREACHABLE'],
+      [9, 'BLOCKED'],
+      [10, 'UNCONFIGURED'],
+      [11, 'BLOCKED'],
+    ] as const)
+      display.update(index, status);
     display.urls(['http://localhost:5173/'], [], 3.5);
 
     const visible = screen(output);
     expect(visible.match(/Haze Agent/g)).toHaveLength(1);
-    expect(visible.match(/Zetaris containers/g)).toHaveLength(1);
-    expect(visible.match(/Backend build/g)).toHaveLength(1);
-    expect(visible.match(/Frontend \+ backend API/g)).toHaveLength(1);
+    expect(visible.match(/Zetaris platform/g)).toHaveLength(1);
+    expect(visible.match(/Haze TypeScript build/g)).toHaveLength(1);
+    expect(visible.match(/Haze web app/g)).toHaveLength(1);
     expect(visible).toContain('STARTED  2.0s');
     expect(visible).not.toMatch(/STARTING|WAITING/);
+    expect(visible).toMatch(/World Model \(SQLite\)[^\n]*READY/);
+    expect(visible).toMatch(/H-MEM[^\n]*DISABLED/);
+    expect(visible).toMatch(/Nightshift local jobs[^\n]*BLOCKED/);
     expect(visible).toContain('http://localhost:5173/');
     expect(visible).toContain('Started in 3.5s');
+    display.close();
+  });
+
+  it('preserves a failed component when skipping checks after an interrupted startup', () => {
+    vi.stubEnv('TERM', 'xterm');
+    const output = new Output();
+    const display = createStartupDisplay({ output });
+    display.update(3, 'READY');
+    display.update(4, 'FAILED', 'SQLite query failed');
+    display.update(8, 'STARTING');
+    display.skipPending(3);
+    const visible = screen(output);
+    expect(visible).toMatch(/Haze tasks \(LangGraph\)[^\n]*READY/);
+    expect(visible).toMatch(/World Model \(SQLite\)[^\n]*FAILED/);
+    expect(visible).toMatch(/Nightshift runtime[^\n]*SKIPPED/);
     display.close();
   });
 
@@ -215,7 +264,7 @@ describe('development startup status display', () => {
 
     const visible = screen(output);
     expect(visible.match(/Docker could not connect/g)).toHaveLength(1);
-    expect(visible.match(/Zetaris containers/g)).toHaveLength(1);
+    expect(visible.match(/Zetaris platform/g)).toHaveLength(1);
     expect(visible.indexOf('Docker could not connect')).toBeLessThan(
       visible.indexOf('Haze Agent'),
     );
@@ -236,7 +285,7 @@ describe('development startup status display', () => {
     const visible = screen(output);
     expect(visible.match(/warning/g)).toHaveLength(1);
     expect(visible.match(/Haze Agent/g)).toHaveLength(1);
-    expect(visible.match(/Zetaris containers/g)).toHaveLength(1);
+    expect(visible.match(/Zetaris platform/g)).toHaveLength(1);
     expect(visible).toContain('FAILED');
     expect(visible.indexOf('warning')).toBeLessThan(
       visible.indexOf('Haze Agent'),
@@ -291,9 +340,9 @@ describe('development startup status display', () => {
       const text = output.chunks.join('');
       expect(text).not.toContain('\u001b');
       expect(text).not.toMatch(/STARTING|WAITING/);
-      expect(text.match(/Zetaris containers/g)).toHaveLength(1);
-      expect(text.match(/Backend build/g)).toHaveLength(1);
-      expect(text.match(/Frontend \+ backend API/g)).toHaveLength(1);
+      expect(text.match(/Zetaris platform/g)).toHaveLength(1);
+      expect(text.match(/Haze TypeScript build/g)).toHaveLength(1);
+      expect(text.match(/Haze web app/g)).toHaveLength(1);
       expect(text.match(/http:\/\/localhost:5173\//g)).toHaveLength(1);
       expect(output.listenerCount('resize')).toBe(0);
     },

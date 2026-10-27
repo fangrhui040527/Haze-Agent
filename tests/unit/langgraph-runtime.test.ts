@@ -258,7 +258,9 @@ describe('LangGraph runtime acceptance', () => {
       expect(threads).toHaveLength(3);
       expect(threads.every((thread) => thread.checkpoint_ns === '')).toBe(true);
       expect(
-        threads.filter((thread) => thread.thread_id.includes('specialist.v1')),
+        threads.filter((thread) =>
+          thread.thread_id.includes('specialist.v3.automatic-chains'),
+        ),
       ).toHaveLength(2);
     } finally {
       checkpoints.close();
@@ -407,6 +409,170 @@ describe('LangGraph runtime acceptance', () => {
     expect(specialistCalls).toBe(2);
     expect(complete.questions).toHaveLength(1);
     expect(complete.questions[0]?.status).toBe('answered');
+  });
+
+  it('refreshes a late peer grant and removes completed message recipients without restarting', async () => {
+    const firstToolStarted = deferred<void>();
+    const afterGrant = deferred<void>();
+    const secondToolStarted = deferred<void>();
+    const afterPeerCompletion = deferred<void>();
+    const releasePeer = deferred<void>();
+    const seen: {
+      peers: { id: string; revision: number }[];
+      messagePeers: { id: string; revision: number }[];
+      allowed: string[];
+    }[] = [];
+    let coordinated = false;
+    const test = await fixture({
+      definitions: [
+        { ...definition, tools: ['test.turn-barrier'] },
+        {
+          ...definition,
+          id: 'test.peer',
+          agent: 'EvidenceCritic',
+          execute: async (services) => {
+            await firstToolStarted.promise;
+            services.escalate!(
+              'peer_request',
+              'Grant the purpose-bound peer channel while retrieval is active.',
+            );
+            await releasePeer.promise;
+            return output();
+          },
+        },
+      ],
+      tools: [
+        {
+          id: 'test.turn-barrier',
+          version: '1',
+          description: 'Wait for the explicitly controlled test state change.',
+          mode: 'live',
+          inputSchema: z.strictObject({
+            phase: z.enum(['grant', 'completion']),
+          }),
+          outputSchema: z.strictObject({ completed: z.literal(true) }),
+          async execute(input) {
+            const { phase } = input as { phase: 'grant' | 'completion' };
+            if (phase === 'grant') {
+              firstToolStarted.resolve();
+              await afterGrant.promise;
+            } else {
+              secondToolStarted.resolve();
+              await afterPeerCompletion.promise;
+            }
+            return { completed: true };
+          },
+        },
+      ],
+      specialist: (input) => {
+        const context = input.context as {
+          peers: { id: string; revision: number }[];
+          message_peers: { id: string; revision: number }[];
+          action_contract: { allowed_actions: string[] };
+        };
+        seen.push({
+          peers: context.peers,
+          messagePeers: context.message_peers,
+          allowed: context.action_contract.allowed_actions,
+        });
+        if (seen.length <= 2)
+          return {
+            id: `turn-barrier-${seen.length}`,
+            type: 'tool',
+            tool: 'test.turn-barrier',
+            input: { phase: seen.length === 1 ? 'grant' : 'completion' },
+          };
+        return {
+          id: 'finish-after-peer-completion',
+          type: 'finish',
+          summary: 'The current peer contract was refreshed across each turn.',
+          support: 'supported',
+          uncertainty: [],
+          outputs: [],
+        };
+      },
+      manager: async (context) => {
+        if (!context.assignments.length)
+          return {
+            type: 'apply_plan',
+            assignments: [
+              {
+                key: 'sender',
+                definition_id: definition.id,
+                brief: 'Observe peer authority between controlled turns.',
+                depends_on: [],
+              },
+              {
+                key: 'peer',
+                definition_id: 'test.peer',
+                brief: 'Remain active until the test releases the peer.',
+                depends_on: [],
+              },
+            ],
+            retain_assignment_ids: [],
+            reason: 'Admit both branches before granting their peer channel.',
+          };
+        if (!coordinated) {
+          await firstToolStarted.promise;
+          coordinated = true;
+          const [sender, peer] = context.assignments;
+          return {
+            type: 'coordinate',
+            participants: [
+              { assignment_id: sender!.id, revision: sender!.revision },
+              { assignment_id: peer!.id, revision: peer!.revision },
+            ],
+            purpose: 'late peer verification',
+          };
+        }
+        return awaitBranches(context);
+      },
+    });
+    const id = test.admit();
+    const admitted = test.runtime.store.read(id, localTaskIdentity);
+    try {
+      await firstToolStarted.promise;
+      const granted = await until(test.runtime, id, (task) =>
+        Boolean(test.runtime.store.peerChannelForRun(task.current_run_id)),
+      );
+      const peer = granted.assignments.find(
+        (assignment) => assignment.definition_id === 'test.peer',
+      )!;
+      expect(seen[0]!.peers).toEqual([]);
+      expect(seen[0]!.messagePeers).toEqual([]);
+      expect(seen[0]!.allowed).not.toContain('message');
+      afterGrant.resolve();
+      await secondToolStarted.promise;
+      expect(seen[1]!.messagePeers).toEqual([
+        expect.objectContaining({ id: peer.id, revision: peer.revision }),
+      ]);
+      expect(seen[1]!.allowed).toContain('message');
+      releasePeer.resolve();
+      await until(test.runtime, id, (task) =>
+        task.assignments.some(
+          (assignment) =>
+            assignment.id === peer.id && assignment.status === 'completed',
+        ),
+      );
+      afterPeerCompletion.resolve();
+      const completed = await until(test.runtime, id, (task) =>
+        ['completed', 'failed', 'paused'].includes(task.status),
+      );
+      expect(completed.status, completed.error?.message).toBe('completed');
+      expect(completed.current_run_id).toBe(admitted.current_run_id);
+      expect(completed.generation).toBe(admitted.generation);
+      expect(seen).toHaveLength(3);
+      expect(seen[2]!.peers).toEqual([
+        expect.objectContaining({ id: peer.id, revision: peer.revision }),
+      ]);
+      expect(seen[2]!.messagePeers).toEqual([]);
+      expect(seen[2]!.allowed).not.toContain('message');
+      expect(seen[2]!.allowed).not.toContain('wait');
+    } finally {
+      afterGrant.resolve();
+      releasePeer.resolve();
+      afterPeerCompletion.resolve();
+    }
   });
 
   it('restores peer waits after restart, releases capacity and delivers one authorized message', async () => {

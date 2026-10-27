@@ -12,6 +12,16 @@ const DamageAccountPage = lazy(() =>
     default: module.DamageAccountPage,
   })),
 );
+const DamageReductionPage = lazy(() =>
+  import('../features/damage-reduction/DamageReductionPage.tsx').then(
+    (module) => ({ default: module.DamageReductionPage }),
+  ),
+);
+const ReductionProgrammePage = lazy(() =>
+  import('../features/damage-reduction/ProgrammePage.tsx').then((module) => ({
+    default: module.ReductionProgrammePage,
+  })),
+);
 
 const ManagerPage = lazy(() =>
   import('../features/manager/ManagerPage.tsx').then((module) => ({
@@ -31,6 +41,12 @@ const MemoryPage = lazy(() =>
   })),
 );
 
+const NightshiftPage = lazy(() =>
+  import('../features/nightshift/NightshiftPage.tsx').then((module) => ({
+    default: module.NightshiftPage,
+  })),
+);
+
 /**
  * All pages. To add a page: create src/features/<name>/<Name>Page.tsx and add a route here
  * (plus a NavLink in AppLayout.tsx if it belongs in the header).
@@ -44,6 +60,14 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'item/:id', element: <DetailPage /> },
       { path: 'demo-data', element: <DemoDataPage /> },
+      {
+        path: 'nightshift/:jobId?',
+        element: (
+          <Suspense fallback={<p role="status">Opening Nightshift jobs...</p>}>
+            <NightshiftPage />
+          </Suspense>
+        ),
+      },
       {
         path: 'world-model',
         element: (
@@ -75,6 +99,28 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<p role="status">Opening damage appraisal...</p>}>
             <DamageAccountPage />
+          </Suspense>
+        ),
+      },
+      ...['damage-reduction', 'damage-reduction/tasks/:taskId'].map((path) => ({
+        path,
+        element: (
+          <Suspense
+            fallback={
+              <p role="status">Opening conditional planning preview...</p>
+            }
+          >
+            <DamageReductionPage />
+          </Suspense>
+        ),
+      })),
+      {
+        path: 'damage-reduction/programmes/:programmeId',
+        element: (
+          <Suspense
+            fallback={<p role="status">Opening programme coordination…</p>}
+          >
+            <ReductionProgrammePage />
           </Suspense>
         ),
       },
