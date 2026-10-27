@@ -66,7 +66,7 @@ haze> doctor
 haze> open world
 ```
 
-`status` supports `app`, `agents`, `nightshift`, `zetaris`, `world`, `hmem`, and `hazeops`. Task
+`status` supports `app`, `agents`, `nightshift`, `zetaris`, `world`, and `hazeops`. Task
 commands also support `show`, `cancel`, `continue`, and `reply`; `help tasks`
 explains their arguments. Resume retains the run's deadline and remaining budget;
 Continue creates a fresh linked run. Local cancellation does not establish that a
@@ -80,6 +80,31 @@ settings, and reports overrides and restart requirements. Existing task routes
 remain pinned. `logs zetaris --follow` streams this project's Compose output;
 `tasks watch` and `nightshift show JOB_ID` inspect durable work history.
 
+Manager chat limits can be configured in the same console or root `.env`:
+
+| Setting                          | Default | Allowed range    |
+| -------------------------------- | ------- | ---------------- |
+| `HAZE_MANAGER_MAX_MODEL_CALLS`   | 6       | 1–64 per message |
+| `HAZE_MANAGER_MAX_RETRIEVALS`    | 4       | 0–32 per message |
+| `HAZE_MANAGER_TIMEOUT_MS`        | 120000  | 1000–1800000 ms  |
+| `HAZE_MANAGER_MAX_OUTPUT_TOKENS` | 2400    | 1–32768 per call |
+| `HAZE_MANAGER_MAX_CORRECTIONS`   | 1       | 0–8 per message  |
+
+For example, `config set HAZE_MANAGER_MAX_MODEL_CALLS 12`,
+`config set HAZE_MANAGER_MAX_RETRIEVALS 8`, then `config validate` and
+`app restart`. Values must be whole numbers within these ranges; invalid server
+settings fail startup validation. All decisions share the model-call budget,
+including retrieval requests, malformed-output corrections and the final reply.
+Increasing a retrieval or correction limit does not increase the model-call
+limit. These controls govern quick Manager chat; tracked task budgets remain
+separate. Backend source edits require `app restart --rebuild`. If the dev
+launcher was already running when its console code changed, stop it and rerun
+`npm run dev` once to load the updated console.
+
+Historical comparisons also need evidence covering the requested dates. See
+[Compare historical haze days](docs/guides/historical-haze-comparison.md) for the
+Kuala Lumpur workflow, timezone boundaries, source imports and current limits.
+
 During a watch or command, `Ctrl+C` ends that command and returns to the prompt.
 When idle, `Ctrl+C`, `Ctrl+D`, or `exit` stops the app and preserves Zetaris.
 `shutdown --all` stops the app and then this project's Compose services, retaining
@@ -89,7 +114,7 @@ their data. Redirected output keeps plain startup logs without a prompt; use
 continue to pass through to Vite.
 
 The root dev command names the actual components: Zetaris, the Haze TypeScript
-build, React web app, LangGraph task engine, SQLite World Model, H-MEM, HazeOps
+build, React web app, LangGraph task engine, SQLite World Model, HazeOps
 collectors, agent model routes, and Nightshift runtime, candidate jobs, inference,
 and automation. They share the Haze process where applicable; these rows do not
 imply separate operating-system services. Each starting or checking component has a live
@@ -103,13 +128,12 @@ reads. HazeOps reports its scheduler's execution state and enabled source count.
 Model routes stay `UNVERIFIED` until their live-inference readiness reports prove
 otherwise; startup submits no model calls or Nightshift jobs. Optional components
 can be `DISABLED`, `BLOCKED`, `UNCONFIGURED`, or `UNAVAILABLE` while the app starts.
-H-MEM currently reports `DISABLED`: it is not attached to active tasks and its
-historical dashboard memory remains archival. A reachable Nightshift runtime is
+A reachable Nightshift runtime is
 shown separately from usable candidate jobs and released automation. New candidate
 chains allow cloud models with no monetary cap; explicit local-only grants retain
 $0 cloud spend. Job, attempt and lifetime limits still apply. Normal agent
 inference and background candidate generation are separate Nightshift APIs. Use
-`status hmem`, `status hazeops`, or `nightshift status` to inspect the current state.
+`status hazeops` or `nightshift status` to inspect the current state.
 
 `STARTED` means Compose started the containers; the Zetaris row summarizes their
 current health and completed one-shot jobs. Check `docker compose ps --all` for
@@ -198,6 +222,8 @@ Open `/damage-account` and describe the location, episode and dates; no upload i
 
 Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/testing/world-model-control-plane.md) for configuration and isolated checks.
 
+Choose **Demos** in the frontend to browse the [damage account example](docs/guides/damage-account-demo.md) at `/demos/damage-account` and [damage reduction example](docs/guides/damage-reduction-demo.md) at `/demos/damage-reduction`. These bundled synthetic recordings include exact sources and reviews and need no separate demo commands, provider, or task server. To execute a fresh fixture workflow instead, use `npm run damage:demo` or `npm run reduction:demo`; the isolated servers default to ports 5174 and 5175 respectively.
+
 The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
 
 The dashboard, HazeOps watchers, general tasks and `/world-model` now use one
@@ -226,21 +252,21 @@ The fixture verifier imports a source, completes a general explanation and a PM2
 
 Browse the [documentation index](docs/README.md) for guides grouped by topic.
 
-| Path                                                                | Purpose                                                                                                                     |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API                                          |
-| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries                                  |
-| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                                                  |
-| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                                                                |
-| `app/adapters/`                                                     | Provider integrations, World Model damage-input bridge, pinned Meterless facades and Zetaris deployment/data-source tooling |
-| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                                                             |
-| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                                                          |
-| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                                                             |
-| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                                                          |
-| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                                                         |
-| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                                                               |
-| `third_party/`                                                      | Pinned engine sources                                                                                                       |
-| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records                                            |
+| Path                                                                | Purpose                                                                                           |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [`app/tasks/`](app/tasks/README.md)                                 | General task admission, authoritative SQLite rows, controls, recovery and HTTP API                |
+| [`app/orchestration/`](app/orchestration/README.md)                 | Bounded agent actions, registered definitions, typed tools and graph/checkpoint boundaries        |
+| [`app/contracts/`](app/contracts/README.md)                         | Browser-safe v3 contracts and separate server-only canonical serialization                        |
+| `app/agents/`, [`app/capabilities/`](app/capabilities/README.md)    | Versioned agents and independently registered domain methods                                      |
+| `app/adapters/`                                                     | Provider integrations, World Model damage-input bridge and Zetaris deployment/data-source tooling |
+| `app/dashboard/`, `app/world/`                                      | Dashboard APIs/projections and shared SQLite evidence ingestion                                   |
+| [`app/checkpoints/`](app/checkpoints/README.md)                     | Checkpoint helpers                                                                                |
+| [`app/compatibility/`](app/compatibility/README.md), `app/graph.ts` | Engine/restart proof and offline metadata graph                                                   |
+| `frontend/`                                                         | Chat, evidence results, source samples and agent execution display                                |
+| `scripts/`, `tests/`                                                | Build, verification, examples and regression checks                                               |
+| `input_examples/`, `output_examples/`                               | Offline metadata examples and explicit orchestration fixtures                                     |
+| `third_party/`                                                      | Pinned engine sources                                                                             |
+| `docs/`                                                             | Current architecture, implementation notes and labeled historical design records                  |
 
 ## Offline infrastructure and engine pins
 

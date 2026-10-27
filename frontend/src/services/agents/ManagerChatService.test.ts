@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type {
-  ManagerChatRequest,
-  ManagerChatResponse,
+import {
+  MANAGER_CHAT_MAX_TIMEOUT_MS,
+  type ManagerChatRequest,
+  type ManagerChatResponse,
 } from '../../../../app/contracts/manager-chat.ts';
 import { HttpAgentService } from './HttpAgentService.ts';
 import { taskId, runId } from './testFixtures.ts';
@@ -27,6 +28,52 @@ const json = (value: unknown, status = 200) =>
   });
 
 describe('Manager conversational transport', () => {
+  it('accepts replies after the former 130-second timeout and bounds a stalled request', async () => {
+    vi.useFakeTimers();
+    const timeout = vi
+      .spyOn(AbortSignal, 'timeout')
+      .mockImplementation((ms) => {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), ms);
+        return controller.signal;
+      });
+    try {
+      let respond!: (response: Response) => void;
+      const delayed = new Promise<Response>((resolve) => {
+        respond = resolve;
+      });
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockReturnValueOnce(delayed)
+        .mockReturnValueOnce(new Promise<Response>(() => {}));
+      const service = new HttpAgentService('', fetcher);
+      const pending = service.managerChat(request);
+      const accepted = expect(pending).resolves.toEqual(reply);
+      const replySignal = timeout.mock.results[0].value as AbortSignal;
+
+      await vi.advanceTimersByTimeAsync(130_001);
+      expect(replySignal.aborted).toBe(false);
+      respond(json(reply));
+      await accepted;
+
+      const stalled = service.managerChat(request);
+      const rejected = expect(stalled).rejects.toMatchObject({
+        name: 'AbortError',
+      });
+      const stalledSignal = timeout.mock.results[1].value as AbortSignal;
+      await vi.advanceTimersByTimeAsync(MANAGER_CHAT_MAX_TIMEOUT_MS + 9_999);
+      expect(stalledSignal.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(stalledSignal.aborted).toBe(true);
+      await rejected;
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      timeout.mockRestore();
+      vi.clearAllTimers();
+      vi.useRealTimers();
+    }
+  });
+
   it('sends ordinary conversation to the Manager endpoint without admitting or observing a task', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(reply));
     const result = await new HttpAgentService('', fetcher).managerChat(request);

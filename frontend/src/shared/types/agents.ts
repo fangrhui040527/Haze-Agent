@@ -11,7 +11,7 @@
  *   C. no backend                     -> mock plays level A, labelled as a demo simulation
  */
 
-import type { AgentId } from './domain.ts';
+import type { AgentId, RecordedAgentId } from './domain.ts';
 import type { TaskLink } from './tasks.ts';
 import type {
   TaskEvent,
@@ -24,7 +24,7 @@ import type {
   JsonValue,
 } from '../../../../app/contracts/artifacts.ts';
 
-export type { AgentId };
+export type { AgentId, RecordedAgentId };
 
 /** A durable task receipt. Its message and actor come directly from the server. */
 export interface TaskAgentEvent {
@@ -119,7 +119,6 @@ export const AGENT_IDS: readonly AgentId[] = [
   'manager',
   'hazeops',
   'worldmodel',
-  'hmem',
   'evidencecritic',
   'workershield',
 ];
@@ -134,7 +133,6 @@ export const AGENT_INFO: Record<AgentId, { name: string; role: string }> = {
     name: 'World Model',
     role: 'Stores scoped evidence and lineage for dashboard and tasks',
   },
-  hmem: { name: 'H-Mem', role: 'Disabled in the general task service' },
   evidencecritic: {
     name: 'EvidenceCritic',
     role: 'Checks freshness, agreement and links',
@@ -144,3 +142,24 @@ export const AGENT_INFO: Record<AgentId, { name: string; role: string }> = {
     role: 'Calculates evidence coverage and ranges with reproducible methods',
   },
 };
+
+/** Retired identities kept only so historical records still display. */
+const RETIRED_AGENT_INFO: Record<
+  Exclude<RecordedAgentId, AgentId>,
+  { name: string; role: string }
+> = {
+  hmem: {
+    name: 'Retired H-MEM',
+    role: 'Retired component; shown only in historical records',
+  },
+};
+
+/** Display info for any recorded identity; unknown ids never crash a page. */
+export function recordedAgentInfo(id: string): { name: string; role: string } {
+  return (
+    (AGENT_INFO as Record<string, { name: string; role: string }>)[id] ??
+    (RETIRED_AGENT_INFO as Record<string, { name: string; role: string }>)[
+      id
+    ] ?? { name: `Unknown agent (${id})`, role: 'Unrecognised recorded agent' }
+  );
+}

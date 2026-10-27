@@ -28,6 +28,10 @@ export interface ManagerGraphHooks {
   dispatch(this: void, state: ManagerGraphState): Update | Promise<Update>;
   park(this: void, state: ManagerGraphState): Update | Promise<Update>;
   trace?(node: string): void;
+  traceCompleted?(
+    node: string,
+    timing: { duration_ms: number; outcome: 'ok' | 'error' },
+  ): void;
 }
 
 interface ManagerWorkflow {

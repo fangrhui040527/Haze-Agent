@@ -252,6 +252,10 @@ export class NightshiftJobService {
     this.store.nightshift.configureAutomatic({
       enabled: gate.released && gate.ready,
       evidence_id: gate.evidence_id,
+      scope:
+        gate.schema_version === 'haze.nightshift.automatic.readiness.v2'
+          ? gate.scope
+          : null,
     });
     return gate;
   }

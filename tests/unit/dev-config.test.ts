@@ -26,6 +26,13 @@ const { createDevConfig } = (await import(
   }) => Configuration;
 };
 const directories: string[] = [];
+const managerLimits = [
+  ['HAZE_MANAGER_MAX_MODEL_CALLS', '6', 1, 64],
+  ['HAZE_MANAGER_MAX_RETRIEVALS', '4', 0, 32],
+  ['HAZE_MANAGER_TIMEOUT_MS', '120000', 1000, 1_800_000],
+  ['HAZE_MANAGER_MAX_OUTPUT_TOKENS', '2400', 1, 32_768],
+  ['HAZE_MANAGER_MAX_CORRECTIONS', '1', 0, 8],
+] as const;
 
 async function workspace(content = '', env: NodeJS.ProcessEnv = {}) {
   const root = await mkdtemp(join(tmpdir(), 'haze-dev-config-'));
@@ -40,6 +47,72 @@ afterEach(async () => {
 });
 
 describe('development console configuration', () => {
+  it.each(managerLimits)(
+    'shows the default %s and persists supported boundary values',
+    async (key, defaultValue, minimum, maximum) => {
+      const { root, configuration } = await workspace('KEEP=untouched\n');
+      const defaultLine = `${key} = "${defaultValue}"  [default]`;
+      expect(await configuration.execute(['config', 'show'])).toContain(
+        defaultLine,
+      );
+      expect(await configuration.execute(['config', 'get', key])).toBe(
+        defaultLine,
+      );
+
+      for (const value of [minimum, maximum]) {
+        const saved = String(value);
+        expect(
+          await configuration.execute(['config', 'set', key, saved]),
+        ).toContain('Restart the app');
+        expect(parseEnv(await readFile(join(root, '.env'), 'utf8'))).toEqual({
+          KEEP: 'untouched',
+          [key]: saved,
+        });
+        const reloaded = createDevConfig({ root, env: {} });
+        expect(await reloaded.execute(['config', 'get', key])).toBe(
+          `${key} = "${saved}"  [.env]`,
+        );
+        expect(await reloaded.execute(['config', 'validate'])).toContain(
+          'Configuration syntax is valid',
+        );
+      }
+    },
+  );
+
+  it.each(managerLimits)(
+    'rejects invalid %s without changing the saved configuration',
+    async (key, _defaultValue, minimum, maximum) => {
+      const initial = 'KEEP=untouched\n';
+      const { root, configuration } = await workspace(initial);
+      for (const invalid of [
+        String(minimum - 1),
+        String(maximum + 1),
+        '1.5',
+        'unlimited',
+        '',
+      ]) {
+        await expect(
+          configuration.execute(['config', 'set', key, invalid]),
+        ).rejects.toThrow(`must be an integer from ${minimum} to ${maximum}`);
+        expect(await readFile(join(root, '.env'), 'utf8')).toBe(initial);
+      }
+    },
+  );
+
+  it('reports invalid Manager limits already present in the environment', async () => {
+    const { configuration } = await workspace('', {
+      HAZE_MANAGER_MAX_MODEL_CALLS: '0',
+      HAZE_MANAGER_TIMEOUT_MS: 'unlimited',
+    });
+    const result = await configuration.execute(['config', 'validate']);
+    expect(result).toContain(
+      'HAZE_MANAGER_MAX_MODEL_CALLS must be an integer from 1 to 64',
+    );
+    expect(result).toContain(
+      'HAZE_MANAGER_TIMEOUT_MS must be an integer from 1000 to 1800000',
+    );
+  });
+
   it('redacts secrets before startup, including overridden credentials and URL userinfo', async () => {
     const { root } = await workspace('NVIDIA_API_KEY=root-secret-value\n');
     await writeFile(

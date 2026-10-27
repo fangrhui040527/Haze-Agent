@@ -7,7 +7,7 @@ import type {
   openHazeEngines,
   MemoryRecord,
   Observation,
-} from '../adapters/meterless/index.js';
+} from './meterless/index.js';
 import { VersionedCheckpointer } from '../graph.js';
 import versions from '../workflow_versions.json' with { type: 'json' };
 import type {

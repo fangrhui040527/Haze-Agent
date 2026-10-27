@@ -78,6 +78,7 @@ function decisionFeedback(invalid: InvalidOutput) {
                 'invalid_source_citation',
                 'exact_templates_required',
                 'fixed_plan',
+                'missing_peer_coordination',
               ].includes(invalid.code)
             ? invalid.message
             : 'Do not repeat queued work. Coordinate the exact missing peer channel or wait.',
@@ -145,12 +146,13 @@ const listedArtifact = (context: ManagerContext, ref: Ref) =>
       artifact.ref.version === ref.version &&
       artifact.ref.sha256 === ref.sha256,
   );
+// Same numbering as final synthesis: user-supplied sources are S, every other listed source E.
 const citationLetter = (context: ManagerContext, ref: Ref) => {
   const artifact = listedArtifact(context, ref);
-  return (
-    artifact?.citation_letter ??
-    (artifact?.kind === 'source.import' ? ('S' as const) : undefined)
-  );
+  if (!artifact) return undefined;
+  return artifact.citation_letter === 'S' || artifact.kind === 'source.import'
+    ? ('S' as const)
+    : ('E' as const);
 };
 const producedByCritic = (context: ManagerContext, ref: Ref) => {
   const artifact = listedArtifact(context, ref);
@@ -268,7 +270,7 @@ function knownInvalidOutput(
     return {
       code: 'missing_source_citation',
       message:
-        'Citation markers need a number: [E1] is the first selected source whose citation_letter is E, [E2] the second, [S1] the first S source. Return the complete decision again with numbered markers only; never write a bare [E] or [S].',
+        'Citation markers need a number: [E1] is the first selected external capture, [E2] the second, [S1] the first imported source. Return the complete decision again with numbered markers only; never write a bare [E] or [S].',
     };
   if (
     action.type === 'finalize' &&
@@ -280,6 +282,49 @@ function knownInvalidOutput(
       message:
         'The proposed action.sources is nonempty but action.answer has no citation marker. Return the complete decision again with an answer supported by exactly those selected sources and matching markers in action.answer: [S1] for the first imported source, [S2] for the second, [E1] for the first external capture. Do not invent sources or change checkpoint values.',
     };
+  if (action.type === 'finalize') {
+    const cited = [...action.answer.matchAll(/\[([A-Za-z]+\d+)\]/g)].map(
+      (match) => match[1],
+    );
+    const declaredRefs = [
+      ...context.request.context_refs,
+      ...context.corrections.flatMap(
+        (correction) => correction.context_refs ?? [],
+      ),
+    ];
+    const compactImports = (
+      context.current_import_context_ref_indices ?? []
+    ).flatMap((index) => (declaredRefs[index] ? [declaredRefs[index]] : []));
+    const sameRef = (
+      left: (typeof action.sources)[number],
+      right: (typeof action.sources)[number],
+    ) =>
+      left.id === right.id &&
+      left.version === right.version &&
+      left.sha256 === right.sha256;
+    let sourceIndex = 0,
+      captureIndex = 0;
+    const markers = action.sources.map((source) => {
+      const artifact = context.artifacts.find((entry) =>
+        sameRef(entry.ref, source),
+      );
+      if (
+        artifact?.kind === 'source.import' ||
+        compactImports.some((ref) => sameRef(ref, source))
+      )
+        return `S${++sourceIndex}`;
+      // A compacted/unknown source is not enough to infer its marker class.
+      return artifact ? `E${++captureIndex}` : undefined;
+    });
+    if (
+      !markers.includes(undefined) &&
+      cited.some((marker) => !markers.includes(marker))
+    )
+      return {
+        code: 'invalid_source_citation',
+        message: `Return the full decision. Citation markers are assigned only to action.sources, not work_products or retained reviews. Use only ${markers.length ? markers.map((marker) => `[${marker}]`).join(', ') : 'no citation markers'} for the selected sources; preserve exact references and checkpoint values.`,
+      };
+  }
   if (
     (action.type === 'apply_plan' ||
       action.type === 'lookup' ||
@@ -304,26 +349,6 @@ function knownInvalidOutput(
       return {
         code: 'fixed_plan',
         message: `The ${fixed.card.id} plan for this objective is fixed. Do not add, re-brief or replace assignments or run lookups: wait for running work, inspect results, or finalize with the reported gaps, rejections and uncertainty.`,
-      };
-  }
-  if (action.type === 'finalize') {
-    // Letters follow the runtime's numbering; a source missing from context is left to the runtime.
-    const letters = action.sources.map((ref) => citationLetter(context, ref));
-    const counts = { S: 0, E: 0 };
-    const allowed = new Set(
-      letters.flatMap((letter) =>
-        letter ? [`${letter}${++counts[letter]}`] : [],
-      ),
-    );
-    const unknown = letters.includes(undefined)
-      ? []
-      : [...action.answer.matchAll(/\[([A-Za-z]+\d+)\]/g)]
-          .map((match) => match[1]!)
-          .filter((marker) => !allowed.has(marker));
-    if (unknown.length)
-      return {
-        code: 'invalid_source_citation',
-        message: `action.answer cites ${[...new Set(unknown)].slice(0, 6).join(', ')} but the selected sources only allow ${[...allowed].join(', ') || 'none'}. Return the complete decision again citing only those markers, numbered by each source's citation_letter in selected order.`,
       };
   }
   if (
@@ -359,7 +384,7 @@ function knownInvalidOutput(
       };
   }
   if (
-    action.type !== 'apply_plan' ||
+    !['apply_plan', 'wait'].includes(action.type) ||
     context.plan_objective_revision !== context.objective_revision
   )
     return null;
@@ -367,6 +392,7 @@ function knownInvalidOutput(
     ['queued', 'running'].includes(assignment.status),
   );
   if (
+    action.type === 'apply_plan' &&
     !action.assignments.some((proposal) =>
       active.some((assignment) => assignment.id === proposal.key),
     )
@@ -406,6 +432,15 @@ function knownInvalidOutput(
     }
     if (peerPrerequisite) break;
   }
+  if (action.type === 'wait')
+    return peerPrerequisite
+      ? {
+          code: 'missing_peer_coordination',
+          message:
+            'Return the full decision. Queued assignments cannot progress while their required peer channel is missing. Propose coordinate using the exact supplied missing participants and purpose before waiting. Keep checkpoint values unchanged; this hint grants no authority.',
+          peer_prerequisite: peerPrerequisite,
+        }
+      : null;
   return {
     code: 'duplicate_active_assignment',
     message:

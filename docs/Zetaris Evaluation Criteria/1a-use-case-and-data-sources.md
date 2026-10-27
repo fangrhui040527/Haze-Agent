@@ -11,12 +11,12 @@ possible causes separate.
 
 ### Selected sources
 
-| Source | USL data | Use |
-| --- | --- | --- |
-| Open-Meteo air quality | `air_quality_obs`: hourly PM2.5 and PM10 | Air-quality timeline |
-| NASA FIRMS | `active_fires`: fire detections, time, location, and FRP | Satellite fire context |
-| NASA POWER | `power_daily`: daily climate values | Weather context |
-| Data.gov.my weather | `weather_forecast`: forecast text by location code and date | Forecast context |
+| Source                 | USL data                                                    | Use                    |
+| ---------------------- | ----------------------------------------------------------- | ---------------------- |
+| Open-Meteo air quality | `air_quality_obs`: hourly PM2.5 and PM10                    | Air-quality timeline   |
+| NASA FIRMS             | `active_fires`: fire detections, time, location, and FRP    | Satellite fire context |
+| NASA POWER             | `power_daily`: daily climate values                         | Weather context        |
+| Data.gov.my weather    | `weather_forecast`: forecast text by location code and date | Forecast context       |
 
 These four sources exceed the three-source minimum. The
 [Environmental USL DDL](../../app/adapters/zetaris/usl/env_usl/usl_schema.sql)

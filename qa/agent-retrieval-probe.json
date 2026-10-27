@@ -1,0 +1,50 @@
+{
+  "probe": "agent evidence retrieval (live network, through app/adapters/haze-sources)",
+  "totals": {
+    "total": 5,
+    "pass": 5,
+    "fail": 0
+  },
+  "results": [
+    {
+      "name": "agent adapter retrieves live Open-Meteo PM2.5",
+      "ok": true,
+      "http_status": 200,
+      "bytes": 1405,
+      "sha256_well_formed": true,
+      "has_retrievedAt": true,
+      "numeric_pm2_5": 48,
+      "pm2_5_range": [
+        14.5,
+        84.5
+      ]
+    },
+    {
+      "name": "content hash is deterministic for identical bytes",
+      "ok": true,
+      "second_bytes": 1405,
+      "byte_identical": false,
+      "hash_matches": false,
+      "note": "upstream payload changed between calls; hash equality not asserted"
+    },
+    {
+      "name": "an already-aborted signal is refused",
+      "ok": true,
+      "rejected_with": "Open-Meteo air quality: cancelled"
+    },
+    {
+      "name": "agent adapter retrieves live NASA FIRMS CSV",
+      "ok": true,
+      "http_status": 200,
+      "bytes": 122,
+      "sha256_well_formed": true,
+      "header_fields": 14,
+      "data_rows": 0
+    },
+    {
+      "name": "the map key never appears in the returned payload",
+      "ok": true,
+      "key_leaked": false
+    }
+  ]
+}

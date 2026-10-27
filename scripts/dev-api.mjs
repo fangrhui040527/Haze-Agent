@@ -3,11 +3,10 @@ import { stripVTControlCharacters } from 'node:util';
 import {
   checkStartupComponents,
   collectorsReadiness,
-  memoryReadiness,
 } from './dev-readiness.mjs';
 
 export const API_COMMANDS = [
-  'status [app|agents|nightshift|world|hmem|hazeops]',
+  'status [app|agents|nightshift|world|hazeops]',
   'agents list | agents show <name>',
   'tasks run "<objective>"',
   'tasks list [--active|--failed] [--cursor <cursor>]',
@@ -492,13 +491,10 @@ export function createDevApi({
   }
 
   async function status(component, signal) {
-    if (component === 'hmem' || component === 'hazeops') {
+    if (component === 'hazeops') {
       const health = await request('/api/health', { signal });
-      const value =
-        component === 'hmem'
-          ? memoryReadiness(health)
-          : collectorsReadiness(health);
-      return `${component === 'hmem' ? 'H-MEM' : 'HazeOps collectors'}: ${value.status}\n${value.detail}`;
+      const value = collectorsReadiness(health);
+      return `HazeOps collectors: ${value.status}\n${value.detail}`;
     }
     if (component === 'agents') return agents(['list'], signal);
     if (component === 'nightshift') return nightshift(['status'], signal);
@@ -512,7 +508,7 @@ export function createDevApi({
       const health = await request('/api/health', { signal });
       return `App: ${health.ok === true ? 'ready' : 'degraded'} — ${origin()}\nMode: ${line(health.mode)} | started: ${line(health.startedAt)}\nWorld Model: ${line(health.worldModel?.backend)} | coverage: ${line(health.coverage)}\nWatchers: ${(health.watchers ?? []).length}`;
     }
-    throw new Error('Usage: status app|agents|nightshift|world|hmem|hazeops');
+    throw new Error('Usage: status app|agents|nightshift|world|hazeops');
   }
 
   async function execute(tokens, { signal } = {}) {
@@ -523,20 +519,13 @@ export function createDevApi({
     if (group === 'status') {
       requireArgs(
         args.length === 1,
-        'status app|agents|nightshift|world|hmem|hazeops',
+        'status app|agents|nightshift|world|hazeops',
       );
       return status(args[0], signal);
     }
     if (group === 'doctor') {
       requireArgs(args.length === 0, 'doctor');
-      const components = [
-        'app',
-        'agents',
-        'world',
-        'hmem',
-        'hazeops',
-        'nightshift',
-      ];
+      const components = ['app', 'agents', 'world', 'hazeops', 'nightshift'];
       const results = await Promise.allSettled(
         components.map((component) => status(component, signal)),
       );

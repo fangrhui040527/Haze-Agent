@@ -22,7 +22,7 @@
 
 .title {
   font-size: var(--text-lg);
-  font-weight: 900;
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
 }
 
@@ -89,7 +89,7 @@
 .field input:focus,
 .field select:focus {
   border-color: var(--color-focus);
-  box-shadow: 2px 2px 0 var(--color-shadow-neo);
+  box-shadow: 0 0 0 1px var(--color-border);
 }
 
 .searchField input {
@@ -255,7 +255,7 @@
   background: var(--color-accent);
   color: var(--color-accent-contrast);
   font-size: var(--text-sm);
-  font-weight: 800;
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -276,7 +276,7 @@
 }
 
 .clearFiltersButton:active:not(:disabled) {
-  transform: translate(2px, 2px);
+  transform: none;
   box-shadow: var(--shadow-btn-active);
 }
 
@@ -385,7 +385,7 @@
   background: var(--color-surface-2);
   text-align: left;
   font-size: var(--text-xs);
-  font-weight: 800;
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-muted);
@@ -486,7 +486,7 @@
   position: sticky;
   right: 0;
   background: var(--color-surface);
-  box-shadow: -6px 0 6px -6px rgb(0 0 0 / 0.25);
+  box-shadow: -6px 0 6px -6px rgb(var(--shadow-color) / 0.25);
 }
 
 .table th:last-child {
@@ -609,34 +609,16 @@
 
 .readMoreBtn:hover {
   background: var(--color-accent);
-  color: #fff4cc;
-  border-color: #fff4cc;
+  color: var(--color-accent-contrast);
+  border-color: var(--color-accent);
   box-shadow: none;
-  transform: scale(1.06);
 }
 
 .readMoreBtn:active {
   background: var(--color-accent-hover);
-  color: #ffffff;
+  color: var(--color-accent-contrast);
   border-color: var(--color-accent-hover);
-  transform: scale(0.9);
   box-shadow: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .readMoreBtn:hover {
-    background: var(--color-accent);
-    color: #1a1006;
-    border-color: #fff4cc;
-  }
-
-  .readMoreBtn:active {
-    background: var(--color-accent-hover);
-    color: #ffffff;
-    border-color: var(--color-accent-hover);
-    box-shadow: none;
-    transform: scale(0.9);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -810,4 +792,35 @@
   .tooltip {
     transition: none;
   }
+}
+
+/* ── Haze instrument styling: hairline rows, subtle zebra, tabular numerals ── */
+.table th {
+  font-family: var(--font-mono);
+  border-bottom: var(--hairline);
+}
+
+.table td {
+  border-bottom: var(--hairline);
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody > tr:not(.breakdownRow):nth-of-type(even) > td {
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+/* Long values end in "…" inside their own column instead of spilling into the next one. */
+.table tbody > tr:not(.breakdownRow) > td {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table tbody > tr:not(.breakdownRow) > td > * {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

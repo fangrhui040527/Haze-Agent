@@ -111,6 +111,10 @@ import {
 export const GENERAL_STORAGE_FORMAT = 'haze.general.sqlite.v2';
 export const STORAGE_MARKER = 'storage-format.json';
 export const MIGRATION_PENDING = 'migration-in-progress.json';
+/** Purpose-bound peer channel budget. One run may never exceed these. */
+const PEER_MAX_MESSAGES = 6;
+const PEER_MAX_BYTES = 12_288;
+const PEER_CHANNEL_TTL_MS = 600_000;
 const now = () => new Date().toISOString();
 const terminal = (status: string) =>
   ['completed', 'failed', 'cancelled', 'timed_out'].includes(status);
@@ -3347,26 +3351,42 @@ export class TaskStore {
           0,
           Math.ceil(run.limits.reserved_model_calls / 2) - synthesisUsed,
         );
-        const completedReview = this.allAssignments(run.id).some(
+        const critics = this.allAssignments(run.id).filter(
           (item) =>
             item.role === 'EvidenceCritic' &&
-            item.objective_revision === task.objective_revision &&
-            item.status === 'completed' &&
-            item.usability !== 'stale',
+            item.objective_revision === task.objective_revision,
         );
+        const completedReview = critics.some(
+          (item) => item.status === 'completed' && item.usability !== 'stale',
+        );
+        // Once every registered critic for this revision has terminated without
+        // a usable result, the independent review can no longer run. Holding its
+        // reserve would strand floor(reserved_model_calls / 2) calls for the rest
+        // of the run: nobody can claim them and synthesis is denied them. Release
+        // them to the final synthesis only — specialist work still may not take
+        // them, which preserves the documented guarantee that review and
+        // synthesis retain capacity before specialists consume the budget.
+        const reviewUnavailable =
+          critics.length > 0 &&
+          critics.every(
+            (item) => terminal(item.status) || item.usability === 'stale',
+          );
         const reviewRemaining = completedReview
           ? 0
           : Math.max(
               0,
               Math.floor(run.limits.reserved_model_calls / 2) - reviewUsed,
             );
+        const finalising = [
+          'core.manager.synthesis',
+          'core.manager.coordinator',
+        ].includes(assignment.definition_id);
         const reserve =
-          (['core.manager.synthesis', 'core.manager.coordinator'].includes(
-            assignment.definition_id,
-          )
+          (finalising ? 0 : synthesisRemaining) +
+          (assignment.role === 'EvidenceCritic' ||
+          (finalising && reviewUnavailable)
             ? 0
-            : synthesisRemaining) +
-          (assignment.role === 'EvidenceCritic' ? 0 : reviewRemaining);
+            : reviewRemaining);
         if (run.usage.model_calls >= run.limits.max_model_calls - reserve)
           fail(
             'model_limit',
@@ -3422,7 +3442,7 @@ export class TaskStore {
         'attempt_charged',
         assignment.role,
         `${kind} attempt charged before dispatch.`,
-        { attempt_id: attempt.id },
+        { attempt_id: attempt.id, kind: attempt.kind },
         assignmentId,
       );
       return attempt;
@@ -3469,6 +3489,7 @@ export class TaskStore {
       this.db
         .prepare('UPDATE attempts SET body=? WHERE id=?')
         .run(JSON.stringify(attempt), attemptId);
+      const completedAt = now();
       this.appendEvent(
         taskId,
         attempt.accepted ? 'attempt_completed' : 'late_receipt_recorded',
@@ -3476,7 +3497,19 @@ export class TaskStore {
         attempt.accepted
           ? 'Current attempt receipt persisted.'
           : 'Historical receipt retained; output excluded by execution fence.',
-        { attempt_id: attempt.id, accepted: attempt.accepted },
+        {
+          attempt_id: attempt.id,
+          accepted: attempt.accepted,
+          kind: attempt.kind,
+          status: attempt.status,
+          started_at: attempt.charged_at,
+          completed_at: completedAt,
+          duration_ms: Math.max(
+            0,
+            Date.parse(completedAt) - Date.parse(attempt.charged_at),
+          ),
+          ...(typeof tool === 'string' ? { tool } : {}),
+        },
         assignment.id,
       );
       return attempt;
@@ -5627,6 +5660,19 @@ export class TaskStore {
         const task = decode<TaskCore>(row.body),
           run = this.run(task.current_run_id);
         if (terminal(run.status)) continue;
+        // Stop expired work before rebinding waits can reject its old authority.
+        if (
+          run.status !== 'paused' &&
+          Date.parse(run.limits.deadline) <= Date.now()
+        ) {
+          this.stop(
+            task.id,
+            'timed_out',
+            'deadline_exceeded',
+            'Original run deadline expired before restart; explicitly Continue with a new bounded run.',
+          );
+          continue;
+        }
         const topology = this.executionVersion(run.id);
         if (
           topology?.engine === 'langgraph' &&
@@ -5856,8 +5902,8 @@ export class TaskStore {
         );
       if (
         previous &&
-        (previous.messages >= 6 ||
-          previous.bytes >= 12_288 ||
+        (previous.messages >= PEER_MAX_MESSAGES ||
+          previous.bytes >= PEER_MAX_BYTES ||
           Date.parse(previous.expires_at) <= Date.now())
       )
         fail(
@@ -5879,7 +5925,7 @@ export class TaskStore {
         participants,
         expires_at: new Date(
           Math.min(
-            Date.now() + 600_000,
+            Date.now() + PEER_CHANNEL_TTL_MS,
             Date.parse(run.limits.deadline),
             previous ? Date.parse(previous.expires_at) : Infinity,
           ),
@@ -5963,8 +6009,8 @@ export class TaskStore {
       if (
         !key ||
         !text ||
-        channel.messages >= 6 ||
-        channel.bytes + bytes > 12_288
+        channel.messages >= PEER_MAX_MESSAGES ||
+        channel.bytes + bytes > PEER_MAX_BYTES
       )
         fail('peer_message_limit', 'Peer message/byte budget exhausted.', 422);
       const message: PeerMessage = {
@@ -5983,7 +6029,10 @@ export class TaskStore {
         .run(message.id, channelId, key, fingerprint, JSON.stringify(message));
       channel.messages++;
       channel.bytes += bytes;
-      if (channel.messages === 6 || channel.bytes === 12_288)
+      if (
+        channel.messages >= PEER_MAX_MESSAGES ||
+        channel.bytes >= PEER_MAX_BYTES
+      )
         channel.status = 'closed';
       this.db
         .prepare('UPDATE channels SET body=? WHERE id=?')

@@ -18,7 +18,7 @@ import {
   SOURCE_KIND_LABELS,
 } from '../../shared/lib/labels.ts';
 import { formatDateTime, utcOffsetLabel } from '../../shared/lib/time.ts';
-import { AGENT_INFO } from '../../shared/types/agents.ts';
+import { recordedAgentInfo } from '../../shared/types/agents.ts';
 import type {
   CheckResult,
   ItemDetail,
@@ -465,9 +465,9 @@ export function DetailPage() {
             <li key={r.agent}>
               <span
                 className={styles.agentName}
-                title={AGENT_INFO[r.agent].role}
+                title={recordedAgentInfo(r.agent).role}
               >
-                {AGENT_INFO[r.agent].name}
+                {recordedAgentInfo(r.agent).name}
               </span>
               <Badge
                 tone={
@@ -504,7 +504,7 @@ export function DetailPage() {
                 {t.agent && (
                   <span className={styles.muted}>
                     {' '}
-                    · {AGENT_INFO[t.agent].name}
+                    · {recordedAgentInfo(t.agent).name}
                   </span>
                 )}
               </span>

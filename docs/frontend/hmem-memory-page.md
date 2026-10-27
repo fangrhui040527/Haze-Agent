@@ -1,4 +1,8 @@
-# H-MEM Memory Page (frontend)
+# Retired H-MEM Memory Page (historical design)
+
+The fixture page, route and navigation have been removed from the product. This
+document records the former design only. Historical data and the isolated pinned
+compatibility probe are retained.
 
 Route: `/memory` (header nav: **Memory**)
 

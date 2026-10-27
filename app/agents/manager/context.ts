@@ -82,7 +82,9 @@ export function assembleManagerContext(
   );
   const context: ManagerContext = {
     purpose: 'decision',
-    // The decision count keeps ids unique when a decision (such as inspect) adds no event.
+    // Distinct applied decisions can share a material-event cursor (for
+    // example, coordinate then wait). Rejected proposals and checkpoint
+    // replay retain this ordinal until a decision commits.
     decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}:${state.decisions.length}`,
     run_id: task.current_run_id,
     generation: task.generation,
@@ -209,11 +211,11 @@ export function assembleManagerContext(
         ),
         excerpt: summary ?? content.slice(0, 1600),
         truncated: summary !== undefined || content.length > 1600,
-        // Same rule as final-synthesis citation numbering: S for imports, E for captures.
-        citation_letter:
-          artifact.producer.kind === 'user' || artifact.kind === 'source.import'
-            ? 'S'
-            : 'E',
+        // Final-synthesis numbering: user-supplied sources cite as [S…], every other source as [E…].
+        ...(artifact.producer.kind === 'user' ||
+        artifact.kind === 'source.import'
+          ? { citation_letter: 'S' as const }
+          : {}),
       };
     }),
     inspections: structuredClone(

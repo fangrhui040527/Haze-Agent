@@ -1,0 +1,44 @@
+{
+  "use_case": "UC-26 damage-account demo reaches its reviewed state",
+  "outcome": "complete",
+  "elapsed_ms": 15781,
+  "port": 5512,
+  "totals": {
+    "total": 6,
+    "pass": 6,
+    "fail": 0
+  },
+  "checks": [
+    {
+      "name": "retains the synthetic example in the demo World Model",
+      "ok": true,
+      "captured": null
+    },
+    {
+      "name": "builds and independently checks a request-only account",
+      "ok": true,
+      "captured": null
+    },
+    {
+      "name": "serves a completed damage-account URL",
+      "ok": true,
+      "captured": "http://127.0.0.1:5512/damage-account/ca46e469-d60c-49a3-b2be-b264d69790e9"
+    },
+    {
+      "name": "reports a supported independent review",
+      "ok": true,
+      "captured": null
+    },
+    {
+      "name": "reports the expected benefit/cost ratio",
+      "ok": true,
+      "captured": "4.57."
+    },
+    {
+      "name": "stays up for browsing rather than exiting",
+      "ok": true,
+      "captured": null
+    }
+  ],
+  "output_tail": "\n> haze-agent@0.1.0 damage:demo\n> npm run build && node scripts/demo-damage-account.mjs\n\n\n> haze-agent@0.1.0 build\n> npm run vendor:engines && node scripts/build.mjs\n\n\n> haze-agent@0.1.0 vendor:engines\n> node scripts/vendor-engines.mjs\n\nVendored pinned starter, H-MEM and separate World Model (1742dec56a66e58eef9dda2d2b865823758ca8cd).\nSynthetic damage demo: invented people, region and CU currency.\n1/2: Retaining the complete example in the demo World Model...\n2/2: Building and independently checking a request-only account...\n\nOpen the completed demo: http://127.0.0.1:5512/damage-account/ca46e469-d60c-49a3-b2be-b264d69790e9\nTry the same request at: http://127.0.0.1:5512/damage-account\nRequest: Build a damage account for Fixture Region for September to October 2015 using World Model.\nDemo state and exact results: C:\\Users\\USER\\Desktop\\open Agent hackathon\\.state\\damage-demo\\0b4cba20-4d39-4641-8c4d-8c1b511e381f\nIndependent review: supported. Benefit/cost ratio: 4.57.\nKeep this process running to browse the demo. Ctrl+C stops it.\n"
+}

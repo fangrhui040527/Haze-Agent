@@ -8,6 +8,7 @@ import {
 } from '../contracts/artifacts.js';
 import { canonicalJson, contractHash } from '../contracts/json.js';
 import type { ModelRouteSnapshot } from '../contracts/model-routes.js';
+import type { AutomaticScope } from '../contracts/nightshift-automatic.js';
 import {
   chainAdmissionSchema,
   chainControlSchema,
@@ -138,6 +139,7 @@ export class NightshiftStore {
   private automaticPolicy = {
     enabled: false,
     evidence_id: null as string | null,
+    scope: null as AutomaticScope | null,
   };
   constructor(
     private readonly db: DatabaseSync,
@@ -297,6 +299,8 @@ export class NightshiftStore {
   configureAutomatic(policy: {
     enabled: boolean;
     evidence_id: string | null;
+    /** Released ceilings; absent only for trusted pre-scope (v1) injections. */
+    scope?: AutomaticScope | null;
   }): void {
     if (
       policy.enabled &&
@@ -307,7 +311,7 @@ export class NightshiftStore {
         'Automatic mode requires trusted release evidence.',
         503,
       );
-    this.automaticPolicy = clone(policy);
+    this.automaticPolicy = clone({ ...policy, scope: policy.scope ?? null });
   }
   private requireAutomaticRelease() {
     if (!this.automaticPolicy.enabled || !this.automaticPolicy.evidence_id)
@@ -315,6 +319,34 @@ export class NightshiftStore {
         'nightshift_automatic_release_blocked',
         'Automatic mode is not released: prior live gates remain unmet.',
         503,
+      );
+  }
+  /** Admission and successor dispatch both stay inside the released ceilings. */
+  private requireAutomaticScope(grant: {
+    privacy: string;
+    total_runs: number;
+    automatic_followup_runs: number;
+    max_jobs: number;
+    max_attempts: number;
+    lifetime_seconds: number;
+  }) {
+    const scope = this.automaticPolicy.scope;
+    if (!scope) return;
+    const exceeded = [
+      !(scope.privacy as string[]).includes(grant.privacy) && 'privacy',
+      grant.total_runs > scope.max_total_runs && 'total_runs',
+      grant.automatic_followup_runs > scope.max_automatic_followups &&
+        'automatic_followup_runs',
+      grant.max_jobs > scope.max_jobs && 'max_jobs',
+      grant.max_attempts > scope.max_jobs * scope.max_attempts_per_job &&
+        'max_attempts',
+      grant.lifetime_seconds > scope.max_lifetime_seconds && 'lifetime_seconds',
+    ].filter((item): item is string => !!item);
+    if (exceeded.length)
+      fail(
+        'nightshift_automatic_scope_exceeded',
+        `The released automatic scope does not cover: ${exceeded.join(', ')}.`,
+        422,
       );
   }
   private operation<T>(
@@ -736,6 +768,7 @@ export class NightshiftStore {
             );
           if (request.schema_version === 'haze.nightshift.chain.admission.v2') {
             this.requireAutomaticRelease();
+            this.requireAutomaticScope(request);
             if (request.previous_chain_id) {
               const previous = this.refresh(
                 this.rawChain(request.previous_chain_id, identity),
@@ -1069,6 +1102,26 @@ export class NightshiftStore {
               'Application-wide nonterminal external-job capacity exhausted.',
               429,
             );
+          const scope = this.automaticPolicy.scope;
+          if (chain.schema_version === 'haze.nightshift.chain.v2' && scope) {
+            if (request.n > scope.max_attempts_per_job)
+              fail(
+                'nightshift_automatic_scope_exceeded',
+                `The released automatic scope allows ${scope.max_attempts_per_job} attempt(s) per job.`,
+                422,
+              );
+            const held = this.db
+              .prepare(
+                'SELECT COALESCE(SUM(capacity_held),0) count FROM ns_reservations WHERE chain_id=?',
+              )
+              .get(chain.id) as { count: number };
+            if (held.count >= scope.max_concurrent_jobs)
+              fail(
+                'nightshift_automatic_concurrency',
+                `The released automatic scope allows ${scope.max_concurrent_jobs} concurrent native job(s) per chain.`,
+                429,
+              );
+          }
           for (const ref of request.input_refs) {
             this.access.artifact(ref, identity);
             if (!this.access.applicable(task.id, ref, task.objective_revision))
@@ -3008,6 +3061,13 @@ export class NightshiftStore {
           'nightshift_manual_chain',
           'This immutable grant does not authorize automatic follow-ups.',
         );
+      // A narrowed or replaced release cannot be bypassed by an older grant.
+      this.requireAutomaticScope({
+        ...chain.grant,
+        lifetime_seconds: Math.ceil(
+          (Date.parse(chain.expires_at) - Date.parse(chain.created_at)) / 1000,
+        ),
+      });
       const used = (
         this.db
           .prepare(

@@ -100,6 +100,297 @@ describe('Manager conversational routing', () => {
     expect(countTasks(store)).toBe(0);
   });
 
+  it.each([
+    { credentials: {}, expected: 'unconfigured' },
+    {
+      credentials: {
+        OPEN_AQ_KEY: 'PRIVATE_OPENAQ_KEY',
+        FIRMS_MAP_KEY: 'PRIVATE_FIRMS_KEY',
+      },
+      expected: 'available',
+    },
+  ])(
+    'exposes trusted source status $expected without exposing credentials',
+    async ({ credentials, expected }) => {
+      const injected = model((input) => {
+        const context = input.context as {
+          execution_mode: string;
+          available_sources: {
+            provider: string;
+            status: string;
+            data_kind: string;
+            coverage: string;
+            reliability: string;
+          }[];
+        };
+        expect(context.execution_mode).toBe('live');
+        expect(context.available_sources).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              provider: 'open-meteo',
+              status: 'available',
+              data_kind: 'modeled',
+            }),
+            expect.objectContaining({
+              provider: 'openaq',
+              status: expected,
+              data_kind: 'observation',
+            }),
+            expect.objectContaining({
+              provider: 'firms',
+              status: expected,
+            }),
+          ]),
+        );
+        const openAq = context.available_sources.find(
+          (source) => source.provider === 'openaq',
+        )!;
+        expect(openAq.coverage).toContain('75 km');
+        expect(openAq.reliability).toContain('low-cost');
+        expect(
+          context.available_sources.find(
+            (source) => source.provider === 'firms',
+          )!.coverage,
+        ).toContain('bbox 95,-6,120,8');
+        expect(JSON.stringify(input)).not.toContain('PRIVATE_');
+        expect(input.instruction).toContain(
+          'Prefer available OpenAQ observations for current Malaysian haze conditions',
+        );
+        expect(input.instruction).toContain(
+          'the first current-conditions lookup must omit provider or select openaq',
+        );
+        expect(input.instruction).toContain(
+          'Only say observations were unavailable or no observations were returned after an OpenAQ retrieval reports that result',
+        );
+        return reply();
+      });
+      const { service } = await setup({
+        mode: 'live',
+        env: credentials,
+        model: injected,
+      });
+      await resolve(service, 'Hi');
+      expect(injected.complete).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    { provider: undefined, expected: 'openaq', kind: 'observed' },
+    { provider: 'open-meteo', expected: 'open-meteo', kind: 'modeled' },
+  ])(
+    'uses $expected for a Malaysian lookup with provider $provider',
+    async ({ provider, expected, kind }) => {
+      const sourceResolver = vi.fn<
+        NonNullable<ManagerConversationOptions['sourceResolver']>
+      >((selectedProvider, location) => {
+        const adapter = createFixtureCollectionAdapter({
+          capability: 'evidence-collection',
+          provider: selectedProvider,
+          locations: [location],
+        });
+        const run = adapter.run.bind(adapter);
+        adapter.run = async (context) => {
+          const result = await run(context);
+          result.evidence[0]!.record.sourceKind =
+            selectedProvider === 'openaq' ? 'observation' : 'modeled';
+          result.stations = [
+            {
+              stationId: 'openaq-test',
+              name: 'Kuala Lumpur test sensor',
+              lat: location.lat,
+              lon: location.lon,
+              provider: 'AirGradient',
+              isMonitor: false,
+              sensorId: 123,
+              nearestLocationId: location.id,
+              distanceKm: 4,
+            },
+          ];
+          return result;
+        };
+        return adapter;
+      });
+      const injected = model((input, call) => {
+        const context = input.context as {
+          evidence: { id: string }[];
+          retrievals: { stations: unknown[] }[];
+        };
+        if (call === 0)
+          return {
+            type: 'retrieve',
+            operation: 'haze_latest',
+            location: 'Kuala Lumpur',
+            fresh: true,
+            ...(provider ? { provider } : {}),
+          };
+        expect(context.retrievals[0]!.stations).toEqual([
+          expect.objectContaining({
+            name: 'Kuala Lumpur test sensor',
+            provider: 'AirGradient',
+            isMonitor: false,
+            distanceKm: 4,
+          }),
+        ]);
+        return reply('Current source data.', [context.evidence[0]!.id]);
+      });
+      const { service } = await setup({
+        mode: 'live',
+        env: { OPEN_AQ_KEY: 'PRIVATE_OPENAQ_KEY' },
+        model: injected,
+        sourceResolver,
+      });
+      const result = await resolve(service, 'Current haze in Kuala Lumpur');
+      expect(sourceResolver).toHaveBeenCalledExactlyOnceWith(
+        expected,
+        expect.objectContaining({ countryCode: 'MY' }),
+      );
+      expect(result.citations[0]!.kind).toBe(kind);
+    },
+  );
+
+  it.each(['empty', 'failed'])(
+    'reports an %s observation lookup before an explicit modeled fallback',
+    async (outcome) => {
+      const sourceResolver = vi.fn<
+        NonNullable<ManagerConversationOptions['sourceResolver']>
+      >((provider, location) => {
+        const adapter = createFixtureCollectionAdapter({
+          capability: 'evidence-collection',
+          provider,
+          locations: [location],
+        });
+        const run = adapter.run.bind(adapter);
+        adapter.run = async (context) => {
+          if (provider === 'openaq' && outcome === 'failed')
+            throw new Error('PRIVATE_UPSTREAM_DIAGNOSTIC');
+          const result = await run(context);
+          if (provider === 'openaq') {
+            result.evidence[0]!.record.sourceKind = 'observation';
+            result.facts = [];
+            result.coverage.covered = 0;
+          }
+          return result;
+        };
+        return adapter;
+      });
+      const injected = model((input, call) => {
+        const context = input.context as {
+          evidence: { id: string; kind: string }[];
+          retrievals: {
+            provider: string;
+            unavailable?: string;
+            source_status?: string;
+          }[];
+        };
+        if (call === 0)
+          return {
+            type: 'retrieve',
+            operation: 'haze_latest',
+            location: 'Kuala Lumpur',
+            fresh: true,
+          };
+        if (call === 1) {
+          expect(sourceResolver).toHaveBeenCalledTimes(1);
+          expect(context.retrievals[0]).toMatchObject({
+            provider: 'openaq',
+          });
+          expect(context.retrievals[0]!.unavailable).toContain(
+            outcome === 'empty' ? 'coverage gap' : 'request failed',
+          );
+          expect(context.retrievals[0]!.source_status).not.toBe('unconfigured');
+          expect(JSON.stringify(input.context)).not.toContain('PRIVATE_');
+          return {
+            type: 'retrieve',
+            operation: 'haze_latest',
+            provider: 'open-meteo',
+            location: 'Kuala Lumpur',
+            fresh: true,
+          };
+        }
+        return reply('CAMS modeled fallback; observations unavailable.', [
+          context.evidence.find((entry) => entry.kind === 'modeled')!.id,
+        ]);
+      });
+      const { service } = await setup({
+        mode: 'live',
+        env: { OPEN_AQ_KEY: 'PRIVATE_OPENAQ_KEY' },
+        model: injected,
+        sourceResolver,
+      });
+      const result = await resolve(service, 'Current haze in Kuala Lumpur');
+      expect(sourceResolver.mock.calls.map(([provider]) => provider)).toEqual([
+        'openaq',
+        'open-meteo',
+      ]);
+      expect(result).toMatchObject({
+        citations: [{ kind: 'modeled' }],
+        error: { category: 'source_unavailable' },
+      });
+    },
+  );
+
+  it.each([
+    {
+      mode: 'live' as const,
+      env: {},
+      expected: 'unconfigured',
+    },
+    {
+      mode: 'live' as const,
+      env: { SAMPLE_MODE: 'true', OPEN_AQ_KEY: 'PRIVATE_OPENAQ_KEY' },
+      expected: 'disabled_sample_mode',
+    },
+    {
+      mode: 'replay' as const,
+      env: { OPEN_AQ_KEY: 'PRIVATE_OPENAQ_KEY' },
+      expected: 'disabled_replay_mode',
+    },
+    {
+      mode: 'fixture' as const,
+      env: {},
+      expected: 'synthetic_fixture',
+    },
+  ])(
+    'keeps source status $expected consistent with execution mode',
+    async ({ mode, env, expected }) => {
+      const injected = model((input, call) => {
+        const context = input.context as {
+          available_sources: { provider: string; status: string }[];
+          retrievals: { source_status?: string }[];
+          evidence: { id: string }[];
+        };
+        expect(
+          context.available_sources.find(
+            (source) => source.provider === 'openaq',
+          )!.status,
+        ).toBe(expected);
+        if (call === 0)
+          return {
+            type: 'retrieve',
+            operation: 'haze_latest',
+            provider: 'openaq',
+            location: 'Kuala Lumpur',
+            fresh: true,
+          };
+        if (mode !== 'fixture')
+          expect(context.retrievals[0]!.source_status).toBe(expected);
+        return reply(
+          'Source status checked.',
+          context.evidence.map(({ id }) => id),
+        );
+      });
+      const { service } = await setup({ mode, env, model: injected });
+      const result = await resolve(service, 'Current haze in Kuala Lumpur');
+      expect(result.citations.map(({ kind }) => kind)).toEqual(
+        mode === 'fixture' ? ['synthetic_fixture'] : [],
+      );
+      if (mode !== 'fixture')
+        expect(result).toMatchObject({
+          error: { category: 'source_unavailable' },
+        });
+    },
+  );
+
   it('asks for missing location then completes the lookup from conversation history', async () => {
     const { service, store } = await setup();
     const question = await resolve(service, 'Latest haze information');
@@ -223,6 +514,187 @@ describe('Manager conversational routing', () => {
       error: { category: 'source_unavailable' },
     });
     expect(countTasks(store)).toBe(0);
+  });
+
+  it.each([undefined, '2'])(
+    'enforces the model decision budget when configured as %s',
+    async (maxModelCalls) => {
+      const injected = model(() => ({
+        type: 'retrieve',
+        operation: 'world_lookup',
+      }));
+      const { service, store } = await setup({
+        model: injected,
+        env: {
+          HAZE_MANAGER_MAX_RETRIEVALS: '10',
+          ...(maxModelCalls
+            ? { HAZE_MANAGER_MAX_MODEL_CALLS: maxModelCalls }
+            : {}),
+        },
+      });
+      const lookup = vi.spyOn(store.world, 'lookup');
+      const result = await resolve(service, 'Look up stored information');
+      const expected = maxModelCalls ? Number(maxModelCalls) : 6;
+      expect(injected.complete).toHaveBeenCalledTimes(expected);
+      expect(lookup).toHaveBeenCalledTimes(expected);
+      expect(result).toMatchObject({
+        kind: 'reply',
+        error: { category: 'model_output_invalid' },
+      });
+    },
+  );
+
+  it('can finish after more than six model decisions when the configured budgets allow it', async () => {
+    const injected = model((_input, call) =>
+      call < 7
+        ? { type: 'retrieve', operation: 'world_lookup' }
+        : reply('Lookup complete.'),
+    );
+    const { service, store } = await setup({
+      model: injected,
+      env: {
+        HAZE_MANAGER_MAX_MODEL_CALLS: '8',
+        HAZE_MANAGER_MAX_RETRIEVALS: '7',
+      },
+    });
+    const lookup = vi.spyOn(store.world, 'lookup');
+    expect(await resolve(service, 'Look up stored information')).toMatchObject({
+      kind: 'reply',
+      paragraphs: ['Lookup complete.'],
+    });
+    expect(injected.complete).toHaveBeenCalledTimes(8);
+    expect(lookup).toHaveBeenCalledTimes(7);
+    expect(countTasks(store)).toBe(0);
+  });
+
+  it.each([0, 2])(
+    'stops after %i configured retrieval operations',
+    async (maxRetrievals) => {
+      const injected = model(() => ({
+        type: 'retrieve',
+        operation: 'world_lookup',
+      }));
+      const { service, store } = await setup({
+        model: injected,
+        env: { HAZE_MANAGER_MAX_RETRIEVALS: String(maxRetrievals) },
+      });
+      const lookup = vi.spyOn(store.world, 'lookup');
+      expect(
+        await resolve(service, 'Look up stored information'),
+      ).toMatchObject({
+        kind: 'reply',
+        error: { category: 'source_unavailable' },
+      });
+      expect(lookup).toHaveBeenCalledTimes(maxRetrievals);
+      expect(injected.complete).toHaveBeenCalledTimes(maxRetrievals + 1);
+    },
+  );
+
+  it.each([0, 2])(
+    'allows %i configured malformed-output corrections',
+    async (maxCorrections) => {
+      const injected = model((_input, call) =>
+        call < 2 ? '{bad json' : reply('Corrected answer.'),
+      );
+      const { service } = await setup({
+        model: injected,
+        env: { HAZE_MANAGER_MAX_CORRECTIONS: String(maxCorrections) },
+      });
+      const result = await resolve(service, 'Hi');
+      expect(injected.complete).toHaveBeenCalledTimes(maxCorrections + 1);
+      if (maxCorrections === 0)
+        expect(result).toMatchObject({
+          error: { category: 'model_output_invalid' },
+        });
+      else
+        expect(result).toMatchObject({
+          kind: 'reply',
+          paragraphs: ['Corrected answer.'],
+        });
+    },
+  );
+
+  it('shares the configured correction budget across malformed output and invalid retrieval decisions', async () => {
+    const injected = model((_input, call) =>
+      call === 1
+        ? { type: 'retrieve', operation: 'world_context' }
+        : '{bad json',
+    );
+    const { service } = await setup({
+      model: injected,
+      env: { HAZE_MANAGER_MAX_CORRECTIONS: '2' },
+    });
+    expect(await resolve(service, 'Hi')).toMatchObject({
+      error: { category: 'model_output_invalid' },
+    });
+    expect(injected.complete).toHaveBeenCalledTimes(3);
+  });
+
+  it('passes configured token and decision budgets to the model', async () => {
+    const injected = model(() => reply('Hello'));
+    const { service } = await setup({
+      model: injected,
+      env: {
+        HAZE_MANAGER_MAX_MODEL_CALLS: '12',
+        HAZE_MANAGER_MAX_RETRIEVALS: '7',
+        HAZE_MANAGER_MAX_CORRECTIONS: '2',
+        HAZE_MANAGER_MAX_OUTPUT_TOKENS: '733',
+      },
+    });
+    await resolve(service, 'Hi');
+    expect(injected.complete.mock.calls[0]?.[0]).toMatchObject({
+      max_output_tokens: 733,
+      context: {
+        model_decisions_remaining: 11,
+        retrieval_operations_remaining: 7,
+        corrections_remaining: 2,
+      },
+    });
+    expect(injected.complete.mock.calls[0]?.[0].instruction).toContain(
+      '7 retrieval operations and 2 malformed-output corrections',
+    );
+  });
+
+  it('applies the configured deadline to a model that ignores AbortSignal', async () => {
+    const injected = model(() => reply());
+    injected.complete.mockImplementation(() => new Promise<string>(() => {}));
+    const { service } = await setup({
+      model: injected,
+      env: { HAZE_MANAGER_TIMEOUT_MS: '1000' },
+    });
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const pending = service.resolve(
+        request('Hi'),
+        localTaskIdentity,
+        new AbortController().signal,
+      );
+      void pending.then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      expect(await pending).toMatchObject({
+        error: { category: 'transport_failure' },
+      });
+      expect(injected.complete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    ['HAZE_MANAGER_MAX_MODEL_CALLS', '0'],
+    ['HAZE_MANAGER_MAX_RETRIEVALS', '33'],
+    ['HAZE_MANAGER_TIMEOUT_MS', '999'],
+    ['HAZE_MANAGER_MAX_OUTPUT_TOKENS', '0'],
+    ['HAZE_MANAGER_MAX_CORRECTIONS', '9'],
+    ['HAZE_MANAGER_MAX_MODEL_CALLS', 'Infinity'],
+  ])('rejects invalid server configuration for %s', async (key, value) => {
+    await expect(setup({ env: { [key]: value } })).rejects.toThrow(key);
   });
 
   it('keeps unavailable sources in chat and prevents task fallback', async () => {
@@ -470,4 +942,51 @@ describe('Manager conversational routing', () => {
       error: { category: 'source_unavailable' },
     });
   });
+
+  it.each([
+    { maxModelCalls: '6', expectedCalls: 2 },
+    { maxModelCalls: '1', expectedCalls: 1 },
+  ])(
+    'explains historical data requirements when the model repeats an unsupported lookup with $maxModelCalls decisions available',
+    async ({ maxModelCalls, expectedCalls }) => {
+      const injected = model(() => ({
+        type: 'retrieve',
+        operation: 'haze_latest',
+        location: 'Kuala Lumpur',
+        period: {
+          start: '2026-09-27T00:00:00Z',
+          end: '2026-10-27T00:00:00Z',
+        },
+      }));
+      const sourceResolver = vi.fn(() => {
+        throw new Error(
+          'A current snapshot cannot establish historical coverage',
+        );
+      });
+      const { service, store } = await setup({
+        model: injected,
+        sourceResolver,
+        env: { HAZE_MANAGER_MAX_MODEL_CALLS: maxModelCalls },
+      });
+      const result = await resolve(
+        service,
+        'Which day had the worst haze in Kuala Lumpur during the past month?',
+      );
+      expect(result).toMatchObject({
+        kind: 'reply',
+        citations: [],
+        error: { category: 'source_unavailable', retryable: false },
+      });
+      const text = result.paragraphs.join(' ');
+      expect(text).toContain('Kuala Lumpur');
+      expect(text).toContain('historical hourly or daily PM2.5 records');
+      expect(text).toContain('daily means');
+      expect(text).toContain('observed from modeled');
+      expect(text).toContain('missing days');
+      expect(text).not.toContain('turn’s limits');
+      expect(injected.complete).toHaveBeenCalledTimes(expectedCalls);
+      expect(sourceResolver).not.toHaveBeenCalled();
+      expect(countTasks(store)).toBe(0);
+    },
+  );
 });

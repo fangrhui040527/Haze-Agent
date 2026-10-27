@@ -4,13 +4,20 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
+import {
+  nightshiftPolicyReady,
+  nightshiftVerificationPolicy,
+  verifiedNativeAttempts,
+} from './nightshift-verification-support.mjs';
 
 const { values } = parseArgs({
   options: {
     live: { type: 'boolean', default: false },
     output: { type: 'string' },
+    privacy: { type: 'string', default: 'local-only' },
   },
 });
+const policy = nightshiftVerificationPolicy(values.privacy);
 const directory = resolve(
   values.output ?? '.state/nightshift-verification',
   randomUUID(),
@@ -42,14 +49,19 @@ const env = {
 };
 const adapter = createNightshiftJobAdapter(env);
 const report = {
-  version: 1,
-  mode: values.live ? 'live-local-job-synthetic-brief' : 'read-only-inspection',
+  version: 2,
+  mode: values.live
+    ? `live-${policy.privacy}-job-synthetic-brief`
+    : 'read-only-inspection',
+  policy,
+  production_release_evidence: false,
   started_at: new Date().toISOString(),
   passed: false,
   readiness: await adapter.readiness(),
   live_inference: false,
   remote_accepted: false,
 };
+report.policy_ready = nightshiftPolicyReady(report.readiness, policy);
 const path = join(directory, 'report.json');
 const save = () => writeFile(path, JSON.stringify(report, null, 2) + '\n');
 await save();
@@ -96,19 +108,18 @@ const boot = () => {
 };
 try {
   if (!values.live) {
-    report.passed = report.readiness.ready;
+    report.passed = report.policy_ready;
   } else {
     assert.equal(
-      report.readiness.ready,
+      report.policy_ready,
       true,
-      'A verified local-only job contract is required before submission.',
+      `Verified ready compute for the requested ${policy.privacy} policy is required before submission.`,
     );
     runtime = boot();
     const task = runtime.store.admit(
       taskRequestSchema.parse({
         schema_version: 'haze.task.request.v3',
-        objective:
-          'Retain a synthetic draft from a manually admitted local Nightshift job.',
+        objective: `Retain a synthetic draft from a manually admitted ${policy.privacy} Nightshift job.`,
       }),
       localTaskIdentity,
       randomUUID(),
@@ -128,8 +139,7 @@ try {
         max_attempts: 1,
         lifetime_seconds: 600,
         automatic_followup_runs: 0,
-        privacy: 'local-only',
-        max_spend_usd: 0,
+        ...policy,
       },
       randomUUID(),
       localTaskIdentity,
@@ -147,8 +157,7 @@ try {
       judge: 'accuracy',
       budget: 'low',
       window: 'now',
-      privacy: 'local-only',
-      max_spend_usd: 0,
+      ...policy,
     };
     const key = randomUUID();
     report.request = request;
@@ -220,6 +229,12 @@ try {
     assert.equal(job.review_status, 'unreviewed');
     assert.deepEqual(job.selections, []);
     assert.ok(job.receipt.output.trim());
+    report.native_attempts = verifiedNativeAttempts(
+      job.receipt,
+      policy.privacy === 'cloud-ok'
+        ? (report.readiness.cloud_lanes ?? [])
+        : undefined,
+    );
     report.live_inference = true;
     assert.equal(report.task.usage.model_calls, 0);
     assert.equal(report.task.usage.tool_calls, 0);
@@ -257,6 +272,7 @@ console.log(
     report: path,
     passed: report.passed,
     mode: report.mode,
+    policy: report.policy,
     live_inference: report.live_inference,
     remote_accepted: report.remote_accepted,
     remote_id:

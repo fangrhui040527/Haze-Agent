@@ -38,6 +38,24 @@ describe('server-owned World Model acceptance policy', () => {
     );
   });
 
+  it('treats a declared-but-empty configuration as disabled rather than refusing to start', () => {
+    // process.env yields '' for `HAZE_WORLD_ACCEPTANCE_POLICY=` in a .env file,
+    // which is a common way to express "leave this off". That must select the
+    // disabled policy, not abort startup. Whitespace-only is the same case.
+    for (const configured of ['', '   ', '\t\n']) {
+      const policy = resolveWorldAcceptancePolicy(configured);
+      expect(isWorldAcceptanceEnabled(policy)).toBe(false);
+      expect(policy.id).toBe('disabled');
+      expect(policy.allowed_capabilities).toEqual([]);
+    }
+  });
+
+  it('ignores surrounding whitespace on a known policy name', () => {
+    expect(resolveWorldAcceptancePolicy('  research-v1  ').id).toBe(
+      'research-v1',
+    );
+  });
+
   it('fails closed for unknown configured policy versions', () => {
     expect(() => resolveWorldAcceptancePolicy('research-v2')).toThrow(
       'Unknown World Model acceptance policy',

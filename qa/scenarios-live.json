@@ -1,0 +1,216 @@
+{
+  "suite": "live cross-system real-world scenarios",
+  "executed_at": "2026-10-27T13:07:10.447Z",
+  "systems": [
+    "Zetaris Lightning (live warehouse: FIRMS hotspots + Open-Meteo PM2.5)",
+    "Open-Meteo air quality API (live upstream)",
+    "Tavily web search via the haze-web-search tool (live, optional)"
+  ],
+  "totals": {
+    "total": 7,
+    "supported": 7,
+    "withheld": 2
+  },
+  "scenarios": [
+    {
+      "id": "S1",
+      "question": "Where is the air worst right now, and does it breach the WHO guideline?",
+      "finding": "Peak PM2.5 is 90.8 ug/m3 at Ampang; 8494 location-hours across 257 locations exceed the WHO 2021 15 ug/m3 guideline.",
+      "evidence": [
+        "Zetaris air_quality.hourly_observations: worst location Ampang peak=90.8 mean=38.4 ug/m3",
+        "Zetaris: 8494 location-hours > 15 ug/m3 over 257 locations"
+      ],
+      "supported": true,
+      "data": {
+        "worst": [
+          "Ampang",
+          "90.8",
+          "38.4"
+        ],
+        "breach": [
+          "8494",
+          "257"
+        ]
+      }
+    },
+    {
+      "id": "S2",
+      "question": "Do the ingested fire hotspots explain the worst-affected location?",
+      "finding": "NO. The worst air is at Ampang (peak 90.8 ug/m3). The nearest ingested fire cluster is Pagoh at 145 km, and the only hotspots within 300 km total just 8.1 MW -- far too little energy to account for a regional episode. The ingested hotspots do not explain it; a transboundary source is implied and confirming it needs wind-trajectory evidence this dataset does not contain.",
+      "evidence": [
+        "Zetaris: worst location Ampang at (3.15, 101.7667), peak 90.8 ug/m3",
+        "Zetaris FIRMS: 17 fires in Tawau, total FRP 425.8 MW, ~1757 km away",
+        "Zetaris FIRMS: 14 fires in Pulau Sipadan, total FRP 137.4 MW, ~1804 km away",
+        "Zetaris FIRMS: 5 fires in Kalabakan, total FRP 34.2 MW, ~1687 km away",
+        "Zetaris FIRMS: 3 fires in Bario, total FRP 13.7 MW, ~1728 km away",
+        "Zetaris FIRMS: 2 fires in Bau, total FRP 25.2 MW, ~925 km away",
+        "Zetaris FIRMS: 2 fires in Bintulu, total FRP 6.3 MW, ~1219 km away",
+        "Zetaris FIRMS: 1 fires in Pagoh, total FRP 8.1 MW, ~145 km away",
+        "Zetaris FIRMS: 1 fires in Miri, total FRP 4.5 MW, ~1260 km away",
+        "Zetaris FIRMS: 1 fires in Taman Tunku Abdul Rahman, total FRP 2.3 MW, ~1580 km away",
+        "Zetaris FIRMS: 1 fires in Sarawak, total FRP 7.6 MW, ~1262 km away"
+      ],
+      "supported": true,
+      "conclusion_withheld": true,
+      "data": {
+        "worst": [
+          "Ampang",
+          "90.8",
+          "3.15",
+          "101.7667"
+        ],
+        "distances": [
+          {
+            "region": "Tawau",
+            "fires": 17,
+            "frp": 425.8,
+            "km": 1757
+          },
+          {
+            "region": "Pulau Sipadan",
+            "fires": 14,
+            "frp": 137.4,
+            "km": 1804
+          },
+          {
+            "region": "Kalabakan",
+            "fires": 5,
+            "frp": 34.2,
+            "km": 1687
+          },
+          {
+            "region": "Bario",
+            "fires": 3,
+            "frp": 13.7,
+            "km": 1728
+          },
+          {
+            "region": "Bau",
+            "fires": 2,
+            "frp": 25.2,
+            "km": 925
+          },
+          {
+            "region": "Bintulu",
+            "fires": 2,
+            "frp": 6.3,
+            "km": 1219
+          },
+          {
+            "region": "Pagoh",
+            "fires": 1,
+            "frp": 8.1,
+            "km": 145
+          },
+          {
+            "region": "Miri",
+            "fires": 1,
+            "frp": 4.5,
+            "km": 1260
+          },
+          {
+            "region": "Taman Tunku Abdul Rahman",
+            "fires": 1,
+            "frp": 2.3,
+            "km": 1580
+          },
+          {
+            "region": "Sarawak",
+            "fires": 1,
+            "frp": 7.6,
+            "km": 1262
+          }
+        ]
+      }
+    },
+    {
+      "id": "S3",
+      "question": "Does independent public reporting corroborate a transboundary source?",
+      "finding": "4 of 4 retrieved documents name Indonesia, Sumatra, Kalimantan or transboundary transport as the source.",
+      "evidence": [
+        "web search response sha256 88773ea91c82...",
+        "2026 Southeast Asian haze - Wikipedia -- https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze",
+        "IDN: Fire - 07-2026 - Indonesia: Forest Fires and Haze in Sumatra and Kalimantan (2026-08-24) - Indonesia | ReliefWeb -- https://reliefweb.int/report/indonesia/idn-fire-07-2026-indonesia-forest-fires-and-haze-sumatra-and-kalimantan-2026-08-24",
+        "Months-long Indonesia wildfires spew toxic haze across Southeast Asia - France 24 -- https://www.france24.com/en/asia-pacific/20261018-months-long-indonesia-wildfires-spew-toxic-haze-across-southeast-asia",
+        "Why Southeast Asia Is Facing a Haze Crisis -- https://time.com/article/2026/09/17/wildfire-haze-indonesia-malaysia-singapore-southeast-asia-super-el-nino"
+      ],
+      "supported": true,
+      "caveat": "Press reporting is unreviewed third-party narrative, not measurement. It can corroborate a hypothesis but cannot establish attribution on its own.",
+      "data": {
+        "skipped": false,
+        "retrieved": 4,
+        "corroborating": 4
+      }
+    },
+    {
+      "id": "S4",
+      "question": "Is the Zetaris warehouse consistent with the upstream it was built from?",
+      "finding": "Stored peak for Kuala Lumpur is 90.8 ug/m3 against a live upstream peak of 90.8 ug/m3 (ratio 1.00). Same order of magnitude, so the warehouse is consistent with its source.",
+      "evidence": [
+        "Zetaris: Kuala Lumpur peak 90.8 ug/m3 over 96 stored samples",
+        "Open-Meteo live peak 90.8 ug/m3 for the same coordinates",
+        "Windows are not identical: the warehouse retains a wider forecast range than the live comparison call."
+      ],
+      "supported": true,
+      "data": {
+        "storedPeak": 90.8,
+        "upstreamPeak": 90.8,
+        "ratio": 1
+      }
+    },
+    {
+      "id": "S5",
+      "question": "Can every retained number be traced to a dated, identified source?",
+      "finding": "Fire rows carry sensor identity (2 distinct platforms) and acquisition times 2026-10-27 12:38:00.0 to 2026-10-27 14:20:00.0, with 0 rows missing a confidence grade. PM2.5 rows carry ingest stamps (7 batch time(s), 2026-10-27T11:25:53.844Z).",
+      "evidence": [
+        "Zetaris FIRMS: 47 rows, 2 sensor platforms, acquisition 2026-10-27 12:38:00.0 to 2026-10-27 14:20:00.0",
+        "Zetaris PM2.5: ingest batches 7, first 2026-10-27T11:25:53.844Z, last 2026-10-27T11:25:55.183Z"
+      ],
+      "supported": true,
+      "data": {
+        "fires": [
+          "47",
+          "2",
+          "2026-10-27 12:38:00.0",
+          "2026-10-27 14:20:00.0",
+          "0"
+        ],
+        "ingest": [
+          "7",
+          "2026-10-27T11:25:53.844Z",
+          "2026-10-27T11:25:55.183Z"
+        ]
+      }
+    },
+    {
+      "id": "S6",
+      "question": "Does the stack fail safe, and quietly, when a credential expires?",
+      "finding": "Yes: an invalid token is refused rather than silently returning data, and the token did not appear in any output. However the refusal surfaces only as HTTP 400 Bad Request, which does not tell an operator the token expired.",
+      "evidence": [
+        "run_sql.py with an invalid token exited 1",
+        "token present in output: false",
+        "Observed live earlier this session: a real token lapsed after ~1 hour and every query began failing with HTTP 400."
+      ],
+      "supported": true,
+      "data": {
+        "exit": 1,
+        "leaked": false
+      }
+    },
+    {
+      "id": "S7",
+      "question": "Are the 345 retained locations independent measurements?",
+      "finding": "NO. 345 locations yield only 104 distinct peak values (30%). Open-Meteo is a MODEL on a grid coarser than this location list, so locations sharing a cell return identical series. Counting them as independent observations overstates confidence: a headline like \"257 locations affected\" reflects far fewer independent grid cells.",
+      "evidence": [
+        "Zetaris: 104 distinct peak values across 345 locations",
+        "The feed is modelled output, not ground sensors; co-located points are duplicates, not corroboration."
+      ],
+      "supported": true,
+      "conclusion_withheld": true,
+      "data": {
+        "distinct": 104,
+        "locations": 345
+      }
+    }
+  ]
+}

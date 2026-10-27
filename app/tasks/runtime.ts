@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { evidenceResearchToolGranted } from '../contracts/evidence-tools.js';
 import type {
   ManagerConversationFactory,
   ManagerConversationService,
   ManagerConversationResolution,
 } from '../orchestration/conversation.js';
+import { readManagerConversationLimits } from '../orchestration/conversation-limits.js';
 import {
   managerChatRequestSchema,
   managerChatResponseSchema,
@@ -93,6 +95,7 @@ import {
   validateArtifactClosure,
   validateAssignmentPlan,
 } from '../orchestration/runtime.js';
+import { renderFinalAnswer } from '../orchestration/final-answer.js';
 import {
   boundedExecution,
   type AgentExecutionServices,
@@ -222,6 +225,7 @@ export class TaskRuntime {
   private readonly modelRouteRegistry: ModelRouteService;
   private closed = false;
   private conversation: ManagerConversationService | undefined;
+  private readonly conversationTimeoutMs: number;
   private conversationTurns: ConversationTurnStore | undefined;
   private readonly conversationAbort = new AbortController();
   private readonly conversationPending = new Map<
@@ -235,6 +239,9 @@ export class TaskRuntime {
     (taskId: string, identity: TaskIdentity) => unknown
   >();
   constructor(private readonly options: TaskRuntimeOptions) {
+    this.conversationTimeoutMs = readManagerConversationLimits(
+      options.env ?? process.env,
+    ).timeoutMs;
     validateNightshiftConfiguration(
       options.env ?? process.env,
       options.nightshiftPollIntervalMs,
@@ -653,7 +660,7 @@ export class TaskRuntime {
               identity,
               AbortSignal.any([
                 this.conversationAbort.signal,
-                AbortSignal.timeout(120_000),
+                AbortSignal.timeout(this.conversationTimeoutMs),
               ]),
             );
       if (this.closed)
@@ -831,6 +838,7 @@ export class TaskRuntime {
       },
       tools: [...this.options.registry.tools.values()]
         .filter((tool) => tool.mode === (this.options.mode ?? 'live'))
+        .filter((tool) => evidenceResearchToolGranted(request, tool.id))
         .filter(
           (tool) =>
             !NIGHTSHIFT_TOOL_IDS.includes(tool.id as NightshiftToolId) ||
@@ -1631,6 +1639,19 @@ export class TaskRuntime {
               topology: MANAGER_TOPOLOGY,
             }),
           ),
+        traceCompleted: (node, timing) =>
+          this.store.appendEvent(
+            id,
+            'manager.graph.completed',
+            'Runtime',
+            `Manager graph ${timing.outcome === 'ok' ? 'completed' : 'failed'}: ${node}`,
+            json({
+              thread_id: job.thread_id,
+              node,
+              topology: MANAGER_TOPOLOGY,
+              ...timing,
+            }),
+          ),
       },
     );
     const config = {
@@ -2305,13 +2326,38 @@ export class TaskRuntime {
         'invalid_citation',
         'Final synthesis must cite only exact selected source references.',
       );
+    // Quantitative workflows save only renderer sections. The Manager's own
+    // prose stays in the immutable decision audit, never in the factual answer.
+    const rendered = renderFinalAnswer({
+      task,
+      registry: this.options.registry,
+      selected,
+      closure,
+      reviews: checks,
+      citations,
+      store: this.store,
+      mode: task.mode,
+      read: (ref) => this.readExact(task, ref),
+    });
     const result = this.result(
       task,
-      action.answer,
+      rendered?.answer ?? action.answer,
       action.work_products,
       citations,
       action.uncertainty,
     );
+    if (rendered)
+      this.store.appendEvent(
+        task.id,
+        'final_answer_rendered',
+        'Runtime',
+        'The saved answer was rendered from independently reviewed work products.',
+        json({
+          capabilities: rendered.capabilities,
+          gaps: rendered.gaps,
+          manager_answer_sha256: contractHash(action.answer),
+        }),
+      );
     const requiredAssignments = new Set(
       task.manager?.plans.at(-1)?.assignment_revisions.map((item) => item.id) ??
         [],
@@ -2343,7 +2389,7 @@ export class TaskRuntime {
           ['partial', 'gap', 'unknown'].includes(item.support),
       );
     result.completion =
-      action.unfinished.length || incomplete
+      action.unfinished.length || incomplete || rendered?.gaps.length
         ? selected.length
           ? 'partial'
           : 'blocked'
@@ -2351,6 +2397,7 @@ export class TaskRuntime {
     result.next_requirements = [
       ...new Set([
         ...action.unfinished,
+        ...(rendered?.gaps ?? []),
         ...(action.nightshift_unresolved_jobs ?? []).map(
           (id) => `Required Nightshift job remains unresolved: ${id}.`,
         ),
@@ -3200,6 +3247,23 @@ export class TaskRuntime {
         ))
     );
   }
+  private toolCallCount(
+    task: TaskRecord,
+    assignment: Assignment,
+    toolId: string,
+  ): number {
+    return this.store
+      .attempts(task.id, task.identity)
+      .filter(
+        (attempt) =>
+          attempt.kind === 'tool' &&
+          attempt.assignment_id === assignment.id &&
+          typeof attempt.details === 'object' &&
+          attempt.details !== null &&
+          !Array.isArray(attempt.details) &&
+          attempt.details.tool === toolId,
+      ).length;
+  }
   private async executeAssignment(
     task: TaskRecord,
     assignment: Assignment,
@@ -3362,8 +3426,20 @@ export class TaskRuntime {
                   input: parsed,
                 },
                 signal,
-                async () =>
-                  tool.outputSchema.parse(
+                async () => {
+                  // The current operation has already charged its attempt;
+                  // graph replay returns its receipt before entering this body.
+                  if (
+                    tool.max_calls_per_assignment !== undefined &&
+                    this.toolCallCount(task, assignment, id) >
+                      tool.max_calls_per_assignment
+                  )
+                    throw new TaskError(
+                      422,
+                      'tool_assignment_limit',
+                      'This assignment exhausted the registered tool call limit; retain the existing result or schedule a new bounded assignment.',
+                    );
+                  return tool.outputSchema.parse(
                     await (NIGHTSHIFT_TOOL_IDS.includes(id as NightshiftToolId)
                       ? this.executeNightshiftTool(
                           id as NightshiftToolId,
@@ -3376,7 +3452,8 @@ export class TaskRuntime {
                           identity: structuredClone(context.identity),
                           inputs: structuredClone(context.inputs),
                         })),
-                  ),
+                  );
+                },
                 (output) => ({ output: json(output) }),
               );
         // Governed context tools can durably pin inputs while an assignment runs.
@@ -3596,6 +3673,14 @@ export class TaskRuntime {
           },
           toolCards: assignment.tools
             .filter((id) => task.permissions.tools.includes(id))
+            .filter((id) => {
+              const tool = this.options.registry.tools.get(id);
+              return (
+                tool?.max_calls_per_assignment === undefined ||
+                this.toolCallCount(task, assignment, id) <
+                  tool.max_calls_per_assignment
+              );
+            })
             .map((id) => ({
               id,
               description: this.options.registry.tools.get(id)?.description,

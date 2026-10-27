@@ -1,0 +1,213 @@
+Haze Agent — system test run 2026-10-27T13-23-05-945Z
+node=v24.16.0 platform=win32
+total=42 pass=40 fail=0 warn=2
+
+[PASS] UC-01 Engine pin preflight (node/npm match package.json engines)
+    cmd: node qa/checks/engine-preflight.mjs
+    exit=0 duration=0s
+
+[PASS] UC-02 Vendored engine pins verify
+    cmd: npm run verify:pins
+    exit=0 duration=1s
+
+[PASS] UC-03 Prettier format check
+    cmd: npm run format:check
+    exit=0 duration=11s
+
+[PASS] UC-04 TypeScript typecheck (root + zetaris project)
+    cmd: npm run typecheck
+    exit=0 duration=7s
+
+[PASS] UC-05 ESLint zero-warnings (incl. architecture import rules)
+    cmd: npm run lint
+    exit=0 duration=21s
+
+[PASS] UC-06 Backend build (vendor:engines + build)
+    cmd: npm run build
+    exit=0 duration=7s
+
+[PASS] UC-07 Unit + runtime integration suite (vitest unit project)
+    cmd: npm test
+    exit=0 duration=176s
+
+[PASS] UC-08 Engine source tests
+    cmd: npm run test:engines
+    exit=0 duration=2s
+
+[PASS] UC-09 Model route evaluation + nightshift strict unit tests
+    cmd: npm run routes:test
+    exit=0 duration=1s
+
+[PASS] UC-10 Offline example run (npm start, no env required)
+    cmd: npm start
+    exit=0 duration=1s
+
+[PASS] UC-11 General engine fixture verification (task lifecycle E2E)
+    cmd: node scripts/verify-general.mjs --fixture
+    exit=0 duration=3s
+
+[PASS] UC-12 Damage account fixture verification
+    cmd: node scripts/verify-damage-account.mjs --fixture
+    exit=0 duration=3s
+
+[PASS] UC-13 Damage reduction method verification
+    cmd: node scripts/verify-damage-reduction.mjs --fixture
+    exit=0 duration=4s
+
+[PASS] UC-14 Damage reduction capacity variant
+    cmd: node scripts/verify-damage-reduction.mjs --fixture --capacity
+    exit=0 duration=29s
+
+[PASS] UC-15 Reduction planning preview verification
+    cmd: node scripts/verify-damage-reduction-preview.mjs --fixture
+    exit=0 duration=12s
+
+[PASS] UC-16 Reduction programmes verification
+    cmd: node scripts/verify-damage-reduction-programmes.mjs --fixture
+    exit=0 duration=9s
+
+[PASS] UC-17 Reduction programme envelope (capacity)
+    cmd: node scripts/verify-damage-reduction-programme-envelope.mjs --fixture --capacity
+    exit=0 duration=15s
+
+[PASS] UC-18 Reduction pilot verification
+    cmd: node scripts/verify-damage-reduction-pilot.mjs --fixture
+    exit=0 duration=13s
+
+[PASS] UC-19 Reduction evaluation verification
+    cmd: node scripts/verify-damage-reduction-evaluation.mjs --fixture
+    exit=0 duration=22s
+
+[PASS] UC-20 LangGraph crash recovery (fencing, resume, no budget replenish)
+    cmd: npm run test:crashes
+    exit=0 duration=7s
+
+[WARN] UC-21 LangGraph rollback (needs --legacy-executable retained dist)
+    cmd: npm run test:rollback
+    exit=1 duration=1s
+    --- output tail ---
+    file:///C:/Users/USER/Desktop/open%20Agent%20hackathon/scripts/verify-langgraph-rollback.mjs:10
+      throw new Error(
+            ^
+    
+    Error: Usage: verify-langgraph-rollback.mjs --legacy-executable /absolute/retained-dist
+        at file:///C:/Users/USER/Desktop/open%20Agent%20hackathon/scripts/verify-langgraph-rollback.mjs:10:9
+        at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+        at async node:internal/modules/esm/loader:633:26
+        at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+    
+    Node.js v24.16.0
+    
+    
+    > haze-agent@0.1.0 test:rollback
+    > node scripts/verify-langgraph-rollback.mjs
+
+[PASS] UC-22 Nightshift strict contract tests
+    cmd: npm run nightshift:contract:test
+    exit=0 duration=1s
+
+[PASS] UC-23 Nightshift crash handling
+    cmd: npm run nightshift:test:crashes
+    exit=0 duration=4s
+
+[PASS] UC-24 Nightshift wait-crash handling
+    cmd: npm run nightshift:test:wait-crashes
+    exit=0 duration=2s
+
+[PASS] UC-25 Nightshift chain-crash handling
+    cmd: npm run nightshift:test:chain-crashes
+    exit=0 duration=3s
+
+[PASS] UC-26 Demo: damage account reaches its independently reviewed state
+    cmd: node qa/checks/damage-demo-probe.mjs
+    exit=0 duration=16s
+
+[PASS] UC-27 Demo: nightshift
+    cmd: npm run nightshift:demo
+    exit=0 duration=0s
+
+[PASS] UC-28 Frontend build + tests
+    cmd: npm run frontend:check
+    exit=0 duration=15s
+
+[PASS] UC-29 NEGATIVE: nonempty unmarked STATE_DIR must fail without modifying it
+    cmd: node qa/checks/state-dir-guard.mjs
+    exit=0 duration=0s
+
+[WARN] UC-30 Postgres-backed suite (skips cleanly when no HAZE_TEST_POSTGRES_URL)
+    cmd: npm run test:postgres
+    exit=1 duration=21s
+    --- output tail ---
+    Error: HAZE_TEST_POSTGRES_URL is required for the PostgreSQL test project.
+     ❯ tests/postgres/checkpoints.postgres.test.ts:15:9
+         13| const connectionString = process.env['HAZE_TEST_POSTGRES_URL'];
+         14| if (!connectionString) {
+         15|   throw new Error(
+           |         ^
+         16|     'HAZE_TEST_POSTGRES_URL is required for the PostgreSQL test projec…
+         17|   );
+    
+    ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+    
+    
+    
+    > haze-agent@0.1.0 test:postgres
+    > vitest run --project postgres
+    
+    
+     RUN  v5.0.5 C:/Users/USER/Desktop/open Agent hackathon
+    
+     ❯ |postgres| tests/postgres/checkpoints.postgres.test.ts (0 test)
+    
+     Test Files  1 failed (1)
+          Tests  no tests
+       Start at  18:28:35
+       Duration  14.06s (worker 100%)
+
+[PASS] UC-31 HTTP API contract (origin/idempotency/v3-only/bounds/query strictness)
+    cmd: node qa/checks/api-e2e.mjs
+    exit=0 duration=3s
+
+[PASS] UC-32 Peer channel message/byte budget bounds
+    cmd: node qa/checks/peer-budget-probe.mjs
+    exit=0 duration=0s
+
+[PASS] UC-33 Reserved review capacity is released when review cannot run
+    cmd: node qa/checks/review-reserve-probe.mjs
+    exit=0 duration=0s
+
+[PASS] UC-34 Manager supervision scenarios (scripted, offline) + role isolation
+    cmd: npm run manager:test -- --scripted
+    exit=0 duration=84s
+
+[PASS] UC-35 Compatibility probe (local checks pass, provider skipped offline)
+    cmd: npm run probe:compatibility
+    exit=0 duration=11s
+
+[PASS] UC-36 Model route evaluation inspection (offline)
+    cmd: npm run routes:evaluate -- --inspect
+    exit=0 duration=1s
+
+[PASS] UC-37 Upstream data sources return live data (network)
+    cmd: node qa/checks/data-sources-probe.mjs
+    exit=0 duration=4s
+
+[PASS] UC-38 Agent's own evidence adapters retrieve live data (network)
+    cmd: node qa/checks/agent-retrieval-probe.mjs
+    exit=0 duration=2s
+
+[PASS] UC-43 Zetaris operator script tests (python unittest)
+    cmd: npm run test:zetaris-scripts
+    exit=0 duration=1s
+
+[PASS] UC-42 Live cross-system real-world haze scenarios (7 questions)
+    cmd: node --env-file-if-exists=.env qa/checks/scenarios-live.mjs
+    exit=0 duration=25s
+
+[PASS] UC-41 Live web-search evidence tool returns usable documents (network)
+    cmd: node --env-file-if-exists=.env qa/checks/web-search-live-probe.mjs
+    exit=0 duration=1s
+
+[PASS] UC-40 Agent health: all roles registered, routed and capability-backed
+    cmd: node qa/checks/agent-health-probe.mjs --live
+    exit=0 duration=5s

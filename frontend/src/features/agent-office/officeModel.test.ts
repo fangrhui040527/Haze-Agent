@@ -69,7 +69,7 @@ describe('deriveAgentStatuses', () => {
       text: 'Actual assignment_started',
     });
     expect(statuses.manager).toEqual({ state: 'idle', text: 'Idle' });
-    expect(statuses.hmem.state).toBe('idle');
+    expect(Object.keys(statuses)).not.toContain('hmem');
     expect(statuses.worldmodel.state).toBe('idle');
     const model = new OfficeModel();
     model.apply(started, 0, true);
@@ -110,12 +110,7 @@ describe('deriveAgentStatuses', () => {
       state: 'working',
       text: 'Reading the selected source.',
     });
-    for (const id of [
-      'worldmodel',
-      'hmem',
-      'workershield',
-      'evidencecritic',
-    ] as const)
+    for (const id of ['worldmodel', 'workershield', 'evidencecritic'] as const)
       expect(statuses[id]).toEqual({ state: 'idle', text: 'Idle' });
   });
   it('follows a run step by step', () => {

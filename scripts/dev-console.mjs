@@ -22,7 +22,6 @@ const commands = {
     'nightshift',
     'zetaris',
     'world',
-    'hmem',
     'hazeops',
     '--watch',
   ],
@@ -50,7 +49,7 @@ const commands = {
 
 const help = {
   status:
-    'status [app|agents|nightshift|zetaris|world|hmem|hazeops] [--watch]\n  Show service readiness and current work. Ctrl+C ends a watch.',
+    'status [app|agents|nightshift|zetaris|world|hazeops] [--watch]\n  Show service readiness and current work. Ctrl+C ends a watch.',
   agents:
     'agents list\nagents show <name>\n  Inspect registered agents, configured models, and current assignments.',
   tasks:

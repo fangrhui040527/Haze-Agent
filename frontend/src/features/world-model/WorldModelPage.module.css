@@ -1,31 +1,25 @@
 /* Haze integration of Meterless's Apache-2.0 control-plane palette and layout.
    Original source and license: /meterless-world-model/README.md. */
 .controlPlane {
-  --wm-bg: #0d0d0d;
-  --wm-surface: #161616;
-  --wm-raised: #1d1d1d;
-  --wm-border: #ffffff14;
-  --wm-text: #f5f5f5;
-  --wm-muted: #aaa;
-  --wm-accent: #18e299;
-  color-scheme: dark;
+  --wm-bg: transparent;
+  --wm-surface: var(--color-panel);
+  --wm-raised: var(--color-surface-2);
+  --wm-border: var(--color-border);
+  --wm-text: var(--color-text);
+  --wm-muted: var(--color-muted);
+  --wm-accent: var(--color-accent);
   overflow: hidden;
-  border: 1px solid var(--wm-border);
-  border-radius: 12px;
+  border: var(--hairline);
+  border-radius: var(--radius-lg);
   background: var(--wm-bg);
   color: var(--wm-text);
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  font-family: var(--font-ui);
   font-size: 14px;
   line-height: 1.55;
 }
 
 .controlPlane :is(h1, h2, h3) {
-  font-family: inherit;
+  font-family: var(--font-display);
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -57,7 +51,7 @@
   width: 100%;
   min-width: 0;
   padding: 9px 10px;
-  border: 1px solid #ffffff29;
+  border: 1px solid var(--color-border-strong);
   border-radius: 6px;
   background: var(--wm-bg);
   color: var(--wm-text);
@@ -98,7 +92,7 @@
   align-items: center;
   gap: 7px;
   padding: 5px 10px;
-  border: 1px solid #ffffff26;
+  border: 1px solid var(--color-border-strong);
   border-radius: 999px;
   color: var(--wm-muted);
   font-size: 11px;
@@ -147,8 +141,8 @@
 }
 .navigation .navActive {
   color: var(--wm-accent);
-  border-color: #18e29929;
-  background: #18e2990d;
+  border-color: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
 }
 .sidebarNote {
   display: grid;
@@ -177,9 +171,9 @@
   gap: 6px;
   margin-top: 6px;
   padding: 9px 12px;
-  border: 1px solid #18e29929;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 16%, transparent);
   border-radius: 9999px;
-  background: #18e2990d;
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
   color: var(--wm-accent);
   font-size: 12px;
   font-weight: 600;
@@ -189,7 +183,7 @@
     transform 150ms;
 }
 .sidebarNote .backLink:hover {
-  background: #18e29926;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
   border-color: var(--wm-accent);
   color: var(--wm-accent);
   transform: translateX(-2px);
@@ -282,18 +276,18 @@
   text-decoration: none;
 }
 .primaryButton {
-  color: #0d0d0d;
+  color: var(--color-accent-contrast);
   background: var(--wm-accent);
   font-weight: 600;
 }
 .primaryButton:hover {
-  background: #66edbc;
+  background: var(--color-accent-hover);
 }
 .ghostButton,
 .loadMore {
   color: var(--wm-text);
   background: transparent;
-  border-color: #ffffff29;
+  border-color: var(--color-border-strong);
 }
 .ghostButton:hover,
 .loadMore:hover {
@@ -342,7 +336,7 @@
 }
 .recordList .selectedRecord {
   background: var(--wm-surface);
-  border-color: #18e29966;
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
   box-shadow: inset 2px 0 var(--wm-accent);
 }
 .recordList strong {
@@ -460,22 +454,22 @@
   justify-self: start;
   padding: 3px 8px;
   border-radius: 4px;
-  background: #ffffff0a;
+  background: var(--color-border);
   color: var(--wm-muted);
   font-size: 11px;
 }
 .statusBadge[data-status='accepted'] {
-  background: #18e29915;
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
   color: var(--wm-accent);
 }
 .statusBadge[data-status='held'],
 .statusBadge[data-status='pending_review'] {
-  background: #f3bc4815;
-  color: #f3bc48;
+  background: var(--color-warn) 15;
+  color: var(--color-warn);
 }
 .statusBadge[data-status='not_eligible'] {
-  background: #ff929215;
-  color: #ff9292;
+  background: var(--color-error) 15;
+  color: var(--color-error);
 }
 .metadata {
   display: grid;
@@ -516,7 +510,7 @@
   border: 1px solid var(--wm-border);
   border-radius: 6px;
   background: var(--wm-bg);
-  color: #c8c8c8;
+  color: var(--color-muted);
   font-size: 11px;
   line-height: 1.7;
 }
@@ -546,7 +540,7 @@
 }
 .timeline li {
   position: relative;
-  border-left: 1px solid #ffffff26;
+  border-left: 1px solid var(--color-border-strong);
   padding: 0 0 24px 22px;
 }
 .timeline li:last-child {
@@ -574,7 +568,7 @@
   background: var(--wm-accent);
 }
 .holdReason {
-  color: #f3bc48;
+  color: var(--color-warn);
 }
 .maintenance {
   max-width: 690px;
@@ -617,17 +611,17 @@
   justify-items: start;
   padding: 15px;
   margin-bottom: 16px;
-  border: 1px solid #ff929240;
+  border: 1px solid var(--color-error) 40;
   border-radius: 6px;
-  background: #ff92920a;
-  color: #ffb3b3;
+  background: var(--color-error) 0a;
+  color: var(--color-error);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 .success {
   padding: 14px;
   margin-top: 18px;
-  border: 1px solid #18e29933;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
   border-radius: 6px;
   color: var(--wm-accent);
   font-size: 12px;
@@ -643,10 +637,10 @@
 .referenceNotice {
   padding: 13px 16px;
   margin-bottom: 20px;
-  border: 1px solid #f3bc4830;
+  border: 1px solid var(--color-warn) 30;
   border-radius: 6px;
-  background: #f3bc4808;
-  color: #d4c9ae;
+  background: var(--color-warn) 08;
+  color: var(--color-muted);
   font-size: 12px;
 }
 .referenceFrame {
@@ -759,4 +753,43 @@
       background 120ms ease,
       border-color 120ms ease;
   }
+}
+
+/* ── Metadata as a two-column key/value table ── */
+.metadata {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 0;
+  margin: var(--space-4) 0;
+  border: var(--hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.metadata > dt,
+.metadata > dd,
+.metadata > div > dt,
+.metadata > div > dd {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--hairline);
+}
+
+.metadata > div {
+  display: contents;
+}
+
+.metadata dt {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  background: var(--color-surface-2);
+}
+
+.metadata dd {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }

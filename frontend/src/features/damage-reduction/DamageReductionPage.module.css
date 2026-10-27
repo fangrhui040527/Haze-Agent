@@ -1,5 +1,5 @@
 .page {
-  max-width: 78rem;
+  max-width: var(--content-max);
   margin-inline: auto;
   display: grid;
   gap: var(--space-6);
@@ -251,5 +251,94 @@
   .steps {
     gap: var(--space-3);
     font-size: var(--text-sm);
+  }
+}
+
+/* ── Layout pass: step bar, columns for the three stages, facts as a key/value table ── */
+.page {
+  gap: var(--space-4);
+}
+.header {
+  max-width: none;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.steps a {
+  padding: var(--space-3) var(--space-4);
+  border-right: var(--hairline);
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  background: var(--color-panel);
+}
+.steps a:last-child {
+  border-right: none;
+}
+.steps a:hover {
+  background: var(--color-accent-soft);
+}
+.card,
+.fieldset {
+  background: var(--color-panel);
+}
+.results {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  align-items: start;
+}
+.facts {
+  gap: 0;
+  border: var(--hairline);
+  border-radius: var(--radius-sm);
+}
+.facts > div {
+  grid-template-columns: minmax(8rem, 2fr) minmax(0, 3fr);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--hairline);
+}
+.facts dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.figures dd {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.tableWrap {
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+}
+.tableWrap thead th {
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.tableWrap tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+@media (max-width: 700px) {
+  .steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .steps a {
+    border-right: none;
+    border-bottom: var(--hairline);
+  }
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
   }
 }

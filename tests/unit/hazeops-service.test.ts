@@ -100,6 +100,27 @@ function service(options: ConstructorParameters<typeof HazeOpsService>[0]) {
 }
 
 describe('shared application HazeOps service', () => {
+  it('schedules retained documents without sending them through measurement ingestion', async () => {
+    const sink = world();
+    const owner = service({
+      store: store(),
+      world: sink,
+      identity,
+      mode: 'fixture',
+      adapters: [],
+    });
+    const spec = adapter('news-documents', () => Promise.resolve(result)).spec;
+    owner.registerEvidenceWatcher({
+      spec,
+      run: () => Promise.resolve({ changed: true, coverage: result.coverage }),
+    });
+    await owner.ready;
+    expect(owner.tick()).toEqual(['news-documents']);
+    await owner.idle();
+    expect(sink.writeAdapterResult).not.toHaveBeenCalled();
+    expect(owner.watchers()[0]?.state.lastOutcome).toBe('ok');
+    expect(owner.watchers()[0]?.state.nextDueAt).toBeTruthy();
+  });
   it('reports scheduler execution separately from configured collectors', async () => {
     const database = store();
     const live = service({

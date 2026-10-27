@@ -50,22 +50,16 @@ export function createDevCommands({
   const status = async (component, options) => {
     if (component) return inspect(component, options);
     const results = await Promise.allSettled(
-      [
-        'app',
-        'agents',
-        'nightshift',
-        'zetaris',
-        'world',
-        'hmem',
-        'hazeops',
-      ].map((name) => inspect(name, options)),
+      ['app', 'agents', 'nightshift', 'zetaris', 'world', 'hazeops'].map(
+        (name) => inspect(name, options),
+      ),
     );
     if (options.signal.aborted) throw options.signal.reason;
     return results
       .map((result, index) =>
         result.status === 'fulfilled'
           ? result.value
-          : `${['App', 'Agents', 'Nightshift', 'Zetaris', 'World Model', 'H-MEM', 'HazeOps'][index]}: unavailable — ${result.reason.message}`,
+          : `${['App', 'Agents', 'Nightshift', 'Zetaris', 'World Model', 'HazeOps'][index]}: unavailable — ${result.reason.message}`,
       )
       .join('\n\n');
   };
@@ -87,7 +81,6 @@ export function createDevCommands({
             'nightshift',
             'zetaris',
             'world',
-            'hmem',
             'hazeops',
           ].includes(positional[0])) ||
         args.filter((arg) => arg === '--watch').length > 1

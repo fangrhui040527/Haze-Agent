@@ -3,11 +3,21 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { createReductionVerificationReader } from './reduction-verification-http.mjs';
 import { createSyntheticDamageImport } from '../dist/capabilities/damage-appraisal/fixtures.js';
 import {
   damageAccountSchema,
   damageReviewSchema,
+  damageImportSchema,
 } from '../dist/contracts/damage-account.js';
+import {
+  artifactEvidence,
+  captureVerificationBindings,
+  accountingDemonstrationGaps,
+  domainModelEvidence,
+  domainVerificationEnvironment,
+  retainedBytesHash,
+} from './domain-verification-support.mjs';
 
 const [mode, inputPath] = process.argv.slice(2);
 if (
@@ -21,6 +31,18 @@ const fixture = mode === '--fixture';
 const input = fixture
   ? createSyntheticDamageImport()
   : JSON.parse(await readFile(resolve(inputPath), 'utf8'));
+damageImportSchema.parse(input);
+if (
+  !fixture &&
+  [
+    ...(input.effects ?? []),
+    ...(input.unit_values ?? []),
+    ...(input.incidence ?? []),
+  ].some((entry) => entry.origin === 'synthetic')
+)
+  throw new Error(
+    'Live accounting verification requires supplied non-synthetic inputs.',
+  );
 const root = resolve(
   process.env.STATE_DIR || '.state',
   'damage-verification',
@@ -28,19 +50,63 @@ const root = resolve(
 );
 await mkdir(root, { recursive: true });
 let child;
+
+const sameRef = (left, right) =>
+  Boolean(
+    left &&
+    right &&
+    left.id === right.id &&
+    left.version === right.version &&
+    left.sha256 === right.sha256,
+  );
+/** Historical artifacts stay retained; only one exact current product can qualify. */
+function currentArtifact(task, artifacts, kind, refs) {
+  const matches = artifacts.filter(
+    (artifact) =>
+      artifact.kind === kind &&
+      artifact.task_id === task.id &&
+      artifact.run_id === task.current_run_id &&
+      artifact.objective_revision === task.objective_revision &&
+      artifact.producer.kind === 'assignment' &&
+      task.artifacts.some(
+        (entry) =>
+          entry.current &&
+          entry.objective_revision === task.objective_revision &&
+          sameRef(entry.artifact, artifact),
+      ) &&
+      task.assignments.some(
+        (assignment) =>
+          assignment.id === artifact.assignment_id &&
+          assignment.id === artifact.producer.id &&
+          assignment.run_id === task.current_run_id &&
+          assignment.objective_revision === task.objective_revision &&
+          assignment.revision === artifact.assignment_revision &&
+          assignment.status === 'completed' &&
+          !['stale', 'rejected'].includes(assignment.usability) &&
+          assignment.outputs.some((ref) => sameRef(ref, artifact)),
+      ) &&
+      refs.some((ref) => sameRef(ref, artifact)),
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
 async function boot() {
   child = fork(
     new URL('./serve-tasks.mjs', import.meta.url),
     fixture ? ['--fixture'] : [],
     {
-      env: { ...process.env, STATE_DIR: root, HAZE_TASK_PORT: '0' },
+      env: {
+        ...(fixture ? process.env : domainVerificationEnvironment(process.env)),
+        STATE_DIR: root,
+        HAZE_TASK_STATE_DIR: root,
+        HAZE_TASK_PORT: '0',
+      },
       stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
     },
   );
   return new Promise((ready, reject) => {
     const timer = setTimeout(
       () => reject(new Error('Damage verifier startup timed out.')),
-      10000,
+      45_000,
     );
     child.once('message', (message) => {
       clearTimeout(timer);
@@ -63,26 +129,10 @@ async function stop() {
     child.kill('SIGTERM');
   });
 }
-async function read(origin, path, body, key = randomUUID()) {
-  const response = await fetch(
-    `${origin}${path}`,
-    body === undefined
-      ? undefined
-      : {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Origin: origin,
-            'Idempotency-Key': key,
-          },
-          body: JSON.stringify(body),
-        },
-  );
-  const data = await response.json();
-  if (!response.ok)
-    throw new Error(`HTTP ${response.status}: ${JSON.stringify(data)}`);
-  return data;
-}
+const transportRetries = [];
+const read = createReductionVerificationReader({
+  onRetry: (entry) => transportRetries.push(entry),
+});
 async function settle(origin, id) {
   const deadline = Date.now() + 310000;
   for (;;) {
@@ -117,8 +167,29 @@ async function capture(origin, task) {
   return { task, artifacts, events };
 }
 let report;
+let before;
+let stage = 'server_start';
+let bindingEvidence = {};
+function retainedAttempts() {
+  const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
+    readOnly: true,
+  });
+  try {
+    return database
+      .prepare('SELECT body FROM attempts ORDER BY rowid')
+      .all()
+      .map((row) => JSON.parse(row.body));
+  } finally {
+    database.close();
+  }
+}
 try {
+  if (!fixture)
+    bindingEvidence = await captureVerificationBindings(
+      domainVerificationEnvironment(process.env),
+    );
   let origin = await boot();
+  stage = 'input_import';
   const imported = await read(origin, '/api/artifacts', {
     schema_version: 'haze.artifact.import.v3',
     filename: 'damage-inputs.json',
@@ -136,9 +207,11 @@ try {
     context_refs: [{ id: ref.id, version: ref.version, sha256: ref.sha256 }],
   };
   const key = randomUUID();
+  stage = 'accounting_task';
   const admission = await read(origin, '/api/tasks', request, key);
   const duplicate = await read(origin, '/api/tasks', request, key);
-  const before = await capture(origin, await settle(origin, admission.task_id));
+  before = await capture(origin, await settle(origin, admission.task_id));
+  stage = 'restart_readback';
   await stop();
   origin = await boot();
   const after = await capture(
@@ -146,11 +219,29 @@ try {
     await read(origin, `/api/tasks/${admission.task_id}`),
   );
   const restart = JSON.stringify(before) === JSON.stringify(after);
-  const rawAccount = before.artifacts.find((a) => a.kind === 'damage.account');
+  const rawAccount = currentArtifact(
+    before.task,
+    before.artifacts,
+    'damage.account',
+    before.task.result?.work_products ?? [],
+  );
   const account = rawAccount
     ? damageAccountSchema.parse(rawAccount.content)
     : undefined;
-  const rawReview = before.artifacts.find((a) => a.kind === 'damage.review');
+  const reviewCheck = before.task.result?.review.checks?.find(
+    (check) =>
+      sameRef(check.artifact, rawAccount) &&
+      check.verdict === 'supported' &&
+      check.producer_assignment_id === rawAccount?.assignment_id &&
+      check.producer_revision === rawAccount?.assignment_revision &&
+      check.reviewer_assignment_id !== check.producer_assignment_id,
+  );
+  const rawReview = currentArtifact(
+    before.task,
+    before.artifacts,
+    'damage.review',
+    [reviewCheck?.review_artifact],
+  );
   const review = rawReview
     ? damageReviewSchema.parse(rawReview.content)
     : undefined;
@@ -166,28 +257,25 @@ try {
     );
   const reviewed = Boolean(
     review?.verdict === 'supported' &&
-    before.task.result?.review.status === 'supported',
+    reviewCheck &&
+    before.task.result?.review.status === 'supported' &&
+    rawReview.assignment_id === reviewCheck.reviewer_assignment_id &&
+    rawReview.assignment_revision === reviewCheck.reviewer_revision &&
+    review.reviewer.assignment_id === rawReview.assignment_id &&
+    review.reviewer.revision === rawReview.assignment_revision &&
+    review.reviewed_artifacts.some((ref) => sameRef(ref, rawAccount)),
   );
   const selected = Boolean(
     rawAccount &&
-    before.task.result?.work_products.some((r) => r.id === rawAccount.id),
+    before.task.result?.work_products.some((r) => sameRef(r, rawAccount)),
   );
-  const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
-    readOnly: true,
-  });
-  const attempts = database
-    .prepare('SELECT body FROM attempts ORDER BY rowid')
-    .all()
-    .map((row) => JSON.parse(row.body));
-  database.close();
-  const genuineModelReceipt =
-    before.task.mode === 'live' &&
-    attempts.some(
-      (a) =>
-        a.kind === 'model' &&
-        a.status === 'completed' &&
-        a.receipt?.response_id,
-    );
+  const attempts = retainedAttempts();
+  const modelEvidence = domainModelEvidence(before.task, attempts);
+  const genuineModelReceipt = modelEvidence.strict_model_receipts;
+  const answerRendered = Boolean(
+    account && before.task.result?.answer.startsWith('Damage account '),
+  );
+  const gaps = accountingDemonstrationGaps(before.task, account);
   const passed =
     before.task.status === 'completed' &&
     duplicate.task_id === admission.task_id &&
@@ -195,12 +283,19 @@ try {
     exactClosure &&
     reviewed &&
     selected &&
-    (fixture || genuineModelReceipt);
+    answerRendered &&
+    (fixture ||
+      (genuineModelReceipt &&
+        gaps.length === 0 &&
+        account.evidence_origin === 'imported'));
   report = {
+    ...bindingEvidence,
     checked_at: new Date().toISOString(),
     mode: fixture ? 'fixture' : 'live',
     passed,
+    transport_retries: transportRetries,
     restart,
+    restart_task: after.task,
     duplicate_delivery: duplicate.task_id === admission.task_id,
     exact_component_closure: exactClosure,
     reviewed,
@@ -209,6 +304,14 @@ try {
     scientific_applicability: 'not_established_by_arithmetic',
     empirical_pilot_qualified: false,
     genuine_model_receipt: !!genuineModelReceipt,
+    ...modelEvidence,
+    answer_rendered: answerRendered,
+    live_readiness_pass: !fixture && passed,
+    gaps,
+    account_status: account?.status ?? null,
+    omissions: account?.omissions ?? [],
+    input_sha256: retainedBytesHash(JSON.stringify(input)),
+    artifact_references: artifactEvidence(before.artifacts),
     accounting_totals: account?.welfare_totals ?? [],
     scenarios: account?.scenarios ?? [],
     capabilities: await read(origin, '/api/capabilities'),
@@ -230,6 +333,36 @@ try {
         task: before.task.status,
         error: before.task.error ?? null,
       },
+      null,
+      2,
+    ),
+  );
+} catch (error) {
+  let attempts = [];
+  let attemptReadError;
+  try {
+    attempts = retainedAttempts();
+  } catch (readError) {
+    attemptReadError = String(readError);
+  }
+  report = {
+    ...bindingEvidence,
+    checked_at: new Date().toISOString(),
+    mode: fixture ? 'fixture' : 'live',
+    passed: false,
+    verification_error: {
+      stage,
+      message: error instanceof Error ? error.message : String(error),
+    },
+    attempts,
+    ...(attemptReadError ? { attempt_read_error: attemptReadError } : {}),
+    capture: before ?? null,
+  };
+  const path = resolve(root, 'report.json');
+  await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
+  console.log(
+    JSON.stringify(
+      { report: path, passed: false, error: report.verification_error },
       null,
       2,
     ),

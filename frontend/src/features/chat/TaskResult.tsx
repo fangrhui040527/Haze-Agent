@@ -92,6 +92,7 @@ export function TaskResult({
       <WorkProducts
         products={result.work_products}
         baseUrl={baseUrl}
+        stale={isStale}
         rejected={result.review.status === 'rejected'}
         rejectedProducts={result.review.checks?.flatMap((check) =>
           check.verdict === 'rejected' ? [check.artifact] : [],

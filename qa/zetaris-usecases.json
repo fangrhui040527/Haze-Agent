@@ -1,0 +1,386 @@
+{
+  "suite": "Zetaris live real-world haze use cases",
+  "executed_at": "2026-10-27T11:28:36.988Z",
+  "stack": {
+    "engine": "Zetaris Lightning 2.4.3-v2.4.3.1-hackathon",
+    "channel": "REST via app/adapters/zetaris/scripts/run_sql.py",
+    "rest_url": "http://localhost:8888/api/v1.0"
+  },
+  "datasets": {
+    "NASA_FIRMS_FILES.active_fires": "NASA FIRMS VIIRS active fire detections, Malaysia (live fetch)",
+    "air_quality.hourly_observations": "Open-Meteo modelled hourly PM2.5/PM10 for 345 Malaysian locations"
+  },
+  "totals": {
+    "total": 10,
+    "pass": 10,
+    "fail": 0
+  },
+  "cases": [
+    {
+      "id": "UC-Z1",
+      "title": "Hotspot inventory: how many active fires were ingested?",
+      "why_it_matters": "An analyst opening the haze console first needs to know the size and recency of the fire dataset.",
+      "sql": "SELECT COUNT(*) AS hotspots, MIN(acq_date) AS earliest, MAX(acq_date) AS latest, COUNT(DISTINCT source) AS satellites FROM NASA_FIRMS_FILES.active_fires",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3713,
+      "row_count": 1,
+      "rows": [
+        [
+          "47",
+          "2026-10-27",
+          "2026-10-27",
+          "2"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z2",
+      "title": "Which fires are burning hardest? (top fire radiative power)",
+      "why_it_matters": "Attribution starts from the most energetic fires, because weak detections rarely drive a haze episode.",
+      "sql": "SELECT location_id, region, ROUND(CAST(frp AS DOUBLE), 2) AS frp_mw, confidence, acq_myt FROM NASA_FIRMS_FILES.active_fires ORDER BY CAST(frp AS DOUBLE) DESC LIMIT 5",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 2947,
+      "row_count": 5,
+      "rows": [
+        [
+          "tawau",
+          "Tawau",
+          "73.89",
+          "n",
+          "2026-10-27 13:36:00.0"
+        ],
+        [
+          "tawau",
+          "Tawau",
+          "73.89",
+          "l",
+          "2026-10-27 13:36:00.0"
+        ],
+        [
+          "tawau",
+          "Tawau",
+          "70.35",
+          "n",
+          "2026-10-27 13:36:00.0"
+        ],
+        [
+          "tawau",
+          "Tawau",
+          "56.28",
+          "n",
+          "2026-10-27 13:36:00.0"
+        ],
+        [
+          "tawau",
+          "Tawau",
+          "55.4",
+          "n",
+          "2026-10-27 13:36:00.0"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z3",
+      "title": "Detection provenance: which satellite saw what, and when?",
+      "why_it_matters": "Every claim must name its sensor. Mixed VIIRS platforms must stay distinguishable.",
+      "sql": "SELECT source, daynight, COUNT(*) AS detections FROM NASA_FIRMS_FILES.active_fires GROUP BY source, daynight ORDER BY detections DESC",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3240,
+      "row_count": 2,
+      "rows": [
+        [
+          "VIIRS_NOAA20_NRT",
+          "D",
+          "30"
+        ],
+        [
+          "VIIRS_NOAA21_NRT",
+          "D",
+          "17"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z4",
+      "title": "Geographic spread: where are the fires concentrated?",
+      "why_it_matters": "Peninsular vs East Malaysia matters: transboundary haze and local burning need different responses.",
+      "sql": "SELECT region, COUNT(*) AS hotspots, COUNT(DISTINCT location_id) AS locations FROM NASA_FIRMS_FILES.active_fires GROUP BY region ORDER BY hotspots DESC",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3464,
+      "row_count": 10,
+      "rows": [
+        [
+          "Tawau",
+          "17",
+          "1"
+        ],
+        [
+          "Pulau Sipadan",
+          "14",
+          "1"
+        ],
+        [
+          "Kalabakan",
+          "5",
+          "1"
+        ],
+        [
+          "Bario",
+          "3",
+          "1"
+        ],
+        [
+          "Bau",
+          "2",
+          "1"
+        ],
+        [
+          "Bintulu",
+          "2",
+          "1"
+        ],
+        [
+          "Pagoh",
+          "1",
+          "1"
+        ],
+        [
+          "Miri",
+          "1",
+          "1"
+        ],
+        [
+          "Taman Tunku Abdul Rahman",
+          "1",
+          "1"
+        ],
+        [
+          "Sarawak",
+          "1",
+          "1"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z5",
+      "title": "Data-quality gate: confidence distribution of detections",
+      "why_it_matters": "Low-confidence detections must be separable so they can be excluded from a published finding.",
+      "sql": "SELECT confidence, COUNT(*) AS detections, ROUND(AVG(CAST(frp AS DOUBLE)), 2) AS mean_frp FROM NASA_FIRMS_FILES.active_fires GROUP BY confidence ORDER BY detections DESC",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 2741,
+      "row_count": 2,
+      "rows": [
+        [
+          "n",
+          "44",
+          "13.19"
+        ],
+        [
+          "l",
+          "3",
+          "28.29"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z6",
+      "title": "PM2.5 coverage: how much air-quality evidence is retained?",
+      "why_it_matters": "The modelled PM2.5 feed is the measurement side of the question; its coverage bounds any claim.",
+      "sql": "SELECT COUNT(*) AS samples, COUNT(DISTINCT location_name) AS locations, MIN(observation_time) AS first_hour, MAX(observation_time) AS last_hour FROM air_quality.hourly_observations",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3210,
+      "row_count": 1,
+      "rows": [
+        [
+          "33120",
+          "345",
+          "2026-10-26T00:00:00.000Z",
+          "2026-10-29T23:00:00.000Z"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z7",
+      "title": "Where is the air worst right now? (peak PM2.5 by location)",
+      "why_it_matters": "The operational question a resident asks: which places are above the unhealthy threshold?",
+      "sql": "SELECT location_name, ROUND(MAX(pm2_5_ug_m3), 1) AS peak_pm25, ROUND(AVG(pm2_5_ug_m3), 1) AS mean_pm25 FROM air_quality.hourly_observations GROUP BY location_name ORDER BY peak_pm25 DESC LIMIT 5",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3140,
+      "row_count": 5,
+      "rows": [
+        [
+          "Petaling Jaya",
+          "90.8",
+          "38.4"
+        ],
+        [
+          "Sentul",
+          "90.8",
+          "38.4"
+        ],
+        [
+          "Kuala Lumpur",
+          "90.8",
+          "38.4"
+        ],
+        [
+          "Ampang",
+          "90.8",
+          "38.4"
+        ],
+        [
+          "Sungai Besi",
+          "90.8",
+          "38.4"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z8",
+      "title": "WHO exceedance: hours above the 15 ug/m3 24-hour guideline",
+      "why_it_matters": "A policy-relevant count, not a raw reading: how many location-hours breach the WHO 2021 guideline?",
+      "sql": "SELECT COUNT(*) AS exceeding_hours, COUNT(DISTINCT location_name) AS affected_locations, ROUND(MAX(pm2_5_ug_m3), 1) AS worst FROM air_quality.hourly_observations WHERE pm2_5_ug_m3 > 15",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3955,
+      "row_count": 1,
+      "rows": [
+        [
+          "8494",
+          "257",
+          "90.8"
+        ]
+      ]
+    },
+    {
+      "id": "UC-Z9",
+      "title": "CROSS-SOURCE ATTRIBUTION: fires within ~50km of the worst-affected places",
+      "why_it_matters": "The actual haze-attribution join. Pairs each high-PM2.5 location with nearby active fires, which is what a source-attribution answer must be built on. A crude degree box stands in for a proper geodesic buffer.",
+      "sql": "SELECT aq.location_name,\n       ROUND(MAX(aq.pm2_5_ug_m3), 1) AS peak_pm25,\n       COUNT(DISTINCT f.location_id) AS nearby_fire_sites,\n       ROUND(SUM(CAST(f.frp AS DOUBLE)), 1) AS nearby_total_frp\nFROM air_quality.hourly_observations aq\nJOIN NASA_FIRMS_FILES.active_fires f\n  ON ABS(CAST(f.latitude AS DOUBLE) - aq.requested_latitude) < 0.45\n AND ABS(CAST(f.longitude AS DOUBLE) - aq.requested_longitude) < 0.45\nGROUP BY aq.location_name\nORDER BY nearby_total_frp DESC\nLIMIT 8",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 3966,
+      "row_count": 8,
+      "rows": [
+        [
+          "Bau",
+          "44.4",
+          "1",
+          "2414.4"
+        ],
+        [
+          "Lundu",
+          "44.4",
+          "1",
+          "2414.4"
+        ],
+        [
+          "Kuching",
+          "54.0",
+          "1",
+          "1587.8"
+        ],
+        [
+          "Sebauh",
+          "42.6",
+          "2",
+          "979.2"
+        ],
+        [
+          "Tatau",
+          "29.7",
+          "2",
+          "979.2"
+        ],
+        [
+          "Bintulu",
+          "42.6",
+          "2",
+          "979.2"
+        ],
+        [
+          "Gemas",
+          "23.9",
+          "1",
+          "778.6"
+        ],
+        [
+          "Pagoh",
+          "29.2",
+          "1",
+          "778.6"
+        ]
+      ],
+      "interpretation_note": "A zero-row result is a legitimate finding: it means no ingested fire sits near a monitored location in this window, so no fire-based attribution is supportable from this evidence."
+    },
+    {
+      "id": "UC-Z10",
+      "title": "Registration metadata is inspectable (schema introspection)",
+      "why_it_matters": "An auditor must be able to see the registered shape of each source, not just its rows.",
+      "sql": "DESCRIBE air_quality.hourly_observations",
+      "status": "PASS",
+      "exit_code": 0,
+      "statements_ok": "1/1",
+      "elapsed_ms": 2702,
+      "row_count": 8,
+      "rows": [
+        [
+          "location_name",
+          "string",
+          null
+        ],
+        [
+          "requested_latitude",
+          "double",
+          null
+        ],
+        [
+          "requested_longitude",
+          "double",
+          null
+        ],
+        [
+          "observation_time",
+          "string",
+          null
+        ],
+        [
+          "pm2_5_ug_m3",
+          "double",
+          null
+        ],
+        [
+          "pm10_ug_m3",
+          "double",
+          null
+        ],
+        [
+          "ingested_utc",
+          "string",
+          null
+        ],
+        [
+          "issued_utc",
+          "timestamp",
+          null
+        ]
+      ]
+    }
+  ]
+}

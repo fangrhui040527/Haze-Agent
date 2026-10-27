@@ -882,6 +882,44 @@ describe('external waits and durable capacity', () => {
     );
     expect(store.read(f.task.id, identity).runs).toHaveLength(1);
   });
+  it('reopens an expired external wait with retained results without dispatching or resubmitting work', () => {
+    let store = open();
+    const f = fixture(store);
+    park(store, f);
+    store.externalWaits.tryReleaseExternalOnly(f.authority);
+    finish(store, f.job);
+    store.externalWaits.reconcileDeliveries();
+    const receipt = store.nightshift.job(f.job.id, identity).receipt;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(f.task.limits.deadline));
+    const directory = store.directory;
+    store.close();
+
+    store = new TaskStore(directory);
+    stores.push(store);
+    const recovered = store.read(f.task.id, identity),
+      view = store.externalWaits.view(f.task.id, identity);
+    expect(recovered.status).toBe('timed_out');
+    expect(recovered.current_run_id).toBe(f.task.current_run_id);
+    expect(recovered.runs).toHaveLength(1);
+    expect(recovered.limits.deadline).toBe(f.task.limits.deadline);
+    expect(view.capacity.permit).toBe('released');
+    expect(view.waits).toHaveLength(1);
+    expect(view.waits[0]!.state).toBe('fenced');
+    expect(view.deliveries[0]!.state).toBe('fenced');
+    expect(store.externalWaits.drainReady()).toEqual([]);
+    expect(store.listRecoverableTasks()).toEqual([]);
+    for (const job of store.graph.pending())
+      expect(job.generation).toBeLessThan(recovered.generation);
+    expect(store.nightshift.job(f.job.id, identity).receipt).toEqual(receipt);
+    expect(
+      (
+        store.db
+          .prepare('SELECT count(*) n FROM ns_submission_attempts')
+          .get() as { n: number }
+      ).n,
+    ).toBe(1);
+  });
   it('protects immutable wait authority and terminal delivery identity in SQLite', () => {
     const store = open(),
       f = fixture(store);

@@ -103,6 +103,15 @@ export interface HazeOpsServiceOptions {
   schedulerIntervalMs?: number;
 }
 
+/** Documents and accounting datasets use the scheduler without asserting measurements. */
+export interface EvidenceWatcher {
+  spec: WatcherSpec;
+  run(context: { signal: AbortSignal; runId: string }): Promise<{
+    changed: boolean;
+    coverage: CoverageReport;
+  }>;
+}
+
 interface Job {
   view: WatcherJobView;
   watcherId: string;
@@ -159,6 +168,7 @@ export class HazeOpsService {
   readonly locations: readonly Location[];
   readonly ready: Promise<void>;
   private readonly adapters = new Map<string, SourceAdapter>();
+  private readonly evidenceWatchers = new Map<string, EvidenceWatcher>();
   private readonly specifications = new Map<string, WatcherSpec>();
   private readonly states = new Map<string, WatcherState>();
   private readonly active = new Map<string, Job>();
@@ -291,8 +301,21 @@ export class HazeOpsService {
     });
   }
 
+  registerEvidenceWatcher(watcher: EvidenceWatcher): void {
+    if (this.adapters.has(watcher.spec.id))
+      throw new Error('A measurement watcher already uses this ID.');
+    this.evidenceWatchers.set(watcher.spec.id, watcher);
+    this.specifications.set(watcher.spec.id, watcher.spec);
+    this.saveState({
+      ...(this.states.get(watcher.spec.id) ?? emptyState(watcher.spec.id)),
+      enabled: true,
+      disabledReason: null,
+    });
+  }
+
   registerDisabled(spec: WatcherSpec, reason: string): void {
     this.adapters.delete(spec.id);
+    this.evidenceWatchers.delete(spec.id);
     this.specifications.set(spec.id, spec);
     this.saveState({
       ...(this.states.get(spec.id) ?? emptyState(spec.id)),
@@ -338,10 +361,12 @@ export class HazeOpsService {
     );
   }
   dueWatchers(now = new Date()): string[] {
-    return [...this.adapters.keys()].filter((id) => {
-      const due = this.states.get(id)?.nextDueAt;
-      return !this.active.has(id) && (!due || due <= now.toISOString());
-    });
+    return [...this.adapters.keys(), ...this.evidenceWatchers.keys()].filter(
+      (id) => {
+        const due = this.states.get(id)?.nextDueAt;
+        return !this.active.has(id) && (!due || due <= now.toISOString());
+      },
+    );
   }
   watcherForSource(sourceId: string): string | null {
     return this.specs().find((spec) => spec.source.id === sourceId)?.id ?? null;
@@ -497,39 +522,50 @@ export class HazeOpsService {
       state.lastAttemptAt = job.view.startedAt;
       state.attempts++;
       this.saveState(state);
-      const adapter = this.adapters.get(job.watcherId)!;
-      const result = await abortable(
-        collectOnce(adapter, {
-          now: new Date(),
-          signal,
-          runId: job.view.id,
-        }),
-        signal,
-      );
+      const adapter = this.adapters.get(job.watcherId);
+      const evidenceWatcher = this.evidenceWatchers.get(job.watcherId);
+      const evidenceResult = evidenceWatcher
+        ? await abortable(
+            evidenceWatcher.run({ signal, runId: job.view.id }),
+            signal,
+          )
+        : undefined;
+      const result = adapter
+        ? await abortable(
+            collectOnce(adapter, {
+              now: new Date(),
+              signal,
+              runId: job.view.id,
+            }),
+            signal,
+          )
+        : undefined;
       signal.throwIfAborted();
-      const summary = await this.options.world.writeAdapterResult(
-        result,
-        job.view.id,
-      );
+      const summary = result
+        ? await this.options.world.writeAdapterResult(result, job.view.id)
+        : null;
       const finishedAt = new Date().toISOString();
-      state.lastOutcome =
-        summary.evidenceWritten === 0 && summary.factsWritten === 0
-          ? 'unchanged'
-          : 'ok';
+      state.lastOutcome = (
+        summary
+          ? summary.evidenceWritten === 0 && summary.factsWritten === 0
+          : !evidenceResult?.changed
+      )
+        ? 'unchanged'
+        : 'ok';
       state.lastSuccessAt = finishedAt;
       state.lastError = null;
       state.cursor =
-        result.evidence.map((value) => value.record.rawSha256).join('+') ||
+        result?.evidence.map((value) => value.record.rawSha256).join('+') ||
         state.cursor;
       if (
-        summary.newestObservation &&
+        summary?.newestObservation &&
         (!state.acceptedThrough ||
           summary.newestObservation > state.acceptedThrough)
       )
         state.acceptedThrough = summary.newestObservation;
-      state.lastCoverage = result.coverage;
+      state.lastCoverage = result?.coverage ?? evidenceResult!.coverage;
       state.nextDueAt = new Date(
-        Date.now() + adapter.spec.cadenceSec * 1000,
+        Date.now() + this.specifications.get(job.watcherId)!.cadenceSec * 1000,
       ).toISOString();
       state.lastDurationMs = Date.now() - started;
       this.saveState(state);

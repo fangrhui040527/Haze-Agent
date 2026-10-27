@@ -148,6 +148,12 @@ export interface StatefulToolStore {
   ): Artifact;
 }
 
+/** Evidence inspection only; no pins, artifact writes or database handle. */
+export type ReadonlyEvidenceStore = Pick<
+  StatefulToolStore,
+  'read' | 'artifact' | 'world'
+>;
+
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
 export interface TaskMutationContext {
   kind: 'update' | 'control';
@@ -326,6 +332,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   outputSchema: z.ZodType<O>;
   /** When declared, a retained result may only be saved as this artifact kind. */
   output_artifact_kind?: string;
+  /** Charged attempts per stable assignment id, including restarts and rebriefs. */
+  max_calls_per_assignment?: number;
   execute(input: I, context: ToolContext): Promise<O>;
 }
 export interface AssignmentServices {
@@ -428,8 +436,44 @@ export interface AgentExecutionServices extends AssignmentServices {
   reject(response: AgentModelCompletion, reason: string): void;
 }
 
+/** One deterministic section of a saved quantitative answer. */
+export interface FinalAnswerSection {
+  heading: string;
+  lines: string[];
+}
+export interface FinalRendererInput {
+  task: TaskRecord;
+  /** Selected artifacts of this renderer's registered kinds, in selection order. */
+  artifacts: readonly Artifact[];
+  /** The validated exact dependency closure of the whole final selection. */
+  closure: readonly Artifact[];
+  reviews: readonly ArtifactReviewCheck[];
+  /** Read-only services. Renderers never call models or mutate state. */
+  services: {
+    store: ReadonlyEvidenceStore;
+    mode: ExecutionMode;
+    read(ref: ArtifactRef): Artifact;
+  };
+}
+export interface FinalRenderer {
+  /** Selection is by registered kind and producing capability, never by model prose. */
+  artifact_kinds: string[];
+  render(input: FinalRendererInput): {
+    sections: FinalAnswerSection[];
+    limitations: string[];
+    /** Explicit outstanding items; they also become result next requirements. */
+    gaps: string[];
+  };
+}
+
 /** Registration describes implementations. Task grants are checked separately at every boundary. */
 export class ExecutionRegistry {
+  readonly finalRenderers = new Map<string, FinalRenderer>();
+  /** Quantitative capabilities own the factual text of their saved answers. */
+  registerFinalRenderer(capabilityId: string, renderer: FinalRenderer): this {
+    this.unique(this.finalRenderers, capabilityId, renderer);
+    return this;
+  }
   readonly extensionFactories: ((
     host: TaskRuntimeExtensionHost,
   ) => TaskRuntimeExtension)[] = [];

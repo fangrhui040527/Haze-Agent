@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { useAgentRun, type AgentRun } from '../dashboard/useAgentRun.ts';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { DamageWorkProducts } from './DamageWorkProducts.tsx';
+import { TaskExecutionReceipts } from './TaskExecutionReceipts.tsx';
 import styles from './DamageAccountPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
+import { TaskHistory } from './TaskHistory.tsx';
 
 const REQUEST_PREFIX = 'Build a damage account using World Model evidence. ';
 
@@ -27,9 +29,7 @@ export function DamageAccountView({
   taskId?: string;
   run: AgentRun;
 }) {
-  const navigate = useNavigate();
   const [objective, setObjective] = useState('');
-  const [savedId, setSavedId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const record = run.task?.record;
   const result = record?.result;
@@ -65,11 +65,6 @@ export function DamageAccountView({
       );
     }
   };
-  const openSaved = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const id = savedId.trim();
-    if (id) navigate(`/damage-account/${encodeURIComponent(id)}`);
-  };
   const receipts = run.events.flatMap((event) =>
     event.type === 'task_event' ? [event.receipt] : [],
   );
@@ -82,6 +77,9 @@ export function DamageAccountView({
           Build and inspect accounts using evidence retained in World Model.
           Physical harm, financing and social welfare remain separate views.
         </p>
+        <Link to="/demos/damage-account">
+          View the completed synthetic demo
+        </Link>
       </header>
 
       <div className={styles.intake}>
@@ -133,28 +131,10 @@ export function DamageAccountView({
             <Link to="/damage-account">Create another account</Link>
           </section>
         )}
-        <section aria-labelledby="open-account-heading">
-          <h2 id="open-account-heading">Open a saved task</h2>
-          <form className={styles.form} onSubmit={openSaved}>
-            <label htmlFor="damage-saved-task">Task ID</label>
-            <input
-              id="damage-saved-task"
-              value={savedId}
-              onChange={(event) => setSavedId(event.target.value)}
-              placeholder="Paste a saved task ID"
-              required
-            />
-            <div>
-              <Button type="submit" disabled={!savedId.trim()}>
-                Open account
-              </Button>
-            </div>
-          </form>
-          <p className={styles.note}>
-            Retained evidence keeps its original applicability limits. An
-            arithmetic review does not establish scientific attribution.
-          </p>
-        </section>
+        <TaskHistory
+          currentTaskId={record?.id ?? taskId}
+          refreshKey={record ? `${record.id}:${record.status}` : ''}
+        />
       </div>
 
       {(error ||
@@ -248,42 +228,61 @@ export function DamageAccountView({
                 Independent review checks ({result.review.checks.length})
               </summary>
               <p>{result.review.scope}</p>
-              <ul>
-                {result.review.checks.map((check, index) => (
-                  <li key={`${check.artifact.id}-${index}`}>
-                    <a
-                      href={`${baseUrl}/api/artifacts/${check.artifact.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Artifact version {check.artifact.version}
-                    </a>
-                    : {check.verdict.replaceAll('_', ' ')}.
-                    <p className={styles.identifier}>
-                      Producer revision {check.producer_revision}.{' '}
-                      {check.reviewer_revision
-                        ? `Reviewer revision ${check.reviewer_revision}.`
-                        : 'Independent review pending.'}
-                    </p>
-                    {check.review_artifact && (
-                      <a
-                        href={`${baseUrl}/api/artifacts/${check.review_artifact.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open exact review
-                      </a>
-                    )}
-                    {check.limitations.length > 0 && (
-                      <ul>
-                        {check.limitations.map((limitation, item) => (
-                          <li key={item}>{limitation}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th scope="col">Artifact</th>
+                      <th scope="col">Verdict</th>
+                      <th scope="col">Revisions</th>
+                      <th scope="col">Review</th>
+                      <th scope="col">Limitations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.review.checks.map((check, index) => (
+                      <tr key={`${check.artifact.id}-${index}`}>
+                        <td>
+                          <a
+                            href={`${baseUrl}/api/artifacts/${check.artifact.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Artifact version {check.artifact.version}
+                          </a>
+                        </td>
+                        <td>{check.verdict.replaceAll('_', ' ')}.</td>
+                        <td className={styles.identifier}>
+                          Producer revision {check.producer_revision}.{' '}
+                          {check.reviewer_revision
+                            ? `Reviewer revision ${check.reviewer_revision}.`
+                            : 'Independent review pending.'}
+                        </td>
+                        <td>
+                          {check.review_artifact && (
+                            <a
+                              href={`${baseUrl}/api/artifacts/${check.review_artifact.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open exact review
+                            </a>
+                          )}
+                        </td>
+                        <td>
+                          {check.limitations.length > 0 && (
+                            <ul>
+                              {check.limitations.map((limitation, item) => (
+                                <li key={item}>{limitation}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </details>
           )}
           <details className={styles.details}>
@@ -314,13 +313,7 @@ export function DamageAccountView({
           <summary>
             Task coordination and execution receipts ({receipts.length})
           </summary>
-          <ol>
-            {receipts.map((receipt) => (
-              <li key={receipt.cursor}>
-                <strong>{receipt.actor}</strong>: {receipt.message}
-              </li>
-            ))}
-          </ol>
+          <TaskExecutionReceipts record={record} receipts={receipts} />
           <Link to={`/task/${encodeURIComponent(record.id)}`}>
             Open the general task report
           </Link>

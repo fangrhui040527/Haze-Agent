@@ -70,7 +70,9 @@ Storage stays under `STATE_DIR`:
 SQLite explicitly uses WAL, `synchronous=FULL` (reported as `2`) and a 5000 ms busy
 timeout. LangGraph uses `durability: 'sync'`. Checkpoints contain execution metadata,
 domain IDs, verification hashes and probe status, not memory text or observation
-payloads. H-MEM and World Model remain the memory/evidence services. SQLite is for
+payloads. Within this isolated probe, H-MEM and the reference World Model provide
+memory/evidence services through `app/compatibility/meterless/`. The product runtime
+uses its authoritative SQLite store and does not open H-MEM. SQLite is for
 single-process judging; the two workers run sequentially. Production uses
 `PostgresSaver`; `MemorySaver` remains limited to disposable tests.
 

@@ -281,8 +281,11 @@ export function discoverNightshiftCli(
     installationRoot: resolve(dirname(script), '..'),
   };
 }
-function reviewedInstallation(command: NightshiftCliCommand): boolean {
-  if (!command.installationRoot) return false;
+/** Release evidence binds the exact reviewed source set, not only a version string. */
+function reviewedInstallationFingerprint(
+  command: NightshiftCliCommand,
+): string | null {
+  if (!command.installationRoot) return null;
   try {
     const paths = Object.keys(REVIEWED_SOURCE_HASHES);
     const actual: Record<string, string> = {};
@@ -297,10 +300,68 @@ function reviewedInstallation(command: NightshiftCliCommand): boolean {
     )
       for (const path of Object.keys(REVIEWED_STRICT_SOURCE_HASHES))
         actual[path] = readHash(path);
-    return reviewedNightshiftJobSourceHashes(actual);
+    if (!reviewedNightshiftJobSourceHashes(actual)) return null;
+    return createHash('sha256')
+      .update(
+        JSON.stringify(
+          Object.keys(actual)
+            .sort()
+            .map((path) => [path, actual[path]]),
+        ),
+      )
+      .digest('hex');
   } catch {
-    return false;
+    return null;
   }
+}
+/** Only named, ready cloud lanes can prove the selected native compute locality. */
+export function inspectCloudLanes(statusValue: unknown): {
+  lane: string;
+  provider: string;
+  model: string;
+}[] {
+  const status = record(statusValue);
+  const lanes = (Array.isArray(status?.lanes) ? status.lanes : [])
+    .map(record)
+    .filter(
+      (lane): lane is Record<string, unknown> =>
+        lane !== null &&
+        (lane.kind === 'cloud' ||
+          (lane.kind === undefined && lane.provider === 'nvidia')) &&
+        !lane.disabled &&
+        lane.races !== false &&
+        typeof lane.state === 'string' &&
+        lane.state.toLowerCase() === 'ready' &&
+        typeof lane.model === 'string' &&
+        lane.model.length > 0,
+    )
+    .flatMap((lane) => {
+      const id = safeText(lane.id);
+      const provider = safeText(lane.provider);
+      const model = safeText(lane.model);
+      return id && provider && model ? [{ lane: id, provider, model }] : [];
+    });
+  if (
+    lanes.length > 128 ||
+    new Set(lanes.map((lane) => lane.lane)).size !== lanes.length
+  )
+    return [];
+  return lanes.sort((left, right) =>
+    JSON.stringify([left.lane, left.provider, left.model]).localeCompare(
+      JSON.stringify([right.lane, right.provider, right.model]),
+    ),
+  );
+}
+/** The ready cloud lanes the runtime may select from; a changed roster is new evidence. */
+export function cloudRosterFingerprint(statusValue: unknown): string | null {
+  const lanes = inspectCloudLanes(statusValue)
+    .map(({ lane, provider, model }) => [lane, provider, model])
+    .sort((left, right) =>
+      JSON.stringify(left).localeCompare(JSON.stringify(right)),
+    );
+  return lanes.length
+    ? createHash('sha256').update(JSON.stringify(lanes)).digest('hex')
+    : null;
 }
 export interface NightshiftCliInvocation {
   command: string;
@@ -534,6 +595,9 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       can_reconcile: false,
       cancellation_idempotent: false,
       reason: null,
+      installation_fingerprint: null,
+      roster_fingerprint: null,
+      cloud_lanes: [],
       options: {
         judges: ['accuracy', 'consistency', 'creative', 'quality'],
         budgets: ['low', 'mid', 'high', 'max'],
@@ -588,8 +652,10 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       const caps = record(discovery?.capabilities);
       const generation = record(caps?.generation)?.available === true;
       const outcome = record(caps?.job_outcome)?.available === true;
+      const installation = reviewedInstallationFingerprint(this.command);
       const sourceContract =
-        reviewedInstallation(this.command) && base.runtime_version === '1.2.1';
+        installation !== null && base.runtime_version === '1.2.1';
+      base.installation_fingerprint = sourceContract ? installation : null;
       base.local_only_enforced = sourceContract;
       base.cloud_enforced = sourceContract;
       let localCompute = { available: false, fleets: [] as string[] };
@@ -601,6 +667,8 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
         ]);
         localCompute = inspectLocalCompute(fleets, status);
         cloudCompute = inspectCloudCompute(status);
+        base.roster_fingerprint = cloudRosterFingerprint(status);
+        base.cloud_lanes = inspectCloudLanes(status);
         // This runtime records fleet_id as metadata; it does not select a
         // different compute roster. Do not advertise it as a submission choice.
       }

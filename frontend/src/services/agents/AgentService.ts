@@ -25,6 +25,21 @@ import type {
   ManagerChatResponse,
 } from '../../../../app/contracts/manager-chat.ts';
 
+export type TaskSummary = Pick<
+  TaskRecord,
+  'id' | 'status' | 'current_run_id' | 'updated_at' | 'usage'
+> & { objective: string };
+export interface TaskListPage {
+  tasks: TaskSummary[];
+  has_more: boolean;
+  next_cursor?: string;
+}
+export interface TaskListOptions {
+  limit?: number;
+  cursor?: string;
+  status?: 'all' | 'active' | 'failed';
+}
+
 export interface AgentService {
   readonly label: string;
   managerChat?(
@@ -44,6 +59,10 @@ export interface AgentService {
     onTask?: (task: AgentTaskHandle) => void,
   ): Promise<AgentAnswer>;
   readTask?(taskId: string, signal?: AbortSignal): Promise<TaskRecord>;
+  listTasks?(
+    options?: TaskListOptions,
+    signal?: AbortSignal,
+  ): Promise<TaskListPage>;
   readReductionPreview?(
     taskId: string,
     signal?: AbortSignal,

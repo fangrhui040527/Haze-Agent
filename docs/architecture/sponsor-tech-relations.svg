@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1940" viewBox="0 0 2400 1940">
-<title>Haze sponsor technology relationship graph</title><desc>Current Haze architecture connecting LangGraph workflows, NVIDIA Nemotron model routes, optional Meterless Nightshift inference and background jobs, Zetaris evidence retrieval, Haze authoritative SQLite state, and separately packaged Meterless reference engines with H-MEM disabled.</desc>
+<title>Haze sponsor technology relationship graph</title><desc>Current Haze architecture connecting LangGraph workflows, NVIDIA Nemotron model routes, optional Meterless Nightshift inference and background jobs, Zetaris evidence retrieval, Haze authoritative SQLite state, and separately packaged Meterless reference engines with H-MEM retired from the product.</desc>
 <defs><filter id="shadow" x="-15%" y="-15%" width="130%" height="145%"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#16304e" flood-opacity=".055"/></filter>
 <marker id="arrow-7590ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7590ae"/></marker>
 <marker id="start-7590ae" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="#7590ae"/></marker>
@@ -23,7 +23,7 @@
 <text x="134" y="68" font-size="21" font-weight="700" fill="#3d70c9" text-anchor="middle" letter-spacing="0.6">HAZE</text>
 <text x="70" y="151" font-size="61" font-weight="750" fill="#14273e" text-anchor="start" letter-spacing="0">How sponsor technology fits into Haze</text>
 <text x="72" y="199" font-size="28" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Current code connections, service boundaries, and reference-only integrations</text>
-<text x="2330" y="69" font-size="20" font-weight="650" fill="#60738a" text-anchor="end" letter-spacing="1">27 OCT 2026</text>
+<text x="2330" y="69" font-size="20" font-weight="650" fill="#60738a" text-anchor="end" letter-spacing="1">28 OCT 2026</text>
 <path d="M 76 247 L 129 247" fill="none" stroke="#3d70c9" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow-3d70c9)"/>
 <text x="144" y="254" font-size="21" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Implemented core connection</text>
 <path d="M 592 247 L 645 247" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)"/>
@@ -67,7 +67,7 @@
 <text x="1731" y="1094" text-anchor="middle" font-size="17" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">granted jobs /</text>
 <text x="1731" y="1119" text-anchor="middle" font-size="17" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">candidate context</text>
 <path d="M 2092 1117 L 2092 1051" fill="none" stroke="#b6731a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="9 8" marker-end="url(#arrow-b6731a)" marker-start="url(#start-b6731a)"/>
-<text x="2115" y="1085" text-anchor="start" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">local job control</text>
+<text x="2115" y="1085" text-anchor="start" font-size="18" font-weight="600" fill="#60738a" stroke="#f4f7fc" stroke-width="8" paint-order="stroke" stroke-linejoin="round">native job control</text>
 <rect x="835" y="281" width="710" height="52" rx="18" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.6"/>
 <text x="1190" y="315" font-size="26" font-weight="650" fill="#14273e" text-anchor="middle" letter-spacing="0">Chat · Dashboard · World Model explorer</text>
 <rect x="740" y="420" width="900" height="124" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
@@ -96,7 +96,7 @@
 <rect x="740" y="1230" width="900" height="127" rx="20" fill="#edf4ff" stroke="#3d70c9" stroke-width="1.8" filter="url(#shadow)"/>
 <rect x="740" y="1249" width="5" height="89" rx="2.5" fill="#3d70c9"/>
 <text x="765" y="1261" font-size="18" font-weight="700" fill="#3d70c9" text-anchor="start" letter-spacing="1.3">OUTPUT &amp; ACCEPTANCE GATES</text>
-<text x="765" y="1300" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Manager finalization</text>
+<text x="765" y="1300" font-size="29" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Reviewed deterministic finalization</text>
 <text x="765" y="1337" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Source-linked answers · reviewed work products · explicit evidence gaps</text>
 <rect x="70" y="518" width="490" height="147" rx="20" fill="#ffffff" stroke="#78818e" stroke-width="1.8" filter="url(#shadow)"/>
 <rect x="70" y="537" width="5" height="109" rx="2.5" fill="#78818e"/>
@@ -151,13 +151,13 @@
 <text x="126" y="1614" font-size="28" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Compatibility checks + disposable browser sandbox</text>
 <text x="126" y="1651" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Vendored upstream engine and original control-plane example.</text>
 <text x="126" y="1683" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Active Haze domain state uses the transactional SQLite store above.</text>
-<text x="126" y="1715" font-size="18" font-weight="400" fill="#78818e" text-anchor="start" letter-spacing="0">app/adapters/meterless/   ·   frontend/public/meterless-world-model/</text>
+<text x="126" y="1715" font-size="18" font-weight="400" fill="#78818e" text-anchor="start" letter-spacing="0">app/compatibility/meterless/   ·   frontend/public/meterless-world-model/</text>
 <rect x="1202" y="1544" width="1097" height="191" rx="20" fill="#f1f3f6" stroke="#78818e" stroke-width="1.8" filter="url(#shadow)"/>
 <rect x="1202" y="1563" width="5" height="153" rx="2.5" fill="#78818e"/>
 <text x="1227" y="1575" font-size="18" font-weight="700" fill="#78818e" text-anchor="start" letter-spacing="1.3">H-MEM REFERENCE</text>
-<text x="1227" y="1614" font-size="30" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Packaged; disabled for active tasks</text>
+<text x="1227" y="1614" font-size="30" font-weight="700" fill="#14273e" text-anchor="start" letter-spacing="0">Retired; compatibility checks only</text>
 <text x="1227" y="1651" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Pinned source + conformance checks are retained.</text>
-<text x="1227" y="1683" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Historical dashboard memory is archival; live task memory is unattached.</text>
+<text x="1227" y="1683" font-size="23" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Historical records stay archival; the product has no memory integration.</text>
 <text x="1227" y="1715" font-size="18" font-weight="400" fill="#78818e" text-anchor="start" letter-spacing="0">README.md   ·   docs/infrastructure/engine-pins.md</text>
 <text x="74" y="1830" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Architecture evidence: app/composition.ts · app/tasks/runtime.ts · app/adapters/model-routes.ts · app/tasks/world-store.ts</text>
 <text x="74" y="1866" font-size="22" font-weight="400" fill="#60738a" text-anchor="start" letter-spacing="0">Nightshift automatic successors remain production-gated. World Model acceptance requires a configured supported policy.</text>

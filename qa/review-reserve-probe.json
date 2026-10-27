@@ -1,0 +1,37 @@
+{
+  "probe": "F-06 review reserve",
+  "verdict": "F-06 REFUTED: no capacity is stranded; the reserve behaves correctly.",
+  "results": [
+    {
+      "name": "CONTROL: a completed critic releases the review reserve to synthesis",
+      "ok": true,
+      "criticStatus": "completed",
+      "specialistCalls": 2,
+      "synthesisCalls": 2,
+      "finalUsage": 4,
+      "blockedWith": "model_limit",
+      "unusedCapacity": 0
+    },
+    {
+      "name": "F-06: a terminally FAILED critic must not strand its reserved capacity",
+      "ok": true,
+      "failed_case": {
+        "criticStatus": "failed",
+        "specialistCalls": 2,
+        "synthesisCalls": 2,
+        "finalUsage": 4,
+        "blockedWith": "model_limit",
+        "unusedCapacity": 0
+      },
+      "completed_case": {
+        "criticStatus": "completed",
+        "specialistCalls": 2,
+        "synthesisCalls": 2,
+        "finalUsage": 4,
+        "blockedWith": "model_limit",
+        "unusedCapacity": 0
+      },
+      "stranded": false
+    }
+  ]
+}

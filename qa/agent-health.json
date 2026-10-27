@@ -1,0 +1,206 @@
+{
+  "booted": true,
+  "endpoints": {
+    "/api/agents": 200,
+    "/api/capabilities": 200,
+    "/api/nightshift/readiness": 200
+  },
+  "agents": [
+    {
+      "role": "Manager",
+      "registered": true,
+      "routed": true,
+      "provider": "nightshift",
+      "model": null,
+      "policy": "provider-default",
+      "route_status": null,
+      "definitions": 0,
+      "capabilities": 0,
+      "active_assignments": 0
+    },
+    {
+      "role": "HazeOps",
+      "registered": true,
+      "routed": true,
+      "provider": "nightshift",
+      "model": null,
+      "policy": "provider-default",
+      "route_status": null,
+      "definitions": 6,
+      "capabilities": 6,
+      "active_assignments": 0
+    },
+    {
+      "role": "WorkerShield",
+      "registered": true,
+      "routed": true,
+      "provider": "nightshift",
+      "model": null,
+      "policy": "provider-default",
+      "route_status": null,
+      "definitions": 5,
+      "capabilities": 4,
+      "active_assignments": 0
+    },
+    {
+      "role": "EvidenceCritic",
+      "registered": true,
+      "routed": true,
+      "provider": "nightshift",
+      "model": null,
+      "policy": "provider-default",
+      "route_status": null,
+      "definitions": 9,
+      "capabilities": 6,
+      "active_assignments": 0
+    },
+    {
+      "role": "DamageAccountant",
+      "registered": true,
+      "routed": true,
+      "provider": "nightshift",
+      "model": null,
+      "policy": "provider-default",
+      "route_status": null,
+      "definitions": 6,
+      "capabilities": 2,
+      "active_assignments": 0
+    }
+  ],
+  "unexpected_roles": [],
+  "capability_count": 7,
+  "capabilities": [
+    {
+      "id": "damage-reduction-planning",
+      "roles": [
+        "HazeOps",
+        "DamageAccountant",
+        "WorkerShield",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "damage-appraisal",
+      "roles": [
+        "HazeOps",
+        "DamageAccountant",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "evidence-collection",
+      "roles": [
+        "HazeOps"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "pm25-evidence-summary",
+      "roles": [
+        "HazeOps",
+        "WorkerShield",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "damage-account-intake",
+      "roles": [
+        "WorkerShield",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "episode-investigation",
+      "roles": [
+        "HazeOps",
+        "WorkerShield",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    },
+    {
+      "id": "evidence-synthesis",
+      "roles": [
+        "HazeOps",
+        "EvidenceCritic"
+      ],
+      "ready": "implemented"
+    }
+  ],
+  "provider_readiness": {
+    "provider": null,
+    "status": null,
+    "reason": null,
+    "checked_at": "2026-10-27T11:39:04.991Z",
+    "routes": [
+      {
+        "role": "Manager",
+        "provider": "nightshift",
+        "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "configured": true,
+        "reachability": "blocked",
+        "schema_compatible": false,
+        "live_verified": false,
+        "role_evaluation": "unverified",
+        "policy": "provider-default",
+        "reason": "Server credential is unavailable."
+      },
+      {
+        "role": "HazeOps",
+        "provider": "nightshift",
+        "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "configured": true,
+        "reachability": "blocked",
+        "schema_compatible": false,
+        "live_verified": false,
+        "role_evaluation": "unverified",
+        "policy": "provider-default",
+        "reason": "Server credential is unavailable."
+      },
+      {
+        "role": "WorkerShield",
+        "provider": "nightshift",
+        "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "configured": true,
+        "reachability": "blocked",
+        "schema_compatible": false,
+        "live_verified": false,
+        "role_evaluation": "unverified",
+        "policy": "provider-default",
+        "reason": "Server credential is unavailable."
+      },
+      {
+        "role": "EvidenceCritic",
+        "provider": "nightshift",
+        "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "configured": true,
+        "reachability": "blocked",
+        "schema_compatible": false,
+        "live_verified": false,
+        "role_evaluation": "unverified",
+        "policy": "provider-default",
+        "reason": "Server credential is unavailable."
+      },
+      {
+        "role": "DamageAccountant",
+        "provider": "nightshift",
+        "requested_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "configured": true,
+        "reachability": "blocked",
+        "schema_compatible": false,
+        "live_verified": false,
+        "role_evaluation": "unverified",
+        "policy": "provider-default",
+        "reason": "Server credential is unavailable."
+      }
+    ]
+  },
+  "inference_available": false,
+  "blocked_routes": 5,
+  "problems": [],
+  "verdict": "STRUCTURALLY HEALTHY, INFERENCE BLOCKED (no reachable model provider)"
+}

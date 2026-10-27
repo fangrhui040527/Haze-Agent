@@ -18,6 +18,7 @@ import {
   createModelRouteRegistry,
   createManagerConversation,
   createNightshiftJobAdapter,
+  startApplicationServices,
 } from '../composition.js';
 import {
   TaskRuntime,
@@ -26,6 +27,10 @@ import {
 } from './runtime.js';
 import { browseWorldRecords } from './world-control-plane.js';
 import { handleNightshiftHttp } from './nightshift-http.js';
+import {
+  createNightshiftReleasePolicy,
+  currentReleaseBindings,
+} from '../release/nightshift-release.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -123,24 +128,55 @@ export function createTaskHandler(
     registry?: TaskRuntimeOptions['registry'];
   },
 ) {
+  const modelRoutes =
+    options.modelRoutes ?? createModelRouteRegistry(options.env ?? process.env);
+  const nightshiftJobs =
+    options.nightshiftJobs ??
+    createNightshiftJobAdapter(options.env ?? process.env);
+  const registry =
+    options.registry ??
+    createExecutionRegistry({
+      mode: options.mode ?? 'live',
+      ...(options.env ? { env: options.env } : {}),
+    });
   const runtime = new TaskRuntime({
     ...options,
     conversationFactory:
       options.conversationFactory ?? createManagerConversation,
-    modelRoutes:
-      options.modelRoutes ??
-      createModelRouteRegistry(options.env ?? process.env),
-    nightshiftJobs:
-      options.nightshiftJobs ??
-      createNightshiftJobAdapter(options.env ?? process.env),
-    registry:
-      options.registry ??
-      createExecutionRegistry({
-        mode: options.mode ?? 'live',
-        ...(options.env ? { env: options.env } : {}),
-      }),
+    modelRoutes,
+    nightshiftJobs,
+    registry,
+    // Live servers load release evidence from their own state directory only.
+    ...(options.nightshiftAutomaticRelease ||
+    (options.mode ?? 'live') !== 'live'
+      ? {}
+      : {
+          nightshiftAutomaticRelease: createNightshiftReleasePolicy({
+            stateDirectory: options.stateDirectory,
+            bindings: () =>
+              currentReleaseBindings({
+                registry,
+                modelRoutes,
+                nightshiftJobs,
+                signal: AbortSignal.timeout(8_000),
+              }),
+          }),
+        }),
   });
   let dashboard: ReturnType<typeof createDashboardServices> | undefined;
+  const applicationServices = (identity: TaskIdentity) => {
+    dashboard ??= createDashboardServices({
+      store: runtime.store,
+      identity,
+      mode: runtime.executionMode,
+      env: options.env ?? process.env,
+    });
+    startApplicationServices(runtime, dashboard);
+    return dashboard;
+  };
+  // Live collectors belong to the server lifecycle. Fixture-only task APIs keep
+  // their isolated world until a dashboard is explicitly requested.
+  if (runtime.executionMode === 'live') applicationServices(localTaskIdentity);
   let closed = false;
   let closing: Promise<void> | undefined;
   const handler = (request: IncomingMessage, response: ServerResponse) => {
@@ -244,22 +280,15 @@ export function createTaskHandler(
             'runtime_closed',
             'The application is closing.',
           );
-        dashboard ??= createDashboardServices({
-          store: runtime.store,
-          identity,
-          mode: runtime.executionMode,
-          env: options.env ?? {},
-        });
-        await dashboard.hazeops.ready;
+        const application = applicationServices(identity);
+        await application.hazeops.ready;
         if (closed)
           throw new TaskError(
             503,
             'runtime_closed',
             'The application is closing.',
           );
-        dashboard.view.start();
-        dashboard.hazeops.start();
-        if (await dashboard.view.handle(request, response, url)) return;
+        if (await application.view.handle(request, response, url)) return;
         throw new TaskError(
           404,
           'route_not_found',
@@ -267,6 +296,8 @@ export function createTaskHandler(
         );
       }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(200, runtime.capabilities(identity));
         return;
       }
@@ -345,6 +376,8 @@ export function createTaskHandler(
       }
       const artifact = /^\/api\/artifacts\/([A-Za-z0-9-]+)$/.exec(url.pathname);
       if (artifact && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(200, runtime.store.artifact(artifact[1]!, identity));
         return;
       }
@@ -513,6 +546,8 @@ export function createTaskHandler(
         return;
       }
       if (match[2] === 'world' && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(
           200,
           worldTaskResponseSchema.parse(
@@ -536,6 +571,15 @@ export function createTaskHandler(
       if (request.method !== 'GET' || (match[2] && match[2] !== 'events'))
         throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
       if (match[2] === 'events') {
+        // `after` is the only supported key, and a repeated cursor must not
+        // silently resolve to its first value.
+        for (const key of url.searchParams.keys())
+          if (key !== 'after' || url.searchParams.getAll(key).length !== 1)
+            throw new TaskError(
+              400,
+              'invalid_query',
+              'Unsupported or duplicate query key.',
+            );
         const cursor = url.searchParams.get('after') ?? '0';
         if (!/^\d{1,15}$/.test(cursor) || !Number.isSafeInteger(Number(cursor)))
           throw new TaskError(
@@ -546,6 +590,8 @@ export function createTaskHandler(
         send(200, runtime.store.events(id, identity, Number(cursor)));
         return;
       }
+      if (url.searchParams.size)
+        throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
       send(200, runtime.store.read(id, identity));
     };
     void handle().catch((error: unknown) => {

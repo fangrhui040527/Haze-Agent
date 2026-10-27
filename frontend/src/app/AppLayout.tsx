@@ -7,10 +7,9 @@ import {
   useRouteError,
   Link,
 } from 'react-router';
-import { Badge } from '../shared/ui/Badge.tsx';
 import { buttonClass } from '../shared/ui/Button.tsx';
+import { HazeMark } from '../shared/ui/HazeMark.tsx';
 import { StateMessage } from '../shared/ui/States.tsx';
-import { TimeAgo } from '../shared/ui/TimeAgo.tsx';
 import styles from './AppLayout.module.css';
 import { useLiveData } from './liveDataContext.ts';
 import { LiveDataProvider } from './LiveDataProvider.tsx';
@@ -24,40 +23,25 @@ const CONNECTION_TEXT = {
 
 function Header() {
   const live = useLiveData();
-  const isMock = live.dataSourceLabel.toLowerCase().includes('mock');
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
-        <Link to="/" className={styles.brand}>
-          <span className={styles.logo} aria-hidden="true">
-            ▦
-          </span>{' '}
+        <Link viewTransition to="/" className={styles.brand}>
+          <span className={styles.logo}>
+            <HazeMark size={22} />
+          </span>
           Haze
         </Link>
-        {live.fictional && (
-          <Badge
-            tone="warn"
-            title="These dashboard items are fictional fixtures or demo samples. Task answers label their source and execution mode."
-          >
-            TABLE · fictional sample
-          </Badge>
-        )}
         <span className={styles.connection} title={live.dataSourceLabel}>
           <span
             className={`${styles.dot} ${styles[live.connection]}`}
             aria-hidden="true"
           />
           {CONNECTION_TEXT[live.connection]}
-          {isMock && live.connection === 'live' && ' (mock)'}
-          {live.lastUpdatedAt && (
-            <span className={styles.updated}>
-              {' '}
-              · updated <TimeAgo iso={live.lastUpdatedAt} />
-            </span>
-          )}
         </span>
         <nav className={styles.nav} aria-label="Main">
           <NavLink
+            viewTransition
             to="/dashboard"
             end
             className={({ isActive }) =>
@@ -67,6 +51,7 @@ function Header() {
             Dashboard
           </NavLink>
           <NavLink
+            viewTransition
             to="/manager"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -75,6 +60,7 @@ function Header() {
             Manager Workspace
           </NavLink>
           <NavLink
+            viewTransition
             to="/damage-account"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -83,6 +69,7 @@ function Header() {
             Damage Appraisal
           </NavLink>
           <NavLink
+            viewTransition
             to="/damage-reduction"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -91,6 +78,7 @@ function Header() {
             Damage reduction
           </NavLink>
           <NavLink
+            viewTransition
             to="/world-model"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -99,14 +87,7 @@ function Header() {
             World Model
           </NavLink>
           <NavLink
-            to="/memory"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Memory
-          </NavLink>
-          <NavLink
+            viewTransition
             to="/nightshift"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -115,12 +96,21 @@ function Header() {
             Nightshift
           </NavLink>
           <NavLink
+            viewTransition
             to="/demo-data"
             className={({ isActive }) =>
               `${styles.navLink} ${isActive ? styles.active : ''}`
             }
           >
             Demo Data
+          </NavLink>
+          <NavLink
+            to="/demos"
+            className={({ isActive }) =>
+              `${styles.navLink} ${isActive ? styles.active : ''}`
+            }
+          >
+            Demos
           </NavLink>
         </nav>
       </div>
@@ -134,6 +124,11 @@ function Footer() {
       Not medical advice. Follow your local authorities. Sources are listed on
       each item. Fictional samples are labeled; evidence answers identify their
       source and execution mode.
+      <br />
+      Weather and air-quality data by{' '}
+      <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0), modelled
+      by CAMS (Copernicus). Satellite imagery and fire detections: NASA GIBS and
+      FIRMS, part of NASA EOSDIS.
     </footer>
   );
 }
