@@ -7,6 +7,7 @@ import {
   prepareRouteEvaluation,
   safeEvaluationRoute,
 } from './route-evaluation-support.mjs';
+import { captureVerificationBindings } from './domain-verification-support.mjs';
 
 const { values: options } = parseArgs({
   options: {
@@ -94,6 +95,9 @@ const report = {
     'Contract success does not establish live evidence retrieval, complete task quality, scientific validity or role evaluation approval.',
     'Use the existing manager:evaluate harness for Manager supervision/recovery flows; retain end-to-end specialist task traces separately.',
   ],
+  // Captured before any live call. Evidence assembly must preserve these exact
+  // build/instruction/contract/route/runtime identities rather than relabel old outputs.
+  ...(options.live ? await captureVerificationBindings(process.env) : {}),
 };
 const save = () =>
   writeFile(join(root, 'report.json'), JSON.stringify(report, null, 2) + '\n');

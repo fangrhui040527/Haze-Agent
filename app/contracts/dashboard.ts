@@ -100,11 +100,7 @@ export interface ItemSourceRef {
 }
 
 export type AgentId =
-  | 'manager'
-  | 'hazeops'
-  | 'worldmodel'
-  | 'evidencecritic'
-  | 'workershield';
+  'manager' | 'hazeops' | 'worldmodel' | 'evidencecritic' | 'workershield';
 
 /** Active agents plus the retired H-MEM, which only historical records may carry. */
 export type RecordedAgentId = AgentId | 'hmem';

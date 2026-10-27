@@ -39,6 +39,82 @@ function completedFetch() {
     .mockResolvedValueOnce(json(fixtureTask()));
 }
 describe('general task browser service (fixture wiring)', () => {
+  it('loads saved task summaries with bounded pagination and status filters', async () => {
+    const record = fixtureTask();
+    const page = {
+      tasks: [
+        {
+          id: record.id,
+          objective: record.original_request.objective,
+          status: record.status,
+          current_run_id: record.current_run_id,
+          updated_at: record.updated_at,
+          usage: record.usage,
+        },
+      ],
+      has_more: true,
+      next_cursor: '27',
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(page));
+    const signal = new AbortController().signal;
+    const service = new HttpAgentService('https://haze.example/', fetcher);
+    await expect(
+      service.listTasks({ limit: 10, cursor: '45', status: 'active' }, signal),
+    ).resolves.toEqual(page);
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://haze.example/api/tasks?limit=10&cursor=45&status=active',
+      expect.objectContaining({
+        signal,
+        cache: 'no-store',
+        credentials: 'same-origin',
+      }),
+    );
+  });
+  it('loads the first history page without query parameters', async () => {
+    const page = { tasks: [], has_more: false };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(page));
+    await expect(
+      new HttpAgentService('', fetcher).listTasks(),
+    ).resolves.toEqual(page);
+    expect(fetcher.mock.calls[0][0]).toBe('/api/tasks');
+  });
+  it('encodes a supplied history cursor and surfaces the server rejection', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        json({ error: { message: 'Invalid task inbox query.' } }, 400),
+      );
+    await expect(
+      new HttpAgentService('', fetcher).listTasks({
+        cursor: '12&status=failed',
+      }),
+    ).rejects.toMatchObject({
+      message: 'Invalid task inbox query.',
+      retryable: false,
+    });
+    expect(fetcher.mock.calls[0][0]).toBe(
+      '/api/tasks?cursor=12%26status%3Dfailed',
+    );
+  });
+  it.each([
+    { tasks: [], has_more: true },
+    { tasks: [], has_more: true, next_cursor: 'not-a-cursor' },
+    {
+      tasks: [{ ...fixtureTask(), objective: 'Invalid summary' }],
+      has_more: false,
+    },
+  ])(
+    'rejects malformed history pages instead of presenting saved tasks',
+    async (page) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json(page));
+      await expect(
+        new HttpAgentService('', fetcher).listTasks(),
+      ).rejects.toMatchObject({
+        category: 'task_response_validation',
+        retryable: false,
+      });
+    },
+  );
   it('preserves optional Manager readback and artifact review checks through contract parsing', async () => {
     const record = fixtureTask();
     record.manager = fixtureManager();

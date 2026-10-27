@@ -71,7 +71,8 @@ const releaseRules = (
   )
     context.addIssue({
       code: 'custom',
-      message: 'Release requires verified evidence and every prerequisite gate.',
+      message:
+        'Release requires verified evidence and every prerequisite gate.',
     });
   if (value.ready && !value.released)
     context.addIssue({
@@ -140,7 +141,8 @@ export const AUTOMATIC_RELEASE_GATES = Object.freeze([
   {
     id: 'crash-restart',
     label: 'Crash/restart readback',
-    reason: 'Restart verification of identities, accounting and results is required.',
+    reason:
+      'Restart verification of identities, accounting and results is required.',
   },
 ] as const);
 export type AutomaticReleaseGateId =

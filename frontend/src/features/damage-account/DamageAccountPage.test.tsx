@@ -71,7 +71,10 @@ describe('dedicated damage accounting page', () => {
     );
     expect(markup).toContain('No upload is required.');
     expect(markup).toContain('World Model evidence');
-    expect(markup).toContain('Open a saved task');
+    expect(markup).toContain('Task history');
+    expect(markup).toContain('Loading saved tasks...');
+    expect(markup).not.toContain('Paste a saved task ID');
+    expect(markup).not.toContain('id="damage-saved-task"');
     expect(markup).toContain('The dashboard keeps its own task and office.');
     expect(markup).not.toContain('Account results');
     expect(markup).not.toContain('Pixel-art office');

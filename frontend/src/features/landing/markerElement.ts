@@ -26,7 +26,10 @@ export function buildMarker(
   btn.setAttribute('aria-pressed', String(opts.selected));
   btn.setAttribute('aria-label', describeReading(reading));
   btn.title = describeReading(reading);
-  btn.style.setProperty('--marker-color', `var(${markerVar(reading, opts.layer)})`);
+  btn.style.setProperty(
+    '--marker-color',
+    `var(${markerVar(reading, opts.layer)})`,
+  );
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     opts.onSelect(reading.city.id);
@@ -49,7 +52,11 @@ export function buildMarker(
   text.append(name, value);
   btn.append(text);
 
-  if (opts.wind && reading.windDirection !== null && reading.windSpeed !== null) {
+  if (
+    opts.wind &&
+    reading.windDirection !== null &&
+    reading.windSpeed !== null
+  ) {
     // Meteorological direction is where wind comes FROM; the arrow points where smoke goes.
     const arrow = document.createElement('span');
     arrow.className = styles.windArrow;

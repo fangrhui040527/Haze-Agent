@@ -1,0 +1,138 @@
+.receipts {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.metrics > div {
+  border: var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+}
+
+.metrics dt,
+.note,
+.secondary,
+.context dt,
+.metadataLabel {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.metrics dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  max-width: 100ch;
+  line-height: var(--line-height);
+}
+
+.tableWrap {
+  composes: data-table-wrap from global;
+}
+
+.table {
+  composes: data-table from global;
+  min-width: 850px;
+}
+
+.caption {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  color: var(--color-muted);
+}
+
+.numeric,
+.timestamp {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timestamp,
+.secondary {
+  display: block;
+}
+
+.timestamp > span {
+  display: block;
+}
+
+.timestamp > span:first-child {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.message {
+  width: 100%;
+  min-width: 18rem;
+  overflow-wrap: anywhere;
+}
+
+.eventType {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.message p {
+  margin-block: var(--space-1) var(--space-2);
+}
+
+.toggle {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.detailCell {
+  background: var(--color-surface);
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  margin-block: var(--space-2);
+}
+
+.context dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.metadataLabel {
+  margin-top: var(--space-4);
+}
+
+.metadata {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-block: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 700px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

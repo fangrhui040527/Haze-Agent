@@ -48,7 +48,9 @@ export const pm25FinalRenderer: FinalRenderer = {
             ? `Missing intervals: ${missing.length} (${missing
                 .slice(0, MISSING_INTERVALS_SHOWN)
                 .map((interval) => `${interval.start} to ${interval.end}`)
-                .join('; ')}${missing.length > MISSING_INTERVALS_SHOWN ? `; ${missing.length - MISSING_INTERVALS_SHOWN} more retained in the analysis` : ''}).`
+                .join(
+                  '; ',
+                )}${missing.length > MISSING_INTERVALS_SHOWN ? `; ${missing.length - MISSING_INTERVALS_SHOWN} more retained in the analysis` : ''}).`
             : 'Missing intervals: none within the requested period.',
           range.min === null || range.max === null
             ? 'Range: unavailable; no usable samples.'

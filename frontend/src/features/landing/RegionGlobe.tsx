@@ -165,11 +165,17 @@ export default function RegionGlobe({
     const host = hostRef.current;
     if (!globe || !host) return;
     const hotspots =
-      layers.fires && fires?.status === 'ok' ? fires.hotspots.slice(0, 1500) : [];
+      layers.fires && fires?.status === 'ok'
+        ? fires.hotspots.slice(0, 1500)
+        : [];
     const fire = readToken(host, '--fire-color');
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
     globe
-      .ringsData(reduced ? [] : hotspots.filter((h) => (h.frp ?? 0) >= 20).slice(0, 120))
+      .ringsData(
+        reduced ? [] : hotspots.filter((h) => (h.frp ?? 0) >= 20).slice(0, 120),
+      )
       .ringLat((d) => (d as FireHotspot).lat)
       .ringLng((d) => (d as FireHotspot).lng)
       .ringColor(() => (t: number) => withAlpha(fire, 1 - t))
@@ -199,7 +205,12 @@ export default function RegionGlobe({
         opacity: sat.id === 'himawari' ? 0.7 : 0.8,
       });
     }
-    tiles.push({ id: 'ref', url: gibsReferenceUrl(), altitude: 0.005, opacity: 0.75 });
+    tiles.push({
+      id: 'ref',
+      url: gibsReferenceUrl(),
+      altitude: 0.005,
+      opacity: 0.75,
+    });
     globe
       .tilesData(tiles)
       .tileLat(() => BBOX_TILE.lat)

@@ -5,7 +5,7 @@ import type {
   ExecutionMode,
   ExecutionRegistry,
   FinalAnswerSection,
-  StatefulToolStore,
+  ReadonlyEvidenceStore,
 } from './ports.js';
 
 const ANSWER_LIMIT = 32_000;
@@ -68,13 +68,15 @@ export function renderFinalAnswer(input: {
   closure: readonly Artifact[];
   reviews: readonly ArtifactReviewCheck[];
   citations: TaskResult['sources'];
-  store: StatefulToolStore;
+  store: ReadonlyEvidenceStore;
   mode: ExecutionMode;
   read(ref: ArtifactRef): Artifact;
 }): RenderedFinalAnswer | undefined {
   const capabilities = quantitativeCapabilities(input.task, input.registry);
   if (!capabilities.length) return undefined;
-  const byId = new Map(input.closure.map((artifact) => [artifact.id, artifact]));
+  const byId = new Map(
+    input.closure.map((artifact) => [artifact.id, artifact]),
+  );
   const producerCapability = new Map(
     input.task.assignments.map((assignment) => [
       assignment.id,
@@ -84,6 +86,16 @@ export function renderFinalAnswer(input: {
   const sections: FinalAnswerSection[] = [];
   const limitations: string[] = [];
   const gaps: string[] = [];
+  // Pass an actual inspection facade, not a mutable TaskStore with a narrower
+  // TypeScript annotation. Registered renderers receive no write authority.
+  const store: ReadonlyEvidenceStore = Object.freeze({
+    read: input.store.read.bind(input.store),
+    artifact: input.store.artifact.bind(input.store),
+    world: Object.freeze({
+      lookup: input.store.world.lookup.bind(input.store.world),
+      activeHolds: input.store.world.activeHolds.bind(input.store.world),
+    }),
+  });
   for (const capability of capabilities) {
     const renderer = input.registry.finalRenderers.get(capability)!;
     const label =
@@ -113,7 +125,7 @@ export function renderFinalAnswer(input: {
       artifacts,
       closure: input.closure,
       reviews: input.reviews,
-      services: { store: input.store, mode: input.mode, read: input.read },
+      services: { store, mode: input.mode, read: (ref) => input.read(ref) },
     });
     sections.push(...rendered.sections);
     limitations.push(...rendered.limitations);
@@ -163,7 +175,9 @@ function compose(sections: FinalAnswerSection[]): string {
 /** Shared helpers keep renderer output identical to reviewed artifact values. */
 export const finalAnswerFormat = {
   number(value: number | null | undefined): string {
-    return value === null || value === undefined ? 'unavailable' : String(value);
+    return value === null || value === undefined
+      ? 'unavailable'
+      : String(value);
   },
   ref(ref: ArtifactRef): string {
     return `${ref.id} v${ref.version} (${ref.sha256.slice(0, 12)})`;

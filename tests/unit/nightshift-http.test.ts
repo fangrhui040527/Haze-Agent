@@ -296,7 +296,7 @@ it('serves blocked job readiness and persisted lists through the local same-orig
     );
     expect(automaticReadiness.status).toBe(200);
     expect(await automaticReadiness.json()).toMatchObject({
-      schema_version: 'haze.nightshift.automatic.readiness.v1',
+      schema_version: 'haze.nightshift.automatic.readiness.v2',
       released: false,
       ready: false,
       evidence_id: null,

@@ -52,7 +52,8 @@ export function RegionView({
   const [resetKey, setResetKey] = useState(0);
   const [interactive, setInteractive] = useState(() => !isCoarsePointer());
   const tableId = useId();
-  const satellite = SATELLITE_LAYERS.find((l) => l.id === layers.satellite) ?? null;
+  const satellite =
+    SATELLITE_LAYERS.find((l) => l.id === layers.satellite) ?? null;
   // Freeze "now" per selection so the image URL (and its cache) stays stable.
   const satelliteTime = useMemo(
     () => (satellite ? satellite.time(new Date()) : null),
@@ -149,7 +150,9 @@ export function RegionView({
             <input
               type="checkbox"
               checked={layers.wind}
-              onChange={(e) => setLayers((l) => ({ ...l, wind: e.target.checked }))}
+              onChange={(e) =>
+                setLayers((l) => ({ ...l, wind: e.target.checked }))
+              }
             />
             Wind
           </label>
@@ -158,7 +161,9 @@ export function RegionView({
               type="checkbox"
               checked={layers.fires && firesAvailable}
               disabled={!firesAvailable}
-              onChange={(e) => setLayers((l) => ({ ...l, fires: e.target.checked }))}
+              onChange={(e) =>
+                setLayers((l) => ({ ...l, fires: e.target.checked }))
+              }
             />
             Fire hotspots
           </label>
@@ -170,7 +175,9 @@ export function RegionView({
                 onChange={(e) =>
                   setLayers((l) => ({
                     ...l,
-                    satellite: e.target.checked ? (s.id as SatelliteLayerId) : null,
+                    satellite: e.target.checked
+                      ? (s.id as SatelliteLayerId)
+                      : null,
                   }))
                 }
               />
@@ -245,7 +252,12 @@ function Legend({
                 style={{ background: `var(--scale-temp-${i + 1})` }}
                 aria-hidden="true"
               />
-              {i === 0 ? `< ${all[1]}` : i === all.length - 1 ? `≥ ${b}` : `${b}–${all[i + 1]}`} °C
+              {i === 0
+                ? `< ${all[1]}`
+                : i === all.length - 1
+                  ? `≥ ${b}`
+                  : `${b}–${all[i + 1]}`}{' '}
+              °C
             </li>
           ))}
         </ul>
@@ -270,7 +282,9 @@ function Legend({
           </>
         )}
         {fires?.status === 'no-key' && <>Fire layer needs a FIRMS key. </>}
-        {fires?.status === 'error' && <>Fire layer unavailable: {fires.message}. </>}
+        {fires?.status === 'error' && (
+          <>Fire layer unavailable: {fires.message}. </>
+        )}
         Wind arrows point where air is moving to.
       </p>
       <p className={styles.credits}>
@@ -281,7 +295,13 @@ function Legend({
   );
 }
 
-function ReadingsTable({ id, readings }: { id: string; readings: CityReading[] }) {
+function ReadingsTable({
+  id,
+  readings,
+}: {
+  id: string;
+  readings: CityReading[];
+}) {
   return (
     <table className={styles.table} id={id}>
       <caption>

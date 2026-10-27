@@ -324,6 +324,52 @@ describe('general contract and authoritative SQLite store', () => {
     expect(store.read(task.id, identity).usage.model_calls).toBe(6);
     expect(store.attempts(task.id, identity)).toHaveLength(6);
   });
+  it.each(['model', 'tool'] as const)(
+    'persists %s attempt execution timing and metadata once, including failures',
+    (kind) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-28T01:00:00.000Z'));
+      const store = create(),
+        task = admit(store, randomUUID(), ['test.lookup']),
+        job = assignments(store, task, [
+          definition({ tools: ['test.lookup'] }),
+        ])[0]!;
+      store.acquireAssignment(task.id, job.id);
+      const attempt = store.chargeAttempt(
+        task.id,
+        job.id,
+        kind,
+        kind === 'tool' ? { tool: 'test.lookup' } : {},
+      );
+      vi.setSystemTime(new Date('2026-10-28T01:00:01.250Z'));
+      const result =
+        kind === 'tool'
+          ? { error: { code: 'provider_failure' } }
+          : { output: { answer: 'Done.' } };
+      store.completeAttempt(task.id, attempt.id, result);
+      vi.setSystemTime(new Date('2026-10-28T01:00:02.000Z'));
+      store.completeAttempt(task.id, attempt.id, result);
+
+      const events = store.events(task.id, identity).events;
+      expect(
+        events.find((event) => event.type === 'attempt_charged')?.data,
+      ).toMatchObject({ attempt_id: attempt.id, kind });
+      const completed = events.filter((event) =>
+        ['attempt_completed', 'late_receipt_recorded'].includes(event.type),
+      );
+      expect(completed).toHaveLength(1);
+      expect(completed[0]!.data).toMatchObject({
+        attempt_id: attempt.id,
+        accepted: kind === 'model',
+        kind,
+        status: kind === 'model' ? 'completed' : 'failed',
+        started_at: '2026-10-28T01:00:00.000Z',
+        completed_at: '2026-10-28T01:00:01.250Z',
+        duration_ms: 1250,
+        ...(kind === 'tool' ? { tool: 'test.lookup' } : {}),
+      });
+    },
+  );
   it('persists validated actions before dispatch and dispatches each action only once', () => {
     const store = create(),
       task = admit(store),
@@ -453,6 +499,51 @@ describe('general contract and authoritative SQLite store', () => {
     expect(continued.usage.model_calls).toBe(0);
     expect(continued.runs[0]!.usage.model_calls).toBe(1);
   });
+  it.each(['queued', 'running', 'waiting'] as const)(
+    'recovers an expired %s run without blocking other tasks or renewing its deadline',
+    (status) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-25T12:00:00Z'));
+      const root = directory(),
+        first = create(root),
+        task = admit(first),
+        job = assignments(first, task, [definition()])[0]!;
+      if (status !== 'queued') first.acquireAssignment(task.id, job.id);
+      if (status === 'running') first.chargeAttempt(task.id, job.id, 'model');
+      if (status === 'waiting')
+        first.askQuestion(task.id, job.id, 'Please upload the source.');
+      expect(first.read(task.id, identity).status).toBe(status);
+      vi.setSystemTime(new Date(task.limits.deadline));
+      const healthy = admit(first);
+      first.close();
+
+      const restarted = create(root),
+        recovered = restarted.read(task.id, identity);
+      expect(recovered.status).toBe('timed_out');
+      expect(recovered.current_run_id).toBe(task.current_run_id);
+      expect(recovered.runs).toHaveLength(1);
+      expect(recovered.limits.deadline).toBe(task.limits.deadline);
+      expect(recovered.usage.model_calls).toBe(status === 'running' ? 1 : 0);
+      expect(recovered.assignments[0]!.status).toBe('timed_out');
+      expect(recovered.assignments[0]!.lease_token).toBeUndefined();
+      expect(recovered.error?.code).toBe('deadline_exceeded');
+      expect(recovered.error?.message).toContain('Continue');
+      expect(restarted.read(healthy.id, identity).status).toBe('queued');
+      expect(restarted.listRecoverableTasks().map((item) => item.id)).toEqual([
+        healthy.id,
+      ]);
+      if (status === 'running')
+        expect(restarted.attempts(task.id, identity)[0]!.status).toBe(
+          'unknown',
+        );
+
+      control(restarted, task.id, 'continue');
+      const continued = restarted.read(task.id, identity);
+      expect(continued.current_run_id).not.toBe(task.current_run_id);
+      expect(continued.runs[1]!.predecessor_run_id).toBe(task.current_run_id);
+      expect(continued.runs[0]!.status).toBe('timed_out');
+    },
+  );
   it('keeps one bounded peer channel, deduplicates messages and releases waiting slots', () => {
     const store = create(),
       task = admit(store),

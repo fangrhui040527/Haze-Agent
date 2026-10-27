@@ -3,6 +3,13 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {
+  artifactEvidence,
+  captureVerificationBindings,
+  domainModelEvidence,
+  domainVerificationEnvironment,
+  readVerificationLineage,
+} from './domain-verification-support.mjs';
 
 const [mode, location, start, end] = process.argv.slice(2);
 if (
@@ -20,13 +27,52 @@ const root = resolve(
 );
 await mkdir(root, { recursive: true });
 let child;
+
+const sameRef = (left, right) =>
+  Boolean(
+    left &&
+    right &&
+    left.id === right.id &&
+    left.version === right.version &&
+    left.sha256 === right.sha256,
+  );
+/** Historical artifacts stay retained; only one exact current product can qualify. */
+function currentArtifact(task, artifacts, kind, refs) {
+  const matches = artifacts.filter(
+    (artifact) =>
+      artifact.kind === kind &&
+      artifact.task_id === task.id &&
+      artifact.run_id === task.current_run_id &&
+      artifact.objective_revision === task.objective_revision &&
+      artifact.producer.kind === 'assignment' &&
+      task.artifacts.some(
+        (entry) =>
+          entry.current &&
+          entry.objective_revision === task.objective_revision &&
+          sameRef(entry.artifact, artifact),
+      ) &&
+      task.assignments.some(
+        (assignment) =>
+          assignment.id === artifact.assignment_id &&
+          assignment.id === artifact.producer.id &&
+          assignment.run_id === task.current_run_id &&
+          assignment.objective_revision === task.objective_revision &&
+          assignment.revision === artifact.assignment_revision &&
+          assignment.status === 'completed' &&
+          !['stale', 'rejected'].includes(assignment.usability) &&
+          assignment.outputs.some((ref) => sameRef(ref, artifact)),
+      ) &&
+      refs.some((ref) => sameRef(ref, artifact)),
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
 async function boot() {
   child = fork(
     new URL('./serve-tasks.mjs', import.meta.url),
     fixture ? ['--fixture'] : [],
     {
       env: {
-        ...process.env,
+        ...(fixture ? process.env : domainVerificationEnvironment(process.env)),
         STATE_DIR: root,
         HAZE_TASK_STATE_DIR: root,
         HAZE_TASK_PORT: '0',
@@ -120,6 +166,7 @@ let report;
 let general;
 let investigation;
 let stage = 'server_start';
+let bindingEvidence = {};
 function retainedAttempts() {
   const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
     readOnly: true,
@@ -139,6 +186,10 @@ async function retainReport(value) {
   return path;
 }
 try {
+  if (!fixture)
+    bindingEvidence = await captureVerificationBindings(
+      domainVerificationEnvironment(process.env),
+    );
   let origin = await boot();
   stage = 'source_synthesis';
   const source = await read(origin, '/api/artifacts', {
@@ -209,9 +260,10 @@ try {
     throw new Error('The source synthesis did not produce an acceptance.');
   const recordPath = `/api/world/records/${encodeURIComponent(accepted.subject)}`;
   const acceptedDetail = await read(origin, recordPath);
-  const acceptedLineage = await read(
+  const acceptedLineage = await readVerificationLineage(
+    read,
     origin,
-    `${recordPath}?view=lineage&limit=50`,
+    recordPath,
   );
   if (
     acceptedDetail.view !== 'detail' ||
@@ -240,7 +292,7 @@ try {
     )
   )
     throw new Error('A correction did not hold the accepted fixture record.');
-  const heldLineage = await read(origin, `${recordPath}?view=lineage&limit=50`);
+  const heldLineage = await readVerificationLineage(read, origin, recordPath);
   const authorizedRecordDetail = await read(origin, recordPath);
   if (authorizedRecordDetail.detail.record.ref.id !== accepted.subject)
     throw new Error('Scoped World Model record read failed.');
@@ -256,9 +308,10 @@ try {
     await read(origin, `/api/tasks/${investigation.task.id}`),
   );
   const afterHeldDetail = await read(origin, recordPath);
-  const afterHeldLineage = await read(
+  const afterHeldLineage = await readVerificationLineage(
+    read,
     origin,
-    `${recordPath}?view=lineage&limit=50`,
+    recordPath,
   );
   const restart =
     JSON.stringify(heldDetail) === JSON.stringify(afterHeldDetail) &&
@@ -280,20 +333,79 @@ try {
           typeof attempt.receipt?.response_id === 'string',
       ),
   );
-  const sourceExecuted =
-    investigation.task.usage.tool_calls > 0 &&
-    investigation.artifacts.some(
-      (artifact) => artifact.kind === 'pm25.capture',
-    );
   const attempts = retainedAttempts();
+  const modelEvidence = domainModelEvidence(investigation.task, attempts);
+  const pm25Analysis = currentArtifact(
+    investigation.task,
+    investigation.artifacts,
+    'pm25.analysis',
+    investigation.task.result?.work_products ?? [],
+  );
+  const pm25Capture = currentArtifact(
+    investigation.task,
+    investigation.artifacts,
+    'pm25.capture',
+    pm25Analysis?.dependencies ?? [],
+  );
+  const reviewCheck = investigation.task.result?.review.checks?.find(
+    (check) =>
+      sameRef(check.artifact, pm25Analysis) &&
+      check.verdict === 'supported' &&
+      check.producer_assignment_id === pm25Analysis?.assignment_id &&
+      check.producer_revision === pm25Analysis?.assignment_revision &&
+      check.reviewer_assignment_id !== check.producer_assignment_id,
+  );
+  const pm25Review = currentArtifact(
+    investigation.task,
+    investigation.artifacts,
+    'review',
+    [reviewCheck?.review_artifact],
+  );
+  const reviewed = Boolean(
+    pm25Analysis &&
+    pm25Review &&
+    reviewCheck &&
+    investigation.task.result?.review.status === 'supported' &&
+    pm25Review.assignment_id === reviewCheck.reviewer_assignment_id &&
+    pm25Review.assignment_revision === reviewCheck.reviewer_revision &&
+    pm25Review.content.verdict === 'supported' &&
+    pm25Review.content.reviewed_artifacts?.some((ref) =>
+      sameRef(ref, pm25Analysis),
+    ),
+  );
+  const sourceExecuted = Boolean(
+    pm25Capture && investigation.task.usage.tool_calls > 0,
+  );
+  const retainedQueryRows = Boolean(
+    pm25Capture?.content.selection?.backend === 'zetaris-rest' &&
+    pm25Capture.content.selection.query &&
+    pm25Capture.content.raw &&
+    pm25Capture.content.rows?.length,
+  );
+  const answerRendered = Boolean(
+    pm25Analysis &&
+    investigation.task.result?.answer.startsWith('PM2.5 evidence:') &&
+    investigation.task.result.work_products.some((ref) =>
+      sameRef(ref, pm25Analysis),
+    ),
+  );
   const passed =
     general.task.status === 'completed' &&
     investigation.task.status === 'completed' &&
     sourceExecuted &&
     restart &&
     duplicate.task_id === admitted.task_id &&
-    (fixture || liveReceipts);
+    reviewed &&
+    answerRendered &&
+    retainedQueryRows &&
+    (fixture ||
+      (liveReceipts &&
+        modelEvidence.strict_model_receipts &&
+        pm25Capture.content.mode === 'live' &&
+        pm25Capture.content.evidence_origin !== 'synthetic_fixture' &&
+        pm25Capture.evidence_origin !== 'synthetic_fixture'));
   report = {
+    ...bindingEvidence,
     checked_at: new Date().toISOString(),
     mode: fixture ? 'fixture' : 'live',
     readiness: passed
@@ -305,8 +417,16 @@ try {
     passed,
     source_executed: sourceExecuted,
     live_model_receipts: liveReceipts,
+    pm25_verification: {
+      ...modelEvidence,
+      independently_reviewed: reviewed,
+      retained_query_and_rows: retainedQueryRows,
+      answer_rendered: answerRendered,
+      artifacts: artifactEvidence(investigation.artifacts),
+    },
     duplicate_delivery: duplicate.task_id === admitted.task_id,
     restart,
+    restart_task: afterInvestigation.task,
     capabilities: await read(origin, '/api/capabilities'),
     attempts,
     general,
@@ -353,6 +473,7 @@ try {
     attemptReadError = String(readError);
   }
   report = {
+    ...bindingEvidence,
     checked_at: new Date().toISOString(),
     mode: fixture ? 'fixture' : 'live',
     readiness: 'unverified',
@@ -364,6 +485,18 @@ try {
     },
     attempts,
     ...(attemptReadError ? { attempt_read_error: attemptReadError } : {}),
+    // Keep primary task failures and actual charged calls visible even when a
+    // later verification probe fails before the success report is assembled.
+    task_errors: {
+      general: general?.task.error ?? null,
+      investigation: investigation?.task.error ?? null,
+    },
+    model_evidence: {
+      general: general ? domainModelEvidence(general.task, attempts) : null,
+      investigation: investigation
+        ? domainModelEvidence(investigation.task, attempts)
+        : null,
+    },
     general: general ?? null,
     investigation: investigation ?? null,
   };
@@ -376,6 +509,7 @@ try {
         passed: false,
         readiness: report.readiness,
         error: report.verification_error,
+        task_errors: report.task_errors,
         general: general?.task.status ?? null,
         investigation: investigation?.task.status ?? null,
       },

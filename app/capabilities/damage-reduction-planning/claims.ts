@@ -12,6 +12,7 @@ import {
 import { canonicalJson, contractHash } from '../../contracts/json.js';
 import type {
   ExecutionMode,
+  ReadonlyEvidenceStore,
   StatefulToolStore,
   ToolContext,
   ToolDefinition,
@@ -26,7 +27,7 @@ const same = (left: unknown, right: unknown) =>
 
 /** Historical artifact bytes remain immutable. Eligibility is freshly reconstructed. */
 export function readDamageReductionClaim(
-  store: StatefulToolStore,
+  store: ReadonlyEvidenceStore,
   mode: ExecutionMode,
   query: ReductionClaimQuery,
   context: Pick<ToolContext, 'taskId' | 'identity' | 'runId'>,

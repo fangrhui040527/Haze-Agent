@@ -110,11 +110,7 @@ describe('deriveAgentStatuses', () => {
       state: 'working',
       text: 'Reading the selected source.',
     });
-    for (const id of [
-      'worldmodel',
-      'workershield',
-      'evidencecritic',
-    ] as const)
+    for (const id of ['worldmodel', 'workershield', 'evidencecritic'] as const)
       expect(statuses[id]).toEqual({ state: 'idle', text: 'Idle' });
   });
   it('follows a run step by step', () => {

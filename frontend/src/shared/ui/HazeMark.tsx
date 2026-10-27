@@ -8,7 +8,13 @@ export function HazeMark({ size = 24 }: { size?: number }) {
       aria-hidden="true"
       focusable="false"
     >
-      <circle cx="12" cy="10" r="5.5" fill="var(--color-accent)" opacity="0.9" />
+      <circle
+        cx="12"
+        cy="10"
+        r="5.5"
+        fill="var(--color-accent)"
+        opacity="0.9"
+      />
       <path
         d="M3 15.5h18M5 19h14"
         stroke="var(--color-muted)"
