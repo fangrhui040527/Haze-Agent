@@ -634,3 +634,44 @@
   font-size: var(--text-xs);
   white-space: pre;
 }
+
+/* ── Layout pass: control panels in two columns; wide content spans the full row ── */
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-4);
+}
+@media (min-width: 1024px) {
+  .page {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page > .warning,
+  .page > :has(.browser),
+  .page > :has(.stats),
+  .page > :not(.block):not(.warning) {
+    grid-column: 1 / -1;
+  }
+}
+.block {
+  background: var(--color-panel);
+  border: var(--hairline);
+}
+.block > h2:first-child,
+.block > h3:first-child {
+  border-bottom: var(--hairline);
+}
+.warning {
+  border: 1px solid color-mix(in srgb, var(--band-moderate) 50%, transparent);
+  box-shadow: none;
+}
+.browserTable thead th {
+  background: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.browserTable tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}

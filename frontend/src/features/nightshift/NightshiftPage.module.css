@@ -154,3 +154,22 @@
   overflow: auto;
   overflow-wrap: anywhere;
 }
+
+/* ── Layout pass: shared table look, panels on the smog background ── */
+.tableWrap {
+  composes: data-table-wrap from global;
+}
+.table {
+  composes: data-table from global;
+}
+.panel {
+  padding: var(--space-4) var(--space-5);
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-3);
+}

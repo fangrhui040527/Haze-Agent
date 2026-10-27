@@ -248,42 +248,61 @@ export function DamageAccountView({
                 Independent review checks ({result.review.checks.length})
               </summary>
               <p>{result.review.scope}</p>
-              <ul>
-                {result.review.checks.map((check, index) => (
-                  <li key={`${check.artifact.id}-${index}`}>
-                    <a
-                      href={`${baseUrl}/api/artifacts/${check.artifact.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Artifact version {check.artifact.version}
-                    </a>
-                    : {check.verdict.replaceAll('_', ' ')}.
-                    <p className={styles.identifier}>
-                      Producer revision {check.producer_revision}.{' '}
-                      {check.reviewer_revision
-                        ? `Reviewer revision ${check.reviewer_revision}.`
-                        : 'Independent review pending.'}
-                    </p>
-                    {check.review_artifact && (
-                      <a
-                        href={`${baseUrl}/api/artifacts/${check.review_artifact.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open exact review
-                      </a>
-                    )}
-                    {check.limitations.length > 0 && (
-                      <ul>
-                        {check.limitations.map((limitation, item) => (
-                          <li key={item}>{limitation}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th scope="col">Artifact</th>
+                      <th scope="col">Verdict</th>
+                      <th scope="col">Revisions</th>
+                      <th scope="col">Review</th>
+                      <th scope="col">Limitations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.review.checks.map((check, index) => (
+                      <tr key={`${check.artifact.id}-${index}`}>
+                        <td>
+                          <a
+                            href={`${baseUrl}/api/artifacts/${check.artifact.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Artifact version {check.artifact.version}
+                          </a>
+                        </td>
+                        <td>{check.verdict.replaceAll('_', ' ')}.</td>
+                        <td className={styles.identifier}>
+                          Producer revision {check.producer_revision}.{' '}
+                          {check.reviewer_revision
+                            ? `Reviewer revision ${check.reviewer_revision}.`
+                            : 'Independent review pending.'}
+                        </td>
+                        <td>
+                          {check.review_artifact && (
+                            <a
+                              href={`${baseUrl}/api/artifacts/${check.review_artifact.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open exact review
+                            </a>
+                          )}
+                        </td>
+                        <td>
+                          {check.limitations.length > 0 && (
+                            <ul>
+                              {check.limitations.map((limitation, item) => (
+                                <li key={item}>{limitation}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </details>
           )}
           <details className={styles.details}>
@@ -314,13 +333,26 @@ export function DamageAccountView({
           <summary>
             Task coordination and execution receipts ({receipts.length})
           </summary>
-          <ol>
-            {receipts.map((receipt) => (
-              <li key={receipt.cursor}>
-                <strong>{receipt.actor}</strong>: {receipt.message}
-              </li>
-            ))}
-          </ol>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Actor</th>
+                  <th scope="col">Message</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receipts.map((receipt, index) => (
+                  <tr key={receipt.cursor}>
+                    <td>{index + 1}</td>
+                    <th scope="row">{receipt.actor}</th>
+                    <td>{receipt.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <Link to={`/task/${encodeURIComponent(record.id)}`}>
             Open the general task report
           </Link>

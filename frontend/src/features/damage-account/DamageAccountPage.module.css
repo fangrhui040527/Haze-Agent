@@ -1,5 +1,5 @@
 .page {
-  max-width: 72rem;
+  max-width: var(--content-max);
   margin-inline: auto;
   display: grid;
   gap: var(--space-6);
@@ -21,9 +21,16 @@
 .intake {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr);
-  gap: var(--space-6);
-  padding-block: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-4);
+}
+
+.intake > section,
+.section,
+.page > .details {
+  padding: var(--space-4) var(--space-5);
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
 }
 
 .intake h2 {
@@ -87,4 +94,12 @@
   .intake {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.tableWrap {
+  composes: data-table-wrap from global;
+}
+
+.table {
+  composes: data-table from global;
 }
