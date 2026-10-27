@@ -177,6 +177,10 @@ function safeSourceContext(value: unknown): unknown {
 }
 
 class ConversationOutputError extends Error {}
+const INVESTIGATION =
+  /\b(haze|smoke|jerebu|asap)\b[^]*\b(where|source|sources|origin|come from|came from|why|investigat\w*|trace|attribut\w*)\b|\b(where|source|sources|origin|investigat\w*|trace|attribut\w*)\b[^]*\b(haze|smoke|jerebu|asap)\b/iu;
+const DATE_RANGE =
+  /\b\d{1,2}(?:\s*(?:[–-]|to|and)\s*\d{1,2})?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/iu;
 class RetrievalLimitError extends Error {}
 
 /** Read-only conversation controller; admission and updates remain atomic runtime operations. */
@@ -666,6 +670,18 @@ export class ManagerConversation {
         decision = managerConversationDecisionSchema.parse(
           withoutBlankRetrievalFields(parseContractJson(raw, 65536)),
         );
+        // Live models answered "where did the smoke on <dates> come from" in chat or with
+        // current-snapshot lookups; such a question gets one correction towards a task.
+        if (
+          !corrected &&
+          decision.type !== 'start_task' &&
+          decision.type !== 'clarify' &&
+          INVESTIGATION.test(request.message) &&
+          DATE_RANGE.test(request.message)
+        )
+          throw new ConversationOutputError(
+            'This asks to investigate haze or smoke for a place and period. Return start_task with an objective that keeps the town and dates; quick lookups only return a current snapshot.',
+          );
         if (decision.type === 'reply') {
           if (decision.citation_ids.some((id) => !evidence.has(id)))
             throw new ConversationOutputError(

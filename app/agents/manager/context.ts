@@ -82,7 +82,8 @@ export function assembleManagerContext(
   );
   const context: ManagerContext = {
     purpose: 'decision',
-    decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}`,
+    // The decision count keeps ids unique when a decision (such as inspect) adds no event.
+    decision_id: `${task.current_run_id}:${task.generation}:${state.plan_revision}:${eventCursor}:${state.decisions.length}`,
     run_id: task.current_run_id,
     generation: task.generation,
     objective_revision: task.objective_revision,

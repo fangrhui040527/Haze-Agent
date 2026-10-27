@@ -204,8 +204,9 @@ describe('registered Manager decision layer', () => {
   );
   it('registers a controlled decide entry with no storage or unrestricted adapters', async () => {
     const { context, registry } = await setup();
+    // The trailing count of prior decisions keeps ids unique when no event arrived between them.
     expect(context.decision_id).toBe(
-      `${context.run_id}:${context.generation}:${context.plan_revision}:${context.event_cursor}`,
+      `${context.run_id}:${context.generation}:${context.plan_revision}:${context.event_cursor}:0`,
     );
     expect([...registry.agents.keys()]).toEqual(['Manager']);
     expect(
