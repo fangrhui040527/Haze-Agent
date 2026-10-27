@@ -177,9 +177,9 @@ LIMIT 1
 
 The October 21 table was registered in Zetaris and tested. The query returned:
 
-| Date | Temperature | Humidity | Wind speed |
-| --- | ---: | ---: | ---: |
-| 2026-10-21 | 26.90 °C | 83.17% | 1.04 m/s |
+| Date       | Temperature | Humidity | Wind speed |
+| ---------- | ----------: | -------: | ---------: |
+| 2026-10-21 |    26.90 °C |   83.17% |   1.04 m/s |
 
 The query returned in about four seconds. The previous table is still set to
 October 23 and returns `-999`; use the new table above for October 21. The

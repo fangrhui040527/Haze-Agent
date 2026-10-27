@@ -5,12 +5,12 @@
 For a haze episode investigation, the Environmental USL gives analysts one
 place to query the onboarded sources.
 
-| Area | Hand-coded approach | Zetaris USL |
-| --- | --- | --- |
-| Source access | Build and maintain separate source connections. | Query registered sources through Zetaris. |
-| Location matching | Map and join locations for each analysis. | Reuse `location_dim` and `location_code`. |
-| Cross-source queries | Fetch and combine records in application code. | Query related USL tables with SQL. |
-| Quality checks | Write checks separately for each integration. | Reuse quality queries across common tables. |
+| Area                 | Hand-coded approach                             | Zetaris USL                                 |
+| -------------------- | ----------------------------------------------- | ------------------------------------------- |
+| Source access        | Build and maintain separate source connections. | Query registered sources through Zetaris.   |
+| Location matching    | Map and join locations for each analysis.       | Reuse `location_dim` and `location_code`.   |
+| Cross-source queries | Fetch and combine records in application code.  | Query related USL tables with SQL.          |
+| Quality checks       | Write checks separately for each integration.   | Reuse quality queries across common tables. |
 
 This can make it faster to prepare data for an investigation and easier to
 reuse the same queries and location mappings.
