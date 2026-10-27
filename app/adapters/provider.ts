@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  sampleModelAllowsNoCredential,
+  sampleModelEnvironment,
+  sampleModelUsesBuiltinFallback,
+  prepareSampleModel,
+} from './sample-model.js';
 
 export interface ProbeProviderSelection {
   provider: string;
@@ -126,15 +132,10 @@ async function readCompletion(response: Response): Promise<unknown> {
 
 /** Resolve explicitly selected configuration without performing a request. */
 export function resolveProbeProvider(env: NodeJS.ProcessEnv): ProbeProvider {
+  const sampleEnvironment = env;
+  const localSampleDefault = sampleModelUsesBuiltinFallback(env);
+  env = sampleModelEnvironment(env);
   const provider = env.HAZE_PROVIDER?.trim() || 'offline';
-  const sampleMode = env.SAMPLE_MODE?.trim().toLowerCase();
-  if (sampleMode && sampleMode !== '0' && sampleMode !== 'false') {
-    return offlineProvider(
-      provider === 'offline'
-        ? 'SAMPLE_MODE disables network requests; no model inference was performed.'
-        : 'SAMPLE_MODE disabled the selected provider; no network request or model inference was performed.',
-    );
-  }
   if (provider === 'offline') {
     return offlineProvider(
       'Offline mode selected; hosted-provider compatibility and model inference were not tested.',
@@ -162,18 +163,29 @@ export function resolveProbeProvider(env: NodeJS.ProcessEnv): ProbeProvider {
   return {
     selection,
     async probe() {
-      if (provider === 'nvidia' && !apiKey) {
+      if (
+        !apiKey &&
+        !sampleModelAllowsNoCredential(
+          env,
+          provider,
+          env.HAZE_PROVIDER_BASE_URL,
+        )
+      ) {
         return {
           ...selection,
           status: 'blocked',
           kind: 'chat-completion',
           reason:
-            'NVIDIA_API_KEY or HAZE_PROVIDER_API_KEY is required; no NVIDIA request was made.',
+            provider === 'nvidia'
+              ? 'NVIDIA_API_KEY or HAZE_PROVIDER_API_KEY is required; no NVIDIA request was made.'
+              : 'HAZE_PROVIDER_API_KEY is required unless sample mode selects a loopback model; no request was made.',
         };
       }
       // Only synthetic text is sent. Neither credentials nor response text are
       // returned to the checkpoint or the compatibility report.
       const signal = AbortSignal.timeout(PROBE_TIMEOUT_MS);
+      if (localSampleDefault)
+        await prepareSampleModel(sampleEnvironment, fetch, signal);
       let response: Response;
       let body: unknown;
       try {
@@ -198,7 +210,9 @@ export function resolveProbeProvider(env: NodeJS.ProcessEnv): ProbeProvider {
                     ? { chat_template_kwargs: { enable_thinking: false } }
                     : {}),
                 }
-              : { max_completion_tokens: 32 }),
+              : localSampleDefault
+                ? { max_tokens: 32 }
+                : { max_completion_tokens: 32 }),
             stream: false,
           }),
           signal,

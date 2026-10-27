@@ -5,6 +5,7 @@ import type {
   AgentTaskHandle,
 } from '../../shared/types/agents.ts';
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
+import type { TracePage } from '../../../../app/contracts/trace-export.ts';
 import type {
   Artifact,
   ArtifactImport,
@@ -59,6 +60,17 @@ export interface AgentService {
     onTask?: (task: AgentTaskHandle) => void,
   ): Promise<AgentAnswer>;
   readTask?(taskId: string, signal?: AbortSignal): Promise<TaskRecord>;
+  readTrace?(
+    taskId: string,
+    runId: string,
+    after?: number,
+    signal?: AbortSignal,
+  ): Promise<TracePage>;
+  traceDownloadUrl?(
+    taskId: string,
+    runId: string,
+    format: 'jsonl' | 'bundle',
+  ): string;
   listTasks?(
     options?: TaskListOptions,
     signal?: AbortSignal,

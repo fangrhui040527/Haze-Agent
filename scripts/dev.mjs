@@ -10,6 +10,7 @@ import { createDevConsole } from './dev-console.mjs';
 import { createDevCommands, localAppUrl } from './dev-commands.mjs';
 import { createDevApi } from './dev-api.mjs';
 import { createDevConfig } from './dev-config.mjs';
+import { createSmokeLedgerSidecar } from './dev-smokeledger.mjs';
 import {
   runDevTool,
   terminateDevChild,
@@ -24,8 +25,9 @@ const args = process.argv.slice(2);
 if (args.includes('--console') && args.includes('--no-console'))
   throw new Error('Choose either --console or --no-console.');
 const viteArgs = args.filter(
-  (arg) => !['--console', '--no-console'].includes(arg),
+  (arg) => !['--console', '--no-console', '--no-smokeledger'].includes(arg),
 );
+const withSmokeLedger = !args.includes('--no-smokeledger');
 
 let activeChild;
 let appChild;
@@ -47,6 +49,10 @@ const interactive =
       process.env.TERM !== 'dumb',
     ));
 const config = createDevConfig({ root });
+const launchEnvironment = config.launchEnvironment();
+const sampleMode = !['', '0', 'false'].includes(
+  launchEnvironment.SAMPLE_MODE?.trim().toLowerCase() ?? '',
+);
 const api = createDevApi({ getUrl: () => appUrl });
 const display = createStartupDisplay({ commands: interactive });
 const log = (text) => {
@@ -54,6 +60,29 @@ const log = (text) => {
   if (consoleSession) consoleSession.log(message);
   else display.log(message);
 };
+const appendRuntimeLog = (text) => {
+  runtimeLog = (runtimeLog + text)
+    .slice(-128 * 1024)
+    .split('\n')
+    .slice(-300)
+    .join('\n');
+  for (const listener of logSubscribers) listener(config.redact(text));
+};
+const smokeLedgerRow = STARTUP_COMPONENTS.findIndex(
+  (component) => component.id === 'smokeledger',
+);
+const smokeLedger = createSmokeLedgerSidecar({
+  root,
+  npmCli,
+  signal: probeController.signal,
+  onStatus(status, detail) {
+    display.update(smokeLedgerRow, status, config.redact(detail ?? ''));
+    // The panel closes once the console opens; a late first-time install reports here.
+    if (consoleSession && status !== 'STARTING')
+      log(`SmokeLedger sidecar: ${status}${detail ? ` | ${detail}` : ''}`);
+  },
+  onOutput: appendRuntimeLog,
+});
 
 function appCommand(command, signal) {
   return new Promise((resolveCommand, reject) => {
@@ -98,6 +127,7 @@ function stop(signal = 'SIGINT', { all = false } = {}) {
   process.exitCode = 0;
   probeController.abort();
   consoleSession?.close();
+  smokeLedger.stop(signal);
   if (appChild?.connected) {
     const child = appChild;
     stopTimer = setTimeout(() => terminateDevChild(child, 'SIGKILL'), 12_000);
@@ -225,43 +255,54 @@ async function main() {
   process.once('SIGTERM', onTerminate);
   try {
     starting(0);
-    // Capture Compose progress so the panel is the only terminal renderer.
-    // Whole-project --wait does not handle the standalone bootstrap job.
-    const docker = await runCommand('docker', [
-      'compose',
-      '--progress',
-      'plain',
-      'up',
-      '--detach',
-    ]);
-    if (stopping) return;
-    const status = await runCommand('docker', [
-      'compose',
-      'ps',
-      '--all',
-      '--format',
-      'json',
-    ]);
-    if (stopping) return;
-    const text = status.stdout.trim();
-    const containers = !text
-      ? []
-      : text.startsWith('[')
-        ? JSON.parse(text)
-        : text.split(/\r?\n/).map((line) => JSON.parse(line));
-    const counts = new Map();
-    for (const container of containers) {
-      const state = container.Health || composeServiceState(container);
-      if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+    if (sampleMode) {
+      finished(
+        'SKIPPED',
+        'Sample evidence from data/; Docker and Zetaris are not required',
+      );
+    } else {
+      // Capture Compose progress so the panel is the only terminal renderer.
+      // Whole-project --wait does not handle the standalone bootstrap job.
+      const docker = await runCommand('docker', [
+        'compose',
+        '--progress',
+        'plain',
+        'up',
+        '--detach',
+      ]);
+      if (stopping) return;
+      const status = await runCommand('docker', [
+        'compose',
+        'ps',
+        '--all',
+        '--format',
+        'json',
+      ]);
+      if (stopping) return;
+      const text = status.stdout.trim();
+      const containers = !text
+        ? []
+        : text.startsWith('[')
+          ? JSON.parse(text)
+          : text.split(/\r?\n/).map((line) => JSON.parse(line));
+      const counts = new Map();
+      for (const container of containers) {
+        const state = container.Health || composeServiceState(container);
+        if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+      }
+      finished(
+        'STARTED',
+        [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
+      );
+      const warnings = docker.stderr
+        .split(/\r?\n/)
+        .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
+      if (warnings.length) log(warnings.join('\n'));
     }
-    finished(
-      'STARTED',
-      [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
-    );
-    const warnings = docker.stderr
-      .split(/\r?\n/)
-      .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
-    if (warnings.length) log(warnings.join('\n'));
+
+    // Starts alongside the build; its row reports independently of the stages below.
+    if (withSmokeLedger) void smokeLedger.start();
+    else display.update(smokeLedgerRow, 'DISABLED', '--no-smokeledger');
 
     starting(1);
     const build = await runCommand(process.execPath, [
@@ -383,18 +424,13 @@ async function main() {
         }
       },
       onOutput(text) {
-        runtimeLog = (runtimeLog + text)
-          .slice(-128 * 1024)
-          .split('\n')
-          .slice(-300)
-          .join('\n');
-        for (const listener of logSubscribers) listener(config.redact(text));
+        appendRuntimeLog(text);
         if (frontendReady && !logSubscribers.size) log(text);
         else if (!frontendReady)
           frontendOutput = (frontendOutput + text).slice(-10 * 1024 * 1024);
       },
       env: {
-        ...process.env,
+        ...launchEnvironment,
         HAZE_DEV_BANNER: 'true',
         HAZE_DEV_STARTED_AT: String(startedAt),
       },
@@ -418,8 +454,9 @@ async function main() {
   } finally {
     probeController.abort();
     consoleSession?.close();
+    smokeLedger.stop();
     clearTimeout(stopTimer);
-    if (stopContainers) {
+    if (stopContainers && !sampleMode) {
       log("Stopping this project's Zetaris containers…");
       try {
         log(

@@ -24,6 +24,15 @@ Use Node 24.22.1 and npm 11.8.0 from the repository pins. Install with `npm ci` 
 
 The v1/v2 task paths and `hybrid:*`/`orchestration:*` command aliases are retired. Use the general v3 commands above. Historical state is never migrated automatically.
 
+With `SAMPLE_MODE=true`, `npm run dev` uses local synthetic evidence and skips
+Docker/Zetaris startup. The configured model routes remain active and their
+readiness is reported normally. The launcher reads root and development `.env`
+files before choosing this path; process variables take precedence. Sample
+state defaults to `.state/sample-mode`; an explicit `HAZE_TASK_STATE_DIR`
+overrides it. Direct Vite development and preview servers use the same state
+selection. This mode requires a configured model, and it does not select the
+deterministic fixture adapters.
+
 Build before tests that load the pinned local engines. Default unit tests use disposable memory or temporary SQLite state and require no API credentials. PostgreSQL tests require a dedicated disposable database through `HAZE_TEST_POSTGRES_URL`; the library does not load that environment variable from a file. Run that suite when changing saver configuration, checkpoint behavior or PostgreSQL dependencies.
 
 For frontend changes, also run:

@@ -1,0 +1,23 @@
+{
+  "schema_version": "haze.sample-scenario.v1",
+  "id": "damage-reduction",
+  "kind": "damage-reduction",
+  "synthetic": true,
+  "title": "Assess a proposed intervention across two workforce strata",
+  "objective": "Compare the supplied prospective baseline and intervention residual person-days for the two non-overlapping workforce strata against a target of at least 10% reduction. Prepare a conditional planning preview for the proposed exposure-alert and work-schedule service, independently review arithmetic and plan, and identify missing rules, approval, cost, capacity and worker-income protection. Do not treat the supplied scenario as an achieved intervention or scientifically qualified effectiveness estimate. First calculate and independently review the comparison from the supplied residuals, then produce the conditional preview. Keep explicitly unknown costs, approval, rules, capacity and income safeguards as unresolved prerequisites in that preview; do not ask the user to perform the analysis or invent missing values.",
+  "inputs": {
+    "residuals": "residual-input.json",
+    "target": "target.json",
+    "candidate": "candidate.json"
+  },
+  "provenance": {
+    "origin": "locally-authored-synthetic",
+    "authored_at": "2026-10-28T00:00:00Z",
+    "description": "Hand-authored invented inputs for local software demonstrations. No public agency, monitoring station, study, provider or real population supplied these values."
+  },
+  "gaps": [
+    "No validated real-world intervention efficacy or statistical uncertainty.",
+    "Trigger/action rules, accountable owner, authorization, costs and delivery capacity remain unresolved.",
+    "Worker-income protection is an unresolved hard constraint; no delivery or achieved reduction is supplied."
+  ]
+}

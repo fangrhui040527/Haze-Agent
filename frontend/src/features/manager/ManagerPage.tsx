@@ -10,6 +10,18 @@ import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './ManagerPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
+import type { TaskStatus } from '../../../../app/contracts/tasks.ts';
+
+const statusWording: Record<TaskStatus, string> = {
+  queued: 'Waiting to start',
+  running: 'In progress',
+  waiting: 'Waiting for something',
+  paused: 'Paused',
+  completed: 'Finished',
+  failed: 'Stopped with a problem',
+  timed_out: 'Ran out of time',
+  cancelled: 'Cancelled',
+};
 
 function savedTaskId(): string | undefined {
   try {
@@ -32,18 +44,18 @@ export function ManagerPage() {
   ) : (
     <article className={styles.page}>
       <PageHeader />
-      <NextTaskPermissions />
       <section className={styles.empty}>
         <h2>No task selected</h2>
         <p>
-          Start a task from the dashboard, then open its Manager workspace to
-          follow the plan, assignments and decisions.
+          Start a task from the dashboard. You can then come back here to see
+          how Haze is working on it.
         </p>
         <Link to="/dashboard" className={buttonClass('primary')}>
           Start a task on the dashboard
         </Link>
       </section>
       <TaskPicker />
+      <AdvancedSettings />
     </article>
   );
 }
@@ -59,18 +71,35 @@ function PageHeader({ taskId }: { taskId?: string }) {
     <header className={styles.header}>
       <nav className={styles.actions} aria-label="Manager navigation">
         <BackLink>Back to the dashboard</BackLink>
+      </nav>
+      <div className={styles.titleRow}>
+        <div className={styles.titleText}>
+          <h1>Manager</h1>
+          <p>
+            See how Haze is working on your task: the plan, who is doing what,
+            and the decisions made along the way.
+          </p>
+        </div>
         {taskId && (
           <Link
             to={`/task/${encodeURIComponent(taskId)}`}
-            className={buttonClass('secondary', 'small')}
+            className={`${buttonClass('primary')} ${styles.reportButton}`}
           >
-            Open task report
+            Open task report →
           </Link>
         )}
-      </nav>
-      <h1>Manager</h1>
-      <p>Follow the plan, assignments and decisions for your task.</p>
+      </div>
     </header>
+  );
+}
+
+/** Rarely needed options, kept out of the way of the task itself. */
+function AdvancedSettings() {
+  return (
+    <details className={styles.picker}>
+      <summary>Advanced settings</summary>
+      <NextTaskPermissions />
+    </details>
   );
 }
 
@@ -97,36 +126,30 @@ export function ManagerTaskView({
       <PageHeader taskId={record ? taskId : undefined} />
       <div className={styles.columns}>
         <aside className={styles.side}>
-          <NextTaskPermissions />
-          <TaskPicker taskId={taskId} />
           <div className={styles.status}>
             {record && (
               <>
                 <p className={styles.objective}>
-                  <span className={styles.label}>Original objective</span>
+                  <span className={styles.label}>What you asked for</span>
                   {record.original_request.objective}
                 </p>
                 <table className={styles.facts}>
                   <tbody>
                     <tr>
-                      <th scope="row">Task</th>
+                      <th scope="row">Status</th>
                       <td>
                         <Badge
                           tone={record.status === 'failed' ? 'warn' : 'neutral'}
                         >
-                          {record.status.replaceAll('_', ' ')}
+                          {statusWording[record.status]}
                         </Badge>
                       </td>
                     </tr>
                     <tr>
-                      <th scope="row">Execution mode</th>
-                      <td>{record.mode}</td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Last saved</th>
+                      <th scope="row">Last updated</th>
                       <td>
                         <time dateTime={record.updated_at}>
-                          {record.updated_at}
+                          {new Date(record.updated_at).toLocaleString()}
                         </time>
                       </td>
                     </tr>
@@ -159,6 +182,8 @@ export function ManagerTaskView({
               <TaskQuestions run={run} />
             </section>
           )}
+          <TaskPicker taskId={taskId} />
+          <AdvancedSettings />
         </aside>
         <div className={styles.mainCol}>
           {record && (
@@ -167,8 +192,8 @@ export function ManagerTaskView({
                 <ManagerWorkspace record={record} />
               ) : (
                 <p className={styles.empty}>
-                  No Manager workspace is saved for this run yet. Its task
-                  report remains available above.
+                  The Manager hasn't started planning this task yet. You can
+                  still open the task report above.
                 </p>
               )}
             </>
@@ -187,7 +212,9 @@ function TaskPicker({ taskId = '' }: { taskId?: string }) {
     event.preventDefault();
     const id = value.trim();
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) {
-      setError('Enter a valid task ID from a saved task report.');
+      setError(
+        "That doesn't look like a task ID. Copy it from the end of a task report's web address.",
+      );
       return;
     }
     navigate(`/manager/${encodeURIComponent(id)}`);
@@ -199,6 +226,9 @@ function TaskPicker({ taskId = '' }: { taskId?: string }) {
       </summary>
       <form onSubmit={openTask} className={styles.form}>
         <label htmlFor="manager-task-id">Task ID</label>
+        <p className={styles.note}>
+          You can find it at the end of a task report's web address.
+        </p>
         <div className={styles.taskInput}>
           <input
             id="manager-task-id"

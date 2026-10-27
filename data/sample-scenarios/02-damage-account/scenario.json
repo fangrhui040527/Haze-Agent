@@ -1,0 +1,21 @@
+{
+  "schema_version": "haze.sample-scenario.v1",
+  "id": "damage-account",
+  "kind": "damage-account",
+  "synthetic": true,
+  "title": "Account for an episode with missing mortality evidence",
+  "objective": "Build a damage account from the supplied synthetic treatment cases, lost workdays, compatible CU unit values and financing records for Sample Coastal District during 2026-10-01 to 2026-10-07. Keep physical outcomes, financial incidence and selected social welfare separate; identify the internal transfer and avoid double counting. Report mortality and direct source-fire losses as unestimated, and obtain independent exact-component arithmetic review.",
+  "inputs": {
+    "damage": "damage-input.json"
+  },
+  "provenance": {
+    "origin": "locally-authored-synthetic",
+    "authored_at": "2026-10-28T00:00:00Z",
+    "description": "Hand-authored invented inputs for local software demonstrations. No public agency, monitoring station, study, provider or real population supplied these values."
+  },
+  "gaps": [
+    "Attributable mortality quantity and mortality valuation are not supplied.",
+    "Direct source-fire damage and other sectors are not estimated.",
+    "Supplied causal applicability and unit values are synthetic assertions; scientific qualification is absent."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "scope": {
+    "endpoint": "synthetic lost workdays",
+    "unit": "person-days",
+    "population": "Invented outdoor workforce",
+    "geography": "Sample Coastal District",
+    "pollutant": "Invented episode-related PM2.5 boundary",
+    "period": {
+      "start": "2026-10-01",
+      "end": "2026-10-07"
+    },
+    "coverage": "Two non-overlapping synthetic workforce strata with supplied prospective point estimates.",
+    "missingness": "All four declared residual quantities are supplied; no statistical uncertainty or actual delivery evidence is supplied.",
+    "exclusions": [
+      "Other health endpoints, monetary benefits, costs, delivered effects and real-world effectiveness."
+    ]
+  },
+  "target_fraction": "0.1",
+  "relation": "at_least",
+  "comparator": "Ordinary management with existing protections",
+  "intervention": "Proposed exposure-alert and work-schedule service",
+  "assessment_rule": "point_estimate"
+}

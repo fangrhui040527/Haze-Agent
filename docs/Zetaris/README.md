@@ -6,8 +6,8 @@ Installation, client connections, governed SQL guides and the Zetaris recipe roa
 
 ## Installation
 
+- [Windows quick start](install/quick-start-windows.md).
 - [Local installation guide](install/local-installation.md).
-- [Docker setup entry point](install/zetaris-docker-setup.md).
 - [Managed AWS cluster guide](install/managed-aws-cluster-guide.md).
 - [Installation test record](install/zetaris-installation-test-record.md).
 

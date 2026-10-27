@@ -1,0 +1,29 @@
+{
+  "schema_version": "haze.sample-scenario.v1",
+  "id": "evidence-investigation",
+  "kind": "pm25",
+  "synthetic": true,
+  "title": "Investigate incomplete PM2.5 evidence",
+  "objective": "Investigate PM2.5 evidence for Sample Coastal District during 2026-10-01T00:00:00Z to 2026-10-01T06:00:00Z. Retrieve the available modeled samples, calculate coverage, distinguish missing values from zero and model output from observations, retain exact evidence and request an independent numerical review. Explain the limits before drawing conclusions.",
+  "scope": {
+    "location": "Sample Coastal District",
+    "period": {
+      "start": "2026-10-01T00:00:00Z",
+      "end": "2026-10-01T06:00:00Z"
+    }
+  },
+  "inputs": {
+    "capture": "pm25-capture.json",
+    "notes": "source-notes.md"
+  },
+  "provenance": {
+    "origin": "locally-authored-synthetic",
+    "authored_at": "2026-10-28T00:00:00Z",
+    "description": "Hand-authored invented inputs for local software demonstrations. No public agency, monitoring station, study, provider or real population supplied these values."
+  },
+  "gaps": [
+    "One null concentration and one absent hourly timestamp.",
+    "Observation coverage, model issuance and grid-cell applicability are unknown.",
+    "No fire attribution or damage inputs are provided."
+  ]
+}

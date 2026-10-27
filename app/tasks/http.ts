@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { sampleModeEnabled } from '../adapters/sample-mode.js';
 import { parseContractJson } from '../contracts/json.js';
 import { TaskError, type TaskIdentity } from '../contracts/tasks.js';
 import {
@@ -141,6 +142,20 @@ export function createTaskHandler(
     });
   const runtime = new TaskRuntime({
     ...options,
+    ...(options.taskTimeoutMs === undefined &&
+    sampleModeEnabled(options.env ?? process.env) &&
+    (options.mode ?? 'live') === 'live'
+      ? { taskTimeoutMs: 900_000 }
+      : {}),
+    limits: {
+      // Scoped sample reports include exact component and review references.
+      // Keep enough bounded output space for the ordinary Manager to finish.
+      ...(sampleModeEnabled(options.env ?? process.env) &&
+      (options.mode ?? 'live') === 'live'
+        ? { max_model_input_bytes: 65_536, max_model_output_tokens: 6400 }
+        : {}),
+      ...options.limits,
+    },
     conversationFactory:
       options.conversationFactory ?? createManagerConversation,
     modelRoutes,
@@ -163,6 +178,7 @@ export function createTaskHandler(
           }),
         }),
   });
+  const traces = runtime.traceExports;
   let dashboard: ReturnType<typeof createDashboardServices> | undefined;
   const applicationServices = (identity: TaskIdentity) => {
     dashboard ??= createDashboardServices({
@@ -196,6 +212,76 @@ export function createTaskHandler(
           'The application is closing.',
         );
       const { url, identity } = authorize(request);
+      const traceRoute =
+        /^\/api\/tasks\/([A-Za-z0-9-]+)\/runs\/([A-Za-z0-9-]+)\/(trace|evidence-bundle)$/.exec(
+          url.pathname,
+        );
+      if (traceRoute) {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        const taskId = traceRoute[1]!,
+          runId = traceRoute[2]!;
+        const attachment = (filename: string, type: string, body: string) => {
+          response.writeHead(200, {
+            'Content-Type': type,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Length': Buffer.byteLength(body),
+          });
+          response.end(body);
+        };
+        const bundle = traceRoute[3] === 'evidence-bundle';
+        const allowed = bundle ? [] : ['after', 'limit', 'format'];
+        for (const key of url.searchParams.keys())
+          if (
+            !allowed.includes(key) ||
+            url.searchParams.getAll(key).length !== 1
+          )
+            throw new TaskError(
+              400,
+              'invalid_query',
+              'Unsupported or duplicate query key.',
+            );
+        if (bundle) {
+          attachment(
+            'evidence-bundle.json',
+            'application/json; charset=utf-8',
+            JSON.stringify(traces.bundle(taskId, runId, identity)),
+          );
+          return;
+        }
+        if (url.searchParams.has('format')) {
+          if (
+            url.searchParams.get('format') !== 'jsonl' ||
+            url.searchParams.size !== 1
+          )
+            throw new TaskError(
+              400,
+              'invalid_query',
+              'JSONL downloads accept only format=jsonl.',
+            );
+          attachment(
+            'events.jsonl',
+            'application/x-ndjson; charset=utf-8',
+            traces.jsonl(taskId, runId, identity),
+          );
+          return;
+        }
+        const after = url.searchParams.get('after') ?? '0';
+        const limit = url.searchParams.get('limit') ?? '100';
+        if (!/^\d{1,15}$/.test(after) || !/^\d{1,3}$/.test(limit))
+          throw new TaskError(
+            400,
+            'invalid_query',
+            'Invalid trace cursor or limit.',
+          );
+        send(
+          200,
+          traces.page(taskId, runId, identity, Number(after), Number(limit)),
+        );
+        return;
+      }
       if (url.pathname === '/api/manager/chat') {
         if (request.method !== 'POST')
           throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');

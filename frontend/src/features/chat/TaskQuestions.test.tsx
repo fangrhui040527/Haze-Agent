@@ -63,7 +63,9 @@ describe('persisted task interactions', () => {
     });
     const markup = renderToStaticMarkup(createElement(TaskQuestions, { run }));
     expect(markup).toContain('Which source should be included?');
-    expect(markup).toContain('Answer this question');
+    expect(markup).toContain('Your answer');
+    expect(markup).toContain('Send answer');
+    expect(markup).not.toContain('human wait');
     expect(markup).toContain('Correction history (1)');
     expect(markup).toContain(`Keep the original passage.
   Include the new scope.`);

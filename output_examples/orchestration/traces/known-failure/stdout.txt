@@ -1,0 +1,84 @@
+[trace:1] 2026-10-27T20:37:16.253Z Manager task_admitted: General objective admitted with bounded resources.
+[trace:2] 2026-10-27T20:37:16.565Z Runtime graph_node: Manager graph: hydrate_authority
+[trace:3] 2026-10-27T20:37:16.598Z Manager assignments_created: Admitted 1 assignments.
+[trace:4] 2026-10-27T20:37:16.608Z Runtime manager.graph.completed: Manager graph completed: hydrate_authority
+[trace:5] 2026-10-27T20:37:16.643Z Runtime graph_node: Manager graph: dispatch_assignments
+[trace:6] 2026-10-27T20:37:16.664Z Runtime manager.graph.completed: Manager graph completed: dispatch_assignments
+[trace:7] 2026-10-27T20:37:16.699Z Runtime graph_node: Manager graph: assemble_context
+[trace:8] 2026-10-27T20:37:16.717Z Manager assignment_started: Exact inputs pinned and revised brief acknowledged.
+[trace:9] 2026-10-27T20:37:16.765Z Runtime manager.graph.completed: Manager graph completed: assemble_context
+[trace:10] 2026-10-27T20:37:16.802Z Runtime graph_node: Manager graph: model_decision
+[trace:11] 2026-10-27T20:37:16.880Z Manager attempt_charged: model attempt charged before dispatch.
+[trace:12] 2026-10-27T20:37:16.904Z Manager attempt_completed: Current attempt receipt persisted.
+[trace:13] 2026-10-27T20:37:16.948Z Runtime manager.graph.completed: Manager graph completed: model_decision
+[trace:14] 2026-10-27T20:37:16.979Z Runtime graph_node: Manager graph: validate_decision
+[trace:15] 2026-10-27T20:37:17.001Z Runtime manager.graph.completed: Manager graph completed: validate_decision
+[trace:16] 2026-10-27T20:37:17.039Z Runtime graph_node: Manager graph: lookup_action
+[trace:17] 2026-10-27T20:37:17.064Z Runtime manager.graph.completed: Manager graph completed: lookup_action
+[trace:18] 2026-10-27T20:37:17.099Z Runtime graph_node: Manager graph: execute_action
+[trace:19] 2026-10-27T20:37:17.176Z Manager assignments_created: Admitted 1 assignments.
+[trace:20] 2026-10-27T20:37:17.193Z Manager manager_plan_revised: Follow the frozen scripted case and exact retained evidence.
+[trace:21] 2026-10-27T20:37:17.225Z Manager manager_decision_applied: Follow the frozen scripted case and exact retained evidence.
+[trace:22] 2026-10-27T20:37:17.261Z Runtime manager.graph.completed: Manager graph completed: execute_action
+[trace:23] 2026-10-27T20:37:17.288Z Runtime graph_node: Manager graph: dispatch_assignments
+[trace:24] 2026-10-27T20:37:17.414Z HazeOps assignment_started: Exact inputs pinned and revised brief acknowledged.
+[trace:25] 2026-10-27T20:37:17.475Z Runtime manager.graph.completed: Manager graph completed: dispatch_assignments
+[trace:26] 2026-10-27T20:37:17.549Z Runtime graph_node: Manager graph: persist_wait
+[trace:27] 2026-10-27T20:37:17.591Z Runtime manager.graph.completed: Manager graph completed: persist_wait
+[trace:28] 2026-10-27T20:37:17.623Z HazeOps graph_node: Specialist graph: hydrate
+[trace:29] 2026-10-27T20:37:17.686Z HazeOps graph_node: Specialist graph: context
+[trace:30] 2026-10-27T20:37:17.759Z HazeOps graph_node: Specialist graph: deterministic
+[trace:31] 2026-10-27T20:37:17.788Z HazeOps assignment_failed: Execution state persisted independently of evidence support.
+[trace:32] 2026-10-27T20:37:17.914Z Runtime graph_node: Manager graph: hydrate_authority
+[trace:33] 2026-10-27T20:37:17.948Z Runtime manager.graph.completed: Manager graph completed: hydrate_authority
+[trace:34] 2026-10-27T20:37:17.993Z Runtime graph_node: Manager graph: dispatch_assignments
+[trace:35] 2026-10-27T20:37:18.018Z Runtime manager.graph.completed: Manager graph completed: dispatch_assignments
+[trace:36] 2026-10-27T20:37:18.051Z Runtime graph_node: Manager graph: assemble_context
+[trace:37] 2026-10-27T20:37:18.183Z Runtime manager.graph.completed: Manager graph completed: assemble_context
+[trace:38] 2026-10-27T20:37:18.217Z Runtime graph_node: Manager graph: model_decision
+[trace:39] 2026-10-27T20:37:18.278Z Manager attempt_charged: model attempt charged before dispatch.
+[trace:40] 2026-10-27T20:37:18.307Z Manager attempt_completed: Current attempt receipt persisted.
+[trace:41] 2026-10-27T20:37:18.349Z Runtime manager.graph.completed: Manager graph completed: model_decision
+[trace:42] 2026-10-27T20:37:18.373Z Runtime graph_node: Manager graph: validate_decision
+[trace:43] 2026-10-27T20:37:18.411Z Runtime manager.graph.completed: Manager graph completed: validate_decision
+[trace:44] 2026-10-27T20:37:18.433Z Runtime graph_node: Manager graph: lookup_action
+[trace:45] 2026-10-27T20:37:18.452Z Runtime manager.graph.completed: Manager graph completed: lookup_action
+[trace:46] 2026-10-27T20:37:18.486Z Runtime graph_node: Manager graph: execute_action
+[trace:47] 2026-10-27T20:37:18.549Z Manager assignments_created: Admitted 1 assignments.
+[trace:48] 2026-10-27T20:37:18.553Z Manager manager_plan_revised: Follow the frozen scripted case and exact retained evidence.
+[trace:49] 2026-10-27T20:37:18.559Z Manager manager_decision_applied: Follow the frozen scripted case and exact retained evidence.
+[trace:50] 2026-10-27T20:37:18.597Z Runtime manager.graph.completed: Manager graph completed: execute_action
+[trace:51] 2026-10-27T20:37:18.620Z Runtime graph_node: Manager graph: dispatch_assignments
+[trace:52] 2026-10-27T20:37:18.700Z HazeOps assignment_started: Exact inputs pinned and revised brief acknowledged.
+[trace:53] 2026-10-27T20:37:18.719Z Runtime manager.graph.completed: Manager graph completed: dispatch_assignments
+[trace:54] 2026-10-27T20:37:18.765Z Runtime graph_node: Manager graph: persist_wait
+[trace:55] 2026-10-27T20:37:18.790Z Runtime manager.graph.completed: Manager graph completed: persist_wait
+[trace:56] 2026-10-27T20:37:18.822Z HazeOps graph_node: Specialist graph: hydrate
+[trace:57] 2026-10-27T20:37:18.872Z HazeOps graph_node: Specialist graph: context
+[trace:58] 2026-10-27T20:37:18.929Z HazeOps graph_node: Specialist graph: deterministic
+[trace:59] 2026-10-27T20:37:19.042Z Runtime artifact_applicability_checked: Produced under current objective and acknowledged lease.
+[trace:60] 2026-10-27T20:37:19.046Z HazeOps artifact_saved: Saved immutable evaluation.finding.
+[trace:61] 2026-10-27T20:37:19.127Z HazeOps graph_node: Specialist graph: completion
+[trace:62] 2026-10-27T20:37:19.171Z Runtime artifact_applicability_checked: Produced under current objective and acknowledged lease.
+[trace:63] 2026-10-27T20:37:19.174Z HazeOps artifact_saved: Saved immutable assignment.summary.
+[trace:64] 2026-10-27T20:37:19.186Z HazeOps assignment_completed: Execution state persisted independently of evidence support.
+[trace:65] 2026-10-27T20:37:19.267Z Runtime graph_node: Manager graph: hydrate_authority
+[trace:66] 2026-10-27T20:37:19.321Z Runtime manager.graph.completed: Manager graph completed: hydrate_authority
+[trace:67] 2026-10-27T20:37:19.376Z Runtime graph_node: Manager graph: dispatch_assignments
+[trace:68] 2026-10-27T20:37:19.398Z Runtime manager.graph.completed: Manager graph completed: dispatch_assignments
+[trace:69] 2026-10-27T20:37:19.429Z Runtime graph_node: Manager graph: assemble_context
+[trace:70] 2026-10-27T20:37:19.508Z Runtime manager.graph.completed: Manager graph completed: assemble_context
+[trace:71] 2026-10-27T20:37:19.533Z Runtime graph_node: Manager graph: model_decision
+[trace:72] 2026-10-27T20:37:19.604Z Manager attempt_charged: model attempt charged before dispatch.
+[trace:73] 2026-10-27T20:37:19.623Z Manager attempt_completed: Current attempt receipt persisted.
+[trace:74] 2026-10-27T20:37:19.649Z Runtime manager.graph.completed: Manager graph completed: model_decision
+[trace:75] 2026-10-27T20:37:19.676Z Runtime graph_node: Manager graph: validate_decision
+[trace:76] 2026-10-27T20:37:19.707Z Runtime manager.graph.completed: Manager graph completed: validate_decision
+[trace:77] 2026-10-27T20:37:19.740Z Runtime graph_node: Manager graph: lookup_action
+[trace:78] 2026-10-27T20:37:19.767Z Runtime manager.graph.completed: Manager graph completed: lookup_action
+[trace:79] 2026-10-27T20:37:19.796Z Runtime graph_node: Manager graph: finalize
+[trace:80] 2026-10-27T20:37:19.927Z Manager task_completed: General result committed with exact sources/work products.
+[trace:81] 2026-10-27T20:37:19.952Z Manager manager_decision_applied: Follow the frozen scripted case and exact retained evidence.
+[trace:82] 2026-10-27T20:37:19.983Z Runtime manager.graph.completed: Manager graph completed: finalize
+{"case":"known-failure","passed":true,"observed":{"status":"completed","completion":"full","specialists":2,"definitions":["eval.fail","eval.produce"],"model_calls":3,"tool_calls":0,"peer_messages":0,"latency_ms":4096,"provider_receipts":[{"response_model":null,"response_id":null,"input_tokens":null,"output_tokens":null,"synthetic":true},{"response_model":null,"response_id":null,"input_tokens":null,"output_tokens":null,"synthetic":true},{"response_model":null,"response_id":null,"input_tokens":null,"output_tokens":null,"synthetic":true}]},"isolation":{"passed":true,"violations":[],"manager_model_calls":3,"specialist_model_calls":0,"specialist_tool_calls":0,"registered_tool_ids":["world.lookup","world.context","world.lineage"],"observed_tool_ids":[]}}
+{"report":"C:\\Users\\ASUS\\Desktop\\Cracks\\Haze-Agent\\.state\\manager-evaluation\\scripted-supervised-1793133435963-9b0c59c3-4990-411d-8188-1ba8af245ad5\\report.json","passed":true,"total":1,"passed_cases":1,"failed_cases":0}

@@ -22,7 +22,7 @@ postgres --(healthy)--> driver --(healthy)--> api --(healthy)--> ui
 
 ## Install
 
-See the [root setup guide](../../../../zetaris_docker_setup.md) for the full
+See the [local installation guide](../../../../docs/Zetaris/install/local-installation.md) for the full
 configuration steps. For a new checkout, copy root `.env.example` to root `.env`
 without overwriting an existing file, then fill in the image references and
 credentials issued with your Zetaris download. Keep the issued driver, API and

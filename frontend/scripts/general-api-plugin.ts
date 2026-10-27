@@ -7,6 +7,7 @@ import { createTaskHandler } from '../../app/tasks/http.ts';
 import { TaskError } from '../../app/contracts/tasks.ts';
 import { resolveWorldAcceptancePolicy } from '../../app/tasks/world-policy.ts';
 import { envFileCandidates } from '../../app/adapters/zetaris/scripts/env-files.ts';
+import { sampleStateDirectory } from '../../app/adapters/sample-mode.ts';
 
 /** One local application API for dashboard, HazeOps, tasks and the World Model. */
 export function generalApiPlugin(): Plugin {
@@ -50,7 +51,7 @@ export function generalApiPlugin(): Plugin {
           stateDirectory: resolve(
             import.meta.dirname,
             '../..',
-            env.HAZE_TASK_STATE_DIR ?? env.STATE_DIR ?? '.state/general-v2',
+            sampleStateDirectory(env),
           ),
         });
         closing = undefined;

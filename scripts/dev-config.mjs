@@ -318,6 +318,17 @@ export function createDevConfig({ root, env = process.env }) {
         ),
       ),
     );
+    // A root .env commonly sets STATE_DIR to the live default. Sample evidence
+    // must have a separate store unless the operator chooses a task directory.
+    if (
+      !['', '0', 'false'].includes(
+        effective.SAMPLE_MODE?.trim().toLowerCase() ?? '',
+      ) &&
+      !effective.HAZE_TASK_STATE_DIR
+    ) {
+      effective.HAZE_TASK_STATE_DIR = '.state/sample-mode';
+      sources.HAZE_TASK_STATE_DIR = 'sample mode default';
+    }
     credentialKeys = new Set();
     try {
       const profiles =
@@ -529,6 +540,11 @@ export function createDevConfig({ root, env = process.env }) {
   load();
   return {
     execute,
+    launchEnvironment() {
+      // Resolve the same precedence used by config show before Docker startup.
+      // The returned values are server-only and must never be logged wholesale.
+      return { ...load().effective };
+    },
     get keys() {
       return [...Object.keys(settings), ...credentialKeys].sort();
     },

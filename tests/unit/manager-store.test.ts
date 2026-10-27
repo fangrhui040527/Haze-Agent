@@ -476,8 +476,11 @@ describe('durable Manager coordination', () => {
         .accepted,
     ).toBe(false);
     expect(() => store.applyManagerDecision(task.id, fence)).toThrow('fenced');
-    expect(store.events(task.id, identity).events.at(-2)?.type).toBe(
-      'manager_recovery_paused',
+    expect(
+      store.events(task.id, identity).events.map((event) => event.type),
+    ).toContain('manager_recovery_paused');
+    expect(store.readTraceBatch().at(-1)?.action).toBe(
+      'manager_decision_failed',
     );
   });
   it('requires explicit linked continuation for unfinished historical Manager runs', () => {

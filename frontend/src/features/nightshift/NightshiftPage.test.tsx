@@ -53,7 +53,8 @@ it('offers manual-only jobs and separate browser observation while loading', () 
   expect(markup).toContain('Admitted tasks keep their original routes');
   expect(markup).toContain('direct calls have no job-chain spend cap');
   expect(markup).toContain('Submit job');
-  expect(markup).toContain('Stop browser observation');
+  expect(markup).toContain('Pause live updates');
+  expect(markup).toContain('Technical details');
   expect(markup).toContain('zero automatic follow-ups');
   expect(markup).toContain('Cloud allowed');
   expect(markup).toContain('no cloud spend cap');
