@@ -78,6 +78,9 @@ import {
   createPilotTools,
   readPilotTaskView,
 } from './capabilities/damage-reduction-planning/pilot-workflow.js';
+import { pm25FinalRenderer } from './capabilities/pm25/final-answer.js';
+import { damageAccountFinalRenderer } from './capabilities/damage-appraisal/final-answer.js';
+import { reductionFinalRenderer } from './capabilities/damage-reduction-planning/final-answer.js';
 
 /** Concrete provider routing stays registered at the application boundary. */
 export function createModelRouteRegistry(
@@ -171,6 +174,13 @@ export function createExecutionRegistry(options: {
   });
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
+  // Quantitative answers are rendered from reviewed artifacts, not Manager prose.
+  registry.registerFinalRenderer(pm25.card.id, pm25FinalRenderer);
+  registry.registerFinalRenderer(
+    calculatedDamage.card.id,
+    damageAccountFinalRenderer,
+  );
+  registry.registerFinalRenderer(reduction.card.id, reductionFinalRenderer);
   for (const assignment of [
     ...createDamageReductionAssignments(),
     ...createDamageAppraisalAssignments(),

@@ -161,6 +161,9 @@ export const jobsReadinessSchema = z.strictObject({
   schema_hash: z.string().nullable(),
   can_reconcile: z.boolean(),
   reason: z.string().nullable(),
+  /** Reviewed source-set and ready cloud-lane fingerprints bound by release evidence. */
+  installation_fingerprint: z.string().nullable().optional(),
+  roster_fingerprint: z.string().nullable().optional(),
   cancellation_idempotent: z.literal(false),
   options: z.strictObject({
     judges: z.array(z.string()),

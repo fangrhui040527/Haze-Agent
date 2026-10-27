@@ -34,6 +34,19 @@ export function AutomaticReleaseDetails({
             </strong>
             . {data.reason}
           </p>
+          {data.schema_version === 'haze.nightshift.automatic.readiness.v2' ? (
+            <p>
+              Supported automatic scope: {data.scope.privacy.join(', ')} only;
+              at most {data.scope.max_total_runs} total runs with{' '}
+              {data.scope.max_automatic_followups} automatic follow-up,{' '}
+              {data.scope.max_concurrent_jobs} concurrent native job,{' '}
+              {data.scope.max_jobs} jobs in total and{' '}
+              {data.scope.max_attempts_per_job} attempt per job, within a{' '}
+              {Math.round(data.scope.max_lifetime_seconds / 60)}-minute absolute
+              chain lifetime. Cloud jobs follow the runtime&apos;s monetary
+              policy; no dollar ceiling can be enforced.
+            </p>
+          ) : null}
           {data.evidence_kind === 'fixture' ? (
             <p role="status">
               Fixture evidence proves control flow only. It does not establish

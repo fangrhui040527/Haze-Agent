@@ -180,6 +180,11 @@ export class AutomaticChainService {
     this.store.nightshift.configureAutomatic({
       enabled: this.latestReadiness.released && this.latestReadiness.ready,
       evidence_id: this.latestReadiness.evidence_id,
+      scope:
+        this.latestReadiness.schema_version ===
+        'haze.nightshift.automatic.readiness.v2'
+          ? this.latestReadiness.scope
+          : null,
     });
     return structuredClone(this.latestReadiness);
   }
