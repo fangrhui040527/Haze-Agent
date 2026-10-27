@@ -12,15 +12,30 @@ const reasonLabel = {
   stopped: 'Stopped work',
 } as const;
 
+/** Anything here the user could still be waiting on; a stopped, empty view is not. */
+export function hasPendingExternalWork(data: ExternalWaitView): boolean {
+  const reason = data.capacity.wait_reason;
+  return (
+    reason === 'compute' ||
+    reason === 'capacity' ||
+    data.capacity.queue !== null ||
+    data.waits.length > 0 ||
+    data.deliveries.length > 0
+  );
+}
+
 /** This observer has no mutation path; stored authority remains on the server. */
 export function ExternalWaitObserver({
   taskId,
   jobId,
   observing = true,
+  compact = false,
 }: {
   taskId: string;
   jobId?: string;
   observing?: boolean;
+  /** Task report: render only while external work is pending, without operator detail. */
+  compact?: boolean;
 }) {
   const [client] = useState(() => new NightshiftClient());
   const [snapshot, setSnapshot] = useState<ExternalWaitView | null>(null);
@@ -60,6 +75,15 @@ export function ExternalWaitObserver({
     };
   }, [client, taskId, active, refresh]);
   const data = snapshot?.task_id === taskId ? snapshot : null;
+  if (compact) {
+    if (!data || !hasPendingExternalWork(data)) return null;
+    return (
+      <section className={styles.panel} aria-label="External waits">
+        <h2>Waiting on external work</h2>
+        <ExternalWaitDetails data={data} jobId={jobId} compact />
+      </section>
+    );
+  }
   return (
     <section className={styles.panel} aria-label="External waits and capacity">
       <h2>External waits and Haze capacity</h2>
@@ -103,9 +127,11 @@ export function ExternalWaitObserver({
 export function ExternalWaitDetails({
   data,
   jobId,
+  compact = false,
 }: {
   data: ExternalWaitView;
   jobId?: string;
+  compact?: boolean;
 }) {
   const waits = jobId
     ? data.waits.filter((wait) =>
@@ -118,12 +144,14 @@ export function ExternalWaitDetails({
   const capacity = data.capacity;
   return (
     <>
-      <p>
-        <Link to={`/task/${encodeURIComponent(data.task_id)}`}>
-          Owning task
-        </Link>{' '}
-        <code>{data.task_id}</code>
-      </p>
+      {!compact && (
+        <p>
+          <Link to={`/task/${encodeURIComponent(data.task_id)}`}>
+            Owning task
+          </Link>{' '}
+          <code>{data.task_id}</code>
+        </p>
+      )}
       <p role="status">
         <strong>
           {capacity.wait_reason
@@ -132,10 +160,12 @@ export function ExternalWaitDetails({
         </strong>
         {' · '}Task permit: {capacity.permit}.
       </p>
-      <p>
-        Haze allows two task permits and two shared specialist slots. Remote job
-        reservations are counted separately.
-      </p>
+      {!compact && (
+        <p>
+          Haze allows two task permits and two shared specialist slots. Remote
+          job reservations are counted separately.
+        </p>
+      )}
       {capacity.queue ? (
         <p>
           Capacity queue: {capacity.queue.status}; first eligible sequence{' '}
@@ -145,7 +175,7 @@ export function ExternalWaitDetails({
             <> Reason: {capacity.queue.reason}.</>
           ) : null}
         </p>
-      ) : (
+      ) : compact ? null : (
         <p>No capacity queue entry is recorded.</p>
       )}
       {capacity.wait_reason === 'stopped' ? (
@@ -155,7 +185,9 @@ export function ExternalWaitDetails({
           grant.
         </p>
       ) : null}
-      <h3>Required dependencies and target revisions</h3>
+      {compact && !waits.length ? null : (
+        <h3>Required dependencies and target revisions</h3>
+      )}
       {waits.length ? (
         <ol className={styles.events}>
           {waits.map((wait) => (
@@ -193,12 +225,14 @@ export function ExternalWaitDetails({
             </li>
           ))}
         </ol>
-      ) : (
+      ) : compact ? null : (
         <p>
           No external dependencies are recorded{jobId ? ' for this job' : ''}.
         </p>
       )}
-      <h3>Retained result deliveries</h3>
+      {compact && !deliveries.length ? null : (
+        <h3>Retained result deliveries</h3>
+      )}
       {deliveries.length ? (
         <ol className={styles.events}>
           {deliveries.map((delivery) => (
@@ -231,17 +265,19 @@ export function ExternalWaitDetails({
             </li>
           ))}
         </ol>
-      ) : (
+      ) : compact ? null : (
         <p>
           No terminal result delivery is recorded. Remote progress and receipt
           retrieval remain visible on each job.
         </p>
       )}
-      <p className={styles.note}>
-        Retained bytes do not grant execution authority or establish evidence
-        acceptance. Current permissions, exact references and independent review
-        still apply.
-      </p>
+      {!compact && (
+        <p className={styles.note}>
+          Retained bytes do not grant execution authority or establish evidence
+          acceptance. Current permissions, exact references and independent
+          review still apply.
+        </p>
+      )}
     </>
   );
 }

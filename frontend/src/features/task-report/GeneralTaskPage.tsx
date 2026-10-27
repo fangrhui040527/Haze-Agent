@@ -7,13 +7,15 @@ import {
   useWorldModelStatus,
   type WorldModelStatusState,
 } from './useWorldModelStatus.ts';
-import { Badge } from '../../shared/ui/Badge.tsx';
+import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
+import { Badge, type Tone } from '../../shared/ui/Badge.tsx';
 import { Button, buttonClass } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
 import { ExternalWaitObserver } from '../nightshift/ExternalWaits.tsx';
 import { TraceTimeline } from './TraceTimeline.tsx';
+import { timeAgo } from '../../shared/lib/time.ts';
 
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
@@ -38,6 +40,23 @@ export function GeneralTaskPage({ taskId }: { taskId: string }) {
   );
 }
 
+const STATUS: Record<TaskRecord['status'], { label: string; tone: Tone }> = {
+  queued: { label: 'Queued', tone: 'neutral' },
+  running: { label: 'Running', tone: 'accent' },
+  waiting: { label: 'Waiting for input', tone: 'info' },
+  paused: { label: 'Paused', tone: 'neutral' },
+  completed: { label: 'Completed', tone: 'ok' },
+  failed: { label: 'Failed', tone: 'error' },
+  timed_out: { label: 'Timed out', tone: 'warn' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
+};
+
+const STOPPED: Partial<Record<TaskRecord['status'], string>> = {
+  timed_out: 'The run reached its deadline before finishing.',
+  failed: 'The run stopped with an error.',
+  cancelled: 'This task was cancelled.',
+};
+
 /** The report renders saved state and actual receipts without simulated steps. */
 export function GeneralTaskReport({
   taskId,
@@ -50,21 +69,22 @@ export function GeneralTaskReport({
 }) {
   const task = run.task?.id === taskId ? run.task : null;
   const record = task?.record;
+  const status = record ? STATUS[record.status] : null;
   const error =
     record?.error?.message ??
     run.observationError ??
     (!record ? run.operationError : null) ??
     (record && ['failed', 'timed_out'].includes(record.status)
-      ? `Task ended with server status ${record.status}.`
+      ? `Task ${STATUS[record.status].label.toLowerCase()}.`
       : null) ??
     (run.status === 'failed' ? 'Task observation failed.' : null);
   const loading = !record && run.status === 'idle' && !error;
   const observing = ['running', 'waiting', 'paused'].includes(run.status);
-  const receipts = run.events.flatMap((event) =>
-    event.type === 'task_event' && event.receipt.task_id === taskId
-      ? [event.receipt]
-      : [],
-  );
+  const statusText = loading ? 'Loading the saved task...' : run.statusText;
+  const stopped = record ? STOPPED[record.status] : undefined;
+  const openQuestions =
+    record?.questions.some((question) => question.status === 'open') ?? false;
+  const nextStep = Boolean(stopped) || openQuestions;
   return (
     <article
       className={styles.page}
@@ -72,94 +92,88 @@ export function GeneralTaskReport({
     >
       <BackLink>Back to the dashboard</BackLink>
       <div className={styles.doc}>
-        <h1 className={styles.title}>Task report</h1>
-        {record && (
-          <blockquote className={styles.quote}>
-            <span className={styles.label}>Original objective</span>
-            <p className={styles.block}>{record.original_request.objective}</p>
-          </blockquote>
+        <span className={styles.label}>Task report</span>
+        <h1 className={styles.title}>
+          {record?.original_request.objective ?? 'Task report'}
+        </h1>
+        {record && status && (
+          <p className={styles.meta}>
+            <Badge tone={status.tone}>{status.label}</Badge>
+            {record.mode !== 'live' && <Badge>{record.mode} mode</Badge>}
+            <span>
+              Updated{' '}
+              <time
+                dateTime={record.updated_at}
+                title={new Date(record.updated_at).toLocaleString()}
+              >
+                {timeAgo(record.updated_at, Date.now())}
+              </time>
+            </span>
+          </p>
         )}
-        <p className={styles.meta}>
-          {record && (
-            <>
-              <Badge tone={record.status === 'failed' ? 'warn' : 'neutral'}>
-                Server task: {record.status}
-              </Badge>
-              <span>Execution mode: {record.mode}.</span>
-              <span>
-                Last saved:{' '}
-                <time dateTime={record.updated_at}>{record.updated_at}</time>
-              </span>
-            </>
-          )}
-        </p>
-        <p className={styles.placeholder} role="status">
-          {(loading || run.status === 'running') && <Spinner />}
-          {loading ? 'Loading the saved task...' : run.statusText}
-        </p>
-        {observing && (
-          <Button size="small" variant="ghost" onClick={run.cancel}>
-            Stop waiting
-          </Button>
+        {(loading || (run.status !== 'idle' && statusText !== error)) && (
+          <p className={styles.placeholder} role="status">
+            {(loading || run.status === 'running') && <Spinner />}
+            {statusText}
+            {observing && (
+              <Button size="small" variant="ghost" onClick={run.cancel}>
+                Stop waiting
+              </Button>
+            )}
+          </p>
         )}
         {error && (
           <p className={styles.error} role="alert">
             {error}
           </p>
         )}
-        {record && (
-          <>
-            <TaskQuestions run={run} />
-          </>
-        )}
-        {record && worldModel && <WorldModelStatus state={worldModel} />}
-        {record && <ExternalWaitObserver taskId={record.id} />}
-      </div>
-      {record && (
-        <p className={styles.back}>
-          <Link
-            to={`/manager/${encodeURIComponent(record.id)}`}
-            className={buttonClass('secondary', 'small')}
-          >
-            Open Manager workspace
-          </Link>
-        </p>
-      )}
-      {record && <TraceTimeline record={record} />}
-      <details open={!record?.result || observing}>
-        <summary>Actual execution receipts ({receipts.length})</summary>
-        {receipts.length > 0 ? (
-          <ol className={styles.steps}>
-            {receipts.map((receipt) => (
-              <li key={receipt.cursor}>
-                <div>
+        {record &&
+          (nextStep ? (
+            <section
+              className={styles.nextStep}
+              aria-labelledby="next-step-title"
+            >
+              <h2 id="next-step-title" className={styles.heading}>
+                Next step
+              </h2>
+              {stopped && (
+                <>
                   <p className={styles.block}>
-                    <strong>{receipt.actor}</strong>: {receipt.message}
+                    {stopped} Continue to start a linked run with fresh
+                    resources; saved work is kept.
                   </p>
-                  <small>
-                    <time dateTime={receipt.at}>{receipt.at}</time> -{' '}
-                    {receipt.type} - run {receipt.run_id}, revision{' '}
-                    {receipt.objective_revision}
-                  </small>
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className={styles.placeholder}>
-            No execution receipts loaded yet.
-          </p>
-        )}
-      </details>
+                  <Button
+                    size="small"
+                    onClick={() => void run.control('continue').catch(() => {})}
+                    disabled={run.operationPending}
+                  >
+                    Continue in a new run
+                  </Button>
+                </>
+              )}
+              <TaskQuestions run={run} />
+              {run.operationPending && (
+                <p role="status">Saving task change...</p>
+              )}
+              {run.operationError && (
+                <p className={styles.error} role="alert">
+                  {run.operationError}
+                </p>
+              )}
+            </section>
+          ) : (
+            <TaskQuestions run={run} />
+          ))}
+        {record && worldModel?.data?.records.length ? (
+          <WorldModelStatus state={worldModel} />
+        ) : null}
+        {record && <ExternalWaitObserver taskId={record.id} compact />}
+      </div>
       {record?.result && task && (
         <section className={styles.doc} aria-labelledby="task-result-title">
           <h2 id="task-result-title" className={styles.heading}>
             Saved result
           </h2>
-          <p className={styles.meta}>
-            Current saved task state · run {record.current_run_id}. Historical
-            trace selection above does not change this panel.
-          </p>
           <TaskResult
             evidence={{
               taskUrl: task.taskUrl,
@@ -172,8 +186,20 @@ export function GeneralTaskReport({
           />
         </section>
       )}
-      {task && (
+      {record && (
+        <TraceTimeline
+          record={record}
+          defaultCollapsed={Boolean(record.result) || nextStep}
+        />
+      )}
+      {record && task && (
         <p className={styles.back}>
+          <Link
+            to={`/manager/${encodeURIComponent(record.id)}`}
+            className={buttonClass('secondary', 'small')}
+          >
+            Open Manager workspace
+          </Link>{' '}
           <a href={task.taskUrl} target="_blank" rel="noreferrer">
             Saved task record
           </a>

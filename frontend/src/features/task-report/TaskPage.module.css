@@ -307,3 +307,28 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+.nextStep {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.nextStep > * {
+  margin-block: 0;
+}
+
+.nextStep > button {
+  justify-self: start;
+}
+
+.collapsible > summary {
+  cursor: pointer;
+}
+
+.collapsible > summary > h2 {
+  display: inline;
+}
