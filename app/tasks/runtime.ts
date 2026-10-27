@@ -1,4 +1,15 @@
 import { randomUUID } from 'node:crypto';
+import type {
+  ManagerConversationFactory,
+  ManagerConversationService,
+  ManagerConversationResolution,
+} from '../orchestration/conversation.js';
+import {
+  managerChatRequestSchema,
+  managerChatResponseSchema,
+  type ManagerChatResponse,
+} from '../contracts/manager-chat.js';
+import { ConversationTurnStore } from './conversation-store.js';
 import {
   createManagerReferenceContract,
   managerReferenceOutputSchema,
@@ -122,6 +133,7 @@ export interface TaskRuntimeOptions {
   mode?: ExecutionMode;
   model?: AgentModel;
   modelRoutes?: ModelRouteService;
+  conversationFactory?: ManagerConversationFactory;
   nightshiftJobs?: NightshiftJobPort;
   nightshiftPollIntervalMs?: number;
   /** Trusted server release evidence; no environment, browser or model may set it. */
@@ -209,6 +221,13 @@ export class TaskRuntime {
   private model: AgentModel | undefined;
   private readonly modelRouteRegistry: ModelRouteService;
   private closed = false;
+  private conversation: ManagerConversationService | undefined;
+  private conversationTurns: ConversationTurnStore | undefined;
+  private readonly conversationAbort = new AbortController();
+  private readonly conversationPending = new Map<
+    string,
+    Promise<ManagerChatResponse>
+  >();
   private readonly externalWaitTimer: ReturnType<typeof setInterval>;
   private readonly extensions = new Map<string, TaskRuntimeExtension>();
   private readonly extensionTaskViews = new Map<
@@ -579,6 +598,176 @@ export class TaskRuntime {
     return this.model
       ? createInjectedRouteSnapshot(this.model.selection)
       : this.modelRouteRegistry.snapshot();
+  }
+  /** Chat decisions have no execution lease and never await task completion. */
+  async managerChat(
+    value: unknown,
+    key: string,
+    identity: TaskIdentity = localTaskIdentity,
+  ): Promise<ManagerChatResponse> {
+    if (this.closed)
+      throw new TaskError(503, 'runtime_closed', 'The Manager is stopping.');
+    this.capabilities(identity);
+    const parsed = managerChatRequestSchema.safeParse(value);
+    if (!parsed.success)
+      throw new TaskError(
+        400,
+        'invalid_chat_request',
+        'Send a bounded haze.manager.chat.request.v1 conversation turn.',
+      );
+    const request = parsed.data;
+    const ledger = (this.conversationTurns ??= new ConversationTurnStore(
+      this.store,
+    ));
+    const existing = ledger.begin(request, request, key, identity);
+    if (existing.response !== null)
+      return managerChatResponseSchema.parse(JSON.parse(existing.response));
+    const pendingKey = JSON.stringify([
+      identity.principal,
+      identity.workspace,
+      request.conversation_id,
+      request.turn_id,
+    ]);
+    const pending = this.conversationPending.get(pendingKey);
+    if (pending) return pending;
+    const execute = async (): Promise<ManagerChatResponse> => {
+      if (!this.options.conversationFactory)
+        throw new TaskError(
+          503,
+          'chat_unavailable',
+          'A Manager conversation controller has not been registered.',
+        );
+      this.conversation ??= this.options.conversationFactory({
+        store: this.store,
+        mode: this.executionMode,
+        env: this.options.env ?? process.env,
+        ...(this.model ? { model: this.model } : {}),
+        modelRoutes: this.modelRouteRegistry,
+        diagnostic: (category, error) => ledger.diagnostic(category, error),
+      });
+      const resolution: ManagerConversationResolution =
+        existing.resolution !== null
+          ? (JSON.parse(existing.resolution) as ManagerConversationResolution)
+          : await this.conversation.resolve(
+              request,
+              identity,
+              AbortSignal.any([
+                this.conversationAbort.signal,
+                AbortSignal.timeout(120_000),
+              ]),
+            );
+      if (this.closed)
+        throw new TaskError(
+          503,
+          'runtime_closed',
+          'The Manager is stopping. Retry this saved turn after restart.',
+        );
+      ledger.resolve(request, identity, resolution);
+      try {
+        return ledger.finish(request, identity, () => {
+          const common = {
+            schema_version: 'haze.manager.chat.response.v1' as const,
+            paragraphs: resolution.paragraphs,
+            citations: resolution.citations,
+          };
+          if (resolution.kind === 'start_task') {
+            // Only the user's workspace setting grants optional execution tools.
+            const taskRequest = { ...resolution.request };
+            delete taskRequest.nightshift_tools;
+            const permission = Boolean(
+              request.nightshift_tools?.length &&
+              request.nightshift_permission_id &&
+              ledger.claimPermission(
+                request.nightshift_permission_id,
+                request,
+                identity,
+              ),
+            );
+            const admitted = this.admit(
+              {
+                ...taskRequest,
+                ...(permission
+                  ? { nightshift_tools: request.nightshift_tools }
+                  : {}),
+              },
+              `chat-admit-${request.conversation_id}-${request.turn_id}`,
+              identity,
+            );
+            return managerChatResponseSchema.parse({
+              ...common,
+              kind: 'task_admitted',
+              task: {
+                task_id: admitted.task_id,
+                title: resolution.title,
+                summary: 'Task admitted. The Manager is preparing the work.',
+                status_url: admitted.status_url,
+              },
+            });
+          }
+          if (resolution.kind === 'answer_task') {
+            const { task_id, ...question } = resolution.answer_to;
+            this.update(
+              task_id,
+              {
+                ...question,
+                schema_version: 'haze.task.update.v3',
+                kind: 'clarification',
+                passage: resolution.passage,
+              },
+              `chat-answer-${request.conversation_id}-${request.turn_id}`,
+              identity,
+            );
+            const task = this.store.read(task_id, identity);
+            return managerChatResponseSchema.parse({
+              ...common,
+              kind: 'task_updated',
+              task: {
+                task_id,
+                title: task.original_request.objective.slice(0, 240),
+                summary:
+                  'Your answer was saved. The Manager can continue the task.',
+                status_url: `/api/tasks/${task_id}`,
+              },
+            });
+          }
+          return managerChatResponseSchema.parse({
+            ...common,
+            kind: resolution.kind,
+            ...('error' in resolution && resolution.error
+              ? { error: resolution.error }
+              : {}),
+          });
+        });
+      } catch (error) {
+        const category =
+          error instanceof TaskError
+            ? error.status === 409
+              ? 'task_conflict'
+              : 'task_admission_failed'
+            : 'task_response_invalid';
+        ledger.diagnostic(category, error);
+        return ledger.finish(request, identity, () =>
+          managerChatResponseSchema.parse({
+            schema_version: 'haze.manager.chat.response.v1',
+            kind: 'reply',
+            citations: [],
+            paragraphs: [
+              error instanceof TaskError
+                ? error.message
+                : 'The Manager could not validate the task response. The last confirmed task state is still available in the Manager workspace.',
+            ],
+            error: { category, retryable: false },
+          }),
+        );
+      }
+    };
+    const operation = execute();
+    this.conversationPending.set(pendingKey, operation);
+    try {
+      return await operation;
+    } finally {
+      this.conversationPending.delete(pendingKey);
+    }
   }
   admit(
     value: unknown,
@@ -3907,6 +4096,7 @@ export class TaskRuntime {
   async close() {
     if (this.closed) return;
     this.closed = true;
+    this.conversationAbort.abort(new Error('Manager runtime closed.'));
     clearInterval(this.externalWaitTimer);
     for (const task of this.store.listRecoverableTasks()) {
       if (!['queued', 'running'].includes(task.status)) continue;
@@ -3921,6 +4111,8 @@ export class TaskRuntime {
         expected_objective_revision: task.objective_revision,
       });
     }
+    if (this.conversationPending.size)
+      await Promise.allSettled(this.conversationPending.values());
     await this.automaticChains.close();
     await this.nightshift.close();
     await this.dispatcher.close();

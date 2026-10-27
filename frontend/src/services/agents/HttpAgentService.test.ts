@@ -280,6 +280,34 @@ describe('general task browser service (fixture wiring)', () => {
     ).rejects.toThrow('Objective revision is stale.');
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it('distinguishes transport failures from task contract errors and preserves diagnostics', async () => {
+    const cause = new TypeError('Connection reset');
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(cause);
+    await expect(
+      new HttpAgentService('', fetcher).watchTask(
+        taskId,
+        () => {},
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({
+      category: 'transport',
+      retryable: true,
+      cause,
+    });
+    const malformed = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(json({ events: 'not a page' }));
+    await expect(
+      new HttpAgentService('', malformed).watchTask(
+        taskId,
+        () => {},
+        new AbortController().signal,
+      ),
+    ).rejects.toMatchObject({
+      category: 'task_response_validation',
+      retryable: false,
+    });
+  });
   it('stops a browser wait without inventing server cancellation', async () => {
     const controller = new AbortController();
     const fetcher = vi

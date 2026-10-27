@@ -1597,6 +1597,128 @@ export class TaskStore {
       });
     });
   }
+  /** Read governed evidence for chat without admitting a task or acquiring grants. */
+  conversationWorldLookup(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    input: WorldLookupInput,
+  ) {
+    const scope = { ...identity, mode };
+    const records: WorldRecord[] = [];
+    const current_acceptances: {
+      subject: string;
+      acceptance: WorldAcceptanceOutcome;
+    }[] = [];
+    for (const record of this.world.lookup(scope, input)) {
+      try {
+        const context = this.conversationWorldContext(
+          identity,
+          mode,
+          record.ref.id,
+        );
+        records.push(context.record);
+        current_acceptances.push(
+          ...context.acceptances.map((acceptance) => ({
+            subject: record.ref.id,
+            acceptance,
+          })),
+        );
+      } catch (error) {
+        if (
+          error instanceof TaskError &&
+          ['world_support_unavailable', 'world_record_not_found'].includes(
+            error.code,
+          )
+        )
+          continue;
+        throw error;
+      }
+    }
+    return worldLookupOutputSchema.parse({
+      schema_version: 'haze.world.lookup.v1',
+      records,
+      current_acceptances: current_acceptances.slice(0, 250),
+    });
+  }
+
+  /** Acceptance is always re-evaluated against current policy and source access. */
+  conversationWorldContext(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    recordId: string,
+  ): WorldContextOutput {
+    const scope = { ...identity, mode };
+    const context = this.world.context(scope, recordId);
+    if (!context)
+      return fail(
+        'world_record_not_found',
+        'World Model record not found.',
+        404,
+      );
+    this.requireConversationWorldSupportAccess(
+      identity,
+      mode,
+      this.world.supportArtifacts(scope, recordId),
+    );
+    const acceptances = context.acceptances.flatMap((acceptance) => {
+      const current = this.world.currentAcceptance(scope, acceptance.id, {
+        policyHash: this.worldAcceptancePolicy.sha256,
+        supportIsCurrent: (outcome) =>
+          this.worldSupportIsCurrent(identity, mode, outcome),
+      });
+      return current ? [current] : [];
+    });
+    return worldContextOutputSchema.parse({ ...context, acceptances });
+  }
+
+  private requireConversationWorldSupportAccess(
+    identity: TaskIdentity,
+    mode: TaskRecord['mode'],
+    refs: ArtifactRef[],
+  ): void {
+    const visited = new Set<string>();
+    const pending = [...refs];
+    while (pending.length) {
+      const ref = pending.pop()!;
+      const key = `${ref.id}:${ref.version}:${ref.sha256}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (visited.size > 1024)
+        fail(
+          'world_support_unavailable',
+          'World Model support exceeds the bounded conversation access check.',
+          403,
+        );
+      let artifact: Artifact;
+      try {
+        artifact = this.artifactMetadata(ref.id, identity, ref);
+        const source = artifact.task_id
+          ? this.core(artifact.task_id, identity)
+          : undefined;
+        if (
+          (source && source.mode !== mode) ||
+          artifact.required_tools.some(
+            (tool) => !source?.permissions.tools.includes(tool),
+          ) ||
+          (source &&
+            this.applicability(
+              source.id,
+              artifact.id,
+              source.objective_revision,
+            )?.current === false)
+        )
+          throw new Error('Source support is no longer available.');
+      } catch {
+        return fail(
+          'world_support_unavailable',
+          'Current source access prevents World Model context disclosure.',
+          403,
+        );
+      }
+      pending.push(...artifact.dependencies);
+    }
+  }
+
   worldLookup(
     taskId: string,
     identity: TaskIdentity,

@@ -5,62 +5,23 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react';
-import { Link, useNavigate } from 'react-router';
-import {
-  AgentRunError,
-  AgentTaskCancelledError,
-} from '../../services/agents/index.ts';
-import { useLocalStorageState, useNow } from '../../shared/hooks/hooks.ts';
-import { isAbortError } from '../../shared/lib/delay.ts';
-import { formatDuration } from '../../shared/lib/time.ts';
-import { readLocal } from '../../shared/lib/store.ts';
-import type {
-  AgentAnswer,
-  AskRequest,
-  Citation,
-} from '../../shared/types/agents.ts';
-import { Badge } from '../../shared/ui/Badge.tsx';
+import { Link } from 'react-router';
+import type { ManagerChatQuestion } from '../../../../app/contracts/manager-chat.ts';
+import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
-import type { AgentRun } from '../dashboard/useAgentRun.ts';
 import { TaskResult } from './TaskResult.tsx';
-import { TaskControls } from './TaskControls.tsx';
+import {
+  reconcileTaskMessages,
+  type ChatMessage,
+} from './conversationState.ts';
+import { useManagerConversation } from './useManagerConversation.ts';
 import styles from './ChatPanel.module.css';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'agents';
-  at: string;
-  text?: string;
-  paragraphs?: string[];
-  citations?: Citation[];
-  source?:
-    | AgentAnswer['source']
-    | 'model'
-    | 'template_fallback'
-    | 'computed_demo'
-    | 'input_required';
-  /** Old browser history is retained as text, without loading retired contracts. */
-  scheduling?: unknown;
-  agentExecution?: unknown;
-  evidence?: AgentAnswer['evidence'];
-  task?: AgentAnswer['task'];
-  stale?: boolean;
-  state: 'pending' | 'done' | 'error' | 'cancelled' | 'task_cancelled';
-  error?: string;
-  retryable?: boolean;
-  /** For retry. */
-  question?: string;
-  focusItemId?: string | null;
-  idempotencyKey?: string;
-  contextRefs?: AskRequest['contextRefs'];
-  scope?: AskRequest['scope'];
-  nightshiftTools?: AskRequest['nightshiftTools'];
-}
 
 const EXAMPLE_PROMPTS = [
   'Explain the difference between modeled PM2.5 estimates and sensor observations.',
-  'Summarize the PM2.5 evidence available for Kuala Lumpur during 2026-10-23 to 2026-10-24, distinguish modeled values from observations, and identify coverage gaps.',
+  'Latest haze information for Singapore',
+  'Investigate the PM2.5 evidence for Kuala Lumpur during 2026-10-23 to 2026-10-24 and write a report.',
 ];
 
 const SOURCE_LABEL = {
@@ -74,10 +35,6 @@ const SOURCE_LABEL = {
   evidence_fixture: 'Fixture evidence · model orchestration',
 } as const;
 
-const MAX_STORED = 50;
-const newId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-
 export interface ChatPrefill {
   question: string;
   focusItemId: string | null;
@@ -90,398 +47,173 @@ export function ChatPanel({
   run: AgentRun;
   prefill: ChatPrefill | null;
 }) {
-  const navigate = useNavigate();
-  // Saved answers stay in this browser, including text from retired demo results.
-  const [messages, setMessages] = useLocalStorageState<ChatMessage[]>(
-    'haze.chat.v1',
-    readLocal<ChatMessage[]>('hazewatch.chat.v1', []),
-  );
+  const conversation = useManagerConversation(run.task, run.observeTask);
   const [draft, setDraft] = useState('');
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
-  const [nightshiftEnabled, setNightshiftEnabled] = useState(false);
+  const [answerTo, setAnswerTo] = useState<ManagerChatQuestion>();
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const historyRef = useRef<HTMLDivElement | HTMLOListElement>(null);
-  // Latest messages for async callbacks (an answer can arrive after several re-renders).
-  const messagesRef = useRef(messages);
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+  const messages =
+    run.task?.record &&
+    !conversation.messages.some(
+      (message) => message.taskCard?.task_id === run.task?.id,
+    )
+      ? reconcileTaskMessages(
+          conversation.messages,
+          run.task.record,
+          conversation.seenEvents,
+        )
+      : conversation.messages;
 
   useEffect(() => {
-    if (prefill) {
-      setDraft(prefill.question);
-      setFocusItemId(prefill.focusItemId);
-      inputRef.current?.focus();
-    }
+    if (!prefill) return;
+    setDraft(prefill.question);
+    setFocusItemId(prefill.focusItemId);
+    setAnswerTo(undefined);
+    inputRef.current?.focus();
   }, [prefill]);
-
-  // Once observed stale, a saved answer remains historical when another task is selected.
-  useEffect(() => {
-    const record = run.task?.record;
-    if (!record) return;
-    let changed = false;
-    const next = messagesRef.current.map((message) => {
-      const evidence = message.evidence;
-      if (message.stale || !evidence || evidence.taskUrl !== run.task?.taskUrl)
-        return message;
-      if (
-        (evidence.objectiveRevision ?? 1) < record.objective_revision ||
-        (evidence.runId && evidence.runId !== record.current_run_id) ||
-        evidence.result.currency === 'stale'
-      ) {
-        changed = true;
-        return { ...message, stale: true };
-      }
-      return message;
-    });
-    if (changed) {
-      messagesRef.current = next;
-      setMessages(next);
-    }
-  }, [run.task, setMessages]);
-
-  // Keep the newest message visible, also when a pending message turns into an answer or error.
   useEffect(() => {
     const list = listRef.current;
-    if (list) {
-      list.scrollTop = list.scrollHeight;
-    }
-  }, [messages]);
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [conversation.messages]);
 
-  useEffect(() => {
-    const input = inputRef.current;
-    const history = historyRef.current;
-    if (!input || !history) return;
-
-    const initialInputHeight = input.getBoundingClientRect().height;
-    const initialHistoryFlex = history.style.flex;
-    const initialHistoryHeight = history.getBoundingClientRect().height;
-    const observer = new ResizeObserver(() => {
-      const height = input.getBoundingClientRect().height;
-      history.style.flex =
-        height > initialInputHeight + 1
-          ? `0 0 ${initialHistoryHeight}px`
-          : initialHistoryFlex;
-    });
-
-    observer.observe(input);
-    return () => {
-      observer.disconnect();
-      history.style.flex = initialHistoryFlex;
-    };
-  }, []);
-
-  // Messages left "pending" from a previous visit can never finish.
-  useEffect(() => {
-    if (messagesRef.current.some((m) => m.state === 'pending')) {
-      setMessages(
-        messagesRef.current.map((m) =>
-          m.state === 'pending' ? { ...m, state: 'cancelled' } : m,
-        ),
-      );
-    }
-  }, [setMessages]);
-
-  const save = (next: ChatMessage[]) => {
-    messagesRef.current = next.slice(-MAX_STORED);
-    setMessages(messagesRef.current);
-  };
-
-  const send = async (
-    question: string,
-    focus: string | null,
-    submissionKey?: string,
-    savedContext?: Pick<
-      AskRequest,
-      'contextRefs' | 'scope' | 'nightshiftTools'
-    >,
-  ) => {
-    const trimmed = question.trim();
-    if (!trimmed || ['running', 'waiting', 'paused'].includes(run.status))
-      return;
-    const pendingId = newId();
-    const idempotencyKey = submissionKey ?? crypto.randomUUID();
-    const nightshiftTools: AskRequest['nightshiftTools'] = savedContext
-      ? savedContext.nightshiftTools
-      : nightshiftEnabled
-        ? ['nightshift.submit', 'nightshift.result', 'nightshift.cancel']
-        : undefined;
-    save([
-      ...messagesRef.current,
-      {
-        id: newId(),
-        role: 'user',
-        at: new Date().toISOString(),
-        text: trimmed,
-        state: 'done',
-      },
-      {
-        id: pendingId,
-        role: 'agents',
-        at: new Date().toISOString(),
-        state: 'pending',
-        question: trimmed,
-        focusItemId: focus,
-        idempotencyKey,
-        contextRefs: savedContext?.contextRefs,
-        scope: savedContext?.scope,
-        nightshiftTools,
-      },
-    ]);
+  const send = () => {
+    if (!draft.trim() || conversation.sending) return;
+    const text = draft;
     setDraft('');
     setFocusItemId(null);
-    setNightshiftEnabled(false);
-
-    const finish = (patch: Partial<ChatMessage>) =>
-      save(
-        messagesRef.current.map((m) =>
-          m.id === pendingId ? { ...m, ...patch } : m,
-        ),
-      );
-
-    try {
-      const answer = await run.ask({
-        question: trimmed,
-        focusItemId: focus,
-        idempotencyKey,
-        ...(savedContext?.contextRefs !== undefined
-          ? { contextRefs: savedContext.contextRefs }
-          : {}),
-        ...(savedContext?.scope !== undefined
-          ? { scope: savedContext.scope }
-          : {}),
-        ...(nightshiftTools ? { nightshiftTools } : {}),
-      });
-      finish({
-        state: 'done',
-        paragraphs: answer.paragraphs,
-        citations: answer.citations,
-        source: answer.source,
-        evidence: answer.evidence,
-        task: answer.task,
-      });
-      // The Manager opened a task report: show it being written.
-      if (answer.task)
-        void navigate(`/report/${encodeURIComponent(answer.task.taskId)}`);
-    } catch (error) {
-      if (error instanceof AgentTaskCancelledError)
-        finish({ state: 'task_cancelled' });
-      else if (isAbortError(error)) finish({ state: 'cancelled' });
-      else
-        finish({
-          state: 'error',
-          error: error instanceof Error ? error.message : String(error),
-          retryable: error instanceof AgentRunError ? error.retryable : true,
-        });
+    setAnswerTo(undefined);
+    void conversation.send(text, focusItemId, answerTo);
+  };
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    send();
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      send();
     }
   };
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    void send(draft, focusItemId);
-  };
-
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void send(draft, focusItemId);
-    }
-  };
-
-  const running = ['running', 'waiting', 'paused'].includes(run.status);
-  const showWelcome = messages.length === 0 && !run.task;
-  const clearChat = () => {
+  const clear = () => {
+    conversation.clear();
     run.reset();
-    save([]);
     setDraft('');
     setFocusItemId(null);
+    setAnswerTo(undefined);
     inputRef.current?.focus();
   };
-  const currentRecord = run.task?.record;
-  const currentResultInHistory = Boolean(
-    currentRecord &&
-    messages.some(
-      (message) =>
-        message.evidence &&
-        message.evidence.taskUrl === run.task?.taskUrl &&
-        (message.evidence.objectiveRevision ?? 1) ===
-          currentRecord.objective_revision &&
-        message.evidence.runId === currentRecord.current_run_id,
-    ),
-  );
 
   return (
     <section className={styles.chat} aria-labelledby="chat-title">
       <div className={styles.header}>
-        <h2 id="chat-title">Ask the agents</h2>
-        {(messages.length > 0 || run.task) && (
-          <Button
-            size="small"
-            variant="ghost"
-            onClick={clearChat}
-            disabled={running || run.operationPending}
-          >
+        <h2 id="chat-title">Chat with the Manager</h2>
+        {messages.length > 0 && (
+          <Button size="small" variant="ghost" onClick={clear}>
             Clear chat
           </Button>
         )}
       </div>
-
-      {showWelcome ? (
+      {messages.length === 0 ? (
         <div className={styles.empty}>
           <p>
-            Describe what you need to understand or investigate. The agents will
-            ask for missing information.
+            Ask a question or describe what you need to investigate. The Manager
+            will start a tracked task when the work needs one.
           </p>
           <ul className={styles.prompts}>
-            {EXAMPLE_PROMPTS.map((p) => (
-              <li key={p}>
+            {EXAMPLE_PROMPTS.map((prompt) => (
+              <li key={prompt}>
                 <button
                   type="button"
                   className={styles.prompt}
                   onClick={() => {
-                    setDraft(p);
+                    setDraft(prompt);
                     setFocusItemId(null);
+                    setAnswerTo(undefined);
                     inputRef.current?.focus();
                   }}
-                  disabled={running}
                 >
-                  {p}
+                  {prompt}
                 </button>
               </li>
             ))}
           </ul>
         </div>
-      ) : messages.length > 0 ? (
+      ) : (
         <ol
           ref={listRef}
           className={styles.messages}
           role="log"
           aria-label="Conversation"
+          aria-live="polite"
         >
-          {messages.map((m) => (
+          {messages.map((message) => (
             <li
-              key={m.id}
-              className={m.role === 'user' ? styles.user : styles.agents}
+              key={message.id}
+              className={message.role === 'user' ? styles.user : styles.agents}
             >
               <span className={styles.who}>
-                {m.role === 'user' ? 'You' : 'Agents'}
+                {message.role === 'user' ? 'You' : 'Manager'}
               </span>
               <MessageBody
-                message={m}
-                onRetry={() =>
-                  m.question &&
-                  void send(
-                    m.question,
-                    m.focusItemId ?? null,
-                    m.idempotencyKey,
-                    {
-                      contextRefs: m.contextRefs,
-                      scope: m.scope,
-                      nightshiftTools: m.nightshiftTools,
-                    },
-                  )
-                }
-                retryDisabled={running}
-                stale={
-                  Boolean(m.stale) ||
-                  Boolean(
-                    m.evidence &&
-                    run.task &&
-                    m.evidence.taskUrl === run.task.taskUrl &&
-                    run.task.record &&
-                    ((m.evidence.objectiveRevision ?? 1) <
-                      run.task.record.objective_revision ||
-                      (m.evidence.runId &&
-                        m.evidence.runId !== run.task.record.current_run_id) ||
-                      run.task.record.result?.currency === 'stale'),
-                  )
+                message={message}
+                onRetry={() => void conversation.retry(message)}
+                retryDisabled={conversation.sending}
+                onAnswer={(question) => {
+                  setAnswerTo(question);
+                  inputRef.current?.focus();
+                }}
+                observationError={
+                  message.taskCard
+                    ? conversation.observationErrors[message.taskCard.task_id]
+                    : undefined
                 }
               />
             </li>
           ))}
         </ol>
-      ) : null}
-
-      {run.task?.record && (
-        <div className={styles.currentTask}>
-          <TaskControls run={run} />
-          {run.task.record.questions.some(
-            (question) => question.status === 'open',
-          ) && (
-            <section aria-label="Questions awaiting an answer">
-              <h3>Clarification needed</h3>
-              <ul>
-                {run.task.record.questions
-                  .filter((question) => question.status === 'open')
-                  .map((question) => (
-                    <li key={question.id}>{question.question}</li>
-                  ))}
-              </ul>
-              <Link to={`/task/${encodeURIComponent(run.task.id)}`}>
-                Answer in task report
-              </Link>
-            </section>
-          )}
-          {run.task.record.result &&
-            !currentResultInHistory &&
-            (run.task.record.result.currency === 'current' ||
-              !messages.some(
-                (message) => message.evidence?.taskUrl === run.task?.taskUrl,
-              )) && (
-              <TaskResult
-                evidence={{
-                  taskUrl: run.task.taskUrl,
-                  result: run.task.record.result,
-                }}
-                showAnswer
-              />
-            )}
-        </div>
+      )}
+      {answerTo && (
+        <p className={styles.focusNote}>
+          Replying to a task question.{' '}
+          <button
+            type="button"
+            className={styles.linkButton}
+            onClick={() => setAnswerTo(undefined)}
+          >
+            Ask something else
+          </button>
+        </p>
       )}
       <form className={styles.form} onSubmit={onSubmit}>
         <label htmlFor="chat-input" className="visually-hidden">
-          Your question
+          Your message to the Manager
         </label>
         <textarea
           id="chat-input"
           ref={inputRef}
           rows={2}
           value={draft}
-          placeholder="Type a question… (Enter to send, Shift+Enter for a new line)"
-          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Ask the Manager… (Enter to send, Shift+Enter for a new line)"
+          onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           maxLength={16000}
         />
         <Button
           type="submit"
           variant="primary"
-          disabled={running || draft.trim() === ''}
+          disabled={conversation.sending || draft.trim() === ''}
         >
           Send
         </Button>
       </form>
-      <div className={styles.nightshiftGrant}>
-        <label>
-          <input
-            type="checkbox"
-            checked={nightshiftEnabled}
-            disabled={running}
-            onChange={(event) => setNightshiftEnabled(event.target.checked)}
-          />{' '}
-          Allow Nightshift candidate tools for this task
-        </label>
-        <p>
-          Optional background candidate generation and judging through
-          Nightshift, separate from the agents’ normal model calls. New chains
-          allow cloud providers with no cloud spend cap. A separate bounded
-          chain grant is required in <Link to="/nightshift">Nightshift</Link>.
-          No automatic successor runs are authorized.
-        </p>
-      </div>
       {focusItemId && (
         <p className={styles.focusNote}>
-          Asking about one item.{' '}
+          Asking about the selected item.{' '}
           <button
             type="button"
             className={styles.linkButton}
@@ -491,186 +223,164 @@ export function ChatPanel({
           </button>
         </p>
       )}
-
-      {run.capabilities.length > 0 && (
-        <details className={styles.capabilities}>
-          <summary>Available capabilities</summary>
-          <ul>
-            {run.capabilities.map((capability) => (
-              <li key={capability.id}>
-                <strong>{capability.id}</strong> ? {capability.readiness}
-                <p>{capability.purpose}</p>
-                <ul>
-                  {capability.limitations.map((limitation, index) => (
-                    <li key={index}>{limitation}</li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {run.capabilitiesError && (
-        <p className={styles.muted}>{run.capabilitiesError}</p>
-      )}
-      <StatusLine run={run} />
     </section>
   );
 }
 
 function MessageBody({
-  message: m,
+  message,
   onRetry,
   retryDisabled,
-  stale,
+  onAnswer,
+  observationError,
 }: {
   message: ChatMessage;
   onRetry: () => void;
   retryDisabled: boolean;
-  stale: boolean;
+  onAnswer: (question: ManagerChatQuestion) => void;
+  observationError?: string;
 }) {
-  if (m.role === 'user') return <p className={styles.bubble}>{m.text}</p>;
-  if (m.state === 'pending')
+  if (message.role === 'user')
+    return <p className={styles.bubble}>{message.text}</p>;
+  if (message.state === 'pending')
     return (
       <p className={`${styles.bubble} ${styles.pending}`}>
-        <Spinner /> Working on it…
+        <Spinner /> Thinking…
       </p>
     );
-  if (m.state === 'cancelled')
-    return (
-      <p className={`${styles.bubble} ${styles.muted}`}>
-        Stopped waiting. Any admitted evidence task remains saved on the server.
-      </p>
-    );
-  if (m.state === 'task_cancelled')
-    return (
-      <p className={`${styles.bubble} ${styles.muted}`}>
-        The server cancelled this task. Saved artifacts remain available.
-      </p>
-    );
-  if (m.state === 'error')
+  if (message.state === 'error' || message.state === 'cancelled')
     return (
       <div className={`${styles.bubble} ${styles.error}`} role="alert">
-        <p>The agents couldn't answer: {m.error}</p>
-        {m.retryable && m.question && (
+        <p>
+          {message.error ??
+            'Delivery was interrupted. Any admitted task remains saved.'}
+        </p>
+        {message.retryable && message.request && (
           <Button size="small" onClick={onRetry} disabled={retryDisabled}>
             Retry
           </Button>
         )}
       </div>
     );
+  if (message.state === 'task_cancelled')
+    return (
+      <p className={`${styles.bubble} ${styles.muted}`}>
+        The server cancelled this task. Saved artifacts remain available.
+      </p>
+    );
   return (
     <div className={styles.bubble}>
-      {(m.scheduling !== undefined || m.agentExecution !== undefined) && (
+      {(message.scheduling !== undefined ||
+        message.agentExecution !== undefined) && (
         <p className={styles.source}>
           Archived crew demo. Saved text is retained; structured scheduling
           details are no longer available.
         </p>
       )}
-      {m.paragraphs?.map((p, i) => (
-        <p key={i}>{p}</p>
+      {message.text && <p>{message.text}</p>}
+      {message.stale && !message.evidence && (
+        <p className={styles.muted}>
+          Historical message from an earlier task revision.
+        </p>
+      )}
+      {message.paragraphs?.map((paragraph, index) => (
+        <p key={index}>{paragraph}</p>
       ))}
-      {m.evidence?.result?.schema_version === 'haze.task.result.v3' && (
-        <TaskResult evidence={m.evidence} stale={stale} />
+      {message.evidence?.result?.schema_version === 'haze.task.result.v3' && (
+        <TaskResult
+          evidence={message.evidence}
+          stale={Boolean(message.stale)}
+        />
       )}
-      {m.task && (
-        <p>
-          <Link to={`/report/${encodeURIComponent(m.task.taskId)}`}>
-            Open the report: {m.task.title}
-          </Link>
-        </p>
-      )}
-      {m.citations && m.citations.length > 0 && (
-        <p className={styles.citations}>
-          Sources:{' '}
-          {m.citations.map((c, i) =>
-            c.href ? (
-              <a
-                key={i}
-                href={c.href}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.citation}
-                title={c.sha256 ? `SHA-256 ${c.sha256}` : undefined}
-              >
-                [{c.id ?? i + 1}] {c.label}
-              </a>
-            ) : c.itemId ? (
-              <Link
-                key={i}
-                to={`/item/${encodeURIComponent(c.itemId)}`}
-                className={styles.citation}
-              >
-                [{i + 1}] {c.label}
-              </Link>
-            ) : (
-              <span key={i} className={styles.citation}>
-                [{i + 1}] {c.label}
-              </span>
-            ),
+      {message.taskCard && (
+        <div className={styles.taskCard}>
+          <strong>{message.taskCard.title}</strong>
+          <p>{message.taskCard.summary}</p>
+          {observationError && (
+            <p className={styles.muted}>
+              Progress is temporarily unavailable. The last confirmed task state
+              is shown.
+            </p>
           )}
-        </p>
+          <Link to={`/manager/${encodeURIComponent(message.taskCard.task_id)}`}>
+            Open Manager workspace
+          </Link>
+        </div>
       )}
-      {m.source && (
-        <p className={styles.source}>
-          <Badge tone={m.source === 'evidence_model' ? 'info' : 'neutral'}>
-            {SOURCE_LABEL[m.source]}
-          </Badge>
-        </p>
+      {message.workspaceTaskId && (
+        <Link to={`/manager/${encodeURIComponent(message.workspaceTaskId)}`}>
+          Open Manager workspace
+        </Link>
       )}
-    </div>
-  );
-}
-
-/** The always-visible text version of what the agents are doing (screen-reader friendly). */
-function StatusLine({ run }: { run: AgentRun }) {
-  const observing = ['running', 'waiting', 'paused'].includes(run.status);
-  const now = useNow(observing ? 1000 : 60_000);
-  const running = observing;
-  const task = run.events.findLast((event) => event.type === 'task_event');
-  const baseUrl: unknown = import.meta.env.VITE_API_BASE_URL;
-  const savedTaskUrl =
-    run.task?.taskUrl ??
-    (task
-      ? `${typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : ''}/api/tasks/${task.receipt.task_id}`
-      : undefined);
-  return (
-    <div
-      className={`${styles.status} ${run.status === 'failed' ? styles.statusFailed : ''}`}
-    >
-      {running && <Spinner />}
-      <span aria-live="polite" className={styles.statusText}>
-        {run.statusText}
-      </span>
-      {running && run.startedAt !== null && (
-        <span className={styles.elapsed} aria-hidden="true">
-          {formatDuration(now - run.startedAt)}
-        </span>
+      {message.task && (
+        <Link to={`/report/${encodeURIComponent(message.task.taskId)}`}>
+          Open the report: {message.task.title}
+        </Link>
       )}
-      {running && (
-        <Button size="small" variant="ghost" onClick={run.cancel}>
-          Stop waiting
+      {message.taskQuestion && !message.questionAnswered && (
+        <Button
+          size="small"
+          variant="ghost"
+          onClick={() => onAnswer(message.taskQuestion!)}
+        >
+          Answer this question
         </Button>
       )}
-      {run.operationError && !run.task?.record && (
-        <p role="alert" className={styles.cancellationError}>
-          {run.operationError}
-        </p>
+      {message.taskQuestion && message.questionAnswered && (
+        <span className={styles.muted}>
+          This question is no longer waiting for an answer.
+        </span>
       )}
-      {savedTaskUrl && (
-        <a
-          href={savedTaskUrl}
-          target="_blank"
-          rel="noreferrer"
-          className={styles.citation}
-        >
-          Saved task
-        </a>
+      {message.citations && message.citations.length > 0 && (
+        <div className={styles.citations}>
+          <span>Sources:</span>
+          {message.citations.map((citation, index) => (
+            <span key={citation.id ?? index} className={styles.citation}>
+              {citation.href ? (
+                <a href={citation.href} target="_blank" rel="noreferrer">
+                  [{citation.id ?? index + 1}] {citation.label}
+                </a>
+              ) : 'itemId' in citation && citation.itemId ? (
+                <Link to={`/item/${encodeURIComponent(citation.itemId)}`}>
+                  {citation.label}
+                </Link>
+              ) : (
+                <span>{citation.label}</span>
+              )}
+              {'observed_at' in citation && citation.observed_at && (
+                <>
+                  {' '}
+                  · {citation.kind === 'modeled'
+                    ? 'Modeled for'
+                    : 'Observed'}{' '}
+                  <time dateTime={citation.observed_at}>
+                    {citation.observed_at}
+                  </time>
+                </>
+              )}
+              {'retrieved_at' in citation && citation.retrieved_at && (
+                <>
+                  {' '}
+                  · Retrieved{' '}
+                  <time dateTime={citation.retrieved_at}>
+                    {citation.retrieved_at}
+                  </time>
+                </>
+              )}
+              {'kind' in citation && citation.kind && (
+                <> · {citation.kind.replaceAll('_', ' ')}</>
+              )}
+            </span>
+          ))}
+        </div>
       )}
-      {run.task && (
-        <Link to={`/task/${encodeURIComponent(run.task.id)}`}>
-          Open task report
-        </Link>
+      {message.errorCategory && message.retryable && message.request && (
+        <Button size="small" onClick={onRetry} disabled={retryDisabled}>
+          Retry
+        </Button>
+      )}
+      {message.source && (
+        <p className={styles.source}>{SOURCE_LABEL[message.source]}</p>
       )}
     </div>
   );

@@ -8,6 +8,7 @@ Plans define scope, delivery order and acceptance criteria. Check their status n
 
 - [Reusable task engine and separate agent modules](orchestration/general-agent-refactor-plan.md).
 - [Manager completion plan](orchestration/manager-completion-plan.md).
+- [Manager conversation routing and task UI plan](orchestration/manager-conversation-routing-plan.md).
 - [DamageAccountant implementation plan](damage-accountant-plan.md).
 - [Dedicated SQLite storage integration](storage-integration-plan.md).
 
