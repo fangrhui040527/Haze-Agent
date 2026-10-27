@@ -267,6 +267,8 @@ export function createTaskHandler(
         );
       }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(200, runtime.capabilities(identity));
         return;
       }
@@ -345,6 +347,8 @@ export function createTaskHandler(
       }
       const artifact = /^\/api\/artifacts\/([A-Za-z0-9-]+)$/.exec(url.pathname);
       if (artifact && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(200, runtime.store.artifact(artifact[1]!, identity));
         return;
       }
@@ -513,6 +517,8 @@ export function createTaskHandler(
         return;
       }
       if (match[2] === 'world' && request.method === 'GET') {
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
         send(
           200,
           worldTaskResponseSchema.parse(
@@ -536,6 +542,15 @@ export function createTaskHandler(
       if (request.method !== 'GET' || (match[2] && match[2] !== 'events'))
         throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
       if (match[2] === 'events') {
+        // `after` is the only supported key, and a repeated cursor must not
+        // silently resolve to its first value.
+        for (const key of url.searchParams.keys())
+          if (key !== 'after' || url.searchParams.getAll(key).length !== 1)
+            throw new TaskError(
+              400,
+              'invalid_query',
+              'Unsupported or duplicate query key.',
+            );
         const cursor = url.searchParams.get('after') ?? '0';
         if (!/^\d{1,15}$/.test(cursor) || !Number.isSafeInteger(Number(cursor)))
           throw new TaskError(
@@ -546,6 +561,8 @@ export function createTaskHandler(
         send(200, runtime.store.events(id, identity, Number(cursor)));
         return;
       }
+      if (url.searchParams.size)
+        throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
       send(200, runtime.store.read(id, identity));
     };
     void handle().catch((error: unknown) => {

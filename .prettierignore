@@ -20,3 +20,8 @@ logs/
 .env*
 .codebase-memory/
 tmp/
+
+# Generated system-test artifacts (qa harness output). The qa/*.mjs sources are
+# still formatted and checked; only machine-written result files are exempt.
+qa/*.json
+qa/*.txt

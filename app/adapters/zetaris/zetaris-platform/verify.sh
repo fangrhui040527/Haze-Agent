@@ -42,6 +42,10 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 # Read only the two values needed to log in. Sourcing the whole file would execute it.
 ADMIN_EMAIL=$(sed -n 's/^ZETARIS_ADMIN_EMAIL=//p' "$ENV_FILE" | tail -1)
+# The published URL must follow UI_PORT. A hard-coded 3000 misdirects anyone who moved the
+# UI because that port was already in use by something else.
+UI_PORT_VALUE=$(sed -n 's/^UI_PORT=//p' "$ENV_FILE" | tail -1)
+UI_PORT_VALUE="${UI_PORT_VALUE:-3000}"
 ADMIN_PW=$(sed -n 's/^ZETARIS_ADMIN_PASSWORD=//p' "$ENV_FILE" | tail -1)
 : "${ADMIN_EMAIL:=admin@zetaris.com}"
 
@@ -159,6 +163,6 @@ if [ "$fail" -gt 0 ]; then
     printf 'Quote the FAIL lines above when asking for help.\n'
     exit 1
 fi
-printf 'All %d checks passed. The platform is ready on http://localhost:3000\n' "$pass"
+printf 'All %d checks passed. The platform is ready on http://localhost:%s\n' "$pass" "$UI_PORT_VALUE"
 printf 'Sign in as %s\n' "$ADMIN_EMAIL"
 exit 0
