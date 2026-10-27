@@ -295,13 +295,13 @@ describe('registered Manager decision layer', () => {
         kind: 'review',
         assignment_id: critic,
         current: true,
-        citation_marker: 'E',
+        citation_letter: 'E',
       },
       {
         ref: product,
         kind: 'smokeledger.trace_sources',
         current: true,
-        citation_marker: 'E',
+        citation_letter: 'E',
       },
     ];
     context.reviews = [
@@ -371,14 +371,14 @@ describe('registered Manager decision layer', () => {
           ref: product,
           kind: 'smokeledger.trace_sources',
           current: true,
-          citation_marker: 'E',
+          citation_letter: 'E',
         },
         {
           ref: review,
           kind: 'review',
           assignment_id: critic,
           current: true,
-          citation_marker: 'E',
+          citation_letter: 'E',
         },
       ];
       const inputs: unknown[] = [];

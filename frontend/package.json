@@ -13,6 +13,7 @@
     "data:generate": "node scripts/generate-seed.ts"
   },
   "dependencies": {
+    "globe.gl": "2.46.1",
     "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

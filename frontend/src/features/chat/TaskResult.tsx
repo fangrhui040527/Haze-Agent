@@ -1,6 +1,7 @@
 import type { AgentAnswer } from '../../shared/types/agents.ts';
 import { Link } from 'react-router';
 import { WorkProducts } from './WorkProducts.tsx';
+import { SmokeLedgerGlobe } from './SmokeLedgerGlobe.tsx';
 import styles from './ChatPanel.module.css';
 export function TaskResult({
   evidence,
@@ -84,6 +85,9 @@ export function TaskResult({
             ))}
           </ul>
         </section>
+      )}
+      {result.review.status !== 'rejected' && (
+        <SmokeLedgerGlobe products={result.work_products} />
       )}
       <WorkProducts
         products={result.work_products}

@@ -235,7 +235,7 @@ export interface ManagerContext {
     excerpt?: string;
     truncated?: boolean;
     /** Final-synthesis citation letter: S for imported sources, E for captures. */
-    citation_marker?: 'S' | 'E';
+    citation_letter?: 'S' | 'E';
   }[];
   inspections: ManagerInspection[];
   peer_grants: {

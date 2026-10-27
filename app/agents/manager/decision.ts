@@ -68,7 +68,9 @@ function decisionFeedback(invalid: InvalidOutput) {
     code: invalid.code,
     message:
       invalid.code === 'missing_source_citation'
-        ? 'Return the full decision. Cite selected sources in action.answer with matching [S1]/[E1] markers.'
+        ? invalid.message.startsWith('Citation markers need a number')
+          ? invalid.message
+          : 'Return the full decision. Cite selected sources in action.answer with matching [S1]/[E1] markers.'
         : invalid.code === 'incomplete_artifact_reference'
           ? 'Copy each full artifact ref (id, version, sha256) from supplied canonical refs. Never infer a hash.'
           : [
@@ -146,7 +148,7 @@ const listedArtifact = (context: ManagerContext, ref: Ref) =>
 const citationLetter = (context: ManagerContext, ref: Ref) => {
   const artifact = listedArtifact(context, ref);
   return (
-    artifact?.citation_marker ??
+    artifact?.citation_letter ??
     (artifact?.kind === 'source.import' ? ('S' as const) : undefined)
   );
 };
@@ -261,6 +263,16 @@ function knownInvalidOutput(
   if (
     action.type === 'finalize' &&
     action.sources.length &&
+    /\[[SE]\]/.test(action.answer)
+  )
+    return {
+      code: 'missing_source_citation',
+      message:
+        'Citation markers need a number: [E1] is the first selected source whose citation_letter is E, [E2] the second, [S1] the first S source. Return the complete decision again with numbered markers only; never write a bare [E] or [S].',
+    };
+  if (
+    action.type === 'finalize' &&
+    action.sources.length &&
     !/\[([A-Za-z]+\d+)\]/.test(action.answer)
   )
     return {
@@ -269,7 +281,9 @@ function knownInvalidOutput(
         'The proposed action.sources is nonempty but action.answer has no citation marker. Return the complete decision again with an answer supported by exactly those selected sources and matching markers in action.answer: [S1] for the first imported source, [S2] for the second, [E1] for the first external capture. Do not invent sources or change checkpoint values.',
     };
   if (
-    (action.type === 'apply_plan' || action.type === 'lookup') &&
+    (action.type === 'apply_plan' ||
+      action.type === 'lookup' ||
+      action.type === 'steer') &&
     context.plan_objective_revision === context.objective_revision
   ) {
     // An exact-template plan is complete as admitted; only a correction re-plans it.
@@ -289,7 +303,7 @@ function knownInvalidOutput(
     if (fixed)
       return {
         code: 'fixed_plan',
-        message: `The ${fixed.card.id} plan for this objective is fixed. Do not add or replace assignments or run lookups: wait for running work, inspect results, or finalize with the reported gaps and uncertainty.`,
+        message: `The ${fixed.card.id} plan for this objective is fixed. Do not add, re-brief or replace assignments or run lookups: wait for running work, inspect results, or finalize with the reported gaps, rejections and uncertainty.`,
       };
   }
   if (action.type === 'finalize') {
@@ -309,7 +323,7 @@ function knownInvalidOutput(
     if (unknown.length)
       return {
         code: 'invalid_source_citation',
-        message: `action.answer cites ${[...new Set(unknown)].slice(0, 6).join(', ')} but the selected sources only allow ${[...allowed].join(', ') || 'none'}. Return the complete decision again citing only those markers, numbered by each source's citation_marker in selected order.`,
+        message: `action.answer cites ${[...new Set(unknown)].slice(0, 6).join(', ')} but the selected sources only allow ${[...allowed].join(', ') || 'none'}. Return the complete decision again citing only those markers, numbered by each source's citation_letter in selected order.`,
       };
   }
   if (

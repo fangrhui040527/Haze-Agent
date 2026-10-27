@@ -209,7 +209,7 @@ export function assembleManagerContext(
         excerpt: summary ?? content.slice(0, 1600),
         truncated: summary !== undefined || content.length > 1600,
         // Same rule as final-synthesis citation numbering: S for imports, E for captures.
-        citation_marker:
+        citation_letter:
           artifact.producer.kind === 'user' || artifact.kind === 'source.import'
             ? 'S'
             : 'E',

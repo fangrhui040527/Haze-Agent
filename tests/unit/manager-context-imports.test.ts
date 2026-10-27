@@ -147,7 +147,7 @@ it('labels imported artifacts with the S citation marker used by final synthesis
   const { context } = await inputContext();
   expect(context.artifacts.length).toBeGreaterThan(0);
   for (const artifact of context.artifacts)
-    expect(artifact.citation_marker).toBe('S');
+    expect(artifact.citation_letter).toBe('S');
 });
 
 it('preserves a unique material starting-template brief verbatim when imported envelopes are compacted', async () => {
