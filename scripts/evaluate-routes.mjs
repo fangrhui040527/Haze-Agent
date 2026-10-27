@@ -19,7 +19,7 @@ const { values: options } = parseArgs({
 if (options.live && options.inspect)
   throw new Error('Select --live or --inspect.');
 const bytes = await readFile(
-  new URL('../docs/Testing/route-evaluation-cases.json', import.meta.url),
+  new URL('../docs/testing/cases/route-evaluation-cases.json', import.meta.url),
 );
 const suite = JSON.parse(bytes);
 const cases = suite.cases.filter(

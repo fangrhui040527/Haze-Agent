@@ -1,11 +1,14 @@
-# Manual Nightshift local jobs
+# Manual Nightshift candidate jobs
 
 Haze now has a manual-only job inbox at `/nightshift/:jobId?`. Direct inference
 routing remains separate. A reachable Nightshift daemon is not enough: the
-installed job contract and an eligible ready local text lane must be available.
+installed job contract and eligible ready compute must be available.
 New job admission is blocked whenever the daemon, reviewed contract or eligible
-local compute is unavailable. See the latest
-[recheck](../architecture/nightshift-02-local-jobs-recheck-report.md) for current
+compute is unavailable. New grants default to `cloud-ok` with no monetary cap.
+The active Nightshift fleet selects compute; `cloud-ok` permits cloud and local
+lanes. Existing local-only grants retain their original policy and $0 cloud spend.
+See the latest
+[recheck](../reports/nightshift/nightshift-02-local-jobs-recheck-report.md) for current
 installation findings rather than treating an earlier lane inventory as live.
 
 ## Manual workflow
@@ -20,7 +23,11 @@ installation findings rather than treating an earlier lane inventory as live.
    are four attempts, accuracy judge, low budget, immediate execution and runtime
    selection. The reviewed runtime does not implement explicit fleet selection;
    its `fleet_id` is metadata, so the adapter rejects that option for new jobs.
-   Privacy is local-only and cloud spend is zero.
+   New grants allow cloud with no monetary cap, while jobs, requested attempts
+   and absolute lifetime stay bounded. An explicit local-only grant requires
+   zero cloud spend. Jobs must match their chain's saved policy. The installed
+   CLI rejects positive cloud ceilings because it cannot enforce them; uncapped
+   cloud submissions omit `--max-spend` rather than passing zero.
 4. Observe persisted execution, judging outcome and receipt state independently.
    Closing the page or stopping browser observation does not cancel compute.
    The server supervisor reconnects to acknowledged IDs after restart.
@@ -106,13 +113,14 @@ npm run nightshift:test:crashes            # fake external service, real process
 The live verifier uses a unique `.state/nightshift-verification/<id>/state`
 directory, pins both state-directory environment settings and submits only a
 synthetic brief. A remote acknowledgement is not reported as successful inference.
-An unavailable local lane blocks new work. No script configures a model/fleet or
-enables cloud spending.
+This live verifier explicitly requests local-only/$0, so an unavailable local
+lane blocks its attempt even when cloud candidate jobs are ready. It never
+changes fleets or silently converts that verification request to cloud.
 
 For source-mode crash checks while unrelated work prevents a build, set
 `HAZE_NIGHTSHIFT_VERIFY_SOURCE=1`. Workers load the current backend via Vite SSR
 without application plugins or a listening server. Their external service is a
 fixture; passing these checks is recovery/control evidence, not live inference.
 
-See the [implementation report](../architecture/nightshift-02-local-jobs-implementation-report.md)
+See the [implementation report](../reports/nightshift/nightshift-02-local-jobs-implementation-report.md)
 for the retained live failure, recovery evidence and remaining release gates.

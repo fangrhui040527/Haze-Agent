@@ -75,6 +75,10 @@ describe('chat after crew demo retirement', () => {
     expect(markup).toContain('Allow Nightshift candidate tools for this task');
     expect(markup).toContain('separate bounded chain grant');
     expect(markup).toContain('No automatic successor runs are authorized');
+    expect(markup).toContain('background candidate generation and judging');
+    expect(markup).toContain('normal model calls');
+    expect(markup).toContain('no cloud spend cap');
+    expect(markup).not.toContain('local-only candidate drafts');
     const checkbox = markup.match(/<input[^>]*type="checkbox"[^>]*>/u)?.[0];
     expect(checkbox).toBeDefined();
     expect(checkbox).not.toContain('checked');

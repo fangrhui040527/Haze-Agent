@@ -12,6 +12,22 @@ export const NIGHTSHIFT_LIMITS = Object.freeze({
   metadata_bytes: 65_536,
   attempts: 16,
 });
+export const nightshiftPrivacySchema = z.enum(['local-only', 'cloud-ok']);
+// The installed Nightshift CLI supports uncapped cloud jobs or local-only $0
+// jobs. It cannot enforce a positive monetary cap before a provider call.
+export const nightshiftSpendSchema = z.literal(0).nullable();
+export function validateNightshiftPolicy(
+  value: { privacy: string; max_spend_usd: number | null },
+  context: z.RefinementCtx,
+): void {
+  if ((value.privacy === 'local-only') !== (value.max_spend_usd === 0))
+    context.addIssue({
+      code: 'custom',
+      path: ['max_spend_usd'],
+      message:
+        'Local-only jobs require $0 cloud spend; cloud jobs require null (no monetary cap).',
+    });
+}
 export const nightshiftAuthorityShape = {
   expected_run_id: z.uuid(),
   expected_generation: z.number().int().positive(),
@@ -20,18 +36,20 @@ export const nightshiftAuthorityShape = {
   expected_assignment_id: z.uuid().optional(),
   expected_assignment_revision: z.number().int().positive().optional(),
 };
-export const manualChainAdmissionSchema = z.strictObject({
-  schema_version: z.literal('haze.nightshift.chain.admission.v1'),
-  task_id: z.uuid(),
-  ...nightshiftAuthorityShape,
-  total_runs: z.number().int().min(1).max(4).default(1),
-  max_jobs: z.number().int().min(1).max(4).default(4),
-  max_attempts: z.number().int().min(1).max(16).default(16),
-  lifetime_seconds: z.number().int().min(1).max(86_400).default(86_400),
-  privacy: z.literal('local-only').default('local-only'),
-  max_spend_usd: z.literal(0).default(0),
-  automatic_followup_runs: z.literal(0).default(0),
-});
+export const manualChainAdmissionSchema = z
+  .strictObject({
+    schema_version: z.literal('haze.nightshift.chain.admission.v1'),
+    task_id: z.uuid(),
+    ...nightshiftAuthorityShape,
+    total_runs: z.number().int().min(1).max(4).default(1),
+    max_jobs: z.number().int().min(1).max(4).default(4),
+    max_attempts: z.number().int().min(1).max(16).default(16),
+    lifetime_seconds: z.number().int().min(1).max(86_400).default(86_400),
+    privacy: nightshiftPrivacySchema.default('cloud-ok'),
+    max_spend_usd: nightshiftSpendSchema.default(null),
+    automatic_followup_runs: z.literal(0).default(0),
+  })
+  .superRefine(validateNightshiftPolicy);
 export const automaticChainAdmissionSchema = z
   .strictObject({
     ...manualChainAdmissionSchema.shape,
@@ -44,7 +62,8 @@ export const automaticChainAdmissionSchema = z
   .refine((value) => value.automatic_followup_runs < value.total_runs, {
     message: 'Automatic follow-ups must fit inside the total run grant.',
     path: ['automatic_followup_runs'],
-  });
+  })
+  .superRefine(validateNightshiftPolicy);
 export const chainAdmissionSchema = z.discriminatedUnion('schema_version', [
   manualChainAdmissionSchema,
   automaticChainAdmissionSchema,
@@ -68,28 +87,32 @@ export const chainProgressProposalSchema = z.strictObject({
   expected_chain_revision: z.number().int().positive(),
   progress: nightshiftProgressSchema,
 });
-export const nightshiftJobOptionsSchema = z.strictObject({
-  prompt: z.string().trim().min(1).max(NIGHTSHIFT_LIMITS.prompt_characters),
-  n: z.number().int().min(1).max(16).default(4),
-  judge: z
-    .enum(['accuracy', 'consistency', 'creative', 'quality'])
-    .default('accuracy'),
-  budget: z.enum(['low', 'mid', 'high', 'max']).default('low'),
-  window: z.enum(['now', 'quiet']).default('now'),
-  fleet: z.string().trim().min(1).max(128).optional(),
-  privacy: z.literal('local-only').default('local-only'),
-  max_spend_usd: z.literal(0).default(0),
-});
-export const jobSubmitSchema = z.strictObject({
-  schema_version: z.literal('haze.nightshift.job.submit.v1'),
-  chain_id: z.uuid(),
-  ...nightshiftAuthorityShape,
-  expected_chain_revision: z.number().int().positive(),
-  ...nightshiftJobOptionsSchema.shape,
-  input_refs: z.array(artifactRefSchema).max(32).default([]),
-  role: agentRoleSchema.default('Manager'),
-  purpose: nightshiftPurposeSchema.optional(),
-});
+export const nightshiftJobOptionsSchema = z
+  .strictObject({
+    prompt: z.string().trim().min(1).max(NIGHTSHIFT_LIMITS.prompt_characters),
+    n: z.number().int().min(1).max(16).default(4),
+    judge: z
+      .enum(['accuracy', 'consistency', 'creative', 'quality'])
+      .default('accuracy'),
+    budget: z.enum(['low', 'mid', 'high', 'max']).default('low'),
+    window: z.enum(['now', 'quiet']).default('now'),
+    fleet: z.string().trim().min(1).max(128).optional(),
+    privacy: nightshiftPrivacySchema.default('cloud-ok'),
+    max_spend_usd: nightshiftSpendSchema.default(null),
+  })
+  .superRefine(validateNightshiftPolicy);
+export const jobSubmitSchema = z
+  .strictObject({
+    schema_version: z.literal('haze.nightshift.job.submit.v1'),
+    chain_id: z.uuid(),
+    ...nightshiftAuthorityShape,
+    expected_chain_revision: z.number().int().positive(),
+    ...nightshiftJobOptionsSchema.shape,
+    input_refs: z.array(artifactRefSchema).max(32).default([]),
+    role: agentRoleSchema.default('Manager'),
+    purpose: nightshiftPurposeSchema.optional(),
+  })
+  .superRefine(validateNightshiftPolicy);
 const jobControlShape = {
   ...nightshiftAuthorityShape,
   expected_chain_revision: z.number().int().positive(),
@@ -130,7 +153,8 @@ export const jobsReadinessSchema = z.strictObject({
   runtime_reachable: z.boolean(),
   local_only_enforced: z.boolean(),
   local_compute_available: z.boolean().optional(),
-  cloud_enforced: z.literal(false),
+  cloud_compute_available: z.boolean().optional(),
+  cloud_enforced: z.boolean(),
   ready: z.boolean(),
   runtime_version: z.string().nullable(),
   adapter_version: z.string(),

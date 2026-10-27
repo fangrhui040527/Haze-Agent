@@ -83,7 +83,7 @@ continue to pass through to Vite.
 
 The root dev command names the actual components: Zetaris, the Haze TypeScript
 build, React web app, LangGraph task engine, SQLite World Model, H-MEM, HazeOps
-collectors, agent model routes, and Nightshift runtime, local jobs, inference,
+collectors, agent model routes, and Nightshift runtime, candidate jobs, inference,
 and automation. They share the Haze process where applicable; these rows do not
 imply separate operating-system services. Each starting or checking component has a live
 elapsed timer that refreshes every 0.1 seconds and freezes when the step finishes.
@@ -98,7 +98,10 @@ otherwise; startup submits no model calls or Nightshift jobs. Optional component
 can be `DISABLED`, `BLOCKED`, `UNCONFIGURED`, or `UNAVAILABLE` while the app starts.
 H-MEM currently reports `DISABLED`: it is not attached to active tasks and its
 historical dashboard memory remains archival. A reachable Nightshift runtime is
-shown separately from usable local-only jobs and released automation. Use
+shown separately from usable candidate jobs and released automation. New candidate
+chains allow cloud models with no monetary cap; explicit local-only grants retain
+$0 cloud spend. Job, attempt and lifetime limits still apply. Normal agent
+inference and background candidate generation are separate Nightshift APIs. Use
 `status hmem`, `status hazeops`, or `nightshift status` to inspect the current state.
 
 `STARTED` means Compose started the containers; the Zetaris row summarizes their
@@ -184,9 +187,9 @@ A PM2.5 investigation additionally needs a domain scope, either explicitly or th
 
 [damage-appraisal](app/capabilities/damage-appraisal/README.md) builds and reviews calculated damage accounts from retained evidence. [damage-account-intake](app/capabilities/damage-account-intake/README.md) validates supplied manifests and component completeness. These capabilities were previously named `damage-account` and `damage-accounting`.
 
-Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
+Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/reports/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/reports/orchestration/damage-accountant-implementation-report.md).
 
-Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/Testing/world-model-control-plane.md) for configuration and isolated checks.
+Open **World Model** in the main navigation, or `/world-model`, to browse retained SQLite records, relationships, current acceptance outcomes, history and lineage, and rebuild derived views. The **Reference sandbox** panel runs Meterless's original control plane with disposable sample data. See the [World Model control-plane guide](docs/testing/world-model-control-plane.md) for configuration and isolated checks.
 
 The frontend always uses the general protocol. Set `STATE_DIR=.state/general-v2` for the new storage format; an existing incompatible configured directory fails without modification. Run `npm run tasks:serve` for the standalone loopback API at `http://127.0.0.1:8787`. Mutations require the local same-origin boundary and an `Idempotency-Key`; updates and controls also require the current objective revision, run ID, lease generation and state revision.
 
@@ -199,7 +202,7 @@ archival until explicitly imported. See the [dashboard migration guide](app/dash
 
 ## Verify general execution
 
-To test the Manager independently, run `npm run manager:test`. It uses a fresh isolated build and task state with deterministic specialist stubs. Use `npm run manager:test:live` to test only the Manager's configured model against the same stubs. To talk to that model with your own prompts and follow-ups, run `npm run manager:chat`. See [isolated Manager testing](docs/Testing/manager-testing.md) for focused cases, interactive chat, traces and the limits of a passing result.
+To test the Manager independently, run `npm run manager:test`. It uses a fresh isolated build and task state with deterministic specialist stubs. Use `npm run manager:test:live` to test only the Manager's configured model against the same stubs. To talk to that model with your own prompts and follow-ups, run `npm run manager:chat`. See [isolated Manager testing](docs/testing/manager-testing.md) for focused cases, interactive chat, traces and the limits of a passing result.
 
 ```sh
 npm run check
@@ -210,7 +213,7 @@ npm run tasks:verify -- --live Klang 2026-10-24T00:00:00Z 2026-10-25T00:00:00Z
 
 `check` includes root formatting, types, lint, build, unit and engine checks, frontend build/tests, and fresh-process general and damage-account fixture verification. Use `npm run tasks:test` for focused engine/domain tests. For an explicitly synthetic development server, build first and run `node scripts/serve-tasks.mjs --fixture`. Normal execution never substitutes fixtures, switches providers or retries automatically.
 
-The fixture verifier imports a source, completes a general explanation and a PM2.5 investigation, checks duplicate delivery, captures exact artifacts/events and verifies unchanged readback after process restart. A fixture pass establishes integration behavior only. Live readiness requires a captured configured model and source-tool trace; missing access or a failed attempt never advances readiness. See the [implementation record](docs/orchestration/general-engine-verification.md).
+The fixture verifier imports a source, completes a general explanation and a PM2.5 investigation, checks duplicate delivery, captures exact artifacts/events and verifies unchanged readback after process restart. A fixture pass establishes integration behavior only. Live readiness requires a captured configured model and source-tool trace; missing access or a failed attempt never advances readiness. See the [implementation record](docs/reports/orchestration/general-engine-verification.md).
 
 ## Repository layout
 

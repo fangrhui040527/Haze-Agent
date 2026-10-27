@@ -31,7 +31,7 @@ npm run routes:evaluate -- --live
 npm run routes:evaluate -- --live --role HazeOps
 ```
 
-The harness freezes [the scenarios and acceptance criteria](route-evaluation-cases.json)
+The harness freezes [the scenarios and acceptance criteria](cases/route-evaluation-cases.json)
 before resolving providers. It compares each configured candidate against that
 role's inherited shared route using identical instructions, scenarios, output
 caps and deadlines. Each scenario allows one call per route; no repair, retry or
@@ -72,7 +72,7 @@ if every automated contract/latency check passes. No script promotes a default.
 
 Keep all attempted candidate and baseline traces, including failed and missing
 receipts. Before changing a role's default, retain genuine end-to-end task traces
-and independently evaluate the focus specified in [routing plan 1](../architecture/nightshift-01-routing-plan.md).
+and independently evaluate the focus specified in [routing plan 1](../plans/nightshift/nightshift-01-routing-plan.md).
 The frozen contract gates require every strict action, expected outcome and
 exact-reference check to pass, complete actual provider receipts and latency at
 or below 90 seconds per call. Passing them is necessary but insufficient:

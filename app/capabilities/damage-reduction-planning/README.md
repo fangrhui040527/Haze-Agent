@@ -117,14 +117,14 @@ is historical. Reduction artifact dependencies contain only their material
 selected evidence; unrelated pinned context cannot supply numbers or stale the
 numerical claim.
 
-See the [method specification](../../../docs/architecture/damage-reduction-01-method-spec.md)
-and [implementation report](../../../docs/architecture/damage-reduction-01-implementation-report.md).
+See the [method specification](../../../docs/architecture/damage-reduction/damage-reduction-01-method-spec.md)
+and [implementation report](../../../docs/reports/damage-reduction/damage-reduction-01-implementation-report.md).
 
 The dedicated preview is available at `/damage-reduction`; saved previews reopen
 at `/damage-reduction/tasks/:taskId`. Its service reads the governed projection
 through `GET /api/tasks/:taskId/views/reduction-preview`, rechecking support on
 every reuse. Use `npm run reduction:preview:verify` for the complete synthetic
-planning/review/restart trace. See the [Plan 02 report](../../../docs/architecture/damage-reduction-02-implementation-report.md)
+planning/review/restart trace. See the [Plan 02 report](../../../docs/reports/damage-reduction/damage-reduction-02-implementation-report.md)
 for scope, test evidence and the limits of the computational benchmark.
 
 Programmes also support an explicitly started `pilot` phase after the current
@@ -134,7 +134,7 @@ both products against original design evidence, target and rule versions. The
 read-only projection is `GET /api/tasks/:taskId/views/reduction-pilot`. Missing
 scientific inputs remain conditional/limited; no power or causal estimator is
 introduced. See [programme records](../damage-reduction-programmes/README.md)
-and the [Plan 04 report](../../../docs/architecture/damage-reduction-04-implementation-report.md).
+and the [Plan 04 report](../../../docs/reports/damage-reduction/damage-reduction-04-implementation-report.md).
 
 Plan 05 adds an explicit programme `evaluation` phase. DamageAccountant
 `reduction.evaluate` reproduces supplied residual point comparisons with the
@@ -143,4 +143,4 @@ them independently and inspects dossier completeness. The governed task view is
 `GET /api/tasks/:taskId/views/reduction-evaluation`. Scientific qualification
 requires separate human adoption and current server validation; technical
 artifacts remain unqualified. Run `npm run reduction:evaluation:verify` for the
-synthetic engineering/restart trace. See the [Plan 05 report](../../../docs/architecture/damage-reduction-05-implementation-report.md).
+synthetic engineering/restart trace. See the [Plan 05 report](../../../docs/reports/damage-reduction/damage-reduction-05-implementation-report.md).

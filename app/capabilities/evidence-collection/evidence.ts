@@ -2,7 +2,7 @@ import type { EvidenceCheck } from '../../contracts/haze-evidence.js';
 import {
   hashCheck,
   licenceCheck,
-  pendingReviewChecks,
+  intendedUseReviewCheck,
   provenanceCheck,
 } from './checks.js';
 import { sha256 } from '../../adapters/haze-sources/http.js';
@@ -50,7 +50,7 @@ export function pinEvidence(input: EvidenceInput): PinnedEvidence {
         input.retrievedAt,
       ),
       ...coverageChecks,
-      ...pendingReviewChecks(),
+      intendedUseReviewCheck(),
     ],
   };
   return { record, raw };

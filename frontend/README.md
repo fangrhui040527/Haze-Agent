@@ -9,7 +9,7 @@ EvidenceCritic, WorkerShield) shown as a pixel-art office.
 > and publication remain outside this milestone. See [implementation and verification](../docs/evidence/milestone-v014.md).
 
 Current design and implementation: [`docs/evidence/milestone-v014.md`](../docs/evidence/milestone-v014.md)
-and [`docs/orchestration/orchestration-scaffold.md`](../docs/orchestration/orchestration-scaffold.md).
+and [`docs/history/orchestration/orchestration-scaffold.md`](../docs/history/orchestration/orchestration-scaffold.md).
 
 ---
 

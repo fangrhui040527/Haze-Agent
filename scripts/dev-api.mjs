@@ -448,8 +448,8 @@ export function createDevApi({
             `${title}: ${state}`,
             ...(title === 'Jobs'
               ? [
-                  `  CLI: ${value.cli_available ? 'available' : 'unavailable'} | runtime: ${value.runtime_reachable ? 'reachable' : 'unreachable'} | local compute: ${value.local_compute_available ? 'available' : 'unavailable'}`,
-                  `  Job contract: ${value.schema_compatible ? 'compatible' : 'unavailable'} | local-only policy: ${value.local_only_enforced ? 'enforced' : 'not enforced'}`,
+                  `  CLI: ${value.cli_available ? 'available' : 'unavailable'} | runtime: ${value.runtime_reachable ? 'reachable' : 'unreachable'} | cloud compute: ${value.cloud_compute_available ? 'available' : 'unavailable'} | local compute: ${value.local_compute_available ? 'available' : 'unavailable'}`,
+                  `  Job contract: ${value.schema_compatible ? 'compatible' : 'unavailable'} | cloud policy: ${value.cloud_enforced ? 'supported' : 'unsupported'} | local-only policy: ${value.local_only_enforced ? 'enforced' : 'not enforced'}`,
                   ...(value.options?.fleets?.length
                     ? [`  Fleets: ${value.options.fleets.map(line).join(', ')}`]
                     : []),

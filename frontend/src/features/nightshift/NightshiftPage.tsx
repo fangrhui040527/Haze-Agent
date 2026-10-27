@@ -427,8 +427,8 @@ export function NightshiftPage() {
           max_attempts: draft.max_attempts,
           lifetime_seconds: draft.lifetime_seconds,
           ...currentNightshiftAuthority(task),
-          privacy: 'local-only',
-          max_spend_usd: 0,
+          privacy: draft.privacy,
+          max_spend_usd: draft.privacy === 'cloud-ok' ? null : 0,
         };
         if (!draft.automatic_opt_in)
           return {
@@ -505,8 +505,8 @@ export function NightshiftPage() {
           budget: draft.budget,
           window: draft.window,
           ...(draft.fleet ? { fleet: draft.fleet } : {}),
-          privacy: 'local-only',
-          max_spend_usd: 0,
+          privacy: chain.grant.privacy,
+          max_spend_usd: chain.grant.max_spend_usd,
         };
       },
       (body, key, signal) => client.submitJob(body, key, signal),
@@ -611,7 +611,7 @@ export function NightshiftPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Nightshift local jobs</h1>
+          <h1>Nightshift candidate jobs</h1>
           <p>
             Bounded jobs under explicit grants and historical candidate results.
           </p>
@@ -653,8 +653,8 @@ export function NightshiftPage() {
       ) : null}
       {notice ? <p role="status">{notice}</p> : null}
       {!data ? <p role="status">Loading saved Nightshift jobs...</p> : null}
-      <section className={styles.panel} aria-label="Local job readiness">
-        <h2>Local job readiness</h2>
+      <section className={styles.panel} aria-label="Candidate job readiness">
+        <h2>Candidate job readiness</h2>
         {readinessError ? <p role="status">{readinessError}</p> : null}
         {data?.readiness ? (
           <>
@@ -665,7 +665,9 @@ export function NightshiftPage() {
               · daemon:{' '}
               {data.readiness.runtime_reachable ? 'reachable' : 'unavailable'} ·
               local-only enforcement:{' '}
-              {data.readiness.local_only_enforced ? 'verified' : 'unverified'}
+              {data.readiness.local_only_enforced ? 'verified' : 'unverified'} ·
+              cloud generation:{' '}
+              {data.readiness.cloud_enforced ? 'verified' : 'unverified'}
             </p>
             <p>
               Submission:{' '}
@@ -674,16 +676,16 @@ export function NightshiftPage() {
             </p>
             <p>
               Runtime version: {data.readiness.runtime_version ?? 'unknown'} ·
-              adapter: {data.readiness.adapter_version}. Cloud generation is
-              disabled.
+              adapter: {data.readiness.adapter_version}.
             </p>
           </>
         ) : (
           <p>Runtime readiness has not been established.</p>
         )}
         <p>
-          Job spending policy covers these local jobs. Direct agent-provider
-          inference retains separate Haze call/token limits.
+          New candidate chains default to cloud allowed with no cloud spend cap.
+          Each job keeps its admitted chain’s policy. Normal Haze agent calls
+          use their own model routes and Haze call/token limits.
         </p>
       </section>
       <AutomaticReleaseDetails data={automaticReadiness} />
@@ -691,6 +693,7 @@ export function NightshiftPage() {
         <ChainAdmissionForm
           busy={busy}
           available={data?.readiness?.ready ?? false}
+          readiness={data?.readiness ?? null}
           automaticAvailable={Boolean(
             automaticReadiness?.ready && automaticReadiness.released,
           )}
@@ -720,13 +723,13 @@ export function NightshiftPage() {
           Clear saved request identity
         </Button>
       </p>
-      <section aria-label="Persisted local jobs">
+      <section aria-label="Persisted candidate jobs">
         <h2>Saved jobs</h2>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th scope="col">Local job</th>
+                <th scope="col">Job</th>
                 <th scope="col">Execution</th>
                 <th scope="col">Judge outcome</th>
                 <th scope="col">Receipt</th>

@@ -33,7 +33,7 @@ Using scripts? See [client scripts](../../../app/adapters/zetaris/scripts/HOWTO.
 | Kafka                                                | Ingestion still needs checking                                                                          |
 | SQL databases, logs, PDFs and other planned recipes  | Not ready for onboarding                                                                                |
 
-Known-to-fail recipes require an explicit runner override; they remain failures. See the [roadmap](../plans/FUTURES.md) for planned work.
+Known-to-fail recipes require an explicit runner override; they remain failures. See the [roadmap](../plans/roadmap.md) for planned work.
 
 ## If a source fails
 

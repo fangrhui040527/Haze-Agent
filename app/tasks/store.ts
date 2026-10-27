@@ -2676,7 +2676,7 @@ export class TaskStore {
             this.nightshift.assertOrdinaryInput(ref);
           }
           const limits = resourceLimitsSchema.parse({
-            // Investigation profile (docs/architecture/general-agent-refactor-plan.md).
+            // Investigation profile (docs/plans/orchestration/general-agent-refactor-plan.md).
             // Model-driven specialists each spend turns, so the short-lookup
             // ceiling of six cannot seat Manager planning, three specialists
             // and synthesis in one run.

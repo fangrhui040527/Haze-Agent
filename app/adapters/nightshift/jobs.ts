@@ -24,7 +24,7 @@ import {
   resolveRouteCredential,
 } from './runtime.js';
 
-export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v2';
+export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v3';
 const MAX_STDIO_BYTES = 2 * 1024 * 1024;
 // Installed cancel() labels the record before provider-abort completion. That
 // label is deliberately absent: it cannot prove remote compute termination.
@@ -160,8 +160,28 @@ export function inspectLocalCompute(
       .map((value: unknown) => String(record(value)!.id)),
   };
 }
-// Source-reviewed local-only contract: attempts AND judges carry the job floor
-// through host.mjs to providers.js's refusal boundary. New builds fail closed.
+/** Cloud permission is separate from a local gateway address or local readiness. */
+export function inspectCloudCompute(statusValue: unknown): boolean {
+  const status = record(statusValue);
+  const lanes = Array.isArray(status?.lanes) ? status.lanes : [];
+  return lanes.some((value: unknown) => {
+    const lane = record(value);
+    return (
+      lane !== null &&
+      (lane.kind === 'cloud' ||
+        (lane.kind === undefined && lane.provider === 'nvidia')) &&
+      !lane.disabled &&
+      lane.races !== false &&
+      typeof lane.state === 'string' &&
+      lane.state.toLowerCase() === 'ready' &&
+      typeof lane.model === 'string' &&
+      lane.model.length > 0
+    );
+  });
+}
+// Source-reviewed privacy contract: attempts AND judges carry the job floor
+// through host.mjs to providers.js's refusal boundary. Cloud jobs omit the CLI's
+// unenforceable monetary ceiling. New builds fail closed.
 const REVIEWED_SOURCE_HASHES: Record<string, string> = {
   'cli/ns.mjs':
     'f6c05c9c30f549eacebefe1a0413730a0e346c20f37896a29f7fc2da52e0f378',
@@ -506,6 +526,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       local_only_enforced: false,
       local_compute_available: false,
       cloud_enforced: false,
+      cloud_compute_available: false,
       ready: false,
       runtime_version: null,
       adapter_version: NIGHTSHIFT_JOB_ADAPTER_VERSION,
@@ -553,7 +574,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
           (name) => flags[name] !== undefined,
         ) &&
         accepts('kind', ['best_of_n']) &&
-        accepts('privacy', ['local-only']) &&
+        accepts('privacy', ['local-only', 'cloud-ok']) &&
         accepts('judge', base.options.judges) &&
         accepts('budget', base.options.budgets) &&
         accepts('window', base.options.windows);
@@ -570,31 +591,36 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       const sourceContract =
         reviewedInstallation(this.command) && base.runtime_version === '1.2.1';
       base.local_only_enforced = sourceContract;
+      base.cloud_enforced = sourceContract;
       let localCompute = { available: false, fleets: [] as string[] };
+      let cloudCompute = false;
       if (base.runtime_reachable && sourceContract) {
         const [fleets, status] = await Promise.all([
           readNightshiftControl(this.env, '/admin/fleets', signal),
           readNightshiftControl(this.env, '/admin/status', signal),
         ]);
         localCompute = inspectLocalCompute(fleets, status);
+        cloudCompute = inspectCloudCompute(status);
         // This runtime records fleet_id as metadata; it does not select a
         // different compute roster. Do not advertise it as a submission choice.
       }
       base.local_compute_available = localCompute.available;
+      base.cloud_compute_available = cloudCompute;
       const contractAvailable =
         base.schema_compatible &&
         base.runtime_reachable &&
         generation &&
         outcome &&
         sourceContract;
-      base.ready = contractAvailable && localCompute.available;
+      base.ready =
+        contractAvailable && (localCompute.available || cloudCompute);
       base.can_reconcile = contractAvailable;
       base.reason = base.ready
-        ? 'Local-only text jobs use ready local runtime lanes; explicit fleet selection is unsupported. Exact native-request reconciliation requires a stored server nonce; cloud grants remain disabled.'
+        ? 'Text jobs can use the ready runtime lanes permitted by their grant. Cloud-enabled jobs have no monetary cap; local-only jobs retain $0 cloud spend. Explicit fleet selection is unsupported. Exact native-request reconciliation requires a stored server nonce.'
         : !sourceContract
           ? 'The installed job privacy contract has not been reviewed for this build.'
-          : contractAvailable && !localCompute.available
-            ? 'The daemon is reachable, but no eligible local text lane is ready. Configure local models and fleets in Nightshift; cloud lanes cannot serve local-only jobs.'
+          : contractAvailable && !localCompute.available && !cloudCompute
+            ? 'The daemon is reachable, but no eligible local or cloud text lane is ready. Configure ready models and fleets in Nightshift.'
             : 'The runtime job capabilities are unavailable or unverified.';
       return base;
     } catch {
@@ -617,7 +643,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       throw new NightshiftJobTransportError(
         'rejected-before-acceptance',
         'invalid_options',
-        'Nightshift job options violate the admitted local-only contract.',
+        'Nightshift job options violate the admitted privacy and spending contract.',
       );
     }
     if (request.fleet !== undefined)
@@ -627,11 +653,16 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
         'The installed runtime records fleet names as metadata and cannot select compute by fleet; use runtime selection.',
       );
     const readiness = await this.readiness(signal);
-    if (!readiness.ready)
+    const policyReady =
+      request.privacy === 'cloud-ok'
+        ? readiness.cloud_enforced && readiness.cloud_compute_available === true
+        : readiness.local_only_enforced &&
+          readiness.local_compute_available !== false;
+    if (!readiness.ready || !policyReady)
       throw new NightshiftJobTransportError(
         'rejected-before-acceptance',
         'unavailable',
-        'Nightshift local-job readiness is not established.',
+        'Nightshift job readiness is not established for the requested privacy policy.',
       );
     const args = [
       'generate',
@@ -647,10 +678,9 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       '--window',
       request.window,
       '--privacy',
-      'local-only',
-      '--max-spend',
-      '0',
+      request.privacy,
     ];
+    if (request.privacy === 'local-only') args.push('--max-spend', '0');
     const result = record(
       await this.invoke(args, signal, request.prompt, true),
     );
@@ -862,7 +892,9 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       if (
         !readiness.can_reconcile ||
         !readiness.runtime_reachable ||
-        !readiness.local_only_enforced
+        !(request.privacy === 'cloud-ok'
+          ? readiness.cloud_enforced
+          : readiness.local_only_enforced)
       )
         return refused;
       const native = record(
@@ -878,7 +910,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
           canonicalJson([{ role: 'user', content: request.prompt }]) ||
         native.n !== request.n ||
         native.window !== request.window ||
-        native.privacy !== 'local-only' ||
+        native.privacy !== request.privacy ||
         native.judge_mode !== request.judge ||
         record(native.attempt_budget)?.level !== request.budget ||
         (native.fleet_id ?? null) !== (request.fleet ?? null)

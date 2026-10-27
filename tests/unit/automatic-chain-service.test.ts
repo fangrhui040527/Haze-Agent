@@ -149,6 +149,8 @@ function fixture(
       schema_version: automatic
         ? 'haze.nightshift.chain.admission.v2'
         : 'haze.nightshift.chain.admission.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       task_id: task.id,
       ...authority(task),
       total_runs: grant.totalRuns,
@@ -169,6 +171,8 @@ function fixture(
   const job = store.nightshift.reserveJob(
     {
       schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       chain_id: chain.id,
       ...authority(task),
       expected_chain_revision: chain.revision,
@@ -599,6 +603,8 @@ describe('automatic chain successor decisions', () => {
       const second = f.store.nightshift.reserveJob(
         {
           schema_version: 'haze.nightshift.job.submit.v1',
+          privacy: 'local-only',
+          max_spend_usd: 0,
           chain_id: chain.id,
           ...authority(current),
           expected_assignment_id: assignment.id,
@@ -879,6 +885,8 @@ describe('automatic chain successor decisions', () => {
     const second = f.store.nightshift.reserveJob(
       {
         schema_version: 'haze.nightshift.job.submit.v1',
+        privacy: 'local-only',
+        max_spend_usd: 0,
         chain_id: chain.id,
         ...authority(task),
         expected_chain_revision: chain.revision,

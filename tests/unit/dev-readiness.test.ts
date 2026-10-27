@@ -218,7 +218,7 @@ describe('named startup component readiness', () => {
     ).toBe('FIXTURE');
   });
 
-  it('never labels jobs ready without enforceable local-only compute', async () => {
+  it('never labels jobs ready without a verified policy and eligible compute', async () => {
     const { client } = application({
       '/api/nightshift/jobs/readiness': {
         ready: true,
@@ -232,6 +232,28 @@ describe('named startup component readiness', () => {
     expect(rows.find((value) => value.id === 'nightshift-jobs')?.status).toBe(
       'BLOCKED',
     );
+  });
+
+  it('reports cloud candidate jobs ready without any local model', async () => {
+    const { client } = application({
+      '/api/nightshift/jobs/readiness': {
+        ready: true,
+        cli_available: true,
+        runtime_reachable: true,
+        schema_compatible: true,
+        cloud_enforced: true,
+        cloud_compute_available: true,
+        local_only_enforced: true,
+        local_compute_available: false,
+      },
+    });
+    const rows = await client.startupChecks();
+    expect(rows.find((value) => value.id === 'nightshift-jobs')?.status).toBe(
+      'READY',
+    );
+    expect(
+      rows.find((value) => value.id === 'nightshift-inference')?.status,
+    ).toBe('UNVERIFIED');
   });
 
   it('distinguishes deliberately disabled inspection from a failed connection', async () => {

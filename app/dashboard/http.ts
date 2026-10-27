@@ -9,6 +9,7 @@ import type { WatcherSpec } from '../capabilities/evidence-collection/types.js';
 import { entityId, type HazeWorld } from '../world/haze-world.js';
 import { createLiveUpdateTracker } from './live-updates.js';
 import {
+  cacheProjectionWorld,
   projectDetail,
   projectItems,
   projectLocations,
@@ -97,10 +98,13 @@ export class DashboardService {
   }
 
   snapshot(): DataSnapshot {
-    const { world, hazeops, mode } = this.options;
+    const { hazeops, mode } = this.options;
+    const world = cacheProjectionWorld(this.options.world);
     const specs = hazeops.specs();
     const now = this.clock();
     const fictional = mode === 'fixture';
+    // The location list also supplies the entity lookups used by every item.
+    const locations = projectLocations(world);
     return {
       items: projectItems({
         world,
@@ -109,7 +113,7 @@ export class DashboardService {
         now,
         fictional,
       }),
-      locations: projectLocations(world),
+      locations,
       sources: projectSources(specs, world),
       asOf: now.toISOString(),
       fictional,

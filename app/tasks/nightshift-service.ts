@@ -154,6 +154,7 @@ export class NightshiftJobService {
       schema_compatible: false,
       runtime_reachable: false,
       local_only_enforced: false,
+      cloud_compute_available: false,
       cloud_enforced: false,
       ready: false,
       runtime_version: null,
@@ -173,6 +174,7 @@ export class NightshiftJobService {
   }
   private async requireReady(
     identity: TaskIdentity,
+    privacy: NightshiftSubmitRequest['privacy'],
   ): Promise<NightshiftJobReadiness> {
     let ready: NightshiftJobReadiness;
     try {
@@ -184,25 +186,36 @@ export class NightshiftJobService {
         'Nightshift job readiness could not be established. No submission was made.',
       );
     }
+    const policyReady =
+      privacy === 'local-only'
+        ? ready.local_only_enforced && ready.local_compute_available !== false
+        : ready.cloud_enforced && ready.cloud_compute_available !== false;
     if (
       !ready.ready ||
       !ready.schema_compatible ||
       !ready.runtime_reachable ||
-      !ready.local_only_enforced ||
+      !policyReady ||
       !ready.schema_hash
     )
       throw new TaskError(
         503,
         'nightshift_unavailable',
-        ready.reason ??
-          'The local-only Nightshift job contract is unavailable. No submission was made.',
+        !policyReady
+          ? `Nightshift has no verified ready compute for the requested ${privacy} policy. No submission was made.`
+          : (ready.reason ??
+              `The requested ${privacy} Nightshift job contract is unavailable. No submission was made.`),
       );
     return ready;
   }
   async admitChain(value: unknown, key: string, identity: TaskIdentity) {
     this.check(identity);
     const body = request(chainAdmissionSchema, value);
-    const prior = this.store.nightshift.admissionForKey(body, key, identity);
+    const prior = this.store.nightshift.admissionForKey(
+      body,
+      key,
+      identity,
+      value,
+    );
     if (prior) return this.store.nightshift.chain(prior.chain.id, identity);
     if (body.schema_version === 'haze.nightshift.chain.admission.v2') {
       const gate = await this.automationReadiness(identity);
@@ -213,7 +226,7 @@ export class NightshiftJobService {
           gate.reason ?? 'Automatic mode is not released.',
         );
     }
-    await this.requireReady(identity);
+    await this.requireReady(identity, body.privacy);
     if (body.schema_version === 'haze.nightshift.chain.admission.v2') {
       // Runtime discovery yields to other work. A release observed before it
       // may have been withdrawn; check again with no await before admission.
@@ -225,7 +238,7 @@ export class NightshiftJobService {
           gate.reason ?? 'Automatic mode is not released.',
         );
     }
-    return this.store.nightshift.admitChain(body, key, identity).chain;
+    return this.store.nightshift.admitChain(body, key, identity, value).chain;
   }
   async automationReadiness(identity: TaskIdentity) {
     this.check(identity);
@@ -379,10 +392,11 @@ export class NightshiftJobService {
       original,
       key,
       identity,
+      value,
     );
     if (prior) return this.store.nightshift.job(prior.job.id, identity);
     const body = this.materializePrompt(original, identity);
-    const ready = await this.requireReady(identity);
+    const ready = await this.requireReady(identity, body.privacy);
     if (
       !ready.options.judges.includes(body.judge) ||
       !ready.options.budgets.includes(body.budget) ||
@@ -404,7 +418,7 @@ export class NightshiftJobService {
         runtime_version: ready.runtime_version,
         schema_hash: ready.schema_hash!,
       },
-      original,
+      value,
     );
     if (admitted.reused)
       return this.store.nightshift.job(admitted.job.id, identity);
@@ -418,8 +432,8 @@ export class NightshiftJobService {
       budget: job.options.budget as NightshiftSubmitRequest['budget'],
       window: job.options.window as NightshiftSubmitRequest['window'],
       ...(job.options.fleet ? { fleet: job.options.fleet } : {}),
-      privacy: 'local-only',
-      max_spend_usd: 0,
+      privacy: job.options.privacy,
+      max_spend_usd: job.options.max_spend_usd,
     };
   }
   private async dispatch(

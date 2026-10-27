@@ -1,6 +1,6 @@
 # Organizer checklist
 
-Confirmed for this journey: participants can start a local installation through [Zetaris Cloud](https://www.zetaris.com/cloud), or use an existing platform; the event instance is shared; the objective is open-ended. The [installation guide](../install/updated_zetaris_installation_guide.md#download-and-licensing) covers obtaining the local platform bundle and registry access.
+Confirmed for this journey: participants can start a local installation through [Zetaris Cloud](https://www.zetaris.com/cloud), or use an existing platform; the event instance is shared; the objective is open-ended. The [installation guide](../install/local-installation.md#download-and-licensing) covers obtaining the local platform bundle and registry access.
 
 This repo supplies a participant path through [Start here](../../START-HERE.md). The following items require an actual organizer/administrator decision or provisioning step. Documentation cannot create access or validate an unknown deployment.
 

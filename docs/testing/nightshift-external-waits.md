@@ -22,6 +22,12 @@ this task** option. It requests the three tools only for that submission, resets
 after sending and preserves the original tool grant on an unchanged retry. It
 does not create a chain grant or authorize automatic successors.
 
+Normal agent calls use the task's pinned provider route. Candidate tools use a
+separate Nightshift job API for background generation and judging. Both can use
+the same cloud provider through Nightshift. New candidate chain grants default
+to `cloud-ok` with no monetary cap; job, attempt and lifetime limits still apply.
+Existing local-only/$0 grants are preserved and jobs inherit their chain policy.
+
 ## Read-only browser checks
 
 Open `/nightshift/:jobId` for an acknowledged job with an external dependency.
@@ -89,6 +95,7 @@ are synthetic and do not make external requests.
 A genuine specialist submit/wait/result trace and an interactive-inference
 latency observation while a local background job runs are required live evidence.
 Do not describe a fixture or an acknowledged but refused local-only submission as
-successful generation. Preserve the local-only and zero-cloud-spend policy and
-record unavailable local compute as an unmet gate. Do not change installed
+successful generation. For the retained local-only verification, preserve its
+zero-cloud-spend policy and record unavailable local compute as an unmet gate.
+New cloud grants do not establish that historical local verification. Do not change installed
 fleets, download models or relax privacy to manufacture a successful trace.

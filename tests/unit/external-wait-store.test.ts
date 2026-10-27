@@ -84,6 +84,8 @@ function fixture(store: TaskStore, key = 'task') {
   const chain = store.nightshift.admitChain(
     {
       schema_version: 'haze.nightshift.chain.admission.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       task_id: task.id,
       ...expected(task),
     },
@@ -94,6 +96,8 @@ function fixture(store: TaskStore, key = 'task') {
   const job = store.nightshift.reserveJob(
     {
       schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       chain_id: chain.id,
       ...expected(task),
       expected_assignment_id: specialist.id,
@@ -236,6 +240,8 @@ function consumedRequiredWithOptional(store: TaskStore) {
   const submitted = store.nightshift.reserveJob(
     {
       schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       chain_id: chain.id,
       ...expected(task),
       expected_assignment_id: f.authority.assignment_id,

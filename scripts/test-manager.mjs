@@ -21,7 +21,7 @@ if (options.baselineRoot !== undefined || options.buildRoot !== undefined)
   );
 const frozen = JSON.parse(
   await readFile(
-    join(root, 'docs/orchestration/manager-evaluation-cases.json'),
+    join(root, 'docs/testing/cases/manager-evaluation-cases.json'),
     'utf8',
   ),
 );

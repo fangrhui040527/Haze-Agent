@@ -472,10 +472,11 @@ export function ChatPanel({
           Allow Nightshift candidate tools for this task
         </label>
         <p>
-          Optional local-only candidate drafts and critiques with $0 cloud
-          spend. A separate bounded chain grant is required in{' '}
-          <Link to="/nightshift">Nightshift</Link>. No automatic successor runs
-          are authorized.
+          Optional background candidate generation and judging through
+          Nightshift, separate from the agents’ normal model calls. New chains
+          allow cloud providers with no cloud spend cap. A separate bounded
+          chain grant is required in <Link to="/nightshift">Nightshift</Link>.
+          No automatic successor runs are authorized.
         </p>
       </div>
       {focusItemId && (

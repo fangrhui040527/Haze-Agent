@@ -16,7 +16,7 @@ import {
 const args = process.argv.slice(2);
 const casesBytes = await readFile(
   new URL(
-    '../docs/orchestration/manager-evaluation-cases.json',
+    '../docs/testing/cases/manager-evaluation-cases.json',
     import.meta.url,
   ),
 );

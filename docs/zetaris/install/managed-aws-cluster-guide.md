@@ -2,7 +2,7 @@
 
 Create a Zetaris compute cluster in your AWS account, sign in to its Gateway and run a query.
 
-For Docker Compose on your own computer, see [Install locally](updated_zetaris_installation_guide.md).
+For Docker Compose on your own computer, see [Install locally](local-installation.md).
 
 ## Before you start
 

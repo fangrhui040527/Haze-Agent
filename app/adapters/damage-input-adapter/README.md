@@ -39,5 +39,5 @@ original supporting artifacts. It does not acquire external datasets or estimate
 health effects from raw PM2.5. Missing evidence produces an acquisition gap;
 ambiguous evidence requires clarification. Fixture evidence remains synthetic.
 
-See the [implementation report](../../../docs/orchestration/world-model-damage-input-adapter-report.md)
+See the [implementation report](../../../docs/reports/orchestration/world-model-damage-input-adapter-report.md)
 for bounds, provenance rules and historical validation results.

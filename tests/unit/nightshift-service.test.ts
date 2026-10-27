@@ -12,6 +12,7 @@ import type { NightshiftJob } from '../../app/contracts/nightshift-records.js';
 import type {
   NightshiftJobReadiness,
   NightshiftRemoteJob,
+  NightshiftSubmitRequest,
 } from '../../app/contracts/nightshift.js';
 import {
   NightshiftJobTransportError,
@@ -171,6 +172,8 @@ function automaticAdmission(store: TaskStore) {
     task,
     body: {
       schema_version: 'haze.nightshift.chain.admission.v2',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       task_id: task.id,
       ...authority(task),
       total_runs: 2,
@@ -202,8 +205,15 @@ function releasedFixture() {
     })),
   });
 }
-async function admission(adapter: NightshiftJobPort = port()) {
+async function admission(
+  adapter: NightshiftJobPort = port(),
+  privacy: NightshiftSubmitRequest['privacy'] = 'local-only',
+) {
   const state = setup(adapter);
+  const policy = {
+    privacy,
+    max_spend_usd: privacy === 'local-only' ? 0 : null,
+  };
   const task = state.store.admit(
     taskRequestSchema.parse({
       schema_version: 'haze.task.request.v3',
@@ -215,6 +225,7 @@ async function admission(adapter: NightshiftJobPort = port()) {
   const chain = await state.service.admitChain(
     {
       schema_version: 'haze.nightshift.chain.admission.v1',
+      ...policy,
       task_id: task.id,
       ...authority(task),
     },
@@ -223,6 +234,7 @@ async function admission(adapter: NightshiftJobPort = port()) {
   );
   const body = {
     schema_version: 'haze.nightshift.job.submit.v1',
+    ...policy,
     chain_id: chain.id,
     expected_chain_revision: chain.revision,
     ...authority(task),
@@ -240,6 +252,51 @@ function control(job: NightshiftJob, store: TaskStore) {
 }
 
 describe('browser-independent Nightshift supervisor', () => {
+  it('dispatches cloud candidates without requiring any local model or adding a dollar cap', async () => {
+    const baseline = port();
+    const ready = await baseline.readiness();
+    const remote = await baseline.inspect('remote-1');
+    const adapter = port({
+      readiness: vi.fn(() =>
+        Promise.resolve({
+          ...ready,
+          cloud_enforced: true,
+          cloud_compute_available: true,
+          local_compute_available: false,
+        }),
+      ),
+      inspect: vi.fn(() => Promise.resolve({ ...remote, privacy: 'cloud-ok' })),
+    });
+    const state = await admission(adapter, 'cloud-ok');
+    expect(state.chain.grant).toMatchObject({
+      privacy: 'cloud-ok',
+      max_spend_usd: null,
+      automatic_followup_runs: 0,
+    });
+    const job = await state.service.submitJob(
+      state.body,
+      'cloud-job',
+      identity,
+    );
+    expect(job.remote_id).toBe('remote-1');
+    expect(adapter.submit).toHaveBeenCalledWith(
+      expect.objectContaining({ privacy: 'cloud-ok', max_spend_usd: null }),
+      expect.any(AbortSignal),
+    );
+    await expect(
+      state.service.admitChain(
+        {
+          schema_version: 'haze.nightshift.chain.admission.v1',
+          task_id: state.task.id,
+          ...authority(state.store.read(state.task.id, identity)),
+          privacy: 'local-only',
+          max_spend_usd: 0,
+        },
+        'unavailable-local-chain',
+        identity,
+      ),
+    ).rejects.toMatchObject({ code: 'nightshift_unavailable' });
+  });
   it('admits v2 only while both release checks remain ready', async () => {
     const adapter = port();
     const gate = vi.fn(() => Promise.resolve(releasedFixture()));
@@ -273,6 +330,8 @@ describe('browser-independent Nightshift supervisor', () => {
     const chain = await state.service.admitChain(
       {
         schema_version: 'haze.nightshift.chain.admission.v1',
+        privacy: 'local-only',
+        max_spend_usd: 0,
         task_id: task.id,
         ...authority(task),
       },
@@ -643,7 +702,7 @@ describe('browser-independent Nightshift supervisor', () => {
     await state.service.close();
     expect((await work).execution_state).toBe('submission_unknown');
   });
-  it('rejects unavailable/cloud/unsupported options before creating a remote submission', async () => {
+  it('rejects unenforceable dollar caps and unsupported options before remote submission', async () => {
     const adapter = port();
     const state = await admission(adapter);
     await expect(

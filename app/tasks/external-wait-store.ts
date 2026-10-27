@@ -1129,7 +1129,7 @@ export class ExternalWaitStore {
       )
         fail(
           'nightshift_policy_violation',
-          'The retained result does not satisfy its original local-only execution policy.',
+          'The retained result does not satisfy its original admitted execution policy.',
         );
       if (
         input.decision !== 'use_candidate' &&

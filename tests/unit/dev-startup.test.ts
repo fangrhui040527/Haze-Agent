@@ -224,7 +224,7 @@ describe('root development startup', () => {
     expect(result.output).toMatch(/World Model \(SQLite\)[^\n]*READY/);
     expect(result.output).toMatch(/H-MEM[^\n]*DISABLED/);
     expect(result.output).toMatch(/Nightshift runtime[^\n]*UNREACHABLE/);
-    expect(result.output).toMatch(/Nightshift local jobs[^\n]*UNAVAILABLE/);
+    expect(result.output).toMatch(/Nightshift candidate jobs[^\n]*UNAVAILABLE/);
     for (const name of [
       'Zetaris platform',
       'Haze TypeScript build',

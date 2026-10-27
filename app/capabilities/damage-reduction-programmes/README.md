@@ -125,4 +125,4 @@ imported flags, numerical agreement and delivery receipts cannot establish an
 achieved effect alone. The programme page displays the server conclusion and its
 reproduction limits. The engineering verifier is
 `npm run reduction:evaluation:verify`; operational release requires a reviewed
-non-synthetic reference trace. See the [Plan 05 report](../../../docs/architecture/damage-reduction-05-implementation-report.md).
+non-synthetic reference trace. See the [Plan 05 report](../../../docs/reports/damage-reduction/damage-reduction-05-implementation-report.md).

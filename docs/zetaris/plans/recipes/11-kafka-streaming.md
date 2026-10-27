@@ -7,7 +7,7 @@
 
 ## Why this is deferred
 
-Do not start Kafka or other streaming recipes until a Zetaris installation can ingest from a Kafka broker. The [local installation](../../install/updated_zetaris_installation_guide.md) has been tested, but Kafka ingestion has not. A broker needs more resources than a file table or REST call, and the host must have enough capacity for both Zetaris and Kafka. Confirm ingestion before scaffolding the recipe.
+Do not start Kafka or other streaming recipes until a Zetaris installation can ingest from a Kafka broker. The [local installation](../../install/local-installation.md) has been tested, but Kafka ingestion has not. A broker needs more resources than a file table or REST call, and the host must have enough capacity for both Zetaris and Kafka. Confirm ingestion before scaffolding the recipe.
 
 ## Sources (for when this is picked up)
 

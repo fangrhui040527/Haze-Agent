@@ -110,6 +110,8 @@ function fixture(store: TaskStore, enable = true) {
     automatic_followup_runs: 2,
     automatic_opt_in: true,
     initial_progress: progress,
+    privacy: 'local-only',
+    max_spend_usd: 0,
   };
   return { task, ref, progress, request };
 }

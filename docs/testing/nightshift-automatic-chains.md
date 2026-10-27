@@ -5,7 +5,7 @@ Existing v1 grants remain manual-only after upgrade. A chain's authorized mode
 and the server's release readiness are separate facts: a saved automatic grant
 does not bypass an unmet live or recovery gate.
 
-See the [27 October recheck](../architecture/nightshift-04-automatic-chains-recheck-report.md)
+See the [27 October recheck](../reports/nightshift/nightshift-04-automatic-chains-recheck-report.md)
 for current fixes and verification. Redundant chain Pause must preserve a
 `no_progress` stop; Resume still needs validated refinement. V2 admission checks
 release again after native runtime discovery before saving a grant.
@@ -53,10 +53,12 @@ GET-only observer reads `/api/nightshift/chains/:id/automation`. Check:
 - The existing wait/capacity panel, including queued Haze capacity and stopped
   authority independently of retained result bytes.
 
-The screen shows local-job privacy and $0 cloud spending separately from Haze
-agent-provider model calls, input-byte bounds, output-token bounds and reserved
+The screen shows each candidate grant's saved privacy and spend policy separately
+from Haze agent-provider model calls, input-byte bounds, output-token bounds and reserved
 synthesis/review calls. A low job budget or a reachable daemon is not a Haze
-resource grant or evidence acceptance.
+resource grant or evidence acceptance. New candidate grants default to cloud-ok
+with no monetary cap; existing local-only grants retain $0 cloud spend. This
+policy choice does not release automatic follow-ups or satisfy its live gates.
 
 The explicit **Submit revised progress** form sends the versioned record through
 `POST /api/nightshift/chains/:id/progress` with current revisions and an
@@ -101,4 +103,4 @@ The installed configuration currently lacks an eligible local text lane. Genuine
 Manager, specialist and background-job traces, including an interactive latency
 observation, remain live gates. Do not enable production automatic mode from
 schema inspection or fixture success, change fleets or download models to
-manufacture a successful trace, or relax the local-only/$0 policy.
+manufacture a successful trace, or rewrite historical local-only/$0 grants.

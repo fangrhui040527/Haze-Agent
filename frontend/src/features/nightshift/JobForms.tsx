@@ -16,6 +16,7 @@ export type ChainDraft = {
   instruction: string;
   input_refs_text: string;
   previous_chain_id: string;
+  privacy: 'cloud-ok' | 'local-only';
 };
 export type JobDraft = {
   chain_id: string;
@@ -29,21 +30,39 @@ export type JobDraft = {
   fleet: string;
 };
 
+export function candidatePolicyReady(
+  readiness: NightshiftJobReadiness | null,
+  privacy: 'cloud-ok' | 'local-only',
+): boolean {
+  if (!readiness?.ready) return false;
+  return privacy === 'cloud-ok'
+    ? readiness.cloud_enforced && readiness.cloud_compute_available !== false
+    : readiness.local_only_enforced &&
+        readiness.local_compute_available !== false;
+}
+
 export function ChainAdmissionForm({
   busy,
   available,
+  readiness,
   automaticAvailable = false,
   automaticReason = null,
   onSubmit,
 }: {
   busy: boolean;
   available: boolean;
+  readiness?: NightshiftJobReadiness | null;
   automaticAvailable?: boolean;
   automaticReason?: string | null;
   onSubmit(draft: ChainDraft): void;
 }) {
   const [automatic, setAutomatic] = useState(false);
   const [totalRuns, setTotalRuns] = useState(1);
+  const [privacy, setPrivacy] = useState<'cloud-ok' | 'local-only'>('cloud-ok');
+  const policyAvailable =
+    readiness === undefined
+      ? available
+      : candidatePolicyReady(readiness, privacy);
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -61,6 +80,7 @@ export function ChainAdmissionForm({
       instruction: String(data.get('instruction') ?? '').trim(),
       input_refs_text: String(data.get('initial_input_refs') ?? '[]'),
       previous_chain_id: String(data.get('previous_chain_id') ?? '').trim(),
+      privacy,
     });
   };
   return (
@@ -75,6 +95,26 @@ export function ChainAdmissionForm({
         Task ID
         <input name="task_id" required maxLength={36} placeholder="Task UUID" />
       </label>
+      <label>
+        Candidate compute policy
+        <select
+          name="privacy"
+          value={privacy}
+          onChange={(event) =>
+            setPrivacy(
+              event.target.value === 'local-only' ? 'local-only' : 'cloud-ok',
+            )
+          }
+        >
+          <option value="cloud-ok">Cloud allowed — no cloud spend cap</option>
+          <option value="local-only">Local only — $0 cloud spend</option>
+        </select>
+      </label>
+      <p>
+        {privacy === 'cloud-ok'
+          ? 'No cloud spend cap. Nightshift uses its configured providers for candidate generation and judging. Job, attempt and lifetime limits still apply.'
+          : 'Candidate generation and judging require available local models. Cloud spending is zero.'}
+      </p>
       <div className={styles.fields}>
         <label>
           Total admitted runs
@@ -218,16 +258,24 @@ export function ChainAdmissionForm({
         </>
       ) : (
         <p>
-          Local-only · $0 cloud spend · zero automatic follow-ups. Additional
-          runs require explicit user controls and share this grant.
+          This grant allows zero automatic follow-ups. Additional runs require
+          explicit user controls and share this grant.
         </p>
       )}
       <Button
         type="submit"
-        disabled={busy || !available || (automatic && !automaticAvailable)}
+        disabled={
+          busy || !policyAvailable || (automatic && !automaticAvailable)
+        }
       >
         Admit chain
       </Button>
+      {!policyAvailable && readiness ? (
+        <p role="status">
+          {privacy === 'cloud-ok' ? 'Cloud' : 'Local-only'} candidate jobs are
+          unavailable. {readiness.reason}
+        </p>
+      ) : null}
     </form>
   );
 }
@@ -244,6 +292,11 @@ export function JobSubmissionForm({
   onSubmit(draft: JobDraft): void;
 }) {
   const available = chains.filter((chain) => chain.status === 'active');
+  const [selectedChainId, setSelectedChainId] = useState('');
+  const selectedChain = available.find((chain) => chain.id === selectedChainId);
+  const policyReady = selectedChain
+    ? candidatePolicyReady(readiness, selectedChain.grant.privacy)
+    : false;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -261,7 +314,7 @@ export function JobSubmissionForm({
   };
   return (
     <form className={styles.panel} onSubmit={submit}>
-      <h2>Submit a local text job</h2>
+      <h2>Submit a candidate text job</h2>
       <p>
         Generate an evidence-linked draft, alternative explanation or critique
         candidate. Retrieval, calculations and independent review stay with
@@ -269,7 +322,12 @@ export function JobSubmissionForm({
       </p>
       <label>
         Active bounded chain
-        <select name="chain_id" required defaultValue="">
+        <select
+          name="chain_id"
+          required
+          value={selectedChainId}
+          onChange={(event) => setSelectedChainId(event.target.value)}
+        >
           <option value="" disabled>
             Select an active chain
           </option>
@@ -281,6 +339,14 @@ export function JobSubmissionForm({
           ))}
         </select>
       </label>
+      {selectedChain ? (
+        <p>
+          {selectedChain.grant.privacy === 'cloud-ok'
+            ? 'Cloud allowed · No cloud spend cap.'
+            : 'Local only · $0 cloud spend.'}{' '}
+          This job inherits the selected chain’s compute policy.
+        </p>
+      ) : null}
       <label>
         Brief
         <textarea
@@ -342,7 +408,7 @@ export function JobSubmissionForm({
           </select>
         </label>
         <label>
-          Budget
+          Generation budget
           <select name="budget" defaultValue="low">
             {['low', 'mid', 'high', 'max'].map((value) => (
               <option key={value}>{value}</option>
@@ -362,17 +428,14 @@ export function JobSubmissionForm({
         </label>
       </div>
       <p>
-        Text best_of_n only · local-only · $0 cloud spend. The server checks
-        options and remaining reservations before submission. There is no
-        unbounded local queue.
+        Nightshift generates and judges candidate text separately from normal
+        Haze agent calls. The server checks the selected chain’s policy and
+        remaining job and attempt limits before submission.
       </p>
-      <Button
-        type="submit"
-        disabled={busy || !readiness?.ready || available.length === 0}
-      >
+      <Button type="submit" disabled={busy || !policyReady}>
         Submit job
       </Button>
-      {!readiness?.ready ? (
+      {!readiness?.ready || (selectedChain && !policyReady) ? (
         <p role="status">
           Submission unavailable:{' '}
           {readiness?.reason ?? 'waiting for runtime readiness.'}

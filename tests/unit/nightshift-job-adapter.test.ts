@@ -7,6 +7,7 @@ import {
   discoverNightshiftCli,
   parseNightshiftEnvelope,
   runNightshiftCli,
+  inspectCloudCompute,
   inspectLocalCompute,
   reviewedNightshiftJobSourceHashes,
   type NightshiftCliInvocation,
@@ -149,6 +150,69 @@ describe('Nightshift job transport contracts', () => {
     expect(calls[0]?.args).not.toContain('--fleet');
     expect(calls[0]?.mutation).toBe(true);
   });
+  it('submits cloud-enabled jobs without the CLI zero-spend override or a false monetary ceiling', async () => {
+    const calls: NightshiftCliInvocation[] = [];
+    const instance = adapter((input) => {
+      calls.push(input);
+      return Promise.resolve(okay({ job_id: 'cloud-job1' }));
+    });
+    vi.spyOn(instance, 'readiness').mockResolvedValue({
+      ...ready,
+      cloud_enforced: true,
+      cloud_compute_available: true,
+      local_compute_available: false,
+    });
+    await expect(
+      instance.submit({ ...request, privacy: 'cloud-ok', max_spend_usd: null }),
+    ).resolves.toEqual({ remote_id: 'cloud-job1' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.args).toContain('cloud-ok');
+    expect(calls[0]?.args).not.toContain('--max-spend');
+    expect(calls[0]?.args).not.toContain('local-only');
+    expect(calls[0]?.stdin).toBe(request.prompt);
+    expect(calls[0]?.mutation).toBe(true);
+  });
+  it.each([
+    { cloud_enforced: false, cloud_compute_available: true },
+    { cloud_enforced: true, cloud_compute_available: false },
+    { cloud_enforced: true, cloud_compute_available: undefined },
+  ])(
+    'refuses cloud work without reviewed policy and ready cloud compute (%j)',
+    async (policy) => {
+      const runner = vi.fn<NightshiftCliRunner>();
+      const instance = adapter(runner);
+      vi.spyOn(instance, 'readiness').mockResolvedValue({
+        ...ready,
+        ...policy,
+      });
+      await expect(
+        instance.submit({
+          ...request,
+          privacy: 'cloud-ok',
+          max_spend_usd: null,
+        }),
+      ).rejects.toMatchObject({
+        outcome: 'rejected-before-acceptance',
+        diagnostic_code: 'unavailable',
+      });
+      expect(runner).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps local-only jobs blocked when only cloud compute is ready', async () => {
+    const runner = vi.fn<NightshiftCliRunner>();
+    const instance = adapter(runner);
+    vi.spyOn(instance, 'readiness').mockResolvedValue({
+      ...ready,
+      cloud_enforced: true,
+      cloud_compute_available: true,
+      local_compute_available: false,
+    });
+    await expect(instance.submit(request)).rejects.toMatchObject({
+      outcome: 'rejected-before-acceptance',
+      diagnostic_code: 'unavailable',
+    });
+    expect(runner).not.toHaveBeenCalled();
+  });
   it('rejects an explicit fleet before invoking the CLI even if stale readiness advertises it', async () => {
     const runner = vi.fn<NightshiftCliRunner>();
     const instance = adapter(runner);
@@ -164,13 +228,15 @@ describe('Nightshift job transport contracts', () => {
     });
     expect(runner).not.toHaveBeenCalled();
   });
-  it('rejects unsupported cloud/fleet/options before invoking the mutation', async () => {
+  it('rejects inconsistent privacy, unsupported fleet and positive monetary caps before invoking the mutation', async () => {
     const runner = vi.fn<NightshiftCliRunner>();
     const instance = adapter(runner);
     vi.spyOn(instance, 'readiness').mockResolvedValue(ready);
     for (const input of [
       { ...request, fleet: 'unknown' },
       { ...request, privacy: 'cloud-ok' },
+      { ...request, privacy: 'local-only', max_spend_usd: null },
+      { ...request, privacy: 'cloud-ok', max_spend_usd: 1 },
       { ...request, max_spend_usd: 1 },
       { ...request, n: 17 },
     ]) {
@@ -371,11 +437,61 @@ describe('Nightshift job transport contracts', () => {
     },
   );
 
-  it.each([undefined, 'historical-local'])(
-    'verifies an exact historical native request and its fleet metadata (%s)',
-    async (fleet) => {
+  it.each([{ kind: 'cloud' }, { provider: 'nvidia' }])(
+    'recognizes a ready cloud race lane independently of local compute (%j)',
+    (classification) => {
+      const status = {
+        lanes: [
+          {
+            id: 'cloud1',
+            model: 'nvidia/nemotron',
+            state: 'ready',
+            ...classification,
+          },
+        ],
+      };
+      expect(inspectCloudCompute(status)).toBe(true);
+      expect(inspectLocalCompute({ fleets: [] }, status).available).toBe(false);
+    },
+  );
+  it.each([
+    { state: 'loading' },
+    { disabled: true },
+    { races: false },
+    { model: '' },
+    { kind: 'local', provider: 'nvidia' },
+    { kind: undefined, provider: undefined },
+  ])(
+    'does not advertise unavailable or unclassified cloud compute (%j)',
+    (change) => {
+      expect(
+        inspectCloudCompute({
+          lanes: [
+            {
+              id: 'cloud1',
+              kind: 'cloud',
+              model: 'nvidia/nemotron',
+              state: 'ready',
+              ...change,
+            },
+          ],
+        }),
+      ).toBe(false);
+      expect(inspectCloudCompute(null)).toBe(false);
+    },
+  );
+
+  it.each([
+    [undefined, 'local-only', 0],
+    ['historical-local', 'local-only', 0],
+    [undefined, 'cloud-ok', null],
+  ] as const)(
+    'verifies an exact native request and its fleet and privacy metadata (%s, %s)',
+    async (fleet, privacy, max_spend_usd) => {
       const marked = {
         ...request,
+        privacy,
+        max_spend_usd,
         ...(fleet ? { fleet } : {}),
         prompt:
           '[Haze request 11111111-1111-4111-8111-111111111111]\nOriginal synthetic objective.',
@@ -388,7 +504,7 @@ describe('Nightshift job transport contracts', () => {
         messages: [{ role: 'user', content: marked.prompt }],
         n: 1,
         window: 'now',
-        privacy: 'local-only',
+        privacy,
         judge_mode: 'accuracy',
         attempt_budget: { level: 'low' },
         ...(fleet ? { fleet_id: fleet } : {}),
@@ -409,6 +525,8 @@ describe('Nightshift job transport contracts', () => {
         ...ready,
         ready: false,
         local_compute_available: false,
+        cloud_enforced: true,
+        cloud_compute_available: false,
         can_reconcile: true,
       });
       await expect(
@@ -679,7 +797,7 @@ describe('Nightshift job transport contracts', () => {
       diagnostic_code: 'response_oversized',
     });
   });
-  it('mutation schemas prohibit automatic successors and positive/cloud spending', () => {
+  it('defaults new grants to cloud permission without a monetary cap and preserves explicit local-only grants', () => {
     const authority = {
       expected_run_id: '11111111-1111-4111-8111-111111111111',
       expected_generation: 1,
@@ -692,6 +810,17 @@ describe('Nightshift job transport contracts', () => {
       ...authority,
     };
     expect(chainAdmissionSchema.parse(chain).automatic_followup_runs).toBe(0);
+    expect(chainAdmissionSchema.parse(chain)).toMatchObject({
+      privacy: 'cloud-ok',
+      max_spend_usd: null,
+    });
+    expect(
+      chainAdmissionSchema.parse({
+        ...chain,
+        privacy: 'local-only',
+        max_spend_usd: 0,
+      }),
+    ).toMatchObject({ privacy: 'local-only', max_spend_usd: 0 });
     expect(
       chainAdmissionSchema.safeParse({ ...chain, automatic_followup_runs: 1 })
         .success,
