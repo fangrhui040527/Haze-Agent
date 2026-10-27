@@ -1,0 +1,17 @@
+[
+  {
+    "date": "2024-12-01",
+    "pollutant": "PM 2.5",
+    "concentration": 11.54
+  },
+  {
+    "date": "2024-11-01",
+    "pollutant": "PM 2.5",
+    "concentration": 12.33
+  },
+  {
+    "date": "2024-10-01",
+    "pollutant": "PM 2.5",
+    "concentration": 14.4
+  }
+]

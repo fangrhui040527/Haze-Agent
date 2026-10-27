@@ -133,6 +133,9 @@ export function DamageReductionView({
           Predictions remain separate from delivery and achieved effects. This
           preview sends no alerts and changes no work schedules.
         </p>
+        <Link to="/demos/damage-reduction">
+          View the completed synthetic demo
+        </Link>
       </header>
       <nav className={styles.steps} aria-label="Preview sections">
         <a href="#reduction-target-heading">1 Target</a>

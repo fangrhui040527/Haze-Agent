@@ -1,0 +1,26 @@
+[
+  {
+    "abs": 5576.0,
+    "sex": "both",
+    "date": "2025-01-01",
+    "rate": 4.7,
+    "state": "Selangor",
+    "district": "Klang"
+  },
+  {
+    "abs": 5619.0,
+    "sex": "both",
+    "date": "2024-01-01",
+    "rate": 4.8,
+    "state": "Selangor",
+    "district": "Klang"
+  },
+  {
+    "abs": 5616.0,
+    "sex": "both",
+    "date": "2023-01-01",
+    "rate": 4.9523809523809526,
+    "state": "Selangor",
+    "district": "Klang"
+  }
+]

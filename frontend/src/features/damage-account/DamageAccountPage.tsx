@@ -82,6 +82,9 @@ export function DamageAccountView({
           Build and inspect accounts using evidence retained in World Model.
           Physical harm, financing and social welfare remain separate views.
         </p>
+        <Link to="/demos/damage-account">
+          View the completed synthetic demo
+        </Link>
       </header>
 
       <div className={styles.intake}>
