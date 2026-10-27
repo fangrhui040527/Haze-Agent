@@ -53,7 +53,44 @@ const content = {
         concession: { central: 7.5, low: 6.5, high: 8.3 },
         peat: { central: 29, low: 29, high: 30.3 },
       },
+      arithmetic: [
+        {
+          wind_speed_scale: 1,
+          total_weight: 16699.5,
+          concession_weight: 1257.08,
+          peat_weight: 4834.79,
+          concession_pct: 7.5,
+          peat_pct: 29,
+        },
+      ],
+      fires: [
+        {
+          lat: -1.4,
+          lon: 104.1,
+          frp: 289.6,
+          pct_of_signal: 1.37,
+          on_peat: false,
+          why: {
+            weight: 228.3,
+            contacts: 473,
+            peat_factor: 1,
+            closest: {
+              distance_km: 5,
+              gap_hours: 0.5,
+              window_hours: 6,
+              space_factor: 0.995,
+              time_factor: 0.914,
+            },
+          },
+        },
+      ],
       method: {
+        peat_factor: 3,
+        spread_km_at_town: 25,
+        spread_km_per_hour_back: 1.5,
+        max_spreads: 3,
+        time_window_hours: 6,
+        peat_time_window_hours: 24,
         hours_back: 72,
         paths_per_wind_speed: 170,
         assumptions: ['Peat fires count 3x; an uncalibrated placeholder.'],
@@ -113,6 +150,9 @@ describe('SmokeLedger report', () => {
     expect(markup).toContain('Sumatra and nearby islands');
     expect(markup).toContain('at least <b>29.0%</b>');
     expect(markup).toContain('not who started');
+    expect(markup).toContain('How the percentages were calculated');
+    expect(markup).toContain('1,257.08 ÷ 16,699.5 = <b>7.5%</b>');
+    expect(markup).toContain('228.3 ÷ 16,699.5 (all fires) = <b>1.37%</b>');
     expect(markup).not.toContain('[E-');
     expect(markup).not.toContain('World Model');
   });

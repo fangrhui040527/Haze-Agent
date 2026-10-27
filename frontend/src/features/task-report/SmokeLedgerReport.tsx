@@ -63,6 +63,42 @@ export interface SmokeTrace {
   fireCount: number;
   hoursBack: number | null;
   paths: number | null;
+  /** Summed weights per wind speed, exactly as the trace recorded them. */
+  sums: Sum[];
+  settings: Settings | null;
+  /** The most heavily weighted fire, factor by factor. */
+  example: Example | null;
+}
+interface Sum {
+  scale: number;
+  total: number;
+  concession: number;
+  peat: number;
+  concessionPct: number;
+  peatPct: number;
+}
+interface Settings {
+  spreadKm: number;
+  spreadPerHour: number;
+  maxSpreads: number;
+  windowHours: number;
+  peatWindowHours: number;
+  peatFactor: number;
+}
+interface Example {
+  lat: number;
+  lon: number;
+  frp: number;
+  share: number;
+  onPeat: boolean;
+  weight: number;
+  contacts: number;
+  peatFactor: number;
+  distanceKm: number;
+  spaceFactor: number;
+  gapHours: number;
+  windowHours: number;
+  timeFactor: number;
 }
 
 function object(value: unknown): Record<string, unknown> | null {
@@ -196,8 +232,63 @@ export function readSmokeTrace(content: unknown): SmokeTrace | null {
       typeof method?.paths_per_wind_speed === 'number'
         ? method.paths_per_wind_speed
         : null,
+    sums: (Array.isArray(map?.arithmetic) ? map.arithmetic : []).flatMap(
+      (row) => {
+        const r = object(row);
+        const n = (key: string) =>
+          typeof r?.[key] === 'number' ? (r[key] as number) : null;
+        const scale = n('wind_speed_scale');
+        const total = n('total_weight');
+        if (scale === null || total === null) return [];
+        return [
+          {
+            scale,
+            total,
+            concession: n('concession_weight') ?? 0,
+            peat: n('peat_weight') ?? 0,
+            concessionPct: n('concession_pct') ?? 0,
+            peatPct: n('peat_pct') ?? 0,
+          },
+        ];
+      },
+    ),
+    settings:
+      method && typeof method.peat_factor === 'number'
+        ? {
+            spreadKm: Number(method.spread_km_at_town),
+            spreadPerHour: Number(method.spread_km_per_hour_back),
+            maxSpreads: Number(method.max_spreads),
+            windowHours: Number(method.time_window_hours),
+            peatWindowHours: Number(method.peat_time_window_hours),
+            peatFactor: method.peat_factor,
+          }
+        : null,
+    example: (() => {
+      const fire = object(Array.isArray(map?.fires) ? map.fires[0] : null);
+      const why = object(fire?.why);
+      const closest = object(why?.closest);
+      if (!fire || !why || !closest) return null;
+      return {
+        lat: Number(fire.lat),
+        lon: Number(fire.lon),
+        frp: Number(fire.frp),
+        share: Number(fire.pct_of_signal),
+        onPeat: Boolean(fire.on_peat),
+        weight: Number(why.weight),
+        contacts: Number(why.contacts),
+        peatFactor: Number(why.peat_factor),
+        distanceKm: Number(closest.distance_km),
+        spaceFactor: Number(closest.space_factor),
+        gapHours: Number(closest.gap_hours),
+        windowHours: Number(closest.window_hours),
+        timeFactor: Number(closest.time_factor),
+      };
+    })(),
   };
 }
+
+const num = (x: number) =>
+  x.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
 const MONTHS = [
   'Jan',
@@ -508,16 +599,11 @@ export function SmokeLedgerReport({
             query and checked each sentence against the data.
           </li>
         </ol>
-        {trace.method && (
-          <details className={styles.more}>
-            <summary>Show the exact formula</summary>
-            <p>{trace.method}</p>
-            <p className={styles.muted}>
-              The globe&apos;s panel has the full sums at each wind speed.
-            </p>
-          </details>
-        )}
       </section>
+
+      {(trace.sums.length > 0 || trace.settings || trace.method) && (
+        <Calculation trace={trace} />
+      )}
 
       {(trace.limitations.length > 0 ||
         trace.assumptions.length > 0 ||
@@ -542,5 +628,134 @@ export function SmokeLedgerReport({
         </section>
       )}
     </div>
+  );
+}
+
+/** The formula, one worked fire, and the exact sums behind every share. */
+function Calculation({ trace }: { trace: SmokeTrace }) {
+  const { settings, example, sums } = trace;
+  const headline = sums.find((row) => row.scale === 1);
+  return (
+    <section aria-labelledby="sl-calc">
+      <h2 id="sl-calc" className={styles.heading}>
+        How the percentages were calculated
+      </h2>
+      <p className={styles.formula}>
+        fire weight = fire strength (FRP) × peat factor × distance factor × time
+        factor
+        <br />
+        share = weight of a group&apos;s fires ÷ weight of all fires
+      </p>
+      {settings && (
+        <ul className={styles.list}>
+          <li>
+            <b>Fire strength (FRP)</b>: the heat the satellite measured, in
+            megawatts. Bigger fires make more smoke.
+          </li>
+          <li>
+            <b>Peat factor</b>: ×{settings.peatFactor} if the fire is on peat
+            (peat smoulders and smokes more), otherwise ×1. This value is an
+            assumption, not a measurement.
+          </li>
+          <li>
+            <b>Distance factor</b>: 1 when the air passed right over the fire,
+            falling towards 0 further away. The allowed distance is{' '}
+            {settings.spreadKm} km at the town, widening by{' '}
+            {settings.spreadPerHour} km for each hour further back; fires more
+            than {settings.maxSpreads}× that away are not counted.
+          </li>
+          <li>
+            <b>Time factor</b>: 1 when the fire was seen exactly when the air
+            passed, falling to 0 at {settings.windowHours} hours apart (
+            {settings.peatWindowHours} hours for peat, which burns longer).
+          </li>
+          <li>
+            A fire&apos;s weight is added up over every air path that passed it,
+            then divided by the number of paths.
+          </li>
+        </ul>
+      )}
+
+      {example && (
+        <>
+          <h3 className={styles.subheading}>
+            Example: the biggest single contributor
+          </h3>
+          <p>
+            A fire at {place(example.lat, example.lon)}
+            {example.onPeat ? ' on peat' : ''}:
+          </p>
+          <p className={styles.formula}>
+            {num(example.frp)} MW × {example.peatFactor} (peat) ×{' '}
+            {example.spaceFactor} (air passed {example.distanceKm} km away) ×{' '}
+            {example.timeFactor} (seen {example.gapHours} h apart, within{' '}
+            {example.windowHours} h)
+            <br />
+            added over {example.contacts.toLocaleString()} air paths → weight{' '}
+            <b>{num(example.weight)}</b>
+            {headline && (
+              <>
+                <br />
+                {num(example.weight)} ÷ {num(headline.total)} (all fires) ={' '}
+                <b>{example.share}%</b> of the smoke
+              </>
+            )}
+          </p>
+        </>
+      )}
+
+      {sums.length > 0 && (
+        <>
+          <h3 className={styles.subheading}>The actual sums</h3>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Wind speed</th>
+                  <th scope="col">Company land</th>
+                  <th scope="col">Peat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sums.map((row) => (
+                  <tr
+                    key={row.scale}
+                    className={row.scale === 1 ? styles.headline : undefined}
+                  >
+                    <td>
+                      {row.scale === 1
+                        ? 'As measured (headline)'
+                        : row.scale < 1
+                          ? `${Math.round((1 - row.scale) * 100)}% slower`
+                          : `${Math.round((row.scale - 1) * 100)}% faster`}
+                    </td>
+                    <td>
+                      {num(row.concession)} ÷ {num(row.total)} ={' '}
+                      <b>{row.concessionPct}%</b>
+                    </td>
+                    <td>
+                      {num(row.peat)} ÷ {num(row.total)} = <b>{row.peatPct}%</b>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className={styles.muted}>
+            The headline percentage uses the measured wind; the
+            &ldquo;likely&rdquo; range is the lowest and highest of the three
+            rows. Winds are never known exactly, so a narrow range means the
+            answer is robust.
+          </p>
+        </>
+      )}
+
+      {trace.method && (
+        <details className={styles.more}>
+          <summary>Show the formula as the engine states it</summary>
+          <p>{trace.method}</p>
+        </details>
+      )}
+    </section>
   );
 }
