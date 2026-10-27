@@ -21,7 +21,11 @@ import {
 import {
   claimCheckInputSchema,
   claimCheckOutputSchema,
+  criticInputSchema,
+  criticOutputSchema,
   frameSmokeLedgerScope,
+  previewsInputSchema,
+  previewsOutputSchema,
   runToolOutputSchema,
   SMOKELEDGER_OPERATIONS,
   smokeLedgerScopeSchema,
@@ -40,6 +44,8 @@ export const SMOKELEDGER_TOOLS = {
   traceSources: 'haze.trace_sources',
   verify: 'haze.evidence.verify',
   claimCheck: 'haze.claim_check',
+  critic: 'haze.evidence_critic',
+  previews: 'haze.message_previews',
 } as const;
 
 /** Limits that must stay visible in every SmokeLedger-backed answer. */
@@ -163,25 +169,20 @@ export function createSmokeLedgerTools(
         Date.parse(scope.window.end) > now
           ? new Date(now).toISOString()
           : undefined;
-      const { status, body } = await sidecar.run(
+      // One computation, no SmokeLedger agents: this task's own agents orchestrate and review.
+      const { status, body } = await sidecar.method(
+        operation === 'assess_haze' ? 'outlook' : 'trace',
         {
           run_id,
-          input: {
-            operation,
-            town: scope.town,
-            timezone: 'Asia/Kuala_Lumpur',
-            time_window: scope.window,
-            ...(as_of ? { as_of } : {}),
-          },
-          // The task Manager writes the answer, so the sidecar's optional prose (two slow
-          // Nemotron calls) is skipped; its findings, critic and evidence are unchanged.
-          options: { sample_mode: mode === 'fixture', narrative: false },
+          town: scope.town,
+          window: scope.window,
+          ...(as_of ? { as_of } : {}),
         },
         context.signal,
       );
       if (status !== 200)
         throw new SmokeLedgerError(
-          errorMessage(body, `SmokeLedger run failed (HTTP ${status}).`),
+          errorMessage(body, `SmokeLedger method failed (HTTP ${status}).`),
           'provider_failure',
         );
       const output = runToolOutputSchema.parse({
@@ -202,11 +203,11 @@ export function createSmokeLedgerTools(
   return [
     runTool(
       SMOKELEDGER_TOOLS.airOutlook,
-      'Hourly PM2.5, 24 h API and school-closure probability for a supported town and window (UTC+8, at most 72 h), with hashed evidence ids and the sidecar critic decision. Read-only.',
+      'Hourly PM2.5, 24 h API and school-closure probability for a supported town and window (UTC+8, at most 72 h), with hashed evidence ids. Records its run and evidence; read-only toward sources.',
     ),
     runTool(
       SMOKELEDGER_TOOLS.traceSources,
-      'Backward attribution of a town\'s smoke to fires, peat and concession land with ranges, map source/date and a confidence label. Read-only; results are leads, not responsibility.',
+      "Backward attribution of a town's smoke to fires, peat and concession land with ranges, map source/date and a confidence label (PeatFire Sentinel's computation). Results are leads, not responsibility.",
     ),
     {
       id: SMOKELEDGER_TOOLS.verify,
@@ -287,6 +288,70 @@ export function createSmokeLedgerTools(
         };
       },
     },
+    {
+      id: SMOKELEDGER_TOOLS.critic,
+      version: '1',
+      mode,
+      description:
+        "SmokeLedger's independent checks on one outlook or trace result: citations, re-running every cited query and comparing hashes, window coverage and hindsight disclosure.",
+      inputSchema: criticInputSchema,
+      outputSchema: criticOutputSchema,
+      async execute(input, context) {
+        const { operation, scope, result } = criticInputSchema.parse(input);
+        const sidecar = client();
+        await ready(sidecar, mode, context.signal);
+        const { status, body } = await sidecar.method(
+          'critic',
+          {
+            operation,
+            run_id: result.run_id,
+            town: scope.town,
+            window: scope.window,
+            result,
+          },
+          context.signal,
+        );
+        const parsed = criticOutputSchema.safeParse(body);
+        if (status !== 200 || !parsed.success)
+          throw new SmokeLedgerError(
+            errorMessage(body, `Critic checks failed (HTTP ${status}).`),
+            'provider_failure',
+          );
+        return parsed.data;
+      },
+    },
+    {
+      id: SMOKELEDGER_TOOLS.previews,
+      version: '1',
+      mode,
+      description:
+        "CommunityAlert's Malay/English message previews for a reviewed outlook. Previews only: nothing is sent.",
+      inputSchema: previewsInputSchema,
+      outputSchema: previewsOutputSchema,
+      async execute(input, context) {
+        const { scope, assessment, bound_to } = previewsInputSchema.parse(input);
+        const sidecar = client();
+        await ready(sidecar, mode, context.signal);
+        const { status, body } = await sidecar.method(
+          'previews',
+          {
+            run_id: runIdFor(context, 'previews'),
+            town: scope.town,
+            window: scope.window,
+            assessment,
+            bound_to,
+          },
+          context.signal,
+        );
+        const parsed = previewsOutputSchema.safeParse(body);
+        if (status !== 200 || !parsed.success)
+          throw new SmokeLedgerError(
+            errorMessage(body, `Message previews failed (HTTP ${status}).`),
+            'provider_failure',
+          );
+        return parsed.data;
+      },
+    },
   ];
 }
 
@@ -301,12 +366,16 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
         'smokeledger.air_outlook',
         'smokeledger.trace_sources',
         'review',
+        DRAFTS_KIND,
         'evidence.gap',
       ],
       required_tools: Object.values(SMOKELEDGER_TOOLS),
       roles: ['HazeOps', 'WorkerShield', 'EvidenceCritic'],
       readiness: 'implemented',
-      limitations: SMOKELEDGER_LIMITATIONS,
+      limitations: [
+        ...SMOKELEDGER_LIMITATIONS,
+        'Community message previews are drafts; nothing is sent.',
+      ],
     },
     // Both producer outputs need the independent review before the Manager may select them.
     review_requirements: [
@@ -319,6 +388,11 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
         artifact_kind: 'smokeledger.trace_sources',
         review_definition_id: 'smokeledger.review',
         producer_definition_ids: ['smokeledger.trace_sources'],
+      },
+      {
+        artifact_kind: DRAFTS_KIND,
+        review_definition_id: 'smokeledger.review',
+        producer_definition_ids: ['smokeledger.previews'],
       },
     ],
     normalizeReview(artifact) {
@@ -379,7 +453,15 @@ export function createSmokeLedgerCapability(): CapabilityDefinition {
           definition_id: 'smokeledger.review',
           brief:
             'Independently re-run decisive evidence and check every claim before synthesis.',
-          depends_on: ['air-outlook', 'trace-sources'],
+          depends_on: ['air-outlook', 'trace-sources', 'message-previews'],
+          input,
+        },
+        {
+          key: 'message-previews',
+          definition_id: 'smokeledger.previews',
+          brief:
+            'Draft Malay/English community message previews from the outlook for review; never send.',
+          depends_on: ['air-outlook'],
           input,
         },
       ];
@@ -461,6 +543,12 @@ const KIND: Record<SmokeLedgerRunTool, string> = {
   'haze.air_outlook': 'smokeledger.air_outlook',
   'haze.trace_sources': 'smokeledger.trace_sources',
 };
+// The kind avoids the word "review": Manager selection treats such kinds as review records.
+const DRAFTS_KIND = 'smokeledger.community_message_drafts';
+const draftsSchema = z.looseObject({
+  bound_to_outlook: artifactRefSchema,
+  messages: z.looseObject({ status: z.string() }),
+});
 
 async function runOperation(
   services: AssignmentServices,
@@ -559,12 +647,14 @@ async function runOperation(
   };
 }
 
-function criticDecision(response: RunToolOutput['response']): string {
-  const parsed = z
-    .looseObject({ final: z.looseObject({ decision: z.string() }) })
-    .safeParse(response.critic);
-  return parsed.success ? parsed.data.final.decision : 'unknown';
-}
+// Critic findings that mean a claim or its evidence cannot be trusted reject the material;
+// coverage findings leave it usable but partial (its gaps are already disclosed).
+const REJECTING_FINDINGS = new Set([
+  'citation',
+  'hash_mismatch',
+  'hindsight_undisclosed',
+  'unsupported_narrative',
+]);
 
 async function review(services: AssignmentServices): Promise<AssignmentOutput> {
   const reviewed = services.context.inputs.filter((artifact) =>
@@ -581,31 +671,51 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
   const runs = reviewed.map((artifact: Artifact) =>
     runToolOutputSchema.parse(artifact.content),
   );
-  const claims = runs.flatMap((run) => run.response.output?.claims ?? []);
   const cited = [
-    ...new Set(claims.flatMap((claim) => claim.evidence_ids)),
+    ...new Set(
+      runs.flatMap((run) =>
+        (run.response.output?.claims ?? []).flatMap((c) => c.evidence_ids),
+      ),
+    ),
   ]
     .filter((id) => /^E-[a-f0-9]{10}$/.test(id))
     .sort();
+  // Message drafts must be previews of the exact outlook under review, or they are rejected with it.
+  const drafts = services.context.inputs.filter((a) => a.kind === DRAFTS_KIND);
+  const draftProblems = drafts.flatMap((draft) => {
+    const content = draftsSchema.safeParse(draft.content);
+    if (!content.success) return [`drafts ${draft.id}: unreadable draft content.`];
+    const bound = content.data.bound_to_outlook;
+    return [
+      ...(reviewed.some(
+        (a) =>
+          a.kind === KIND['haze.air_outlook'] &&
+          a.id === bound.id &&
+          a.sha256 === bound.sha256,
+      )
+        ? []
+        : [`drafts ${draft.id}: not bound to the outlook under review.`]),
+      ...(content.data.messages.status === 'preview'
+        ? []
+        : [`drafts ${draft.id}: messages are not marked as previews.`]),
+    ];
+  });
   try {
-    const verification = cited.length
-      ? verifyOutputSchema.parse(
-          await services.tool(SMOKELEDGER_TOOLS.verify, {
-            evidence_ids: cited.slice(0, 40),
+    // SmokeLedger's checks on every claim: citations, every cited query re-run, coverage, hindsight.
+    const critic = [];
+    for (const run of runs)
+      critic.push({
+        operation: run.operation,
+        run_id: run.run_id,
+        ...criticOutputSchema.parse(
+          await services.tool(SMOKELEDGER_TOOLS.critic, {
+            operation: run.operation,
+            scope: run.scope,
+            result: run.response,
           }),
-        )
-      : { results: [] };
-    // Every claim gets the deterministic lane; the sentences that reach the synthesis (each
-    // run's summary) also get the model judge, which is too slow for dozens of hourly claims.
-    const claimCheck = claims.length
-      ? claimCheckOutputSchema.parse(
-          await services.tool(SMOKELEDGER_TOOLS.claimCheck, {
-            text: claims.map((claim) => claim.text).join('\n'),
-            evidence_ids: cited.slice(0, 200),
-            use_model: false,
-          }),
-        )
-      : null;
+        ),
+      });
+    // The sentences that reach the synthesis also get the model judge when one is configured.
     const synthesisText = runs
       .map((run) => run.response.output?.summary)
       .filter((summary): summary is string => Boolean(summary?.trim()))
@@ -618,48 +728,40 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
           }),
         )
       : null;
-    const unverified = verification.results.filter((result) => !result.verified);
-    const decisions = runs.map((run) => ({
-      operation: run.operation,
-      run_id: run.run_id,
-      status: run.response.status,
-      decision: criticDecision(run.response),
-    }));
+    const criticFindings = critic.flatMap((c) =>
+      c.decision.findings.map((f) => ({ operation: c.operation, ...f })),
+    );
     const valid =
-      unverified.length === 0 &&
-      (claimCheck?.ok ?? true) &&
-      (synthesisCheck?.ok ?? true);
+      !criticFindings.some((f) => REJECTING_FINDINGS.has(f.code)) &&
+      (synthesisCheck?.ok ?? true) &&
+      draftProblems.length === 0;
     const complete =
-      cited.length <= 40 &&
-      decisions.every((d) => d.status === 'success' && d.decision === 'approve');
+      criticFindings.length === 0 &&
+      runs.every((run) => run.response.status === 'success');
     const findings = [
-      ...unverified.map(
-        (result) => `${result.evidence_id}: ${result.reason ?? 'not verified'}`,
-      ),
-      ...(claimCheck?.problems ?? []),
+      ...criticFindings.map((f) => `${f.operation} ${f.code}: ${f.message}`),
       ...(synthesisCheck?.problems ?? []),
-      ...(cited.length > 40
-        ? [`Only 40 of ${cited.length} cited evidence ids were re-run.`]
-        : []),
+      ...draftProblems,
     ];
+    const reruns = critic.reduce(
+      (sum, c) => sum + (c.remote_calls_executed?.['zetaris.sql'] ?? 0),
+      0,
+    );
     const artifact = services.save('review', {
       valid,
       verdict: valid ? (complete ? 'supported' : 'partial') : 'rejected',
-      verification: verification.results,
-      claim_check: claimCheck,
+      critic,
       synthesis_check: synthesisCheck,
-      sidecar_critic: decisions,
       findings,
-      reviewed_artifacts: reviewed.map(({ id, version, sha256 }) => ({
-        id,
-        version,
-        sha256,
-      })),
+      reviewed_artifacts: [...reviewed, ...drafts].map(
+        ({ id, version, sha256 }) => ({ id, version, sha256 }),
+      ),
     });
+    const checks = [...new Set(critic.flatMap((c) => c.decision.checks_run))];
     return {
       status: 'completed',
       summary: valid
-        ? `Independent checks passed: ${verification.results.length} evidence re-runs matched and ${claims.length} claims cite known evidence.`
+        ? `Independent checks passed (${checks.join(', ')}${synthesisCheck ? ', answer sentences judged' : ''}): ${cited.length} cited evidence ids, ${reruns} live Zetaris re-runs.`
         : 'SmokeLedger material rejected by the independent checks.',
       support: valid ? (complete ? 'supported' : 'partial') : 'gap',
       uncertainty: findings,
@@ -684,6 +786,56 @@ async function review(services: AssignmentServices): Promise<AssignmentOutput> {
       outputs: [gap],
     };
   }
+}
+
+/**
+ * CommunityAlert's previews drafted from the outlook. They are bound to its exact
+ * revision and reviewed with it, so they reach an answer only if the review supports both.
+ */
+async function messagePreviews(
+  services: AssignmentServices,
+): Promise<AssignmentOutput> {
+  const outlook = services.context.inputs.find(
+    (a) => a.kind === KIND['haze.air_outlook'],
+  );
+  const run = outlook
+    ? runToolOutputSchema.safeParse(outlook.content)
+    : undefined;
+  const assessment = z
+    .looseObject({ hourly: z.array(z.unknown()) })
+    .safeParse(run?.success ? run.data.response['assessment'] : undefined);
+  if (!outlook || !run?.success || !assessment.success)
+    return {
+      status: 'completed',
+      summary: 'Message previews unavailable: no air outlook to draft from.',
+      support: 'gap',
+      uncertainty: ['Previews are drafted only from an air outlook.'],
+      outputs: [],
+    };
+  const output = previewsOutputSchema.parse(
+    await services.tool(SMOKELEDGER_TOOLS.previews, {
+      scope: run.data.scope,
+      assessment: assessment.data,
+      bound_to: `${outlook.id}@${outlook.sha256.slice(0, 12)}`,
+    }),
+  );
+  const artifact = services.save(DRAFTS_KIND, {
+    notice:
+      'PREVIEW ONLY - not sent. Delivery needs a separate, human-authorised step.',
+    bound_to_outlook: {
+      id: outlook.id,
+      version: outlook.version,
+      sha256: outlook.sha256,
+    },
+    messages: output.messages,
+  });
+  return {
+    status: 'completed',
+    summary: `${output.messages.previews.length} message previews drafted (${[...new Set(output.messages.previews.map((p) => p.language))].join(', ')}); nothing was sent.`,
+    support: 'supported',
+    uncertainty: ['Previews are drafts for human review; no message was sent.'],
+    outputs: [artifact],
+  };
 }
 
 export function createSmokeLedgerAssignments(): AssignmentDefinition[] {
@@ -714,10 +866,20 @@ export function createSmokeLedgerAssignments(): AssignmentDefinition[] {
       version: '1',
       capability: SMOKELEDGER_CAPABILITY,
       agent: 'EvidenceCritic',
-      tools: [SMOKELEDGER_TOOLS.verify, SMOKELEDGER_TOOLS.claimCheck],
+      tools: [SMOKELEDGER_TOOLS.critic, SMOKELEDGER_TOOLS.claimCheck],
       instructions:
         'Independently re-run decisive evidence and check every claim. A producer cannot approve its own work; reject any failed check.',
       execute: review,
+    },
+    {
+      id: 'smokeledger.previews',
+      version: '1',
+      capability: SMOKELEDGER_CAPABILITY,
+      agent: 'WorkerShield',
+      tools: [SMOKELEDGER_TOOLS.previews],
+      instructions:
+        'Draft community message previews from the outlook for independent review. Never send anything.',
+      execute: messagePreviews,
     },
   ];
 }

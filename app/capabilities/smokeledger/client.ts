@@ -99,11 +99,17 @@ export function createSmokeLedgerClient(
         timeoutMs: 10_000,
         mayHaveExecuted: false,
       }),
-    run: (body: unknown, signal: AbortSignal) =>
-      request('POST', '/run', signal, {
+    // One SmokeLedger computation per call; the caller's agents orchestrate, not the sidecar.
+    method: (
+      name: 'outlook' | 'trace' | 'critic' | 'previews',
+      body: unknown,
+      signal: AbortSignal,
+    ) =>
+      request('POST', `/api/methods/${name}`, signal, {
         body,
-        timeoutMs: 300_000,
-        mayHaveExecuted: true,
+        timeoutMs: name === 'previews' ? 30_000 : 300_000,
+        // Outlook and trace write their runs and evidence, so an unanswered call may have run.
+        mayHaveExecuted: name === 'outlook' || name === 'trace',
       }),
     verify: (evidenceId: string, signal: AbortSignal) =>
       request(

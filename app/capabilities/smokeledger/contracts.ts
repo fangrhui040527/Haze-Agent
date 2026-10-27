@@ -85,6 +85,45 @@ export const runToolOutputSchema = z.strictObject({
 });
 export type RunToolOutput = z.infer<typeof runToolOutputSchema>;
 
+/** SmokeLedger's critic checks on one method result (EvidenceCritic). */
+export const criticInputSchema = z.strictObject({
+  operation: z.enum(['assess_haze', 'trace_sources']),
+  scope: smokeLedgerScopeSchema,
+  result: runResponseSchema,
+});
+export const criticOutputSchema = z.looseObject({
+  decision: z.looseObject({
+    decision: z.string(),
+    findings: z.array(
+      z.looseObject({ code: z.string(), message: z.string() }),
+    ),
+    checks_run: z.array(z.string()),
+  }),
+  independent_evidence: z.array(z.looseObject({ evidence_id: z.string() })),
+  remote_calls_executed: countsSchema.optional(),
+});
+export type CriticOutput = z.infer<typeof criticOutputSchema>;
+
+/** CommunityAlert's preview text for a reviewed outlook; never sent. */
+export const previewsInputSchema = z.strictObject({
+  scope: smokeLedgerScopeSchema,
+  assessment: z.looseObject({ hourly: z.array(z.unknown()) }),
+  bound_to: z.string().min(1).max(200),
+});
+export const previewsOutputSchema = z.looseObject({
+  messages: z.looseObject({
+    bound_to: z.string(),
+    status: z.literal('preview'),
+    previews: z.array(
+      z.looseObject({
+        audience: z.string(),
+        language: z.string(),
+        text: z.string(),
+      }),
+    ),
+  }),
+});
+
 const provenanceSchema = z.looseObject({
   mode: z.string(),
   engine_operations_executed: countsSchema,

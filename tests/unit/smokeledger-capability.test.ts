@@ -238,6 +238,7 @@ describe('smokeledger scope framing', () => {
       { needs_scope: true },
       { needs_scope: true },
       { needs_scope: true },
+      { needs_scope: true },
     ]);
   });
 });
@@ -246,7 +247,7 @@ describe('smokeledger tools', () => {
   it('runs in sample mode with a stable run id per task, assignment and revision', async () => {
     const sidecar = fakeSidecar({
       'GET /health': health('offline_sample'),
-      'POST /run': (body) => [
+      'POST /api/methods/trace': (body) => [
         200,
         runResponse((body as { run_id: string }).run_id),
       ],
@@ -261,13 +262,10 @@ describe('smokeledger tools', () => {
     expect(first.run_id).toBe(again.run_id);
     expect(revised.run_id).not.toBe(first.run_id);
     expect(first.run_id).toMatch(/^[A-Za-z0-9_.:-]{1,80}$/);
-    expect(sidecar.calls[1]!.body).toMatchObject({
-      input: {
-        operation: 'trace_sources',
-        town: 'Batu Pahat',
-        timezone: 'Asia/Kuala_Lumpur',
-      },
-      options: { sample_mode: true, narrative: false },
+    // One method call: no SmokeLedger workflow, Manager or critic agent.
+    expect(sidecar.calls[1]).toEqual({
+      path: 'POST /api/methods/trace',
+      body: { run_id: first.run_id, town: 'Batu Pahat', window: scope.window },
     });
   });
 
@@ -288,7 +286,11 @@ describe('smokeledger tools', () => {
     const liveSidecar = () =>
       fakeSidecar({
         'GET /health': health('live'),
-        'POST /run': (body) => [
+        'POST /api/methods/outlook': (body) => [
+          200,
+          runResponse((body as { run_id: string }).run_id, { mode: 'live' }),
+        ],
+        'POST /api/methods/trace': (body) => [
           200,
           runResponse((body as { run_id: string }).run_id, { mode: 'live' }),
         ],
@@ -302,8 +304,7 @@ describe('smokeledger tools', () => {
     await tools(current.fetcher, 'live')
       .get('haze.air_outlook')!
       .execute({ town: 'Batu Pahat', window: window(-day / 2) }, context());
-    const asOf = (current.calls[1]!.body as { input: { as_of?: string } }).input
-      .as_of;
+    const asOf = (current.calls[1]!.body as { as_of?: string }).as_of;
     expect(Date.parse(asOf!)).toBeLessThanOrEqual(Date.now());
     expect(Date.now() - Date.parse(asOf!)).toBeLessThan(3_600_000);
 
@@ -316,7 +317,7 @@ describe('smokeledger tools', () => {
       .get('haze.trace_sources')!
       .execute({ town: 'Batu Pahat', window: window(-day / 2) }, context());
     for (const sidecar of [past, trace])
-      expect(sidecar.calls[1]!.body).not.toHaveProperty('input.as_of');
+      expect(sidecar.calls[1]!.body).not.toHaveProperty('as_of');
   });
 
   it('refuses replay mode without any request', async () => {
@@ -371,7 +372,7 @@ describe('smokeledger assignments', () => {
   it('turns an unsupported town into a structured gap, not an error', async () => {
     const sidecar = fakeSidecar({
       'GET /health': health('offline_sample'),
-      'POST /run': (body) => [
+      'POST /api/methods/outlook': (body) => [
         200,
         {
           run_id: (body as { run_id: string }).run_id,
@@ -401,7 +402,7 @@ describe('smokeledger assignments', () => {
       'Fires inside mapped concessions: not assessed, because no concession map is loaded [E-aa6885079e].';
     const sidecar = fakeSidecar({
       'GET /health': health('offline_sample'),
-      'POST /run': (body) => {
+      'POST /api/methods/trace': (body) => {
         const response = runResponse((body as { run_id: string }).run_id);
         response.output.claims.push({
           id: 'c2',
@@ -423,7 +424,7 @@ describe('smokeledger assignments', () => {
   it('keeps the sidecar response verbatim and labels sample evidence fictional', async () => {
     const sidecar = fakeSidecar({
       'GET /health': health('offline_sample'),
-      'POST /run': (body) => [
+      'POST /api/methods/trace': (body) => [
         200,
         runResponse((body as { run_id: string }).run_id),
       ],
@@ -481,17 +482,20 @@ describe('smokeledger assignments', () => {
     } as unknown as Artifact;
   }
 
-  const reviewWith = (verifyOk: boolean, problems: string[]) =>
+  type Finding = { code: string; message: string };
+  const reviewWith = (findings: Finding[], problems: string[]) =>
     fakeSidecar({
       'GET /health': health('offline_sample'),
-      'GET /api/evidence/E-c2b0c3cd57/verify': () => [
+      'POST /api/methods/critic': () => [
         200,
         {
-          ok: verifyOk,
-          stored: 's',
-          now: verifyOk ? 's' : 't',
-          sql: 'SELECT 1',
-          provenance,
+          decision: {
+            decision: findings.length ? 'revise' : 'approve',
+            findings,
+            checks_run: ['citations', 'independent re-query of cited evidence'],
+          },
+          independent_evidence: [],
+          remote_calls_executed: { 'zetaris.sql': 2 },
         },
       ],
       'POST /api/claims/check': (body) => [
@@ -507,8 +511,8 @@ describe('smokeledger assignments', () => {
       ],
     });
 
-  it('approves only when every re-run matches and every claim is cited', async () => {
-    const sidecar = reviewWith(true, []);
+  it('approves only when the critic finds nothing and the answer sentences pass', async () => {
+    const sidecar = reviewWith([], []);
     const { value, saved } = services(sidecar.fetcher, scope, [produced()]);
     const output = await definition('smokeledger.review').execute!(value);
     expect(output.support).toBe('supported');
@@ -516,31 +520,67 @@ describe('smokeledger assignments', () => {
       kind: 'review',
       content: { valid: true, verdict: 'supported' },
     });
-    // All claims: deterministic lane only; the synthesis sentences: model lane allowed.
+    // SmokeLedger's critic checks the full result; the judge sees the answer's sentences.
+    const critic = sidecar.calls.find(
+      (call) => call.path === 'POST /api/methods/critic',
+    );
+    expect(critic!.body).toMatchObject({
+      operation: 'trace_sources',
+      town: 'Batu Pahat',
+      result: { run_id: 'haze-trace_sources-x' },
+    });
     const checks = sidecar.calls
       .filter((call) => call.path === 'POST /api/claims/check')
       .map((call) => call.body as { use_model?: boolean; text: string });
-    expect(checks.map((check) => check.use_model)).toEqual([false, undefined]);
-    expect(checks[1]!.text).toBe(
-      'Fires on peat: 92% of the smoke signal [E-c2b0c3cd57].',
-    );
+    expect(checks).toEqual([
+      expect.objectContaining({
+        text: 'Fires on peat: 92% of the smoke signal [E-c2b0c3cd57].',
+      }),
+    ]);
+    expect(checks[0]).not.toHaveProperty('use_model');
   });
 
   it.each([
-    ['a changed evidence hash', false, []],
-    ['an uncited number', true, ['Number without a citation: "92%"']],
-  ] as const)('blocks on %s', async (_, verifyOk, problems) => {
+    [
+      'a changed evidence hash',
+      [{ code: 'hash_mismatch', message: 'E-c2b0c3cd57 changed.' }],
+      [],
+    ],
+    [
+      'an uncited claim',
+      [{ code: 'citation', message: 'Number without a citation.' }],
+      [],
+    ],
+    ['an unsupported answer sentence', [], ['S1: mean is 83, not 25']],
+  ] as const)('blocks on %s', async (_, findings, problems) => {
     const { value, saved } = services(
-      reviewWith(verifyOk, [...problems]).fetcher,
+      reviewWith([...findings], [...problems]).fetcher,
       scope,
       [produced()],
     );
     const output = await definition('smokeledger.review').execute!(value);
     expect(output.support).toBe('gap');
-    // valid: false is what the task runtime uses to exclude material from synthesis.
+    // valid: false is what normalizeReview turns into a rejected review check.
     expect(saved[0]).toMatchObject({
       kind: 'review',
       content: { valid: false, verdict: 'rejected' },
+    });
+  });
+
+  it('keeps disclosed coverage gaps usable but partial', async () => {
+    const { value, saved } = services(
+      reviewWith(
+        [{ code: 'coverage_gap', message: 'No forecast for 09:00 MYT.' }],
+        [],
+      ).fetcher,
+      scope,
+      [produced()],
+    );
+    const output = await definition('smokeledger.review').execute!(value);
+    expect(output.support).toBe('partial');
+    expect(saved[0]).toMatchObject({
+      kind: 'review',
+      content: { valid: true, verdict: 'partial' },
     });
   });
 
@@ -551,6 +591,108 @@ describe('smokeledger assignments', () => {
     const output = await definition('smokeledger.review').execute!(value);
     expect(output.support).toBe('gap');
     expect(saved[0]!.kind).toBe('evidence.gap');
+  });
+
+  function outlookArtifact(): Artifact {
+    return {
+      id: crypto.randomUUID(),
+      version: 1,
+      sha256: 'd'.repeat(64),
+      kind: 'smokeledger.air_outlook',
+      content: {
+        operation: 'assess_haze',
+        scope,
+        run_id: 'haze-assess_haze-x',
+        response: {
+          ...runResponse('haze-assess_haze-x'),
+          assessment: { hourly: [] },
+        },
+      },
+    } as unknown as Artifact;
+  }
+  const previewSidecar = () =>
+    fakeSidecar({
+      'GET /health': health('offline_sample'),
+      'POST /api/methods/previews': (body) => [
+        200,
+        {
+          messages: {
+            bound_to: (body as { bound_to: string }).bound_to,
+            status: 'preview',
+            previews: [
+              { audience: 'parents', language: 'ms', text: 'Kepada Guru…' },
+            ],
+          },
+        },
+      ],
+    });
+
+  it('drafts previews from the outlook, bound to its exact revision, and never sends them', async () => {
+    const outlook = outlookArtifact();
+    const sidecar = previewSidecar();
+    const { value, saved } = services(sidecar.fetcher, scope, [outlook]);
+    const output = await definition('smokeledger.previews').execute!(value);
+    expect(output.support).toBe('supported');
+    expect(output.summary).toContain('nothing was sent');
+    expect(saved[0]).toMatchObject({
+      kind: 'smokeledger.community_message_drafts',
+      content: {
+        bound_to_outlook: { id: outlook.id, sha256: outlook.sha256 },
+        messages: { status: 'preview' },
+      },
+    });
+    expect((saved[0]!.content as { notice: string }).notice).toContain(
+      'not sent',
+    );
+  });
+
+  it('drafts nothing without an outlook', async () => {
+    const sidecar = previewSidecar();
+    const { value, saved } = services(sidecar.fetcher, scope, []);
+    const output = await definition('smokeledger.previews').execute!(value);
+    expect(output.support).toBe('gap');
+    expect(saved).toEqual([]);
+    expect(sidecar.calls).toEqual([]);
+  });
+
+  it('reviews drafts with the outlook and rejects drafts bound to another outlook', async () => {
+    const outlook = outlookArtifact();
+    const drafts = (bound: Artifact) =>
+      ({
+        id: crypto.randomUUID(),
+        version: 1,
+        sha256: 'f'.repeat(64),
+        kind: 'smokeledger.community_message_drafts',
+        content: {
+          bound_to_outlook: {
+            id: bound.id,
+            version: bound.version,
+            sha256: bound.sha256,
+          },
+          messages: { status: 'preview', previews: [] },
+        },
+      }) as unknown as Artifact;
+    const good = drafts(outlook);
+    const passed = services(reviewWith([], []).fetcher, scope, [outlook, good]);
+    await definition('smokeledger.review').execute!(passed.value);
+    expect(passed.saved[0]).toMatchObject({
+      content: { valid: true },
+    });
+    expect(
+      (
+        passed.saved[0]!.content as { reviewed_artifacts: { id: string }[] }
+      ).reviewed_artifacts.map((ref) => ref.id),
+    ).toEqual([outlook.id, good.id]);
+
+    const stray = services(reviewWith([], []).fetcher, scope, [
+      outlook,
+      drafts(outlookArtifact()),
+    ]);
+    const output = await definition('smokeledger.review').execute!(stray.value);
+    expect(output.support).toBe('gap');
+    expect(stray.saved[0]).toMatchObject({
+      content: { valid: false, verdict: 'rejected' },
+    });
   });
 });
 
@@ -568,6 +710,10 @@ describe('smokeledger review gate (task runtime review checks)', () => {
       }),
       expect.objectContaining({
         artifact_kind: 'smokeledger.trace_sources',
+        review_definition_id: 'smokeledger.review',
+      }),
+      expect.objectContaining({
+        artifact_kind: 'smokeledger.community_message_drafts',
         review_definition_id: 'smokeledger.review',
       }),
     ]);
