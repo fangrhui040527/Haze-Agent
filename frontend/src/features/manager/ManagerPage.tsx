@@ -95,62 +95,86 @@ export function ManagerTaskView({
   return (
     <article className={styles.page} aria-busy={loading}>
       <PageHeader taskId={record ? taskId : undefined} />
-      <NextTaskPermissions />
-      <TaskPicker taskId={taskId} />
-      <div className={styles.status}>
-        {record && (
-          <>
-            <p className={styles.objective}>
-              <span className={styles.label}>Original objective</span>
-              {record.original_request.objective}
+      <div className={styles.columns}>
+        <aside className={styles.side}>
+          <NextTaskPermissions />
+          <TaskPicker taskId={taskId} />
+          <div className={styles.status}>
+            {record && (
+              <>
+                <p className={styles.objective}>
+                  <span className={styles.label}>Original objective</span>
+                  {record.original_request.objective}
+                </p>
+                <table className={styles.facts}>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Task</th>
+                      <td>
+                        <Badge
+                          tone={record.status === 'failed' ? 'warn' : 'neutral'}
+                        >
+                          {record.status.replaceAll('_', ' ')}
+                        </Badge>
+                      </td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Execution mode</th>
+                      <td>{record.mode}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">Last saved</th>
+                      <td>
+                        <time dateTime={record.updated_at}>
+                          {record.updated_at}
+                        </time>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+            <p role="status" className={styles.note}>
+              {loading && <Spinner />}
+              {loading ? 'Loading the saved task...' : run.statusText}
             </p>
-            <p className={styles.meta}>
-              <Badge tone={record.status === 'failed' ? 'warn' : 'neutral'}>
-                Task: {record.status.replaceAll('_', ' ')}
-              </Badge>
-              <span>Execution mode: {record.mode}.</span>
-              <span>
-                Last saved:{' '}
-                <time dateTime={record.updated_at}>{record.updated_at}</time>
-              </span>
-            </p>
-          </>
-        )}
-        <p role="status" className={styles.note}>
-          {loading && <Spinner />}
-          {loading ? 'Loading the saved task...' : run.statusText}
-        </p>
-        {error && (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
-        )}
-        {observing && (
-          <Button size="small" variant="ghost" onClick={run.cancel}>
-            Stop waiting
-          </Button>
-        )}
-      </div>
-      {record && (
-        <>
-          {hasManager ? (
-            <ManagerWorkspace record={record} />
-          ) : (
-            <p className={styles.empty}>
-              No Manager workspace is saved for this run yet. Its task report
-              remains available above.
-            </p>
+            {error && (
+              <p role="alert" className={styles.error}>
+                {error}
+              </p>
+            )}
+            {observing && (
+              <Button size="small" variant="ghost" onClick={run.cancel}>
+                Stop waiting
+              </Button>
+            )}
+          </div>
+          {record && (
+            <section
+              className={styles.status}
+              aria-label="Task controls and clarification"
+            >
+              <h2>Task controls</h2>
+              <TaskControls run={run} />
+              <TaskQuestions run={run} />
+            </section>
           )}
-          <section
-            className={styles.status}
-            aria-label="Task controls and clarification"
-          >
-            <h2>Task controls</h2>
-            <TaskControls run={run} />
-            <TaskQuestions run={run} />
-          </section>
-        </>
-      )}
+        </aside>
+        <div className={styles.mainCol}>
+          {record && (
+            <>
+              {hasManager ? (
+                <ManagerWorkspace record={record} />
+              ) : (
+                <p className={styles.empty}>
+                  No Manager workspace is saved for this run yet. Its task
+                  report remains available above.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </article>
   );
 }
