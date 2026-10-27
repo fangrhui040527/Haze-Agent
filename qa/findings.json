@@ -1,6 +1,6 @@
 {
-  "run_id": "2026-10-27T11-39-01-422Z",
-  "generated_at": "2026-10-27T11:39:06.588Z",
+  "run_id": "2026-10-27T13-23-05-945Z",
+  "generated_at": "2026-10-27T13:23:06.606Z",
   "environment": {
     "node": "v24.16.0",
     "platform": "win32",
@@ -8,8 +8,8 @@
     "cwd": "C:\\Users\\USER\\Desktop\\open Agent hackathon"
   },
   "totals": {
-    "total": 39,
-    "pass": 37,
+    "total": 42,
+    "pass": 40,
     "fail": 0,
     "warn": 2
   },
@@ -506,6 +506,45 @@
       "durationMs": 2074,
       "status": "PASS",
       "stdoutTail": "  ok   agent adapter retrieves live Open-Meteo PM2.5\n       {\"http_status\":200,\"bytes\":1405,\"sha256_well_formed\":true,\"has_retrievedAt\":true,\"numeric_pm2_5\":48,\"pm2_5_range\":[14.5,84.5]}\n  ok   content hash is deterministic for identical bytes\n       {\"second_bytes\":1405,\"byte_identical\":false,\"hash_matches\":false,\"note\":\"upstream payload changed between calls; hash equality not asserted\"}\n  ok   an already-aborted signal is refused\n       {\"rejected_with\":\"Open-Meteo air quality: cancelled\"}\n  ok   agent adapter retrieves live NASA FIRMS CSV\n       {\"http_status\":200,\"bytes\":122,\"sha256_well_formed\":true,\"header_fields\":14,\"data_rows\":0}\n  ok   the map key never appears in the returned payload\n       {\"key_leaked\":false}\n\nagent retrieval: 5/5 -> qa/agent-retrieval-probe.json\n",
+      "stderrTail": ""
+    },
+    {
+      "id": "UC-43",
+      "name": "Zetaris operator script tests (python unittest)",
+      "layer": "unit",
+      "command": "npm run test:zetaris-scripts",
+      "expect": "pass",
+      "optional": false,
+      "exitCode": 0,
+      "durationMs": 656,
+      "status": "PASS",
+      "stdoutTail": "\n> haze-agent@0.1.0 test:zetaris-scripts\n> python -m unittest discover -s app/adapters/zetaris/scripts -t app/adapters/zetaris/scripts -p \"test_*.py\"\n\n",
+      "stderrTail": ".............\r\n----------------------------------------------------------------------\r\nRan 13 tests in 0.035s\r\n\r\nOK\r\n"
+    },
+    {
+      "id": "UC-42",
+      "name": "Live cross-system real-world haze scenarios (7 questions)",
+      "layer": "zetaris",
+      "command": "node --env-file-if-exists=.env qa/checks/scenarios-live.mjs",
+      "expect": "pass",
+      "optional": true,
+      "exitCode": 0,
+      "durationMs": 24621,
+      "status": "PASS",
+      "stdoutTail": "\n[SUPPORTED] S1 Where is the air worst right now, and does it breach the WHO guideline?\n  finding: Peak PM2.5 is 90.8 ug/m3 at Ampang; 8494 location-hours across 257 locations exceed the WHO 2021 15 ug/m3 guideline.\n    - Zetaris air_quality.hourly_observations: worst location Ampang peak=90.8 mean=38.4 ug/m3\n    - Zetaris: 8494 location-hours > 15 ug/m3 over 257 locations\n\n[SUPPORTED] S2 Do the ingested fire hotspots explain the worst-affected location?\n  finding: NO. The worst air is at Ampang (peak 90.8 ug/m3). The nearest ingested fire cluster is Pagoh at 145 km, and the only hotspots within 300 km total just 8.1 MW -- far too little energy to account for a regional episode. The ingested hotspots do not explain it; a transboundary source is implied and confirming it needs wind-trajectory evidence this dataset does not contain.\n    - Zetaris: worst location Ampang at (3.15, 101.7667), peak 90.8 ug/m3\n    - Zetaris FIRMS: 17 fires in Tawau, total FRP 425.8 MW, ~1757 km away\n    - Zetaris FIRMS: 14 fires in Pulau Sipadan, total FRP 137.4 MW, ~1804 km away\n    - Zetaris FIRMS: 5 fires in Kalabakan, total FRP 34.2 MW, ~1687 km away\n    - Zetaris FIRMS: 3 fires in Bario, total FRP 13.7 MW, ~1728 km away\n    - Zetaris FIRMS: 2 fires in Bau, total FRP 25.2 MW, ~925 km away\n    - Zetaris FIRMS: 2 fires in Bintulu, total FRP 6.3 MW, ~1219 km away\n    - Zetaris FIRMS: 1 fires in Pagoh, total FRP 8.1 MW, ~145 km away\n    - Zetaris FIRMS: 1 fires in Miri, total FRP 4.5 MW, ~1260 km away\n    - Zetaris FIRMS: 1 fires in Taman Tunku Abdul Rahman, total FRP 2.3 MW, ~1580 km away\n    - Zetaris FIRMS: 1 fires in Sarawak, total FRP 7.6 MW, ~1262 km away\n\n[SUPPORTED] S3 Does independent public reporting corroborate a transboundary source?\n  finding: 4 of 4 retrieved documents name Indonesia, Sumatra, Kalimantan or transboundary transport as the source.\n    - web search response sha256 88773ea91c82...\n    - 2026 Southeast Asian haze - Wikipedia -- https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze\n    - IDN: Fire - 07-2026 - Indonesia: Forest Fires and Haze in Sumatra and Kalimantan (2026-08-24) - Indonesia | ReliefWeb -- https://reliefweb.int/report/indonesia/idn-fire-07-2026-indonesia-forest-fires-and-haze-sumatra-and-kalimantan-2026-08-24\n    - Months-long Indonesia wildfires spew toxic haze across Southeast Asia - France 24 -- https://www.france24.com/en/asia-pacific/20261018-months-long-indonesia-wildfires-spew-toxic-haze-across-southeast-asia\n    - Why Southeast Asia Is Facing a Haze Crisis -- https://time.com/article/2026/09/17/wildfire-haze-indonesia-malaysia-singapore-southeast-asia-super-el-nino\n\n[SUPPORTED] S4 Is the Zetaris warehouse consistent with the upstream it was built from?\n  finding: Stored peak for Kuala Lumpur is 90.8 ug/m3 against a live upstream peak of 90.8 ug/m3 (ratio 1.00). Same order of magnitude, so the warehouse is consistent with its source.\n    - Zetaris: Kuala Lumpur peak 90.8 ug/m3 over 96 stored samples\n    - Open-Meteo live peak 90.8 ug/m3 for the same coordinates\n    - Windows are not identical: the warehouse retains a wider forecast range than the live comparison call.\n\n[SUPPORTED] S5 Can every retained number be traced to a dated, identified source?\n  finding: Fire rows carry sensor identity (2 distinct platforms) and acquisition times 2026-10-27 12:38:00.0 to 2026-10-27 14:20:00.0, with 0 rows missing a confidence grade. PM2.5 rows carry ingest stamps (7 batch time(s), 2026-10-27T11:25:53.844Z).\n    - Zetaris FIRMS: 47 rows, 2 sensor platforms, acquisition 2026-10-27 12:38:00.0 to 2026-10-27 14:20:00.0\n    - Zetaris PM2.5: ingest batches 7, first 2026-10-27T11:25:53.844Z, last 2026-10-27T11:25:55.183Z\n\n[SUPPORTED] S6 Does the stack fail safe, and quietly, when a credential expires?\n  finding: Yes: an invalid token is refused rather than silently returning data, and the token did not appear in any output. However the refusal surfaces only as HTTP 400 Bad Request, which does not tell an operator the token expired.\n    - run_sql.py with an invalid token exited 1\n    - token present in output: false\n    - Observed live earlier this session: a real token lapsed after ~1 hour and every query began failing with HTTP 400.\n\n[SUPPORTED] S7 Are the 345 retained locations independent measurements?\n  finding: NO. 345 locations yield only 104 distinct peak values (30%). Open-Meteo is a MODEL on a grid coarser than this location list, so locations sharing a cell return identical series. Counting them as independent observations overstates confidence: a headline like \"257 locations affected\" reflects far fewer independent grid cells.\n    - Zetaris: 104 distinct peak values across 345 locations\n    - The feed is modelled output, not ground sensors; co-located points are duplicates, not corroboration.\n\n=== 7/7 scenarios behaved correctly -> qa/scenarios-live.json ===\n",
+      "stderrTail": ""
+    },
+    {
+      "id": "UC-41",
+      "name": "Live web-search evidence tool returns usable documents (network)",
+      "layer": "data",
+      "command": "node --env-file-if-exists=.env qa/checks/web-search-live-probe.mjs",
+      "expect": "pass",
+      "optional": true,
+      "exitCode": 0,
+      "durationMs": 928,
+      "status": "PASS",
+      "stdoutTail": "  ok   fixture mode stays synthetic even with a key present\n       {\"evidence_origin\":\"synthetic_fixture\",\"retrieved_at\":\"2026-10-24T12:00:00.000Z\"}\n  ok   live Tavily search returns usable evidence\n       {\"provider\":\"tavily\",\"evidence_origin\":\"external_source\",\"result_count\":4,\"response_sha256\":\"1dc7a481209b…\",\"retrieved_at\":\"2026-10-27T12:57:29.501Z\",\"elapsed_ms\":777}\n  ok   every result carries a title, absolute URL and snippet\n       {\"urls\":[\"https://www.iqair.com/newsroom/october-8-2026-kuala-lumpur-among-top-10-most-polluted-cities-in-the-world\",\"https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze\",\"https://www.facebook.com/groups/102138850392400/posts/2129794600960138\",\"https://www.aljazeera.com/opinions/2026/10/20/southeast-asias-haze-crisis-will-persist-until-polluters-pay\"]}\n  ok   the requested result cap is respected\n       {\"requested\":4,\"returned\":4}\n  ok   the provider key never appears in the retained capture\n       {\"key_leaked\":false}\n\n  retrieved documents:\n    - October 8, 2026: Kuala Lumpur among top 10 most polluted cities in the world\n      https://www.iqair.com/newsroom/october-8-2026-kuala-lumpur-among-top-10-most-polluted-cities-in-the-world\n      However, this improvement may be temporary, as smoke from fires in Sumatra and Kalimantan continues to affect Peninsular Malaysia, with an ongoing risk of furth…\n    - 2026 Southeast Asian haze - Wikipedia\n      https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze\n      36. ↑ Hussein, Izz Laily (6 September 2026). \"More than 10 hectares of peatland catch fire in Pengerang | New Straits Times\". NST Online. Retrieved 19 October 2…\n    - Environmental Awareness | The transboundary haze crisis across Southeast Asia escalated severely on October 20, 2026, as agricultural and peatland fires in Indonesia blanketed ... | Facebook\n      https://www.facebook.com/groups/102138850392400/posts/2129794600960138\n      Log in\n\nLog in\n\nForgotten account?\n\n issued urgent public health warnings as particulate pollution metrics breached hazardous limits, posing severe risks to vul…\n    - Southeast Asia’s haze crisis will persist until polluters pay | Environment | Al Jazeera\n      https://www.aljazeera.com/opinions/2026/10/20/southeast-asias-haze-crisis-will-persist-until-polluters-pay\n      Save\n\nShare\n\nA woman wearing a face mask walks along a street in Kuala Lumpur as Malaysia continues to be shrouded in haze caused by fires in Indonesia\n\nA woman…\n\n5/5 checks passed -> qa/web-search-live.json\n",
       "stderrTail": ""
     },
     {

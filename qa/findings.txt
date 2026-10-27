@@ -1,6 +1,6 @@
-Haze Agent — system test run 2026-10-27T11-39-01-422Z
+Haze Agent — system test run 2026-10-27T13-23-05-945Z
 node=v24.16.0 platform=win32
-total=39 pass=37 fail=0 warn=2
+total=42 pass=40 fail=0 warn=2
 
 [PASS] UC-01 Engine pin preflight (node/npm match package.json engines)
     cmd: node qa/checks/engine-preflight.mjs
@@ -195,6 +195,18 @@ total=39 pass=37 fail=0 warn=2
 [PASS] UC-38 Agent's own evidence adapters retrieve live data (network)
     cmd: node qa/checks/agent-retrieval-probe.mjs
     exit=0 duration=2s
+
+[PASS] UC-43 Zetaris operator script tests (python unittest)
+    cmd: npm run test:zetaris-scripts
+    exit=0 duration=1s
+
+[PASS] UC-42 Live cross-system real-world haze scenarios (7 questions)
+    cmd: node --env-file-if-exists=.env qa/checks/scenarios-live.mjs
+    exit=0 duration=25s
+
+[PASS] UC-41 Live web-search evidence tool returns usable documents (network)
+    cmd: node --env-file-if-exists=.env qa/checks/web-search-live-probe.mjs
+    exit=0 duration=1s
 
 [PASS] UC-40 Agent health: all roles registered, routed and capability-backed
     cmd: node qa/checks/agent-health-probe.mjs --live

@@ -24,8 +24,8 @@
   },
   "final_results": {
     "harness_use_cases": {
-      "total": 39,
-      "pass": 37,
+      "total": 43,
+      "pass": 40,
       "fail": 0,
       "warn": 2
     },
@@ -89,6 +89,11 @@
       "total": 10,
       "pass": 10,
       "fail": 0
+    },
+    "live_scenarios": {
+      "total": 7,
+      "behaved_correctly": 7,
+      "conclusions_withheld": 2
     }
   },
   "fixes": [
@@ -198,6 +203,27 @@
       "change": "verify.sh now reads UI_PORT from the same env file (defaulting to 3000) and prints the configured port.",
       "verification": "Re-ran verify.sh with UI_PORT=3001: all 9 checks pass and the summary now reads 'ready on http://localhost:3001'.",
       "note": "app/adapters/zetaris/zetaris-platform/ is tracked in git (10 files), so this is repo-maintained rather than a vendor drop-in that would be overwritten."
+    },
+    {
+      "id": "F-10",
+      "severity": "medium",
+      "status": "FIXED",
+      "title": "The stored ZETARIS_API_KEY is a ~1 hour JWT with no refresh, so every automated Zetaris job dies an hour after setup",
+      "found_by": "A cross-system scenario run roughly 90 minutes after the token was minted: every Zetaris query began failing with HTTP 400 Bad Request.",
+      "root_cause": "POST /api/auth/login returns a short-lived idToken (observed exp ~1 hour) plus a refreshToken. The documented workflow stores that idToken as ZETARIS_API_KEY in .env. app/adapters/zetaris/scripts/zetaris_sql.py requires ZETARIS_API_KEY for the REST channel and has no refresh path, and the returned refreshToken is used by nothing. The TypeScript client (zetaris_api.ts) can mint a token from ZETARIS_USERNAME/ZETARIS_PASSWORD so it self-heals; the Python runner cannot.",
+      "evidence": "Decoded token exp 2026-10-27T11:39:31Z against a 13:02Z query: EXPIRED 83 minutes ago. Re-minting restored service immediately, confirming the cause.",
+      "impact": "Any scheduled or unattended Zetaris work -- daily_update.ts, bootstrap_sources, the fetch scripts, anything on a cron -- fails about an hour after a human last logged in. The failure surfaces only as HTTP 400 Bad Request, which does not say the credential expired, so the operator is sent looking at SQL rather than auth.",
+      "recommended_fix": "Give zetaris_sql.py the same credential exchange the TypeScript client already has: when ZETARIS_API_KEY is absent OR the API answers 400/401, mint a fresh token from ZETARIS_USERNAME/ZETARIS_PASSWORD and retry once. Also surface an expiry-specific message rather than a bare 400.",
+      "workaround": "Re-run the login exchange before any batch job, or store ZETARIS_USERNAME/ZETARIS_PASSWORD and mint on demand.",
+      "change": [
+        "zetaris_sql.py now decodes the JWT exp locally (_token_expired) instead of guessing from a status code",
+        "RestChannel mints a token from ZETARIS_USERNAME/ZETARIS_PASSWORD when none is stored OR the stored one has already lapsed, before spending a request",
+        "a rejected call refreshes once and retries; a 400 from bad SQL with a still-valid token does not spend a login",
+        "an auth failure with no credentials configured now names expiry as the likely cause instead of returning a bare HTTP 400",
+        "the login failure path never reads or echoes the response body, so a rejected login cannot quote the password back"
+      ],
+      "verification": "9 new offline unittest cases plus the 4 existing ones pass (13/13). Against the LIVE stack: an expired stored token auto-refreshed and returned 47 hotspots; no stored token at all minted one and returned 33,120 samples; with neither key nor credentials it refuses with a message naming both options.",
+      "also": "app/adapters/zetaris/scripts/test_env.py was orphaned - no suite ran it. Added npm script test:zetaris-scripts and harness UC-43 so these tests run from now on."
     }
   ],
   "hardening_not_a_defect": [
@@ -375,5 +401,16 @@
       "JDBC channel (a driver jar ships in the bundle but was not exercised; all SQL went over REST).",
       "The attribution join uses a crude degree box, not a geodesic buffer or wind-trajectory model, so it demonstrates the data path rather than a scientifically defensible attribution."
     ]
-  }
+  },
+  "open_defects": [],
+  "data_quality_findings": [
+    {
+      "id": "D-01",
+      "title": "The 345 retained PM2.5 locations are not 345 independent measurements",
+      "found_by": "Live scenario S7.",
+      "evidence": "345 locations yield only 104 distinct peak values (30%). Open-Meteo is modelled output on a grid coarser than the location list, so co-located points return identical series.",
+      "impact": "Counting locations as independent observations overstates confidence. A headline such as '257 locations exceed the WHO guideline' reflects far fewer independent grid cells, and co-located points are duplicates rather than corroboration.",
+      "recommendation": "Report affected grid cells alongside affected locations, and treat the feed as modelled coverage rather than independent sensing. Ground sensors (OpenAQ/DOE) are the independent check."
+    }
+  ]
 }

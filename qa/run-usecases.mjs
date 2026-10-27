@@ -373,6 +373,37 @@ const USE_CASES = [
     slow: true,
   },
   {
+    // The Zetaris operator scripts are Python and were never run by any suite.
+    // Covers env resolution and REST token refresh; offline, no stack needed.
+    id: 'UC-43',
+    name: 'Zetaris operator script tests (python unittest)',
+    layer: 'unit',
+    cmd: 'npm run test:zetaris-scripts',
+    expect: 'pass',
+  },
+  {
+    // Cross-system scenarios: live Zetaris warehouse + live upstream APIs +
+    // live web search. Needs the Zetaris stack up with FIRMS and PM2.5
+    // registered, so it is optional and records WARN when unavailable.
+    id: 'UC-42',
+    name: 'Live cross-system real-world haze scenarios (7 questions)',
+    layer: 'zetaris',
+    cmd: 'node --env-file-if-exists=.env qa/checks/scenarios-live.mjs',
+    expect: 'pass',
+    optional: true,
+    slow: true,
+  },
+  {
+    // Needs TAVILY_API_KEY and network; the probe skips cleanly without a key,
+    // so an unconfigured run records WARN rather than a false FAIL.
+    id: 'UC-41',
+    name: 'Live web-search evidence tool returns usable documents (network)',
+    layer: 'data',
+    cmd: 'node --env-file-if-exists=.env qa/checks/web-search-live-probe.mjs',
+    expect: 'pass',
+    optional: true,
+  },
+  {
     // Reports every agent's registration, model route and capability backing
     // from the runtime's own endpoints. Passes when all five roles are
     // registered and routed; it does NOT require a reachable model provider,
