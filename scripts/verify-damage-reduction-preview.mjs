@@ -85,13 +85,16 @@ async function stop() {
   });
 }
 async function read(origin, path, body, key = randomUUID()) {
+  // Fixture kernels can occupy this server's event loop beyond the keepalive
+  // grace period while a reused socket has bytes queued. Avoid pooled sockets.
   const response = await fetch(
     `${origin}${path}`,
     body === undefined
-      ? undefined
+      ? { headers: { Connection: 'close' } }
       : {
           method: 'POST',
           headers: {
+            Connection: 'close',
             'Content-Type': 'application/json',
             Origin: origin,
             'Idempotency-Key': key,

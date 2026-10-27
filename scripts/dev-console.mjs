@@ -31,6 +31,8 @@ const commands = {
     'list',
     'show',
     'watch',
+    'trace',
+    'export',
     'pause',
     'resume',
     'cancel',
@@ -53,7 +55,7 @@ const help = {
   agents:
     'agents list\nagents show <name>\n  Inspect registered agents, configured models, and current assignments.',
   tasks:
-    'tasks run "<objective>"\ntasks list [--active|--failed]\ntasks show <id>\ntasks watch <id>\ntasks pause|resume|cancel|continue <id>\ntasks reply <id> "<answer>" [--question <id>]\n  Resume retains the deadline and remaining budget. Continue creates a linked run.\n  Local cancellation does not confirm remote provider termination.',
+    'tasks run "<objective>"\ntasks list [--active|--failed]\ntasks show <id>\ntasks watch <id>\ntasks trace <taskId> [--run <runId>] [--follow]\ntasks export <taskId> [--run <runId>] --out "<directory>"\ntasks pause|resume|cancel|continue <id>\ntasks reply <id> "<answer>" [--question <id>]\n  Trace follow stays on the selected run; Ctrl+C stops following. Export refuses an existing directory.\n  Resume retains the deadline and remaining budget. Continue creates a linked run.\n  Local cancellation does not confirm remote provider termination.',
   nightshift:
     'nightshift status\nnightshift jobs\nnightshift show <id>\n  Inspect separate candidate-job, direct-inference, and automation readiness.\n  Configure models and fleets in the Nightshift cockpit.',
   config:
@@ -127,7 +129,7 @@ export function commandHelp(topic) {
     'Haze commands',
     '  status [component] [--watch]    Readiness and current work',
     '  agents list | show <name>       Registered agents and assignments',
-    '  tasks run | list | show | watch | pause | resume | cancel | continue | reply',
+    '  tasks run | list | show | watch | trace | export | pause | resume | cancel | continue | reply',
     '  nightshift status | jobs | show Local jobs and readiness gates',
     '  config [show|get|set|validate]   Inspect and configure supported settings',
     '  logs [app|zetaris] [--follow]    Recent runtime output',

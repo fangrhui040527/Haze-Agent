@@ -39,6 +39,11 @@ import {
 } from './nightshift-service.js';
 import { acquireRuntimeOwner } from './runtime-owner.js';
 import {
+  TraceProjectionService,
+  type TraceProjectionOptions,
+} from './trace-projection.js';
+import { TraceExportService } from './trace-export.js';
+import {
   graphThreadId,
   type GraphAuthority,
   type GraphJob,
@@ -146,6 +151,10 @@ export interface TaskRuntimeOptions {
   acceptancePolicy?: 'research-v1';
   /** Injectable dispatch boundary; failure leaves committed queued work recoverable. */
   dispatchTask?: (taskId: string, dispatch: () => void) => void;
+  /** Optional sinks keep tests isolated while production tracing defaults to on. */
+  trace?: TraceProjectionOptions;
+  /** Trusted server registration of service evidence kinds safe for public export. */
+  tracePublicEvidenceKinds?: readonly string[];
 }
 const exact = ({ id, version, sha256 }: ArtifactRef): ArtifactRef => ({
   id,
@@ -218,6 +227,8 @@ export class TaskRuntime {
   readonly nightshift: NightshiftJobService;
   readonly automaticChains: AutomaticChainService;
   readonly store: TaskStore;
+  readonly trace: TraceProjectionService;
+  readonly traceExports: TraceExportService;
   private readonly dispatcher: GraphDispatcher;
   private readonly releaseOwner: () => void;
   private readonly checkpoints: ReturnType<typeof openSqliteCheckpointer>;
@@ -395,6 +406,18 @@ export class TaskRuntime {
       this.releaseOwner();
       throw error;
     }
+    this.traceExports = new TraceExportService(this.store, {
+      env: { ...process.env, ...options.env },
+      ...(options.tracePublicEvidenceKinds
+        ? { publicEvidenceKinds: options.tracePublicEvidenceKinds }
+        : {}),
+      sinkHealth: () => this.trace.health(),
+    });
+    this.trace = new TraceProjectionService(this.store, {
+      env: { ...process.env, ...options.env },
+      ...options.trace,
+      exporter: this.traceExports,
+    });
     this.checkpoints = openSqliteCheckpointer(
       options.stateDirectory,
       'execution-checkpoints-v1.sqlite',
@@ -1243,8 +1266,14 @@ export class TaskRuntime {
           const task = fresh();
           coordinator(task);
           const state = this.store.managerState(id, task.identity)!;
-          const events = this.store.pendingManagerEvents(id, task.identity);
           const artifacts = this.managerArtifacts(task);
+          const reviews = assessArtifactReviews(
+            task,
+            this.options.registry,
+            artifacts,
+          );
+          this.store.recordReviewChecks(id, reviews);
+          const events = this.store.pendingManagerEvents(id, task.identity);
           const agent = this.options.registry.agents.get('Manager');
           if (!agent?.decide || !agent.assembleContext)
             throw new TaskError(
@@ -1274,11 +1303,7 @@ export class TaskRuntime {
             {
               events,
               artifacts,
-              reviews: assessArtifactReviews(
-                task,
-                this.options.registry,
-                artifacts,
-              ),
+              reviews,
               maxBytes: Math.max(
                 1,
                 task.limits.max_model_input_bytes -
@@ -2218,6 +2243,7 @@ export class TaskRuntime {
       this.options.registry,
       artifacts,
     );
+    this.store.recordReviewChecks(task.id, checks);
     const selected = [...action.work_products, ...action.sources];
     const foreignOwners = new Map<
       string,
@@ -4201,6 +4227,7 @@ export class TaskRuntime {
     await this.automaticChains.close();
     await this.nightshift.close();
     await this.dispatcher.close();
+    await this.trace.close();
     (await this.checkpoints).close();
     this.store.close();
     this.releaseOwner();

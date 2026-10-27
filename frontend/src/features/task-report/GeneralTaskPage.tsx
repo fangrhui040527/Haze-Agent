@@ -13,6 +13,7 @@ import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
 import { ExternalWaitObserver } from '../nightshift/ExternalWaits.tsx';
+import { TraceTimeline } from './TraceTimeline.tsx';
 
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
@@ -124,6 +125,7 @@ export function GeneralTaskReport({
           </Link>
         </p>
       )}
+      {record && <TraceTimeline record={record} />}
       <details open={!record?.result || observing}>
         <summary>Actual execution receipts ({receipts.length})</summary>
         {receipts.length > 0 ? (
@@ -154,6 +156,10 @@ export function GeneralTaskReport({
           <h2 id="task-result-title" className={styles.heading}>
             Saved result
           </h2>
+          <p className={styles.meta}>
+            Current saved task state · run {record.current_run_id}. Historical
+            trace selection above does not change this panel.
+          </p>
           <TaskResult
             evidence={{
               taskUrl: task.taskUrl,

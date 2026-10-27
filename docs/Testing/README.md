@@ -6,6 +6,7 @@ Verification guides describe commands, fixture scope and any live prerequisites.
 
 ## Manager and World Model
 
+- [Execution traces and evidence exports](../testing/trace-logging.md).
 - [Test the Manager in isolation](manager-testing.md).
 - [World Model control plane](world-model-control-plane.md).
 - [Model routing verification and evaluation](model-route-evaluation.md).

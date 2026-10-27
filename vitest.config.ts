@@ -7,6 +7,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'node',
+          env: { HAZE_TRACE_FILES: 'off', HAZE_TRACE_STDOUT: 'off' },
           include: ['tests/unit/**/*.test.ts'],
           // Each fork starts SQLite/LangGraph runtimes. Bound their aggregate
           // resource use so the default check does not oversubscribe the host.

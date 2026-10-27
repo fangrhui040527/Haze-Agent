@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { stripVTControlCharacters } from 'node:util';
+import { executeTraceCommand } from './dev-trace.mjs';
 import {
   checkStartupComponents,
   collectorsReadiness,
@@ -11,6 +12,8 @@ export const API_COMMANDS = [
   'tasks run "<objective>"',
   'tasks list [--active|--failed] [--cursor <cursor>]',
   'tasks show <id> | tasks watch <id>',
+  'tasks trace <taskId> [--run <runId>] [--follow]',
+  'tasks export <taskId> [--run <runId>] --out "<directory>"',
   'tasks pause|resume|cancel|continue <id>',
   'tasks reply <id> "<answer>" [--question <id>]',
   'nightshift status | nightshift jobs | nightshift show <id>',
@@ -100,7 +103,10 @@ export function createDevApi({
     return url.origin;
   }
 
-  async function request(path, { signal: suppliedSignal, body } = {}) {
+  async function request(
+    path,
+    { signal: suppliedSignal, body, maxBytes = 2 * 1024 * 1024 } = {},
+  ) {
     const base = origin();
     const uncertainMutation =
       body === undefined
@@ -147,7 +153,7 @@ export function createDevApi({
           const item = await abortable(reader.read(), signal);
           if (item.done) break;
           bytes += item.value.byteLength;
-          if (bytes > 2 * 1024 * 1024)
+          if (bytes > maxBytes)
             throw new Error(
               'The app API response exceeds the console response limit.',
             );
@@ -287,8 +293,10 @@ export function createDevApi({
       .join('\n');
   }
 
-  async function tasks(tokens, signal) {
+  async function tasks(tokens, signal, write) {
     const [action, id, ...rest] = tokens;
+    if (action === 'trace' || action === 'export')
+      return executeTraceCommand(tokens, { request, readTask, signal, write });
     if (action === 'run') {
       const objective = tokens.slice(1).join(' ').trim();
       requireArgs(
@@ -400,7 +408,7 @@ export function createDevApi({
       return `Answer recorded for question ${line(question.id)}: ${line(receipt.confirmed)}.`;
     }
     throw new Error(
-      'Usage: tasks run|list|show|watch|pause|resume|cancel|continue|reply (help tasks)',
+      'Usage: tasks run|list|show|watch|trace|export|pause|resume|cancel|continue|reply (help tasks)',
     );
   }
 
@@ -511,10 +519,10 @@ export function createDevApi({
     throw new Error('Usage: status app|agents|nightshift|world|hazeops');
   }
 
-  async function execute(tokens, { signal } = {}) {
+  async function execute(tokens, { signal, write } = {}) {
     const [group, ...args] = tokens;
     if (group === 'agents') return agents(args, signal);
-    if (group === 'tasks') return tasks(args, signal);
+    if (group === 'tasks') return tasks(args, signal, write);
     if (group === 'nightshift') return nightshift(args, signal);
     if (group === 'status') {
       requireArgs(

@@ -27,7 +27,9 @@ import {
 import {
   managerDecisionSchema,
   managerStateSchema,
+  artifactReviewCheckSchema,
   type ManagerDecision,
+  type ArtifactReviewCheck,
   type ManagerState,
 } from '../contracts/manager.js';
 import {
@@ -36,6 +38,7 @@ import {
   parseContractJson,
 } from '../contracts/json.js';
 import { CONTRACT_LIMITS } from '../contracts/common.js';
+import { traceRecordSchema, type TraceRecord } from '../contracts/trace.js';
 import {
   artifactRefSchema,
   artifactImportSchema,
@@ -303,6 +306,8 @@ export class TaskStore {
   private transactionDepth = 0;
   private readonly worldListeners = new Set<(event: WorldEvent) => void>();
   private readonly pendingWorldEvents: WorldEvent[] = [];
+  private readonly traceListeners = new Set<() => void>();
+  private traceDecisionId: string | undefined;
   private readonly commitCallbacks: (() => void)[] = [];
   private savepointSequence = 0;
   private commitCallbackFailures = 0;
@@ -373,6 +378,8 @@ export class TaskStore {
       CREATE TABLE IF NOT EXISTS operations(scope TEXT NOT NULL,key TEXT NOT NULL,fingerprint TEXT NOT NULL,receipt TEXT NOT NULL,PRIMARY KEY(scope,key));
       CREATE TABLE IF NOT EXISTS events(cursor INTEGER PRIMARY KEY AUTOINCREMENT,task_id TEXT NOT NULL,body TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS task_events ON events(task_id,cursor);
+      CREATE TABLE IF NOT EXISTS trace_records(cursor INTEGER PRIMARY KEY REFERENCES events(cursor),task_id TEXT NOT NULL,run_id TEXT NOT NULL,body TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS trace_records_run ON trace_records(task_id,run_id,cursor);
       CREATE TABLE IF NOT EXISTS artifacts(id TEXT PRIMARY KEY,principal TEXT NOT NULL,workspace TEXT NOT NULL,body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS applicability(task_id TEXT NOT NULL,artifact_id TEXT NOT NULL,objective_revision INTEGER NOT NULL,body TEXT NOT NULL,PRIMARY KEY(task_id,artifact_id,objective_revision));
       CREATE TABLE IF NOT EXISTS world_task_pins(task_id TEXT NOT NULL,principal TEXT NOT NULL,workspace TEXT NOT NULL,mode TEXT NOT NULL,record_id TEXT NOT NULL,support_artifacts TEXT NOT NULL,generation INTEGER NOT NULL,PRIMARY KEY(task_id,record_id,generation));
@@ -661,6 +668,7 @@ export class TaskStore {
       'artifact_saved',
       'specialist_escalated',
       'review_objection',
+      'artifact_reviewed',
       'control_resume',
       'control_continue',
       'restart_recovered',
@@ -804,87 +812,118 @@ export class TaskStore {
     input: ManagerDecision,
     execute: () => JsonValue = () => ({}),
   ): ManagerDispatchReceipt {
-    return this.atomic(() => {
-      const decision = managerDecisionSchema.parse(input),
-        fingerprint = contentHash(decision);
-      const prior = this.db
-        .prepare(
-          'SELECT task_id,fingerprint,receipt FROM manager_decisions WHERE id=?',
+    try {
+      return this.atomic(() => {
+        const decision = managerDecisionSchema.parse(input),
+          fingerprint = contentHash(decision);
+        const prior = this.db
+          .prepare(
+            'SELECT task_id,fingerprint,receipt FROM manager_decisions WHERE id=?',
+          )
+          .get(decision.id) as
+          | { task_id: string; fingerprint: string; receipt: string | null }
+          | undefined;
+        if (prior) {
+          if (prior.task_id !== taskId || prior.fingerprint !== fingerprint)
+            fail(
+              'idempotency_conflict',
+              'Manager decision ID reused with different content.',
+            );
+          if (!prior.receipt)
+            fail(
+              'manager_dispatch_incomplete',
+              'Manager decision has no committed dispatch receipt.',
+            );
+          return decode<ManagerDispatchReceipt>(prior.receipt!);
+        }
+        const { task, state } = this.assertManagerFence(taskId, decision);
+        const latest = this.db
+          .prepare('SELECT MAX(cursor) AS cursor FROM events WHERE task_id=?')
+          .get(taskId) as { cursor: number | null };
+        if (
+          decision.event_cursor < state.last_handled_event_cursor ||
+          decision.event_cursor > (latest.cursor ?? 0)
         )
-        .get(decision.id) as
-        | { task_id: string; fingerprint: string; receipt: string | null }
-        | undefined;
-      if (prior) {
-        if (prior.task_id !== taskId || prior.fingerprint !== fingerprint)
           fail(
-            'idempotency_conflict',
-            'Manager decision ID reused with different content.',
+            'invalid_manager_cursor',
+            'Manager event cursor is outside the admitted event range.',
           );
-        if (!prior.receipt)
-          fail(
-            'manager_dispatch_incomplete',
-            'Manager decision has no committed dispatch receipt.',
+        for (const ref of decision.references)
+          this.artifact(ref.id, task.identity, ref);
+        this.db
+          .prepare('INSERT INTO manager_decisions VALUES(?,?,?,?,?,NULL)')
+          .run(
+            decision.id,
+            taskId,
+            decision.run_id,
+            fingerprint,
+            JSON.stringify(decision),
           );
-        return decode<ManagerDispatchReceipt>(prior.receipt!);
-      }
-      const { task, state } = this.assertManagerFence(taskId, decision);
-      const latest = this.db
-        .prepare('SELECT MAX(cursor) AS cursor FROM events WHERE task_id=?')
-        .get(taskId) as { cursor: number | null };
-      if (
-        decision.event_cursor < state.last_handled_event_cursor ||
-        decision.event_cursor > (latest.cursor ?? 0)
-      )
-        fail(
-          'invalid_manager_cursor',
-          'Manager event cursor is outside the admitted event range.',
-        );
-      for (const ref of decision.references)
-        this.artifact(ref.id, task.identity, ref);
-      this.db
-        .prepare('INSERT INTO manager_decisions VALUES(?,?,?,?,?,NULL)')
-        .run(
-          decision.id,
-          taskId,
-          decision.run_id,
-          fingerprint,
-          JSON.stringify(decision),
-        );
-      state.decisions.push({ decision, created_at: now() });
-      if (decision.interpretation)
-        state.interpretation = copy(decision.interpretation);
-      this.putManager(state);
-      const result = execute();
-      const committed = this.managerState(taskId, task.identity)!;
-      committed.last_handled_event_cursor = decision.event_cursor;
-      const receipt: ManagerDispatchReceipt = {
-        decision_id: decision.id,
-        run_id: decision.run_id,
-        objective_revision: decision.objective_revision,
-        plan_revision: decision.plan_revision,
-        applied_plan_revision: committed.plan_revision,
-        status: 'applied',
-        result,
-        created_at: now(),
-      };
-      committed.dispatch_receipts.push(receipt);
-      this.putManager(committed);
-      this.db
-        .prepare('UPDATE manager_decisions SET receipt=? WHERE id=?')
-        .run(JSON.stringify(receipt), decision.id);
-      this.appendEvent(
-        taskId,
-        'manager_decision_applied',
-        'Manager',
-        decision.explanation,
-        {
+        state.decisions.push({ decision, created_at: now() });
+        if (decision.interpretation)
+          state.interpretation = copy(decision.interpretation);
+        this.putManager(state);
+        const previousDecisionId = this.traceDecisionId;
+        let result: JsonValue;
+        this.traceDecisionId = decision.id;
+        try {
+          result = execute();
+        } finally {
+          this.traceDecisionId = previousDecisionId;
+        }
+        const committed = this.managerState(taskId, task.identity)!;
+        committed.last_handled_event_cursor = decision.event_cursor;
+        const receipt: ManagerDispatchReceipt = {
           decision_id: decision.id,
-          action: decision.action.type,
-          plan_revision: committed.plan_revision,
-        },
-      );
-      return receipt;
-    });
+          run_id: decision.run_id,
+          objective_revision: decision.objective_revision,
+          plan_revision: decision.plan_revision,
+          applied_plan_revision: committed.plan_revision,
+          status: 'applied',
+          result,
+          created_at: now(),
+        };
+        committed.dispatch_receipts.push(receipt);
+        this.putManager(committed);
+        this.db
+          .prepare('UPDATE manager_decisions SET receipt=? WHERE id=?')
+          .run(JSON.stringify(receipt), decision.id);
+        this.appendEvent(
+          taskId,
+          'manager_decision_applied',
+          'Manager',
+          decision.explanation,
+          {
+            decision_id: decision.id,
+            action: decision.action.type,
+            plan_revision: committed.plan_revision,
+            manager_consumed_event_cursor: decision.event_cursor,
+          },
+        );
+        return receipt;
+      });
+    } catch (error) {
+      // The rejected dispatch transaction has rolled back. Retain the decision
+      // and failure separately so failure cannot erase the audit history.
+      try {
+        this.appendEvent(
+          taskId,
+          'manager_decision_failed',
+          'Manager',
+          error instanceof Error
+            ? error.message.slice(0, 4096)
+            : 'Manager decision failed.',
+          {
+            decision_id: input.id,
+            decision: copy(input) as JsonValue,
+            error: error instanceof TaskError ? error.code : 'dispatch_failed',
+          },
+        );
+      } catch {
+        /* Preserve the original failure if the task itself is unavailable. */
+      }
+      throw error;
+    }
   }
   private preserveAssignment(assignment: Assignment) {
     this.db
@@ -2438,7 +2477,11 @@ export class TaskStore {
     this.db.exec('BEGIN IMMEDIATE');
     this.transactionDepth++;
     try {
+      const startCursor = this.traceCursor();
       const result = operation();
+      // Extension stores also insert task events directly on this connection.
+      // Capture their envelopes before the same domain transaction commits.
+      this.capturePendingTraces(startCursor);
       this.db.exec('COMMIT');
       committed = true;
       return result;
@@ -2529,6 +2572,537 @@ export class TaskStore {
       task.result?.currency === 'current'
       ? copy(task.result)
       : undefined;
+  }
+
+  /** Global committed-event boundary used by snapshots and durable projections. */
+  traceCursor(): number {
+    return (
+      this.db
+        .prepare('SELECT COALESCE(MAX(cursor),0) AS cursor FROM events')
+        .get() as { cursor: number }
+    ).cursor;
+  }
+
+  onTraceCommitted(listener: () => void): () => void {
+    this.traceListeners.add(listener);
+    return () => this.traceListeners.delete(listener);
+  }
+
+  /** Native immutable records only; restart recovery uses the SQLite cursor. */
+  readTraceBatch(after = 0, limit = 100): TraceRecord[] {
+    return (
+      this.db
+        .prepare(
+          'SELECT body FROM trace_records WHERE cursor>? ORDER BY cursor LIMIT ?',
+        )
+        .all(after, Math.min(1000, Math.max(1, limit))) as Row[]
+    ).map((row) => traceRecordSchema.parse(decode(row.body)));
+  }
+
+  listTraceRecords(
+    taskId: string,
+    runId: string,
+    identity: TaskIdentity,
+    after = 0,
+    limit = 100,
+    boundary = Number.MAX_SAFE_INTEGER,
+  ): TraceRecord[] {
+    this.core(taskId, identity);
+    if (this.run(runId).task_id !== taskId)
+      fail('run_not_found', 'Run is not part of this task.', 404);
+    const rows = this.db
+      .prepare(
+        `SELECT e.cursor,e.body,t.body AS trace_body FROM events e LEFT JOIN trace_records t ON t.cursor=e.cursor
+      WHERE e.task_id=? AND COALESCE(t.run_id,json_extract(e.body,'$.run_id'))=? AND e.cursor>? AND e.cursor<=? ORDER BY e.cursor LIMIT ?`,
+      )
+      .all(
+        taskId,
+        runId,
+        after,
+        boundary,
+        Math.min(1000, Math.max(1, limit)),
+      ) as (Row & { cursor: number; trace_body: string | null })[];
+    return rows.map((row) =>
+      row.trace_body
+        ? traceRecordSchema.parse(decode(row.trace_body))
+        : this.traceEnvelope(
+            {
+              ...decode<Omit<TaskEvent, 'cursor'>>(row.body),
+              cursor: row.cursor,
+            },
+            'reconstructed',
+          ),
+    );
+  }
+
+  /** Exact historical run, never the current task's Manager pointer. */
+  managerStateForRun(
+    taskId: string,
+    runId: string,
+    identity: TaskIdentity,
+  ): ManagerState | undefined {
+    this.core(taskId, identity);
+    if (this.run(runId).task_id !== taskId)
+      fail('run_not_found', 'Run is not part of this task.', 404);
+    const row = this.db
+      .prepare('SELECT body FROM manager_state WHERE task_id=? AND run_id=?')
+      .get(taskId, runId) as Row | undefined;
+    return row ? this.compatibleManagerState(row.body) : undefined;
+  }
+
+  private capturePendingTraces(after: number): void {
+    const rows = this.db
+      .prepare(
+        'SELECT e.cursor,e.body FROM events e LEFT JOIN trace_records t ON t.cursor=e.cursor WHERE e.cursor>? AND t.cursor IS NULL ORDER BY e.cursor',
+      )
+      .all(after) as (Row & { cursor: number })[];
+    for (const row of rows)
+      this.captureTrace({
+        ...decode<Omit<TaskEvent, 'cursor'>>(row.body),
+        cursor: row.cursor,
+      });
+  }
+
+  /** Persist independent evidence verdicts separately from execution acceptance. */
+  recordReviewChecks(taskId: string, checks: ArtifactReviewCheck[]): void {
+    this.atomic(() => {
+      const task = this.core(taskId);
+      for (const input of checks) {
+        const check = artifactReviewCheckSchema.parse(input);
+        const reviewKey = contentHash(check);
+        const prior = this.db
+          .prepare(
+            `SELECT cursor FROM events WHERE task_id=? AND json_extract(body,'$.run_id')=? AND json_extract(body,'$.type')='artifact_reviewed' AND json_extract(body,'$.data.review_key')=? LIMIT 1`,
+          )
+          .get(taskId, task.current_run_id, reviewKey);
+        if (prior) continue;
+        const cause = check.review_artifact
+          ? (this.db
+              .prepare(
+                `SELECT cursor FROM trace_records WHERE task_id=? AND run_id=? AND json_extract(body,'$.action')='artifact_saved' AND json_extract(body,'$.details.event_data.id')=? ORDER BY cursor DESC LIMIT 1`,
+              )
+              .get(taskId, task.current_run_id, check.review_artifact.id) as
+              { cursor: number } | undefined)
+          : undefined;
+        let reviewedRef = check.artifact;
+        const produced = this.db
+          .prepare(
+            `SELECT body FROM trace_records WHERE task_id=? AND run_id=? AND json_extract(body,'$.action')='artifact_saved' AND json_extract(body,'$.details.event_data.id')=? ORDER BY cursor DESC LIMIT 1`,
+          )
+          .get(taskId, task.current_run_id, check.artifact.id) as
+          Row | undefined;
+        const revised = produced
+          ? traceRecordSchema.parse(decode(produced.body)).supersedes?.artifacts
+          : undefined;
+        // A revision relation is emitted only for a uniquely identified output
+        // of the same producer assignment, never by matching unrelated kinds.
+        const previousReview = (ref: ArtifactRef) =>
+          this.db
+            .prepare(
+              `SELECT cursor FROM events WHERE task_id=? AND json_extract(body,'$.run_id')=? AND json_extract(body,'$.type')='artifact_reviewed'
+          AND json_extract(body,'$.data.reviews[0].artifact.id')=? AND json_extract(body,'$.data.reviews[0].artifact.version')=? AND json_extract(body,'$.data.reviews[0].artifact.sha256')=?
+          AND json_extract(body,'$.data.reviews[0].producer_assignment_id')=? ORDER BY cursor DESC LIMIT 1`,
+            )
+            .get(
+              taskId,
+              task.current_run_id,
+              ref.id,
+              ref.version,
+              ref.sha256,
+              check.producer_assignment_id,
+            ) as { cursor: number } | undefined;
+        let previous = previousReview(reviewedRef);
+        if (!previous && revised?.length === 1) {
+          reviewedRef = revised[0]!;
+          previous = previousReview(reviewedRef);
+        }
+        this.appendEvent(
+          taskId,
+          'artifact_reviewed',
+          check.reviewer_assignment_id ? 'EvidenceCritic' : 'Runtime',
+          `${check.reviewer_assignment_id ? 'Independent review' : 'Review availability'}: ${check.verdict}.`,
+          {
+            review_key: reviewKey,
+            reviews: [check] as unknown as JsonValue,
+            evidence_verdict: check.verdict,
+            ...(cause ? { triggering_event_cursor: cause.cursor } : {}),
+            ...(previous
+              ? {
+                  supersedes_event_cursor: previous.cursor,
+                  supersedes_artifacts: [reviewedRef],
+                }
+              : {}),
+          },
+          check.reviewer_assignment_id,
+        );
+      }
+    });
+  }
+
+  private captureTrace(event: TaskEvent): void {
+    const trace = this.traceEnvelope(event, 'native');
+    this.db
+      .prepare(
+        'INSERT INTO trace_records(cursor,task_id,run_id,body) VALUES(?,?,?,?)',
+      )
+      .run(trace.cursor, trace.task_id, trace.run_id, JSON.stringify(trace));
+    this.afterCommit(() => {
+      for (const listener of this.traceListeners)
+        this.invokeCommitted(listener);
+    });
+  }
+
+  private traceEnvelope(
+    event: TaskEvent,
+    capture: TraceRecord['provenance']['capture'],
+  ): TraceRecord {
+    const task = this.core(event.task_id);
+    const object = (value: unknown): Record<string, unknown> =>
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+    const data = object(event.data);
+    const attemptRow =
+      typeof data['attempt_id'] === 'string'
+        ? (this.db
+            .prepare('SELECT body FROM attempts WHERE id=? AND task_id=?')
+            .get(data['attempt_id'], event.task_id) as Row | undefined)
+        : undefined;
+    const attempt = attemptRow
+      ? decode<AttemptRecord>(attemptRow.body)
+      : undefined;
+    if (attempt && capture === 'reconstructed') {
+      if (event.type === 'attempt_charged') {
+        attempt.status = 'started';
+        attempt.accepted = false;
+        delete attempt.receipt;
+        delete attempt.error;
+      } else {
+        if (typeof data['accepted'] === 'boolean')
+          attempt.accepted = data['accepted'];
+        if (
+          ['started', 'completed', 'failed', 'unknown'].includes(
+            String(data['status']),
+          )
+        )
+          attempt.status = data['status'] as AttemptRecord['status'];
+      }
+    }
+    // A late receipt remains attached to its originating run and lease revision.
+    const runId = attempt?.run_id ?? event.run_id;
+    const assignmentId = attempt?.assignment_id ?? event.assignment_id;
+    const assignmentRow = assignmentId
+      ? (this.db
+          .prepare('SELECT body FROM assignments WHERE id=? AND task_id=?')
+          .get(assignmentId, event.task_id) as Row | undefined)
+      : undefined;
+    const assignment = assignmentRow
+      ? decode<Assignment>(assignmentRow.body)
+      : undefined;
+    const stateRow = this.db
+      .prepare('SELECT body FROM manager_state WHERE run_id=? AND task_id=?')
+      .get(runId, event.task_id) as Row | undefined;
+    const state =
+      stateRow && capture === 'native'
+        ? this.compatibleManagerState(stateRow.body)
+        : undefined;
+    const refs = new Map<string, ArtifactRef>();
+    const collect = (value: unknown, depth = 0): void => {
+      if (depth > 24 || !value || typeof value !== 'object') return;
+      const ref = artifactRefSchema.safeParse(value);
+      if (ref.success) {
+        refs.set(
+          `${ref.data.id}:${ref.data.version}:${ref.data.sha256}`,
+          ref.data,
+        );
+        return;
+      }
+      // Event payloads often add kind to the exact reference.
+      const item = object(value);
+      const embedded = artifactRefSchema.safeParse({
+        id: item['id'],
+        version: item['version'],
+        sha256: item['sha256'],
+      });
+      if (embedded.success)
+        refs.set(
+          `${embedded.data.id}:${embedded.data.version}:${embedded.data.sha256}`,
+          embedded.data,
+        );
+      for (const child of Object.values(value)) collect(child, depth + 1);
+    };
+    collect(event.data);
+    const details: Record<string, JsonValue> =
+      event.data === undefined ? {} : { event_data: event.data };
+    const decisionId =
+      typeof data['decision_id'] === 'string'
+        ? data['decision_id']
+        : this.traceDecisionId;
+    const decisionRow = decisionId
+      ? (this.db
+          .prepare(
+            'SELECT body FROM manager_decisions WHERE id=? AND task_id=?',
+          )
+          .get(decisionId, event.task_id) as Row | undefined)
+      : undefined;
+    const decision = decisionRow
+      ? decode<ManagerDecision>(decisionRow.body)
+      : undefined;
+    if (decision) {
+      collect(decision.references);
+      details['decision'] = copy(decision) as JsonValue;
+    }
+    if (attempt) {
+      // Keep the provider's actual receipt, without copying source bodies from output.
+      details['attempt'] = {
+        kind: attempt.kind,
+        status: attempt.status,
+        accepted: attempt.accepted,
+        details: attempt.details,
+        ...(attempt.receipt === undefined ? {} : { receipt: attempt.receipt }),
+        ...(attempt.error === undefined ? {} : { error: attempt.error }),
+      };
+    }
+    let reviews: TraceRecord['reviews'] = Array.isArray(data['reviews'])
+      ? data['reviews']
+          .map((check) => artifactReviewCheckSchema.safeParse(check))
+          .filter((check) => check.success)
+          .map((check) => check.data)
+      : undefined;
+    collect(reviews);
+    for (const ref of [...refs.values()]) {
+      const row = this.db
+        .prepare('SELECT body FROM artifacts WHERE id=?')
+        .get(ref.id) as Row | undefined;
+      if (!row) continue;
+      const artifact = decode<Artifact>(row.body);
+      if (artifact.sha256 !== ref.sha256 || artifact.version !== ref.version)
+        continue;
+      collect(artifact.dependencies);
+      if (artifact.kind.includes('review')) {
+        const checks = object(artifact.content)['checks'];
+        if (Array.isArray(checks)) {
+          const parsed = checks
+            .map((check) => artifactReviewCheckSchema.safeParse(check))
+            .filter((check) => check.success)
+            .map((check) => check.data);
+          if (parsed.length) {
+            reviews = [...(reviews ?? []), ...parsed];
+            collect(parsed);
+          }
+        }
+      }
+    }
+    const resultRow =
+      event.type === 'task_completed'
+        ? (this.db
+            .prepare(
+              'SELECT body FROM task_run_results WHERE run_id=? AND objective_revision=?',
+            )
+            .get(runId, event.objective_revision) as Row | undefined)
+        : undefined;
+    const result = resultRow ? decode<TaskResult>(resultRow.body) : undefined;
+    if (result) {
+      collect(result.work_products);
+      collect(result.sources);
+      collect(result.review);
+      reviews = result.review.checks ?? reviews;
+    }
+    const peerRow =
+      typeof data['message_id'] === 'string'
+        ? (this.db
+            .prepare('SELECT body FROM messages WHERE id=?')
+            .get(data['message_id']) as Row | undefined)
+        : undefined;
+    const peer = peerRow ? decode<PeerMessage>(peerRow.body) : undefined;
+    const role = (id: string): string => {
+      const row = this.db
+        .prepare('SELECT body FROM assignments WHERE id=? AND task_id=?')
+        .get(id, event.task_id) as Row | undefined;
+      return row ? decode<Assignment>(row.body).role : 'unavailable';
+    };
+    const previousAttempt = attempt
+      ? (this.db
+          .prepare(
+            `SELECT cursor FROM trace_records WHERE run_id=? AND json_extract(body,'$.causes.attempt_id')=? AND cursor<? ORDER BY cursor DESC LIMIT 1`,
+          )
+          .get(runId, attempt.id, event.cursor) as
+          { cursor: number } | undefined)
+      : undefined;
+    const attemptNumber = attempt
+      ? (
+          this.db
+            .prepare(
+              "SELECT COUNT(*) AS count FROM attempts WHERE assignment_id=? AND json_extract(body,'$.kind')=? AND rowid <= (SELECT rowid FROM attempts WHERE id=?)",
+            )
+            .get(attempt.assignment_id, attempt.kind, attempt.id) as {
+            count: number;
+          }
+        ).count
+      : undefined;
+    const status =
+      attempt?.status ??
+      (typeof data['status'] === 'string'
+        ? data['status']
+        : event.type.split('_').at(-1)!);
+    const triggeringCursor =
+      typeof data['triggering_event_cursor'] === 'number'
+        ? data['triggering_event_cursor']
+        : undefined;
+    const causes: TraceRecord['causes'] = {
+      ...(decisionId ? { decision_id: decisionId } : {}),
+      ...(attempt ? { attempt_id: attempt.id } : {}),
+      ...(peer ? { message_id: peer.id } : {}),
+      event_ids: [
+        ...(previousAttempt ? [`trace:${previousAttempt.cursor}`] : []),
+        ...(triggeringCursor ? [`trace:${triggeringCursor}`] : []),
+      ],
+    };
+    const revision =
+      attempt?.assignment_revision ??
+      (capture === 'native'
+        ? assignment?.revision
+        : typeof data['assignment_revision'] === 'number'
+          ? data['assignment_revision']
+          : undefined);
+    let supersedes: TraceRecord['supersedes'] =
+      typeof data['supersedes_event_cursor'] === 'number'
+        ? {
+            event_ids: [`trace:${data['supersedes_event_cursor']}`],
+            artifacts: Array.isArray(data['supersedes_artifacts'])
+              ? data['supersedes_artifacts'].flatMap((item) => {
+                  const parsed = artifactRefSchema.safeParse(item);
+                  return parsed.success ? [parsed.data] : [];
+                })
+              : [],
+          }
+        : undefined;
+    if (
+      capture === 'native' &&
+      event.type === 'artifact_saved' &&
+      assignment &&
+      assignment.revision > 1
+    ) {
+      const currentRef = artifactRefSchema.safeParse({
+        id: data['id'],
+        version: data['version'],
+        sha256: data['sha256'],
+      });
+      const previousRow = this.db
+        .prepare(
+          'SELECT body FROM assignment_history WHERE assignment_id=? AND revision<? ORDER BY revision DESC LIMIT 1',
+        )
+        .get(assignment.id, assignment.revision) as Row | undefined;
+      const previous = previousRow
+        ? decode<Assignment>(previousRow.body)
+        : undefined;
+      if (currentRef.success && previous?.outputs.length === 1) {
+        const ref = previous.outputs[0]!;
+        const artifactRow = this.db
+          .prepare('SELECT body FROM artifacts WHERE id=?')
+          .get(ref.id) as Row | undefined;
+        const artifact = artifactRow
+          ? decode<Artifact>(artifactRow.body)
+          : undefined;
+        if (
+          artifact &&
+          artifact.kind === data['kind'] &&
+          artifact.assignment_id === assignment.id &&
+          artifact.assignment_revision === previous.revision &&
+          artifact.version === ref.version &&
+          artifact.sha256 === ref.sha256
+        ) {
+          const prior = this.db
+            .prepare(
+              `SELECT cursor FROM trace_records WHERE task_id=? AND run_id=? AND json_extract(body,'$.action')='artifact_saved' AND json_extract(body,'$.details.event_data.id')=? ORDER BY cursor DESC LIMIT 1`,
+            )
+            .get(event.task_id, runId, ref.id) as
+            { cursor: number } | undefined;
+          supersedes = {
+            event_ids: prior ? [`trace:${prior.cursor}`] : [],
+            artifacts: [ref],
+          };
+        }
+      }
+    }
+    const omissions =
+      capture === 'reconstructed'
+        ? [
+            'Historical event reconstructed; original event-time Manager/assignment metadata and direct causes may be unavailable.',
+          ]
+        : [];
+    if (Buffer.byteLength(JSON.stringify(details), 'utf8') > 1_000_000) {
+      for (const key of Object.keys(details)) delete details[key];
+      omissions.push(
+        'Event/provider details exceeded the normalized trace detail bound; original receipt remains in SQLite.',
+      );
+    }
+    return traceRecordSchema.parse({
+      schema_version: 'haze.trace.record.v1',
+      event_id: `trace:${event.cursor}`,
+      cursor: event.cursor,
+      task_id: event.task_id,
+      run_id: runId,
+      at: event.at,
+      action: event.type,
+      actor: assignment?.role ?? event.actor,
+      status,
+      summary: event.message,
+      ...(event.type === 'task_admitted'
+        ? { input_summary: task.original_request.objective.slice(0, 2000) }
+        : {}),
+      ...(result ? { output_summary: result.answer.slice(0, 2000) } : {}),
+      objective_revision:
+        attempt?.objective_revision ?? event.objective_revision,
+      generation: attempt?.generation ?? event.generation,
+      ...(assignmentId ? { assignment_id: assignmentId } : {}),
+      ...(revision ? { assignment_revision: revision } : {}),
+      ...(state
+        ? {
+            plan_revision: state.plan_revision,
+            manager_consumed_event_cursor: state.last_handled_event_cursor,
+          }
+        : {}),
+      ...(attempt
+        ? {
+            attempt_number: attemptNumber,
+            execution_status: attempt.status,
+            execution_accepted: attempt.accepted,
+            input_summary: `${attempt.kind} attempt ${attempt.id}`,
+            output_summary: attempt.accepted
+              ? 'Receipt accepted by execution fence.'
+              : 'Receipt not accepted.',
+          }
+        : assignment && capture === 'native'
+          ? { execution_status: assignment.status }
+          : {}),
+      ...(capture === 'native' ? { task_status: this.run(runId).status } : {}),
+      ...(result
+        ? { evidence_verdict: result.review.status, task_status: 'completed' }
+        : typeof data['evidence_verdict'] === 'string'
+          ? { evidence_verdict: data['evidence_verdict'] }
+          : {}),
+      artifacts: [...refs.values()],
+      ...(reviews ? { reviews } : {}),
+      causes,
+      ...(supersedes ? { supersedes } : {}),
+      ...(peer
+        ? {
+            peer: {
+              sender_id: peer.sender,
+              sender_role: role(peer.sender),
+              recipient_id: peer.recipient,
+              recipient_role: role(peer.recipient),
+            },
+          }
+        : {}),
+      provenance: {
+        capture,
+        mode: task.mode,
+        omissions,
+      },
+      ...(Object.keys(details).length ? { details } : {}),
+    });
   }
 
   subscribeWorld(listener: (event: WorldEvent) => void): () => void {
@@ -2933,6 +3507,7 @@ export class TaskStore {
         .prepare('INSERT INTO events(task_id,body) VALUES(?,?)')
         .run(taskId, JSON.stringify(event));
       const cursor = Number(receipt.lastInsertRowid);
+      this.captureTrace({ ...event, cursor });
       if (!(type === 'restart_recovered' && run.status === 'waiting'))
         this.graph.wake(taskId, cursor, type);
       if (
@@ -6044,6 +6619,7 @@ export class TaskStore {
         'Purpose-bound peer message persisted.',
         {
           channel_id: channelId,
+          message_id: message.id,
           channel_revision: channel.revision,
           sender,
           recipient,
