@@ -1,0 +1,12 @@
+{
+  "run_id": "judge-006",
+  "status": "error",
+  "mode": "offline_sample",
+  "error": {
+    "type": "unsupported",
+    "message": "District 'my-sabah-tawau' is not supported. Supported: my-johor-batu-pahat, my-johor-muar, my-johor-johor-bahru, my-melaka-melaka-tengah, my-negeri-sembilan-seremban, my-selangor-petaling, my-selangor-klang, my-wp-kuala-lumpur-kuala-lumpur, my-perak-kinta, my-pahang-kuantan, my-sarawak-kuching, my-sarawak-serian, my-sarawak-sri-aman, my-sarawak-sibu, my-sarawak-miri.",
+    "recoverable": false,
+    "failed_dependencies": []
+  },
+  "execution_time_seconds": 0.003
+}

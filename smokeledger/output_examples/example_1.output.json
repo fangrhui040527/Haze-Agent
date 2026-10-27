@@ -1,0 +1,356 @@
+{
+  "run_id": "judge-001",
+  "status": "success",
+  "mode": "offline_sample",
+  "reasoning_backend": "deterministic",
+  "source_backend": "sample_fixture",
+  "engine_versions": {
+    "hmem": {
+      "engine_name": "meterless-hmem",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/hmem",
+      "path": "engines/hmem/reference",
+      "vendored_to": "vendor/hmem",
+      "src_sha256": "e899794d6db656f91112b953e7c897ccc9354c126a143e953c24f084faee9007"
+    },
+    "world_model": {
+      "engine_name": "meterless-world-model",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/world-model",
+      "path": "engines/world-model/reference",
+      "vendored_to": "vendor/world-model",
+      "src_sha256": "52d8ee1bf697a4d309d2053a442fc4bca3b1fad53a2c824ce729a2f7337519e8"
+    },
+    "app": {
+      "name": "smokeledger-haze-harness",
+      "version": "0.7.0",
+      "workflowVersion": "haze-graph-1"
+    }
+  },
+  "workflow_backend": "langgraph",
+  "workflow_version": "haze-graph-1",
+  "thread_id": "judge-001",
+  "checkpoint_id": "1f1ce0d9-095a-6920-800a-92cf01138feb",
+  "engine_operations_executed": {
+    "world_model.upsertEntity": 2,
+    "world_model.relate": 1,
+    "hmem.add": 2,
+    "hmem.query": 2,
+    "world_model.assertFact": 4
+  },
+  "remote_calls_executed": {},
+  "remote_calls_skipped": {
+    "zetaris.sql": 7
+  },
+  "output": {
+    "summary": "Outdoor crew plan for Klang, 08:00-12:00 MYT: 4 of 4 hours are planned on forecast evidence, with heavy work at 08:00-09:00, 09:00-10:00, 10:00-11:00 where indicative hourly API is 176-177 [E-18ca6e6cc7][E-0639088c6f].",
+    "narrative": null,
+    "proposed_plan": {
+      "proposal_id": "P-fe4183e1-1",
+      "revision": 1,
+      "schedule": [
+        {
+          "label": "08:00-09:00",
+          "task": "drain clearing",
+          "intensity": "heavy",
+          "api_hourly": 177,
+          "band": "unhealthy",
+          "action": "Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.",
+          "basis": "forecast"
+        },
+        {
+          "label": "09:00-10:00",
+          "task": "verge trimming",
+          "intensity": "heavy",
+          "api_hourly": 177,
+          "band": "unhealthy",
+          "action": "Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.",
+          "basis": "forecast"
+        },
+        {
+          "label": "10:00-11:00",
+          "task": "drain clearing",
+          "intensity": "heavy",
+          "api_hourly": 176,
+          "band": "unhealthy",
+          "action": "Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.",
+          "basis": "forecast"
+        },
+        {
+          "label": "11:00-12:00",
+          "task": "signage inspection",
+          "intensity": "light",
+          "api_hourly": 176,
+          "band": "unhealthy",
+          "action": "Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.",
+          "basis": "forecast"
+        }
+      ],
+      "controls": [
+        "Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy."
+      ],
+      "unmet_constraints": []
+    },
+    "claims": [
+      {
+        "id": "judge-001-h-obs",
+        "kind": "observation",
+        "text": "In the 24 hours before the assessment time, model PM2.5 at Klang averaged 81.5 ug/m3 over 24 hours [E-02cd9168f5].",
+        "evidence_ids": [
+          "E-02cd9168f5"
+        ]
+      },
+      {
+        "id": "judge-001-h-1791331200000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "08:00-09:00 MYT: projected hourly PM2.5 105.9 ug/m3 (indicative hourly API 177); 24-hour API 174 with a 23% chance of exceeding the school-closure level [E-18ca6e6cc7].",
+        "evidence_ids": [
+          "E-18ca6e6cc7"
+        ]
+      },
+      {
+        "id": "judge-001-h-1791334800000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "09:00-10:00 MYT: projected hourly PM2.5 105.2 ug/m3 (indicative hourly API 177); 24-hour API 174 with a 23% chance of exceeding the school-closure level [E-18ca6e6cc7].",
+        "evidence_ids": [
+          "E-18ca6e6cc7"
+        ]
+      },
+      {
+        "id": "judge-001-h-1791338400000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "10:00-11:00 MYT: projected hourly PM2.5 104.2 ug/m3 (indicative hourly API 176); 24-hour API 175 with a 24% chance of exceeding the school-closure level [E-18ca6e6cc7].",
+        "evidence_ids": [
+          "E-18ca6e6cc7"
+        ]
+      },
+      {
+        "id": "judge-001-h-1791342000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "11:00-12:00 MYT: projected hourly PM2.5 103.0 ug/m3 (indicative hourly API 176); 24-hour API 175 with a 24% chance of exceeding the school-closure level [E-18ca6e6cc7].",
+        "evidence_ids": [
+          "E-18ca6e6cc7"
+        ]
+      },
+      {
+        "id": "judge-001-w-1791331200000",
+        "kind": "recommendation",
+        "basis": "forecast",
+        "guidance_version": "0.1-placeholder",
+        "memory_ids": [],
+        "text": "08:00-09:00 MYT: drain clearing (heavy); indicative hourly API 177, unhealthy band: Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy [E-18ca6e6cc7][E-0639088c6f].",
+        "evidence_ids": [
+          "E-18ca6e6cc7",
+          "E-0639088c6f"
+        ]
+      },
+      {
+        "id": "judge-001-w-1791334800000",
+        "kind": "recommendation",
+        "basis": "forecast",
+        "guidance_version": "0.1-placeholder",
+        "memory_ids": [],
+        "text": "09:00-10:00 MYT: verge trimming (heavy); indicative hourly API 177, unhealthy band: Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy [E-18ca6e6cc7][E-0639088c6f].",
+        "evidence_ids": [
+          "E-18ca6e6cc7",
+          "E-0639088c6f"
+        ]
+      },
+      {
+        "id": "judge-001-w-1791338400000",
+        "kind": "recommendation",
+        "basis": "forecast",
+        "guidance_version": "0.1-placeholder",
+        "memory_ids": [],
+        "text": "10:00-11:00 MYT: drain clearing (heavy); indicative hourly API 176, unhealthy band: Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy [E-18ca6e6cc7][E-0639088c6f].",
+        "evidence_ids": [
+          "E-18ca6e6cc7",
+          "E-0639088c6f"
+        ]
+      },
+      {
+        "id": "judge-001-w-1791342000000",
+        "kind": "recommendation",
+        "basis": "forecast",
+        "guidance_version": "0.1-placeholder",
+        "memory_ids": [
+          "mem-1"
+        ],
+        "text": "11:00-12:00 MYT: signage inspection (light); indicative hourly API 176, unhealthy band: Limit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy [E-18ca6e6cc7][E-0639088c6f]. Remembered crew constraint applied: no heavy work after 11:00 [M:mem-1].",
+        "evidence_ids": [
+          "E-18ca6e6cc7",
+          "E-0639088c6f"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-18ca6e6cc7",
+        "sha256": "18ca6e6cc7d733ab81fe0e8c8e0f009f56662b2215d46317e512fed742687690",
+        "row_count": 4,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch, pm25_hour, pm25_24h, api, p_close, smoke_index\n       FROM projections WHERE run_id = 'fw-2026100612-h-fe4183' AND town = 'Klang'\n        AND valid_utc >= CAST('2026-10-07T00:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-07T04:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      },
+      {
+        "evidence_id": "E-02cd9168f5",
+        "sha256": "02cd9168f5ef017c49b2a32fa331be6a41bde79d04e8f528dbef91808d568721",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT)) AS latest_epoch FROM pm25\n      WHERE town = 'Klang' AND valid_utc > CAST('2026-10-05T12:00:00.000Z' AS TIMESTAMP) AND valid_utc <= CAST('2026-10-06T12:00:00.000Z' AS TIMESTAMP)\n      GROUP BY kind ORDER BY kind"
+      },
+      {
+        "evidence_id": "E-0639088c6f",
+        "sha256": "0639088c6f21deb468c286b1d5b1af009ec03cbad596cc49de4463a208404b39",
+        "row_count": 5,
+        "backend": "postgres",
+        "produced_by": "workershield",
+        "sql": "SELECT band, api_min, api_max, action, heavy_work, version, status FROM guidance\n      WHERE guidance_id = 'outdoor-work' AND version = '0.1-placeholder' ORDER BY api_min"
+      },
+      {
+        "evidence_id": "E-e74e9c1bc0",
+        "sha256": "e74e9c1bc060c49b81ff72d7af048c7b87fa816cb356795fadd026d04fd3018b",
+        "row_count": 4,
+        "backend": "postgres",
+        "produced_by": "critic",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch FROM projections\n        WHERE run_id = 'fw-2026100612-h-fe4183' AND town = 'Klang' AND pm25_hour IS NOT NULL\n          AND valid_utc >= CAST('2026-10-07T00:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-07T04:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      }
+    ],
+    "limitations": [
+      "Guidance outdoor-work v0.1-placeholder is a PLACEHOLDER written for this demo, not official DOSH guidance.",
+      "Hourly API is an indicative hourly equivalent; official APIMS readings are 24-hour averages.",
+      "Future hours use archived model values (hindsight), as in a replay or the offline sample: a test of the method, not a true forecast.",
+      "Recalled memories are context only; they never establish current air conditions."
+    ],
+    "validity": {
+      "start": "2026-10-07T00:00:00.000Z",
+      "end": "2026-10-07T04:00:00.000Z",
+      "unserved": []
+    },
+    "messages": {
+      "bound_to": "fact_2cd39571d5d25bb1",
+      "previews": [
+        {
+          "audience": "crew",
+          "language": "ms",
+          "text": "Taklimat kru, Klang, Rabu, 7 Oktober 2026\n08:00-09:00: drain clearing\n09:00-10:00: verge trimming\n10:00-11:00: drain clearing\n11:00-12:00: signage inspection\nKawalan:\nLimit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.\nLaporkan segera jika ada sesak nafas atau pening."
+        },
+        {
+          "audience": "crew",
+          "language": "en",
+          "text": "Crew briefing, Klang\n08:00-09:00: drain clearing\n09:00-10:00: verge trimming\n10:00-11:00: drain clearing\n11:00-12:00: signage inspection\nLimit heavy exertion, add rest breaks and rotate crews; provide respirators per employer policy.\nReport breathing difficulty or dizziness immediately."
+        }
+      ],
+      "status": "preview"
+    }
+  },
+  "rationale": "Each hour's band and action come from guidance 0.1-placeholder applied to HazeOps hourly projections [E-18ca6e6cc7][E-0639088c6f].",
+  "guidance_versions": [
+    "0.1-placeholder"
+  ],
+  "assumptions": [
+    "District conditions are represented by Klang town-centre data."
+  ],
+  "change_reason": null,
+  "parent_run_id": null,
+  "critic": {
+    "final": {
+      "decision": "approve",
+      "findings": [],
+      "required_evidence": [],
+      "checks_run": [
+        "citations",
+        "independent re-query of cited evidence",
+        "coverage of requested window",
+        "guidance binding",
+        "hindsight disclosure"
+      ],
+      "independent_queries": [
+        "re-run:E-18ca6e6cc7",
+        "re-run:E-02cd9168f5",
+        "re-run:E-0639088c6f",
+        "E-e74e9c1bc0"
+      ]
+    },
+    "rounds": 1,
+    "history": [
+      {
+        "decision": "approve",
+        "findings": []
+      }
+    ]
+  },
+  "agents": [
+    {
+      "role": "manager",
+      "version": "manager-1.0",
+      "executions": 6
+    },
+    {
+      "role": "hazeops",
+      "version": "hazeops-1.0",
+      "executions": 1
+    },
+    {
+      "role": "workershield",
+      "version": "workershield-1.0",
+      "executions": 1
+    },
+    {
+      "role": "evidence_critic",
+      "version": "evidence-critic-1.0",
+      "executions": 1
+    },
+    {
+      "role": "communityalert",
+      "version": "communityalert-1.0",
+      "executions": 1
+    }
+  ],
+  "memory": {
+    "recalled": [
+      {
+        "id": "mem-1",
+        "content": "Crew constraint for Klang: no heavy work after 11:00"
+      }
+    ],
+    "captured": "mem-2",
+    "audit_entries": 1
+  },
+  "snapshot_id": "S-11b8f9b80511",
+  "conclusion_revision_id": "fact_2cd39571d5d25bb1",
+  "conclusion_status": "current",
+  "trace_id": "judge-001",
+  "log_file": "/tmp/tmp.BRb4ne4uza/logs/trace-judge-001.jsonl",
+  "execution_time_seconds": 1.1,
+  "sponsor_integration_evidence": {
+    "zetaris": {
+      "executed": 0,
+      "skipped": 7,
+      "request_ids": []
+    },
+    "meterless_hmem": {
+      "hmem.add": 2,
+      "hmem.query": 2
+    },
+    "meterless_world_model": {
+      "world_model.upsertEntity": 2,
+      "world_model.relate": 1,
+      "world_model.assertFact": 4
+    },
+    "nightshift": {
+      "executed": 0,
+      "skipped": 0,
+      "available": false,
+      "model_route": "meterless/auto"
+    }
+  },
+  "error": null
+}

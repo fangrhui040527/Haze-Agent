@@ -113,6 +113,7 @@ export interface ManagerConversationOptions {
 }
 
 const INSTRUCTIONS = `You are the conversational Haze Manager. Return a single strict JSON decision.
+FIRST RULE: when the user asks to investigate, assess, explain causes of, or report on haze for a place and period (for example "Investigate the haze over <town> on <dates>"), return start_task immediately. Do not retrieve: quick lookups only return a current snapshot and cannot answer it.
 Decide from the requested outcome and need to track work BEFORE admitting any task.
 Greetings, general explanations, quick data lookups, missing information, and tools alone do not need tasks.
 Use reply for ordinary conversation and explanations. Use retrieve for factual/current haze information.
@@ -131,6 +132,15 @@ const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+// Some models fill unused optional retrieval fields with "" or null; those mean "not given".
+const withoutBlankRetrievalFields = (value: unknown): unknown =>
+  object(value).type === 'retrieve'
+    ? Object.fromEntries(
+        Object.entries(object(value)).filter(
+          ([, field]) => field !== '' && field !== null,
+        ),
+      )
+    : value;
 const firstText = (...values: unknown[]) =>
   values.find((value): value is string => typeof value === 'string') ?? '';
 const short = (value: unknown, maximum = 20000): unknown => {
@@ -181,6 +191,10 @@ function safeSourceContext(value: unknown): unknown {
 }
 
 class ConversationOutputError extends Error {}
+const INVESTIGATION =
+  /\b(haze|smoke|jerebu|asap)\b[^]*\b(where|source|sources|origin|come from|came from|why|investigat\w*|trace|attribut\w*)\b|\b(where|source|sources|origin|investigat\w*|trace|attribut\w*)\b[^]*\b(haze|smoke|jerebu|asap)\b/iu;
+const DATE_RANGE =
+  /\b\d{1,2}(?:\s*(?:[–-]|to|and)\s*\d{1,2})?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/iu;
 class RetrievalLimitError extends Error {}
 
 /** Read-only conversation controller; admission and updates remain atomic runtime operations. */
@@ -768,8 +782,20 @@ export class ManagerConversation {
           ),
         );
         decision = managerConversationDecisionSchema.parse(
-          parseContractJson(raw, 65536),
+          withoutBlankRetrievalFields(parseContractJson(raw, 65536)),
         );
+        // Live models answered "where did the smoke on <dates> come from" in chat or with
+        // current-snapshot lookups; such a question gets one correction towards a task.
+        if (
+          corrections === 0 &&
+          decision.type !== 'start_task' &&
+          decision.type !== 'clarify' &&
+          INVESTIGATION.test(request.message) &&
+          DATE_RANGE.test(request.message)
+        )
+          throw new ConversationOutputError(
+            'This asks to investigate haze or smoke for a place and period. Return start_task with an objective that keeps the town and dates; quick lookups only return a current snapshot.',
+          );
         if (decision.type === 'reply') {
           if (decision.citation_ids.some((id) => !evidence.has(id)))
             throw new ConversationOutputError(

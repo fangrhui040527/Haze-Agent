@@ -1,6 +1,8 @@
 node_modules/
 vendor/
 third_party/
+# SmokeLedger sidecar keeps its own code style and checks (npm run smokeledger:test).
+smokeledger/
 app/adapters/zetaris/
 dist/
 coverage/
