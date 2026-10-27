@@ -257,11 +257,30 @@ function withoutReviewReferences(
   };
 }
 
+/** The exact-template capability whose plan this task is running, if any. */
+const fixedCapability = (context: ManagerContext) =>
+  context.capabilities.find(
+    (capability) =>
+      capability.exact_templates &&
+      context.assignments.some(
+        (assignment) =>
+          assignment.role !== 'Manager' &&
+          (assignment.capability ??
+            context.definitions.find(
+              (definition) => definition.id === assignment.definition_id,
+            )?.capability) === capability.card.id,
+      ),
+  );
+
 function knownInvalidOutput(
   decision: ManagerDecision,
   context: ManagerContext,
 ): InvalidOutput | null {
   const action = decision.action;
+  // A fixed plan whose answer is rendered from reviewed artifacts saves no Manager
+  // prose, so prose citation markers are not grounds for another model turn.
+  if (action.type === 'finalize' && fixedCapability(context)?.renders_answer)
+    return null;
   if (
     action.type === 'finalize' &&
     action.sources.length &&
@@ -333,18 +352,7 @@ function knownInvalidOutput(
   ) {
     // An exact-template plan is complete as admitted; only a correction re-plans it.
     // Its specialists already gather the evidence, so extra lookups add nothing citable.
-    const fixed = context.capabilities.find(
-      (capability) =>
-        capability.exact_templates &&
-        context.assignments.some(
-          (assignment) =>
-            assignment.role !== 'Manager' &&
-            (assignment.capability ??
-              context.definitions.find(
-                (definition) => definition.id === assignment.definition_id,
-              )?.capability) === capability.card.id,
-        ),
-    );
+    const fixed = fixedCapability(context);
     if (fixed)
       return {
         code: 'fixed_plan',

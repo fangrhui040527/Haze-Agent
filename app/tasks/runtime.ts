@@ -2314,18 +2314,6 @@ export class TaskRuntime {
         url: `/api/artifacts/${artifact.id}`,
       };
     });
-    const cited = [...action.answer.matchAll(/\[([A-Za-z]+\d+)\]/g)].map(
-      (match) => match[1],
-    );
-    if (
-      cited.some((id) => !citations.some((citation) => citation.id === id)) ||
-      (citations.length && !cited.length)
-    )
-      throw new TaskError(
-        502,
-        'invalid_citation',
-        'Final synthesis must cite only exact selected source references.',
-      );
     // Quantitative workflows save only renderer sections. The Manager's own
     // prose stays in the immutable decision audit, never in the factual answer.
     const rendered = renderFinalAnswer({
@@ -2339,6 +2327,20 @@ export class TaskRuntime {
       mode: task.mode,
       read: (ref) => this.readExact(task, ref),
     });
+    const cited = [...action.answer.matchAll(/\[([A-Za-z]+\d+)\]/g)].map(
+      (match) => match[1],
+    );
+    // A rendered answer saves no Manager prose, so prose markers cannot misattribute it.
+    if (
+      !rendered &&
+      (cited.some((id) => !citations.some((citation) => citation.id === id)) ||
+        (citations.length && !cited.length))
+    )
+      throw new TaskError(
+        502,
+        'invalid_citation',
+        'Final synthesis must cite only exact selected source references.',
+      );
     const result = this.result(
       task,
       rendered?.answer ?? action.answer,

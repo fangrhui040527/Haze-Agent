@@ -42,7 +42,7 @@ export interface AgentModel {
 
 const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
-const OVERLOAD_STATUSES = new Set([429, 502, 503, 504]);
+const OVERLOAD_STATUSES = new Set([429, 500, 502, 503, 504]);
 const OVERLOAD_BACKOFF_MS = 4000;
 /**
  * Warm configured routes answer in seconds, but a cold endpoint can take far
@@ -377,7 +377,7 @@ export function resolveAgentModel(
             redirect: 'error',
           });
         let response = await send();
-        // An overloaded or rate-limited provider did not process the request, so a
+        // A rate-limited, overloaded or failing provider returned no completion, so a
         // bounded resend cannot execute it twice; other failures are never resent.
         for (
           let retry = 1;

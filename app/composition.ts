@@ -35,7 +35,9 @@ import {
   createSmokeLedgerAssignments,
   createSmokeLedgerCapability,
   createSmokeLedgerTools,
+  SMOKELEDGER_CAPABILITY,
 } from './capabilities/smokeledger/index.js';
+import { smokeLedgerFinalRenderer } from './capabilities/smokeledger/final-answer.js';
 import {
   createDamageAccountIntakeAssignments,
   createDamageAccountIntakeCapability,
@@ -231,6 +233,10 @@ export function createExecutionRegistry(options: {
     damageAccountFinalRenderer,
   );
   registry.registerFinalRenderer(reduction.card.id, reductionFinalRenderer);
+  registry.registerFinalRenderer(
+    SMOKELEDGER_CAPABILITY,
+    smokeLedgerFinalRenderer,
+  );
   for (const assignment of [
     ...createDamageReductionAssignments(),
     ...createDamageEvidenceResearchAssignments(),

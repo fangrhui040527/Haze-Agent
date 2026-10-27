@@ -16,6 +16,41 @@ interface Fire {
   frp: number;
   on_peat: boolean;
   in_concession: boolean;
+  /** How the fire earned its weight at the central wind speed (absent in older traces). */
+  why?: {
+    weight: number;
+    contacts: number;
+    peat_factor: number;
+    closest: {
+      distance_km: number;
+      spread_km: number;
+      gap_hours: number;
+      window_hours: number;
+      hours_back: number;
+      space_factor: number;
+      time_factor: number;
+    };
+  } | null;
+}
+interface Method {
+  paths_per_wind_speed: number;
+  hours_back: number;
+  wind_scales: number[];
+  spread_km_at_town: number;
+  spread_km_per_hour_back: number;
+  max_spreads: number;
+  time_window_hours: number;
+  peat_time_window_hours: number;
+  peat_factor: number;
+  assumptions: string[];
+}
+interface Arithmetic {
+  wind_speed_scale: number;
+  total_weight: number;
+  concession_weight: number;
+  peat_weight: number;
+  concession_pct: number;
+  peat_pct: number;
 }
 interface ConcessionProperties {
   concession_id: string;
@@ -25,6 +60,7 @@ interface ConcessionProperties {
   map_source: string | null;
   map_date: string | null;
   fires: number;
+  weight?: number;
   pct_of_signal: number;
 }
 interface Concession {
@@ -39,6 +75,9 @@ interface MapLayers {
   fires: Fire[];
   fire_count: number;
   shares: { concession: Range | null; peat: Range | null };
+  total_weight?: number;
+  method?: Method;
+  arithmetic?: Arithmetic[];
   concessions: { features: Concession[] };
   note: string;
 }
@@ -124,6 +163,7 @@ const utc = (iso: string) =>
 export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
   const [trace, setTrace] = useState<Trace | null>(null);
   const [hidden, setHidden] = useState<Set<LayerName>>(new Set());
+  const [picked, setPicked] = useState<Fire | null>(null);
   const container = useRef<HTMLDivElement>(null);
   const globe = useRef<GlobeInstance | null>(null);
 
@@ -191,8 +231,9 @@ export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
         .pointColor((d) => fireColor(d as Fire))
         .pointLabel((d) => {
           const fire = d as Fire;
-          return `<b>${fire.on_peat ? 'Fire on peat' : fire.in_concession ? 'Fire on concession land' : 'Fire'}</b><br>${fire.pct_of_signal}% of the smoke signal · FRP ${fire.frp} MW`;
+          return `<b>${fire.on_peat ? 'Fire on peat' : fire.in_concession ? 'Fire on concession land' : 'Fire'}</b><br>${fire.pct_of_signal}% of the smoke signal · FRP ${fire.frp} MW<br><i>Click to see how it was weighted</i>`;
         })
+        .onPointClick((d) => setPicked(d as Fire))
         .pathPoints((p) => p as [number, number][])
         .pathPointLat((p) => (p as [number, number])[0])
         .pathPointLng((p) => (p as [number, number])[1])
@@ -310,6 +351,21 @@ export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
           {layers.fire_count.toLocaleString()} fires on the air&apos;s path (the{' '}
           {layers.fires.length} most weighted are drawn)
         </p>
+        {picked && (
+          <FireBreakdown
+            fire={picked}
+            total={layers.total_weight}
+            onClose={() => setPicked(null)}
+          />
+        )}
+        {layers.method && layers.arithmetic && (
+          <Calculation
+            method={layers.method}
+            arithmetic={layers.arithmetic}
+            town={layers.town?.name ?? 'the town'}
+            cites={cites}
+          />
+        )}
         {top.length > 0 && (
           <>
             <h4>Top concessions by share</h4>
@@ -329,6 +385,9 @@ export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
                     {c.group_name ?? 'group not listed'} · {c.fires} fires ·
                     map: {c.map_source ?? 'unknown'},{' '}
                     {c.map_date ?? 'date unknown'}
+                    {c.weight !== undefined && layers.total_weight
+                      ? ` · weight ${num(c.weight)} ÷ total ${num(layers.total_weight)}`
+                      : ''}
                   </small>
                 </li>
               ))}
@@ -366,5 +425,179 @@ export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
         </p>
       </aside>
     </section>
+  );
+}
+
+const num = (x: number) =>
+  x.toLocaleString(undefined, { maximumFractionDigits: x < 10 ? 3 : 1 });
+
+/** One fire's weight, factor by factor, as the engine computed it. */
+function FireBreakdown({
+  fire,
+  total,
+  onClose,
+}: {
+  fire: Fire;
+  total?: number;
+  onClose: () => void;
+}) {
+  const why = fire.why;
+  return (
+    <div className={styles.explain} role="region" aria-label="Selected fire">
+      <div className={styles.row}>
+        <h4>Selected fire</h4>
+        <button type="button" onClick={onClose} aria-label="Close">
+          ×
+        </button>
+      </div>
+      <p>
+        {fire.on_peat
+          ? 'On mapped peat'
+          : fire.in_concession
+            ? 'On concession land'
+            : 'Not on mapped peat or concession land'}{' '}
+        · {fire.lat.toFixed(3)}, {fire.lon.toFixed(3)}
+      </p>
+      {why ? (
+        <>
+          <p>
+            Each time the air passed this fire it added{' '}
+            <b>fire strength × peat factor × distance factor × time factor</b>{' '}
+            (÷ the number of air paths). At its closest pass:
+          </p>
+          <ul className={styles.factors}>
+            <li>
+              Fire strength (FRP): <b>{fire.frp} MW</b>
+            </li>
+            <li>
+              Peat factor: <b>×{why.peat_factor}</b>
+              {why.peat_factor > 1
+                ? ' (on peat; an assumption)'
+                : ' (not on peat)'}
+            </li>
+            <li>
+              Distance factor: <b>×{why.closest.space_factor}</b> — the air
+              passed {why.closest.distance_km} km away; the path&apos;s spread
+              there was {why.closest.spread_km} km ({why.closest.hours_back} h
+              before reaching the town)
+            </li>
+            <li>
+              Time factor: <b>×{why.closest.time_factor}</b> — seen{' '}
+              {why.closest.gap_hours} h from the air passing, within a{' '}
+              {why.closest.window_hours} h window
+            </li>
+          </ul>
+          <p>
+            Added over <b>{why.contacts}</b> passes, its weight is{' '}
+            <b>{num(why.weight)}</b>
+            {total ? (
+              <>
+                {' '}
+                ÷ all fires&apos; {num(total)} ={' '}
+                <b>{fire.pct_of_signal}% of the smoke signal</b>
+              </>
+            ) : null}
+            .
+          </p>
+        </>
+      ) : (
+        <p>
+          {fire.pct_of_signal}% of the smoke signal. This trace predates the
+          per-fire breakdown; re-run the question to see each factor.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The method, the settings and the exact sums behind every share. */
+function Calculation({
+  method,
+  arithmetic,
+  town,
+  cites,
+}: {
+  method: Method;
+  arithmetic: Arithmetic[];
+  town: string;
+  cites: Trace['cites'];
+}) {
+  return (
+    <details className={styles.explain}>
+      <summary>How these numbers were calculated</summary>
+      <ol className={styles.steps}>
+        <li>
+          <b>Trace the air backwards.</b> {method.paths_per_wind_speed} air
+          paths are followed {method.hours_back} h back from {town}, then
+          repeated with wind speeds ×{method.wind_scales.join(', ×')}.
+        </li>
+        <li>
+          <b>Find the fires the air passed.</b> A satellite fire counts if a
+          path came within {method.max_spreads} spreads of it (spread ={' '}
+          {method.spread_km_at_town} km + {method.spread_km_per_hour_back} km
+          per hour back) and it was seen within {method.time_window_hours} h (
+          {method.peat_time_window_hours} h on peat).
+        </li>
+        <li>
+          <b>Weigh each fire.</b> fire strength (FRP) × peat factor (
+          {method.peat_factor} on peat, else 1) × distance factor e
+          <sup>−d²/2σ²</sup> × time factor (1 − gap ÷ window), added over every
+          pass and divided by the number of paths. Click any fire column to see
+          its numbers.
+        </li>
+        <li>
+          <b>Add up the shares.</b> share = summed weight of the fires in a
+          group ÷ summed weight of all fires on the path.
+        </li>
+      </ol>
+      <table className={styles.sums}>
+        <thead>
+          <tr>
+            <th>Wind speed</th>
+            <th>Concession ÷ total</th>
+            <th>Share</th>
+            <th>Peat ÷ total</th>
+            <th>Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          {arithmetic.map((a) => (
+            <tr
+              key={a.wind_speed_scale}
+              className={a.wind_speed_scale === 1 ? styles.central : undefined}
+            >
+              <td>×{a.wind_speed_scale}</td>
+              <td>
+                {num(a.concession_weight)} ÷ {num(a.total_weight)}
+              </td>
+              <td>{a.concession_pct}%</td>
+              <td>
+                {num(a.peat_weight)} ÷ {num(a.total_weight)}
+              </td>
+              <td>{a.peat_pct}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>
+        The headline share is the ×1 row; the range is the lowest and highest
+        row. A narrow range means the answer barely depends on the uncertain
+        wind speed.
+        {cites.concession || cites.peat ? (
+          <>
+            {' '}
+            The same sums are in the cited query{' '}
+            <code>{cites.concession ?? cites.peat}</code>, which EvidenceCritic
+            re-ran before the answer was accepted.
+          </>
+        ) : null}
+      </p>
+      <h4>Assumptions</h4>
+      <ul className={styles.factors}>
+        {method.assumptions.map((a) => (
+          <li key={a}>{a}</li>
+        ))}
+      </ul>
+    </details>
   );
 }
