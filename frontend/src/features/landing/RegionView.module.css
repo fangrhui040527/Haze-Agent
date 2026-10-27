@@ -286,12 +286,6 @@
 
 /* ── Table alternative ── */
 
-.tableWrap summary {
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
 .table {
   width: 100%;
   margin-top: var(--space-2);
@@ -322,4 +316,15 @@
 .table thead th {
   color: var(--color-muted);
   font-weight: var(--weight-medium);
+}
+
+.table tbody tr[aria-current='true'] > * {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.aqiCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }

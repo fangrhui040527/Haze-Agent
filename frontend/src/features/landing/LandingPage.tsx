@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
   type CSSProperties,
@@ -9,11 +10,12 @@ import { Link } from 'react-router';
 import {
   ArrowRight,
   BookOpenCheck,
-  Database,
+  ChevronDown,
   FileSearch,
   Network,
   Scale,
   ShieldCheck,
+  Table2,
 } from 'lucide-react';
 import {
   AQI_BANDS,
@@ -30,7 +32,7 @@ import { buttonClass } from '../../shared/ui/Button.tsx';
 import { HazeMark } from '../../shared/ui/HazeMark.tsx';
 import { Skeleton } from '../../shared/ui/States.tsx';
 import { TimeAgo } from '../../shared/ui/TimeAgo.tsx';
-import { RegionView } from './RegionView.tsx';
+import { ReadingsTable, RegionView } from './RegionView.tsx';
 import styles from './LandingPage.module.css';
 
 const CAPABILITIES = [
@@ -101,6 +103,59 @@ function CountUp({ value }: { value: number }) {
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return <>{shown}</>;
+}
+
+/**
+ * A faint amber glow that trails the mouse behind the page content. Eased so it
+ * lags a little, idle (no rAF) once settled, and off for touch or reduced motion.
+ */
+function CursorGlow() {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (
+      !el ||
+      !window.matchMedia('(hover: hover) and (pointer: fine)').matches ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+    const target = { x: 0, y: 0 };
+    const pos = { x: 0, y: 0 };
+    let raf = 0;
+    let placed = false;
+    const tick = () => {
+      pos.x += (target.x - pos.x) * 0.12;
+      pos.y += (target.y - pos.y) * 0.12;
+      el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      raf =
+        Math.abs(target.x - pos.x) + Math.abs(target.y - pos.y) > 0.5
+          ? requestAnimationFrame(tick)
+          : 0;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      target.x = e.clientX;
+      target.y = e.clientY;
+      if (!placed) {
+        // Appear where the cursor is instead of sweeping in from the corner.
+        pos.x = target.x;
+        pos.y = target.y;
+        placed = true;
+      }
+      el.dataset.active = 'true';
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    const onLeave = () => delete el.dataset.active;
+    window.addEventListener('pointermove', onMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onLeave);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('pointermove', onMove);
+      document.documentElement.removeEventListener('pointerleave', onLeave);
+    };
+  }, []);
+  return <span ref={ref} className={styles.glow} aria-hidden="true" />;
 }
 
 function Readout({
@@ -224,6 +279,7 @@ export function LandingPage() {
   const region = useRegionData();
   const [selectedId, setSelectedId] = useState('kl');
   const onSelect = useCallback((id: string) => setSelectedId(id), []);
+  const tableId = useId();
 
   const readings = region.snapshot?.readings ?? [];
   const selected = readings.find((r) => r.city.id === selectedId);
@@ -250,35 +306,20 @@ export function LandingPage() {
         <span className={`${styles.fog} ${styles.fogA}`} />
         <span className={`${styles.fog} ${styles.fogB}`} />
       </div>
-
-      <header className={styles.topbar}>
-        <Link to="/" className={styles.brand}>
-          <HazeMark size={24} />
-          Haze
-        </Link>
-        <nav className={styles.topnav} aria-label="Primary">
-          <Link viewTransition to="/world-model">
-            World Model
-          </Link>
-          <Link viewTransition to="/damage-account">
-            Damage appraisal
-          </Link>
-          <Link
-            viewTransition
-            to="/dashboard"
-            className={buttonClass('primary', 'small')}
-          >
-            Open app
-          </Link>
-        </nav>
-      </header>
+      <CursorGlow />
 
       <main id="main">
         <section className={styles.hero}>
           <div className={styles.heroText}>
-            <p className={styles.eyebrow}>
-              Transboundary haze · Malaysia &amp; the region
-            </p>
+            <div className={styles.masthead}>
+              <span className={styles.brand}>
+                <HazeMark size={28} />
+                Haze
+              </span>
+              <p className={styles.eyebrow}>
+                Transboundary haze · Malaysia &amp; the region
+              </p>
+            </div>
             <h1 className={styles.title}>
               Ask about the haze.
               <br />
@@ -296,15 +337,33 @@ export function LandingPage() {
               >
                 Start a task <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <Link viewTransition to="/world-model" className={buttonClass()}>
-                <Database size={18} aria-hidden="true" /> Browse the World Model
-              </Link>
             </div>
             <Readout
               reading={selected}
               fetchedAt={region.snapshot?.fetchedAt}
               stale={stale}
             />
+            {readings.length > 0 && (
+              <details className={styles.cityTable}>
+                <summary>
+                  <Table2 size={16} aria-hidden="true" />
+                  <span className={styles.cityTableLabel}>
+                    Compare all {readings.length} cities
+                  </span>
+                  <span className={styles.cityTableHint} aria-hidden="true" />
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className={styles.cityTableChevron}
+                  />
+                </summary>
+                <ReadingsTable
+                  id={tableId}
+                  readings={readings}
+                  selectedId={selectedId}
+                />
+              </details>
+            )}
             {region.status === 'error' && (
               <p className={styles.dataError} role="alert">
                 Live readings are unavailable right now ({region.error}).
@@ -324,6 +383,7 @@ export function LandingPage() {
               fires={fires}
               selectedId={selectedId}
               onSelect={onSelect}
+              tableId={tableId}
             />
           </div>
         </section>
@@ -372,27 +432,7 @@ export function LandingPage() {
                 )}
               </dd>
             </div>
-            <div className={styles.stat}>
-              <dt>Fire hotspots, last 24 h</dt>
-              <dd>
-                {fires?.status === 'ok' ? (
-                  <>
-                    <span className={styles.statValue}>
-                      <CountUp value={hotspotsInLast(fires.hotspots, 24)} />
-                    </span>
-                    <span className={styles.statLabel}>
-                      VIIRS detections, lat −10…12, lng 92…120
-                    </span>
-                  </>
-                ) : (
-                  <span className={styles.statLabel}>
-                    {fires?.status === 'no-key'
-                      ? 'Needs a FIRMS key (not shown, not guessed)'
-                      : 'Unavailable'}
-                  </span>
-                )}
-              </dd>
-            </div>
+
             <div className={styles.stat}>
               <dt>Cities Unhealthy or worse</dt>
               <dd>
@@ -465,13 +505,6 @@ export function LandingPage() {
             When the data is not there, Haze reports an explicit acquisition gap
             rather than guessing.
           </p>
-          <Link
-            viewTransition
-            to="/dashboard"
-            className={buttonClass('primary')}
-          >
-            Open the dashboard <ArrowRight size={18} aria-hidden="true" />
-          </Link>
         </section>
       </main>
 
