@@ -2,6 +2,11 @@
 
 Implementation date: 27 October 2026.
 
+Current follow-up: the [external waits recheck](nightshift-03-external-waits-recheck-report.md)
+records fixes for late optional delivery and stale completed-result replay,
+current topology/readiness findings and focused verification. The results below
+retain the original implementation snapshot.
+
 The external-wait and capacity implementation is present. The live exit gate
 remains unmet: the installed Nightshift configuration has no eligible local text
 lane, so a genuine specialist submit/wait/result trace and interactive inference

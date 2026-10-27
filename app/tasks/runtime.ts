@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
+  createManagerReferenceContract,
+  managerReferenceOutputSchema,
+} from '../orchestration/manager-reference-contract.js';
+import {
   createSpecialistActionContract,
   SPECIALIST_ACTION_CONTRACT_VERSION,
 } from '../orchestration/action-contract.js';
@@ -42,6 +46,7 @@ import {
 import { openSqliteCheckpointer } from '../checkpoints/sqlite.js';
 import { contractHash, parseContractJson } from '../contracts/json.js';
 import {
+  MANAGER_DECISION_FEEDBACK_MAX_BYTES,
   managerDecisionSchema,
   type ManagerDecision,
 } from '../contracts/manager.js';
@@ -1055,8 +1060,10 @@ export class TaskRuntime {
               role: 'Manager',
               instruction: modelInstruction(agent.instructions),
               context: {},
-              output_schema: promptSchema(
-                agent.schemas?.decision ?? managerDecisionSchema,
+              output_schema: managerReferenceOutputSchema(
+                promptSchema(
+                  agent.schemas?.decision ?? managerDecisionSchema,
+                ) as Record<string, unknown>,
               ),
               max_output_tokens: task.limits.max_model_output_tokens,
               json_mode: true,
@@ -1077,7 +1084,10 @@ export class TaskRuntime {
               ),
               maxBytes: Math.max(
                 1,
-                task.limits.max_model_input_bytes - overhead - 128,
+                task.limits.max_model_input_bytes -
+                  overhead -
+                  128 -
+                  MANAGER_DECISION_FEEDBACK_MAX_BYTES,
               ),
             },
           );
@@ -1096,6 +1106,7 @@ export class TaskRuntime {
           )!;
           const agent = this.options.registry.agents.get('Manager')!;
           let response: AgentModelCompletion | undefined;
+          let modelInvocation = 0;
           const pending = this.store
             .actions(id, task.identity)
             .findLast(
@@ -1215,6 +1226,7 @@ export class TaskRuntime {
               : await agent.decide!({
                   context,
                   model: async (input) => {
+                    const invocation = modelInvocation++;
                     if (task.mode === 'fixture') {
                       if (!agent.fixtureDecision)
                         throw new TaskError(
@@ -1238,7 +1250,7 @@ export class TaskRuntime {
                         coordinator,
                         input,
                         signal,
-                        `manager:${task.objective_revision}:decision:${state.decisions.length}:model`,
+                        `manager:${task.objective_revision}:decision:${state.decisions.length}:model${invocation ? `:repair:${invocation}` : ''}`,
                       );
                     return response;
                   },
@@ -1330,23 +1342,11 @@ export class TaskRuntime {
           const after = this.store.read(id, task.identity);
           return {
             forceDecision:
-              [
-                'inspect',
-                'applicability',
-                'lookup',
-                'coordinate',
-                'steer',
-              ].includes(decision.action.type) ||
-              (decision.action.type === 'apply_plan' &&
-                [...this.options.registry.capabilities.values()].some(
-                  (capability) =>
-                    (capability.peer_requirements?.length ?? 0) > 0 &&
-                    after.assignments.some(
-                      (a) =>
-                        a.run_id === after.current_run_id &&
-                        a.capability === capability.card.id,
-                    ),
-                )),
+              ['inspect', 'applicability', 'lookup', 'steer'].includes(
+                decision.action.type,
+              ) ||
+              (['apply_plan', 'coordinate'].includes(decision.action.type) &&
+                this.needsRequiredPeerChannel(after)),
           };
         },
         dispatch: ({ forceDecision }) => {
@@ -1359,7 +1359,9 @@ export class TaskRuntime {
             };
           if (!['queued', 'running'].includes(task.status))
             return { route: 'done' };
-          if (!forceDecision) this.dispatchAssignments(task);
+          const missingPeerChannel = this.needsRequiredPeerChannel(task);
+          if (!forceDecision && !missingPeerChannel)
+            this.dispatchAssignments(task);
           const state = this.store.managerState(id, task.identity)!;
           const pending = this.store.pendingManagerEvents(id, task.identity);
           const last = state.decisions.at(-1)?.decision;
@@ -1376,7 +1378,8 @@ export class TaskRuntime {
             pending.length ||
             !last ||
             (last.action.type !== 'wait' && !active) ||
-            forceDecision;
+            forceDecision ||
+            missingPeerChannel;
           return {
             route: needsDecision ? 'decide' : 'wait',
             forceDecision: false,
@@ -1459,7 +1462,65 @@ export class TaskRuntime {
         : { cycle: 0 };
     await graph.invoke(input, config);
   }
+  private needsRequiredPeerChannel(task: TaskRecord): boolean {
+    const work = task.assignments.filter(
+      (assignment) =>
+        assignment.run_id === task.current_run_id &&
+        assignment.objective_revision === task.objective_revision &&
+        assignment.usability !== 'stale' &&
+        !['failed', 'cancelled', 'timed_out', 'stale'].includes(
+          assignment.status,
+        ),
+    );
+    const channel = this.store.peerChannelForRun(task.current_run_id);
+    for (const capability of this.options.registry.capabilities.values())
+      for (const requirement of capability.peer_requirements ?? []) {
+        const participants = requirement.definitions.map((definition) =>
+          work.find(
+            (assignment) =>
+              assignment.capability === capability.card.id &&
+              assignment.definition_id === definition,
+          ),
+        );
+        if (!participants[0] || !participants[1]) continue;
+        if (
+          participants.every((assignment) => assignment!.status === 'completed')
+        )
+          continue;
+        // Completion normally closes a channel. Its exact approved pair still
+        // covers the dependent reviewer; it cannot cover a newly admitted ID.
+        const completedParticipant = participants.some(
+          (assignment) => assignment!.status === 'completed',
+        );
+        if (
+          !channel ||
+          channel.task_id !== task.id ||
+          channel.run_id !== task.current_run_id ||
+          channel.objective_revision !== task.objective_revision ||
+          (channel.status !== 'open' &&
+            !(channel.status === 'closed' && completedParticipant)) ||
+          Date.parse(channel.expires_at) <= Date.now() ||
+          channel.purpose !== requirement.purpose ||
+          !participants.every((assignment) =>
+            channel.participants.some(
+              (participant) =>
+                participant.assignment_id === assignment!.id &&
+                participant.revision === assignment!.revision,
+            ),
+          )
+        )
+          return true;
+      }
+    return false;
+  }
   private dispatchAssignments(task: TaskRecord) {
+    // Hydration, restart and material-event paths also enter here. None may
+    // dispatch queued work before the Manager's exact required peer grant.
+    if (
+      !['queued', 'running'].includes(task.status) ||
+      this.needsRequiredPeerChannel(task)
+    )
+      return;
     const work = task.assignments.filter(
       (a) =>
         a.run_id === task.current_run_id &&
@@ -2224,6 +2285,14 @@ export class TaskRuntime {
     const specialistContract = enumerated
       ? createSpecialistActionContract(context, actionSchema)
       : undefined;
+    const managerContract =
+      purpose === 'decision'
+        ? createManagerReferenceContract(
+            context,
+            actionSchema,
+            promptSchema(actionSchema) as Record<string, unknown>,
+          )
+        : undefined;
     const contract =
       'Return exactly one strict JSON action matching the supplied schema and context.action_contract. Use only its legal actions, tools, recipients, job handles and exact artifact references. Advance after a successful tool result instead of repeating unchanged work. Never repeat a JSON key. A rejected_action in history means no action was dispatched: apply its remedy within the existing turn budget and use a new unique action id.';
     const selectedCandidates = this.store.nightshift.selectedDependencies(
@@ -2275,7 +2344,9 @@ export class TaskRuntime {
       // The structure travels in output_schema alone. Duplicating it in the
       // context dominates the prompt and blows the admitted input limit.
       output_schema:
-        specialistContract?.outputSchema ?? promptSchema(actionSchema),
+        specialistContract?.outputSchema ??
+        managerContract?.outputSchema ??
+        promptSchema(actionSchema),
       max_output_tokens: task.limits.max_model_output_tokens,
       json_mode: true,
     };
@@ -2524,8 +2595,29 @@ export class TaskRuntime {
         );
       // Returning accepted bytes never grants their new applicability. The
       // current source grants and candidate context are still revalidated.
-      this.store.externalWaits.candidateContext(authority, task.identity);
-      return nightshiftToolOutputSchema.parse(receipt.value);
+      const candidates = this.store.externalWaits.candidateContext(
+        authority,
+        task.identity,
+      );
+      const value = nightshiftToolOutputSchema.parse(receipt.value);
+      if (
+        value.output !== null &&
+        !candidates.some(
+          (candidate) =>
+            value.candidate !== null &&
+            candidate.job_id === value.job_id &&
+            candidate.artifact.id === value.candidate.id &&
+            candidate.artifact.version === value.candidate.version &&
+            candidate.artifact.sha256 === value.candidate.sha256 &&
+            candidate.text === value.output,
+        )
+      )
+        throw new TaskError(
+          403,
+          'nightshift_result_no_longer_authorized',
+          'The retained candidate is no longer authorized for current result consumption.',
+        );
+      return value;
     }
     if (operation.status !== 'prepared')
       throw new TaskError(

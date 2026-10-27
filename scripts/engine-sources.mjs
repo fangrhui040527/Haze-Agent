@@ -62,7 +62,17 @@ export async function verifySources(root = repositoryRoot) {
     const actualFiles = await listFiles(directory);
     const expectedFiles = Object.keys(source.files).sort();
     if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
-      throw new Error(`Source file inventory differs: ${name}`);
+      const actual = new Set(actualFiles);
+      const expected = new Set(expectedFiles);
+      const unexpected = actualFiles.filter((file) => !expected.has(file));
+      const missing = expectedFiles.filter((file) => !actual.has(file));
+      const details = [
+        unexpected.length ? `unexpected files: ${unexpected.join(', ')}` : '',
+        missing.length ? `missing files: ${missing.join(', ')}` : '',
+      ].filter(Boolean);
+      throw new Error(
+        `Source file inventory differs: ${name} (${details.join('; ')})`,
+      );
     }
     for (const relative of expectedFiles) {
       const file = resolveInside(directory, relative);

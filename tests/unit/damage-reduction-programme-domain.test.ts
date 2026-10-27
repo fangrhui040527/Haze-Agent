@@ -175,6 +175,7 @@ function hostFor(task?: TaskRecord): ProgrammeHost {
     },
     readArtifact: () => source,
     assertEvidenceCurrent: () => undefined,
+    retainSelection: () => sourceRef,
     pinTaskInputs: () => undefined,
     runResult: () => undefined,
     previewView: () => {

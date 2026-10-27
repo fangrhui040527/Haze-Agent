@@ -37,6 +37,7 @@
 .card,
 .fieldset {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   min-width: 0;
   padding: var(--space-5);
@@ -138,6 +139,10 @@
   display: block;
   font-size: var(--text-sm);
   font-weight: 400;
+}
+.resultLabel > span {
+  max-width: 100%;
+  white-space: normal;
 }
 .actions {
   display: flex;

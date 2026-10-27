@@ -16,7 +16,13 @@ import styles from './DamageReductionPage.module.css';
 import { PilotTaskResults } from './PilotResults.tsx';
 import { EvaluationTaskResults } from './EvaluationResults.tsx';
 
-export function ProgrammeListPanel({ currentId }: { currentId?: string }) {
+export function ProgrammeListPanel({
+  currentId,
+  currentRevision,
+}: {
+  currentId?: string;
+  currentRevision?: number;
+}) {
   const [page, setPage] = useState<z.infer<
     typeof reductionProgrammeListSchema
   > | null>(null);
@@ -45,7 +51,7 @@ export function ProgrammeListPanel({ currentId }: { currentId?: string }) {
         if (!controller.signal.aborted) setPending(false);
       });
     return () => controller.abort();
-  }, [offset, refresh]);
+  }, [currentId, currentRevision, offset, refresh]);
   return (
     <section
       className={styles.card}

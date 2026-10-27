@@ -2,6 +2,11 @@
 
 Date: 27 October 2026, Asia/Singapore.
 
+Current follow-up: the [local jobs recheck](nightshift-02-local-jobs-recheck-report.md)
+records newly fixed lifecycle and strict-overlay compatibility defects, current
+runtime findings and which limits were superseded by later phases. The results
+below retain the original implementation snapshot and failed live job.
+
 The manual job backend, durable grants, supervisor, receipt ingestion,
 reconciliation, candidate selection and UI are implemented. **The live release
 gate remains unmet:** this installation has no eligible ready local text lane.

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { parseContractJson } from '../dist/contracts/json.js';
 import { agentActionSchema } from '../dist/orchestration/contracts.js';
+import { managerDecisionSchema } from '../dist/contracts/manager.js';
 import {
   assessRouteOutput,
   prepareRouteEvaluation,
@@ -251,6 +252,61 @@ test('evaluation retains the original Manager schema and context', () => {
   assert.equal(prepared.input.context, context);
   assert.equal(prepared.action_contract_version, undefined);
   assert.deepEqual(prepared.input.output_schema, z.toJSONSchema(managerSchema));
+});
+
+test('Manager evaluation applies the production empty-reference boundary without repairing output', () => {
+  const context = {
+    request: { objective: 'Explain a general concept.', context_refs: [] },
+    artifacts: [],
+    corrections: [],
+  };
+  const original = structuredClone(context);
+  const prepared = prepareRouteEvaluation(
+    {
+      id: 'Manager',
+      instructions:
+        'Answer conceptual questions directly using admitted context.',
+      schemas: { decision: managerDecisionSchema },
+    },
+    context,
+    2400,
+  );
+  const decision = {
+    id: 'concept-decision',
+    run_id: '33333333-3333-4333-8333-333333333333',
+    generation: 1,
+    objective_revision: 1,
+    plan_revision: 0,
+    event_cursor: 0,
+    explanation: 'This conceptual answer requires no source artifact.',
+    references: [],
+    action: {
+      type: 'finalize',
+      answer: 'A general explanation.',
+      work_products: [],
+      sources: [],
+      uncertainty: [],
+      unfinished: [],
+    },
+  };
+  assert.equal(prepared.action_contract_version, 'haze.manager-references.v1');
+  assert.deepEqual(context, original);
+  const providerSchema = z.fromJSONSchema(prepared.input.output_schema);
+  assert.equal(prepared.schema.safeParse(decision).success, true);
+  assert.equal(providerSchema.safeParse(decision).success, true);
+  for (const invalid of [
+    { ...decision, references: [exactArtifact] },
+    { ...decision, action: { ...decision.action, sources: [exactArtifact] } },
+    {
+      ...decision,
+      action: { ...decision.action, work_products: [exactArtifact] },
+    },
+  ]) {
+    const raw = JSON.stringify(invalid);
+    assert.equal(providerSchema.safeParse(invalid).success, false);
+    assert.equal(assessPrepared(raw, prepared).strict_action, false);
+    assert.equal(JSON.stringify(invalid), raw);
+  }
 });
 
 test('preparing every frozen specialist probe preserves its context, criteria and limits', () => {

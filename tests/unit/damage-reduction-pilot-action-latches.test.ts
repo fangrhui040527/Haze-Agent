@@ -200,10 +200,12 @@ describe('immutable digital-action state latches', () => {
       effective_status: 'unknown',
     });
     expect(views[1]?.effective_status).toBe('unknown');
-    expect(views[2]?.effective_status).toBe('confirmed');
-    expect(views[3]?.effective_status).toBe('confirmed');
-    expect(views[3]?.reasons.join(' ')).not.toContain(
-      'Unknown outcome requires',
+    // Replacing the missing original trigger is a different action, even if
+    // its new receipt names the earlier unknown event as a reconciliation.
+    expect(views[2]?.effective_status).toBe('unknown');
+    expect(views[3]?.effective_status).toBe('unknown');
+    expect(views[3]?.reasons.join(' ')).toContain(
+      'identity differs from its original event',
     );
   });
 

@@ -69,6 +69,7 @@ function hostFor(values: Artifact[]) {
         throw new Error('Source held by engineering fixture.');
       if (!map.has(reference.id)) throw new Error('Missing fixture source.');
     },
+    retainSelection: absent,
     pinTaskInputs: absent,
     previewView: absent,
     admitTask: absent,
@@ -142,6 +143,10 @@ describe('external evaluation retained-record guards', () => {
         duplicate: reference,
       }),
     ).toEqual([reference]);
+    const nested = exact(artifact({ name: 'nested proof' }));
+    expect(
+      embeddedEvaluationReferences({ ...reference, raw_proof: nested }),
+    ).toEqual([reference, nested]);
     expect(
       embeddedEvaluationReferences({ id: 'design-id', version: '1' }),
     ).toEqual([]);
@@ -156,6 +161,9 @@ describe('external evaluation retained-record guards', () => {
     const cycle: { self?: unknown } = {};
     cycle.self = cycle;
     expect(() => embeddedEvaluationReferences(cycle)).toThrow(/cyclic/);
+    const wrappedCycle = { ...reference, self: null as unknown };
+    wrappedCycle.self = wrappedCycle;
+    expect(() => embeddedEvaluationReferences(wrappedCycle)).toThrow(/cyclic/);
   });
   it('rejects exact-reference cycles, mismatched bytes and cross-identity proof without dropping current grants', () => {
     const first = artifact({ origin: 'supplied', name: 'first' }),
@@ -186,6 +194,26 @@ describe('external evaluation retained-record guards', () => {
     expect(() =>
       collectEvaluationEvidence([exact(first)], host, localTaskIdentity),
     ).toThrow(/principal|workspace/);
+  });
+  it('rechecks nested proof in reference-shaped wrappers instead of treating other fields as opaque metadata', () => {
+    const original = artifact({ name: 'retained original' });
+    const leaf = artifact({ name: 'nested raw proof' });
+    const wrapper = artifact({ ...exact(original), raw_proof: exact(leaf) });
+    const { host, held, map } = hostFor([original, leaf, wrapper]);
+    expect(
+      collectEvaluationEvidence([exact(wrapper)], host, localTaskIdentity)
+        .map((value) => value.id)
+        .sort(),
+    ).toEqual([original.id, leaf.id, wrapper.id].sort());
+    held.add(leaf.id);
+    expect(() =>
+      collectEvaluationEvidence([exact(wrapper)], host, localTaskIdentity),
+    ).toThrow(/held/);
+    held.clear();
+    map.delete(leaf.id);
+    expect(() =>
+      collectEvaluationEvidence([exact(wrapper)], host, localTaskIdentity),
+    ).toThrow(/Missing/);
   });
   it('fingerprints selected registration facts independently of object identity and irrelevant programme notes', () => {
     const source = artifact({ origin: 'synthetic' }),
@@ -388,8 +416,13 @@ describe('external evaluation retained-record guards', () => {
         origin: 'supplied',
         statement:
           'New non-synthetic proof example; this is still an engineering test.',
+      }),
+      disguised = artifact({
+        ...exact(fresh),
+        origin: 'supplied',
+        raw_proof: exact(leaf),
       });
-    const { host, held } = hostFor([result, leaf, wrapper, fresh]);
+    const { host, held } = hostFor([result, leaf, wrapper, fresh, disguised]);
     const opened = stored({
       kind: 'evaluation_objection',
       result_ref: exact(result),
@@ -438,6 +471,14 @@ describe('external evaluation retained-record guards', () => {
       localTaskIdentity,
     );
     expect(wrapped.objections[0]?.unresolved).toBe(true);
+    const disguisedResolution = projectEvaluationRecords(
+      snapshot,
+      [opened, resolution(exact(disguised))],
+      base,
+      host,
+      localTaskIdentity,
+    );
+    expect(disguisedResolution.objections[0]?.unresolved).toBe(true);
     const cleared = projectEvaluationRecords(
       snapshot,
       [opened, resolve],

@@ -33,6 +33,36 @@ const ref = ({ id, version, sha256 }: ArtifactRef): ArtifactRef => ({
   sha256,
 });
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
+function equivalentExpectedRatio(
+  expected: ExternalEvaluationResult['relative_reduction'],
+  actual: ExternalEvaluationResult['relative_reduction'],
+): boolean {
+  if (expected === null || actual === null) return expected === actual;
+  const decimal = (token: string) => ({
+    coefficient: BigInt(token.replace('.', '')),
+    places: token.split('.')[1]?.length ?? 0,
+  });
+  const en = decimal(expected.numerator),
+    ed = decimal(expected.denominator),
+    an = decimal(actual.numerator),
+    ad = decimal(actual.denominator);
+  if (ed.coefficient === 0n || ad.coefficient === 0n) return false;
+  const left =
+    en.coefficient * ad.coefficient * 10n ** BigInt(ed.places + an.places);
+  const right =
+    an.coefficient * ed.coefficient * 10n ** BigInt(en.places + ad.places);
+  return (
+    [
+      en.coefficient,
+      ed.coefficient,
+      an.coefficient,
+      ad.coefficient,
+      left,
+      right,
+    ].every((value) => value.toString().replace('-', '').length <= 128) &&
+    left === right
+  );
+}
 const body = (artifact: Artifact): unknown => {
   if (typeof artifact.content !== 'string') return artifact.content;
   try {
@@ -549,22 +579,14 @@ export function draftExternalEvaluation(
       issues.gaps.push('independent_expected_output_reviewer_required');
     if (
       input.criterion.kind === 'point_estimate' &&
-      !same(
-        {
-          baseline_damage: result.baseline_damage,
-          intervention_damage: result.intervention_damage,
-          absolute_reduction: result.absolute_reduction,
-          relative_reduction: result.relative_reduction,
-          target_met: result.target_met,
-        },
-        {
-          baseline_damage: expected.baseline_damage,
-          intervention_damage: expected.intervention_damage,
-          absolute_reduction: expected.absolute_reduction,
-          relative_reduction: expected.relative_reduction,
-          target_met: expected.target_met,
-        },
-      )
+      (result.baseline_damage !== expected.baseline_damage ||
+        result.intervention_damage !== expected.intervention_damage ||
+        result.absolute_reduction !== expected.absolute_reduction ||
+        !equivalentExpectedRatio(
+          expected.relative_reduction,
+          result.relative_reduction,
+        ) ||
+        result.target_met !== expected.target_met)
     )
       issues.incompatible.push('independent_expected_output_mismatch');
   }
@@ -918,6 +940,33 @@ export function independentlyReviewExternalEvaluation(
       }
     }
   }
+  // Compare supplied expected fractions independently, without requiring the
+  // external preparer to use our unreduced difference/baseline representation.
+  const matchesExpectedRatio = (
+    expected: ExternalEvaluationResult['relative_reduction'],
+  ) => {
+    if (expected === null || ratio === null) return expected === ratio;
+    const n = unpack(expected.numerator),
+      d = unpack(expected.denominator),
+      reconstructedN = unpack(ratio.numerator),
+      reconstructedD = unpack(ratio.denominator);
+    if (d.n === 0n || reconstructedD.n === 0n) return false;
+    const supplied =
+      n.n * reconstructedD.n * 10n ** BigInt(d.places + reconstructedN.places);
+    const reconstructed =
+      reconstructedN.n * d.n * 10n ** BigInt(n.places + reconstructedD.places);
+    return (
+      [
+        n.n,
+        d.n,
+        reconstructedN.n,
+        reconstructedD.n,
+        supplied,
+        reconstructed,
+      ].every((value) => value.toString().replace('-', '').length <= 128) &&
+      supplied === reconstructed
+    );
+  };
   for (const reference of input.expected_output_refs) {
     const artifact = exactSource(reference),
       expected =
@@ -949,7 +998,7 @@ export function independentlyReviewExternalEvaluation(
       (e.baseline_damage !== baseline ||
         e.intervention_damage !== intervention ||
         e.absolute_reduction !== difference ||
-        !same(e.relative_reduction, ratio) ||
+        !matchesExpectedRatio(e.relative_reduction) ||
         e.target_met !== met)
     )
       incompat.push('expected_mismatch');

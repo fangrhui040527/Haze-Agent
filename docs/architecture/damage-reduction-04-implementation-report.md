@@ -1,5 +1,9 @@
 # Damage reduction pilot and delivery implementation report
 
+The original verification results below are historical. The
+[engineering follow-up](#engineering-follow-up-27-october-2026) records the later
+recheck, fixes and current evidence.
+
 Implemented the recordkeeping milestone from
 [Plan 04](damage-reduction-04-pilot-delivery.md) on 27 October 2026. Programmes
 can explicitly draft and review pilot feasibility/protocols, register immutable
@@ -195,3 +199,121 @@ unknown-outcome reconciliation. Imported records and simulations do not satisfy
 that gate. A named non-synthetic reference, scientific-owner applicability
 review and configured live workflow measurements remain outstanding. Comparative
 outcome evaluation and achieved-damage claims belong to Plan 05.
+
+## Engineering follow-up, 27 October 2026
+
+This recheck covers engineering and recordkeeping. Scientific qualification is
+unchanged. The user explicitly confirmed that live alert/scheduling adapters
+should remain deferred; no external digital action was sent or scheduled.
+
+Two delivery-record defects were found and fixed in `pilot-records.ts`:
+
+- One logical action ID could change its trigger references, occurrence time or
+  registration and use the changed receipt to reconcile an earlier unknown
+  outcome. Append validation now binds those fields, and projection rechecks
+  retained historical records. A mismatched historical reconciliation remains
+  unknown. An exact reconciliation still succeeds, including equivalent
+  timestamp instants expressed with different UTC offsets.
+- A self-consistent receipt could publish recorded delivery while citing an
+  unrelated trigger. Governed recorded delivery now requires coverage of every
+  exact trigger input declared by the registered rule. Incomplete imported
+  records and their receipt-confirmed status remain visible with an explicit
+  reason; they do not gain the governed delivery label. Held original inputs
+  continue to withhold eligibility.
+
+All **23 focused pilot domain/history-latch tests** pass, including both
+regressions. Scoped ESLint and formatting pass.
+
+The earlier browser verification gap is closed. The actual Pilot and Delivery
+UI was exercised at desktop and 390 px mobile widths, through explicit pilot
+admission, supplied-input import, registration, deviation entry, revision
+fencing, exact source inspection, manual reload and a fresh-process restart.
+Record-only operations created no new agent run. A long classification badge
+overflowed its nested mobile card; `PilotResults.tsx` now uses the existing
+wrapping class. The frontend build and **12 focused pilot UI tests** pass.
+The retained [browser report](../../.state/damage-reduction-pilot-ui-recheck/report.json)
+and [restart comparison](../../.state/damage-reduction-pilot-ui-recheck/restart-comparison.json)
+contain the checks, exact counts and screenshots. Readback excludes only the two
+regenerated `preview.claims.checked_at` projection timestamps; retained refs,
+records, history and capacity match.
+
+The fresh-process pilot verifier now supports `--live`, retains unsuccessful
+reports and model attempts, measures API startup/peak RSS, and requires actual
+charged model calls with successful, accepted, non-synthetic provider receipts
+for each live phase. Synthetic inputs and delivery records remain labelled
+synthetic in either mode. `npm run reduction:pilot:live:verify` runs the
+configured model workflow without contacting a digital delivery service.
+
+The enhanced [fixture trace](../../.state/plan04-live-recheck/fixture/damage-reduction-pilot-verification/659d5380-c6ef-49ea-b166-d8aeecbde74a/report.json)
+passes four explicit runs, eight typed records and exact restart readback. It
+used zero model calls and twelve tool calls; peak API RSS was 268,324,864 bytes.
+These fixture measurements do not establish configured model performance.
+
+The wider recheck also fixed the inherited Continue declaration handoff: a
+successor now retains all exact admitted `bound.selected_refs`, including the
+operator selection original. Restart, source-hold, blocked-Continue and
+hold-release regressions pass without bypassing applicability checks.
+
+Configured attempts exposed two prompt/runtime boundaries. Phase objectives
+now explicitly request the registered workflow and its retained products and
+independent review; they state that attached exact refs can be resolved rather
+than asking the operator to attach them again. Manager receives at most one
+charged correction for malformed received output, using a complete corrected
+proposal and the original authority checks. Its bounded feedback envelope has
+a shared 1,024-byte ceiling and reserved room inside the unchanged 24 KiB model
+input limit. A regression fills the initial context budget and verifies both
+charged inputs remain within the ceiling, with only one accepted action.
+Provider failures, unknown operations and custom authority failures are not
+retried. No reference or hash is filled in. Compact output guidance preserves
+the unchanged 1,200-token output ceiling.
+
+The first broad recheck passed engine pins, formatting, TypeScript, repository
+ESLint and build, then recorded **1,224 passing and three failing backend
+tests**. One failure exposed the Continue defect above; two hit existing
+integration-test timeouts. The pilot attempt-budget test now explicitly proves
+that cancelled admitted successors consume allowances and release reservations,
+without rerunning the same phase methods just to count admissions. The combined
+synthetic-wrapper/timing/missing-proof case is split into two focused API tests;
+all assertions and the original 40-second per-test timeout remain. These three
+previously failing checks now pass individually. This is not an aggregate pass;
+the complete aggregate command has not subsequently passed. A later attempt
+stopped on formatting in a concurrently added Nightshift report; that file was
+formatted. After the user asked to leave minor matters, another complete run
+was not started solely for test-structure or formatting cleanup. Final build
+and **53 focused Manager tests** pass, including the full-input-budget case.
+
+### Still unresolved: configured live model readiness
+
+The final configured attempts used the frozen `manager.v15` build and actual
+NVIDIA responses. They did not close the live-workflow gate:
+
+- The [pilot live attempt](../../.state/plan04-live-recheck/live/damage-reduction-pilot-verification/d9719df9-1f3e-49ac-9790-8274ac0a1fd9/report.json)
+  failed during assessment because the proposed plan omitted the required
+  independent reviewer. The runtime rejected it with
+  `independent_review_required` before dispatching workers.
+- The [maximum-input live attempt](../../.state/plan04-live-recheck/live-capacity/damage-reduction-programme-envelope-verification/de3ac1a1-54aa-4585-a3cc-9beb030eaef4/report.json)
+  made one charged model call and zero tool calls. The provider returned HTTP
+  200 with a `length` response status at the unchanged 1,200-token output limit;
+  the incomplete response was rejected. Its original `not_tested` summary
+  predates the verifier's failed-attempt summary fix; its retained model attempt
+  and error are authoritative evidence that live execution was attempted and
+  unsuccessful.
+- The latest [general live verifier attempt](../../.state/plan04-live-recheck/general-live/general-verification/ae470f4e-88ff-4067-bb1d-fa1362a01ca8/report.json)
+  also failed: malformed retained assignment IDs and repeated queued work
+  remained after the bounded correction. It does not establish a successful
+  general live regression.
+
+Earlier unsuccessful attempts remain retained beside these results. Some
+completed numerical selection, arithmetic and independent checking, but failed
+final model output or omitted the requested retained workflow products. Actual
+provider calls and passing deterministic fixtures do not establish a successful
+configured live workflow. Review, reference and token limits remain enforced;
+this report does not claim that every non-scientific release gate is resolved.
+
+The older preview's fair single-agent comparison was rechecked separately. Its
+latest [six-arm trace](../../.state/plan04-live-recheck/model-benchmark/e6fadec0-3bc2-4b45-af81-c9f05f38c31f/report.json)
+has real provider coverage, but a baseline context overflow makes one arm
+unscorable and the coordinated answers remain unsuccessful. The
+[interpretation](../../.state/plan04-live-recheck/model-benchmark/e6fadec0-3bc2-4b45-af81-c9f05f38c31f/interpretation.md)
+explains why this does not close the full fair comparison gate. That engineering
+benchmark is separate from Scientific qualification.

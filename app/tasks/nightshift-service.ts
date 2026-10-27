@@ -214,6 +214,17 @@ export class NightshiftJobService {
         );
     }
     await this.requireReady(identity);
+    if (body.schema_version === 'haze.nightshift.chain.admission.v2') {
+      // Runtime discovery yields to other work. A release observed before it
+      // may have been withdrawn; check again with no await before admission.
+      const gate = await this.automationReadiness(identity);
+      if (!gate.released || !gate.ready)
+        throw new TaskError(
+          503,
+          'nightshift_automatic_release_blocked',
+          gate.reason ?? 'Automatic mode is not released.',
+        );
+    }
     return this.store.nightshift.admitChain(body, key, identity).chain;
   }
   async automationReadiness(identity: TaskIdentity) {

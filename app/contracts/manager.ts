@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { artifactRefSchema, boundedJsonSchema } from './artifacts.js';
 
+/** Includes the JSON envelope added for the one permitted correction turn. */
+export const MANAGER_DECISION_FEEDBACK_MAX_BYTES = 1024;
+
 const text = z.string().min(1).max(4096);
 const revision = z.number().int().nonnegative();
 export const managerInterpretationSchema = z.strictObject({
@@ -176,6 +179,8 @@ export interface ManagerContext {
   event_cursor: number;
   plan_objective_revision: number;
   source_applicability: { id: string; current: boolean }[];
+  /** Exact CURRENT source.import originals, indexed into request refs then correction refs, in that order. */
+  current_import_context_ref_indices?: number[];
   request: TaskRequest;
   corrections: Correction[];
   interpretation?: Partial<ManagerInterpretation>;

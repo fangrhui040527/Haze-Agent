@@ -108,6 +108,28 @@ describe('engine provenance enforcement', () => {
       expect(result.stderr).toContain(
         'Source file inventory differs: world_model',
       );
+      expect(result.stderr).toContain(
+        'unexpected files: reference/src/untracked.ts',
+      );
+    });
+  });
+
+  it('identifies missing files inside a pinned source tree', async () => {
+    await withFixture(async (root, manifest) => {
+      await rm(
+        path.join(
+          root,
+          manifest.sources.world_model!.source_path,
+          'reference/src/index.ts',
+        ),
+      );
+      const result = verify(root, 'verifySources');
+      expect(result.error).toBeUndefined();
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(
+        'Source file inventory differs: world_model',
+      );
+      expect(result.stderr).toContain('missing files: reference/src/index.ts');
     });
   });
 

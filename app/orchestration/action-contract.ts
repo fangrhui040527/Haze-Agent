@@ -2,18 +2,208 @@ import { z } from 'zod';
 import { artifactRefSchema, type ArtifactRef } from '../contracts/artifacts.js';
 import { agentActionSchema, type AgentAction } from './contracts.js';
 
-export const SPECIALIST_ACTION_CONTRACT_VERSION = 'haze.specialist-actions.v1';
+export const SPECIALIST_ACTION_CONTRACT_VERSION = 'haze.specialist-actions.v2';
 
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const referenceKey = (ref: ArtifactRef) =>
   `${ref.id}:${ref.version}:${ref.sha256}`;
+const referenceFields = ['id', 'version', 'sha256'] as const;
+const referenceJSON = z.toJSONSchema(artifactRefSchema);
+const referenceJSONForms = [
+  referenceJSON,
+  z.toJSONSchema(z.fromJSONSchema(referenceJSON)),
+].map((schema) => ({ schema, compact: true }));
+type ReferenceForm = (typeof referenceJSONForms)[number];
+
+/** Match the canonical contract, not arbitrary business objects with an id. */
+function referenceSchema(
+  value: Record<string, unknown>,
+  forms: ReferenceForm[] = referenceJSONForms,
+) {
+  if (
+    value.type !== 'object' ||
+    !record(value.properties) ||
+    Object.keys(value.properties).length !== referenceFields.length ||
+    list(value.required).length !== referenceFields.length ||
+    !referenceFields.every((field) => list(value.required).includes(field))
+  )
+    return undefined;
+  return forms.find(
+    ({ schema: form }) =>
+      value.additionalProperties === form.additionalProperties &&
+      referenceFields.every((field) => {
+        const actual = (value.properties as Record<string, unknown>)[field];
+        const canonical = form.properties![field];
+        return (
+          record(actual) &&
+          record(canonical) &&
+          Object.entries(canonical).every(
+            ([key, item]) =>
+              JSON.stringify(actual[key]) === JSON.stringify(item),
+          )
+        );
+      }),
+  );
+}
+
+/** Traverse schema positions only; constants, examples and defaults are data. */
+function mapSchema(
+  value: unknown,
+  transform: (schema: Record<string, unknown>) => Record<string, unknown>,
+): unknown {
+  if (!record(value)) return value;
+  const result = { ...value };
+  for (const field of [
+    '$defs',
+    'definitions',
+    'properties',
+    'patternProperties',
+    'dependentSchemas',
+  ]) {
+    if (record(value[field]))
+      result[field] = Object.fromEntries(
+        Object.entries(value[field]).map(([key, child]) => [
+          key,
+          mapSchema(child, transform),
+        ]),
+      );
+  }
+  for (const field of ['allOf', 'anyOf', 'oneOf', 'prefixItems'])
+    if (Array.isArray(value[field]))
+      result[field] = value[field].map((child) => mapSchema(child, transform));
+  for (const field of [
+    'items',
+    'contains',
+    'additionalItems',
+    'additionalProperties',
+    'unevaluatedItems',
+    'unevaluatedProperties',
+    'propertyNames',
+    'not',
+    'if',
+    'then',
+    'else',
+  ])
+    if (record(value[field]))
+      result[field] = mapSchema(value[field], transform);
+  return transform(result);
+}
+
+/** Combine documents without moving either document's local definitions. */
+function constrainSchema(
+  base: Record<string, unknown>,
+  policy: Record<string, unknown>,
+): Record<string, unknown> {
+  const definitions = record(base.$defs) ? { ...base.$defs } : {};
+  const names = new Map<string, string>();
+  const escape = (name: string) =>
+    name.replace(/~/g, '~0').replace(/\//g, '~1');
+  if (record(policy.$defs))
+    for (const name of Object.keys(policy.$defs)) {
+      let admittedName = `hazePolicy_${name}`;
+      while (Object.hasOwn(definitions, admittedName)) admittedName += '_';
+      definitions[admittedName] = undefined;
+      names.set(escape(name), escape(admittedName));
+    }
+  const admitted = mapSchema(policy, (node) => {
+    if (typeof node.$ref !== 'string') return node;
+    const match = /^#\/\$defs\/([^/]+)(.*)$/.exec(node.$ref);
+    const name = match && names.get(match[1]!);
+    return name ? { ...node, $ref: `#/$defs/${name}${match[2]}` } : node;
+  }) as Record<string, unknown>;
+  if (record(admitted.$defs)) {
+    for (const [name, schema] of Object.entries(admitted.$defs)) {
+      const renamed = names.get(escape(name))!;
+      definitions[renamed.replace(/~1/g, '/').replace(/~0/g, '~')] = schema;
+    }
+    delete admitted.$defs;
+  }
+  const original = { ...base };
+  delete original.$defs;
+  delete original.$id;
+  delete original.$schema;
+  return {
+    ...(typeof base.$schema === 'string' ? { $schema: base.$schema } : {}),
+    ...(typeof base.$id === 'string' ? { $id: base.$id } : {}),
+    ...(Object.keys(definitions).length ? { $defs: definitions } : {}),
+    allOf: [original, admitted],
+  };
+}
+
+/** Pin provider choices once without expanding every tool's reference position. */
+function bindProviderReferences(
+  schema: Record<string, unknown>,
+  refs: Map<string, ArtifactRef>,
+  forms: ReferenceForm[],
+): Record<string, unknown> {
+  const definitions = record(schema.$defs) ? schema.$defs : {};
+  let name = 'hazeAdmittedArtifactReference';
+  while (Object.hasOwn(definitions, name)) name += '_';
+  const pointer = `#/$defs/${name}`;
+  let bound = false;
+  const output = mapSchema(schema, (value) => {
+    const result = { ...value };
+    const matched = referenceSchema(value, forms);
+    if (matched) {
+      bound = true;
+      // The shared definition supplies the canonical validation. Keep any
+      // additional registered constraints, including constraints on its fields.
+      if (matched.compact) {
+        delete result.required;
+        delete result.additionalProperties;
+        const properties = Object.fromEntries(
+          referenceFields.flatMap((field) => {
+            const canonical = matched.schema.properties![field] as Record<
+              string,
+              unknown
+            >;
+            const original = (result.properties as Record<string, unknown>)[
+              field
+            ];
+            const extra = Object.fromEntries(
+              Object.entries(original as Record<string, unknown>).filter(
+                ([key]) => !Object.hasOwn(canonical, key),
+              ),
+            );
+            return Object.keys(extra).length ? [[field, extra]] : [];
+          }),
+        );
+        if (Object.keys(properties).length) result.properties = properties;
+        else delete result.properties;
+      }
+      result.allOf = [...list(result.allOf), { $ref: pointer }];
+    }
+    return result;
+  }) as Record<string, unknown>;
+  if (bound) {
+    const choices = [...refs.values()].map((ref) => ({
+      type: 'object',
+      properties: {
+        id: { const: ref.id },
+        version: { const: ref.version },
+        sha256: { const: ref.sha256 },
+      },
+    }));
+    output.$defs = {
+      ...(record(output.$defs) ? output.$defs : {}),
+      [name]: choices.length
+        ? { ...referenceJSON, anyOf: choices }
+        : { not: {} },
+    };
+  }
+  return output;
+}
 
 /** References describe choices, never replace the host's current authorization. */
-function references(value: unknown, found = new Map<string, ArtifactRef>()) {
+function references(
+  value: unknown,
+  found = new Map<string, ArtifactRef>(),
+  malformed?: () => void,
+) {
   if (Array.isArray(value)) {
-    for (const item of value) references(item, found);
+    for (const item of value) references(item, found, malformed);
   } else if (record(value)) {
     const parsed = artifactRefSchema.safeParse({
       id: value.id,
@@ -21,7 +211,12 @@ function references(value: unknown, found = new Map<string, ArtifactRef>()) {
       sha256: value.sha256,
     });
     if (parsed.success) found.set(referenceKey(parsed.data), parsed.data);
-    else for (const item of Object.values(value)) references(item, found);
+    else {
+      if (referenceFields.every((field) => Object.hasOwn(value, field)))
+        malformed?.();
+      for (const item of Object.values(value))
+        references(item, found, malformed);
+    }
   }
   return found;
 }
@@ -76,6 +271,8 @@ export function createSpecialistActionContract(
   );
   const variants: z.ZodType[] = [];
   const allowedActions: AgentAction['type'][] = [];
+  const declaredToolInputs = new Set<string>();
+  const referenceForms = [...referenceJSONForms];
   const baseJSON = z.toJSONSchema(baseSchema, { unrepresentable: 'any' });
   const supportedTypes = new Set<string>();
   const collectTypes = (value: unknown) => {
@@ -107,9 +304,40 @@ export function createSpecialistActionContract(
     // Schema. Actual registered tools expose their generated input schema.
     if (
       record(tool.input_schema) &&
-      typeof tool.input_schema.type === 'string'
+      (typeof tool.input_schema.type === 'string' ||
+        typeof tool.input_schema.$ref === 'string' ||
+        ['allOf', 'anyOf', 'oneOf'].some((field) =>
+          Array.isArray((tool.input_schema as Record<string, unknown>)[field]),
+        ))
     ) {
       input = z.fromJSONSchema(tool.input_schema);
+      declaredToolInputs.add(tool.id as string);
+      mapSchema(tool.input_schema, (node) => {
+        // Extra conjunctions can change Zod's representation of a known
+        // canonical reference. Track that source-derived form without guessing
+        // a reference layout from arbitrary registered business schemas.
+        if (referenceSchema(node) && list(node.allOf).length) {
+          try {
+            const sourceSchema: Record<string, unknown> = {
+              ...(record(tool.input_schema)
+                ? {
+                    $defs: tool.input_schema.$defs,
+                    definitions: tool.input_schema.definitions,
+                  }
+                : {}),
+              ...node,
+            };
+            referenceForms.push({
+              schema: z.toJSONSchema(z.fromJSONSchema(sourceSchema)),
+              compact: false,
+            });
+          } catch {
+            // A node may rely on another nested scope. Keep the complete
+            // registered schema and local reference checks in that case.
+          }
+        }
+        return node;
+      });
     }
     add('tool', { tool: z.literal(tool.id as string), input });
   }
@@ -164,10 +392,13 @@ export function createSpecialistActionContract(
     );
   const policy = variants.length === 1 ? variants[0]! : z.union(variants);
   const policyJSON = z.toJSONSchema(policy, { unrepresentable: 'any' });
-  const outputSchema =
+  const outputSchema = bindProviderReferences(
     baseSchema === agentActionSchema
       ? policyJSON
-      : { allOf: [baseJSON, policyJSON] };
+      : constrainSchema(baseJSON, policyJSON),
+    refs,
+    referenceForms,
+  );
   const schema = baseSchema.superRefine((action: unknown, check) => {
     const value = action as AgentAction;
     if (!allowedActions.includes(value.type)) {
@@ -186,8 +417,20 @@ export function createSpecialistActionContract(
       });
       return;
     }
-    const checkReferences = (input: unknown) => {
-      for (const [key] of references(input)) {
+    const checkReferences = (input: unknown, checkMalformed = true) => {
+      const declared = references(
+        input,
+        new Map(),
+        checkMalformed
+          ? () =>
+              check.addIssue({
+                code: 'custom',
+                message:
+                  'Malformed artifact reference; copy its complete id, version and sha256 from admitted context.',
+              })
+          : undefined,
+      );
+      for (const [key] of declared) {
         if (!refs.has(key))
           check.addIssue({
             code: 'custom',
@@ -208,7 +451,8 @@ export function createSpecialistActionContract(
           message: 'Partial or gap support requires an explicit limitation.',
         });
       }
-    } else if (value.type === 'tool') checkReferences(value.input);
+    } else if (value.type === 'tool')
+      checkReferences(value.input, !declaredToolInputs.has(value.tool));
   }) as z.ZodType<AgentAction>;
   return { schema, outputSchema, allowedActions };
 }

@@ -24,7 +24,7 @@ import {
   resolveRouteCredential,
 } from './runtime.js';
 
-export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v1';
+export const NIGHTSHIFT_JOB_ADAPTER_VERSION = 'haze.nightshift.cli.v2';
 const MAX_STDIO_BYTES = 2 * 1024 * 1024;
 // Installed cancel() labels the record before provider-abort completion. That
 // label is deliberately absent: it cannot prove remote compute termination.
@@ -127,6 +127,8 @@ export function inspectLocalCompute(
     .filter(
       (lane): lane is Record<string, unknown> =>
         lane?.kind === 'local' &&
+        !lane.disabled &&
+        lane.races !== false &&
         typeof lane.state === 'string' &&
         lane.state.toLowerCase() === 'ready' &&
         typeof lane.model === 'string' &&
@@ -172,6 +174,29 @@ const REVIEWED_SOURCE_HASHES: Record<string, string> = {
   'engine/host.mjs':
     'ab9e35a78b6545780c904a1d7bc3d6e576598edf5e3e063aebc0c4d2d3e5ce00',
 };
+// The reviewed strict-inference overlay adds a separate facade and HTTP route.
+// Job methods and their local-only refusal boundary are unchanged. Its imported
+// modules are pinned too: a matching host alone cannot attest a changed overlay.
+const REVIEWED_STRICT_SOURCE_HASHES: Record<string, string> = {
+  'engine/host.mjs':
+    'e1668b09429e1aca3364a3cbefe2c2b9acb2a2cdc94a0ead9dca582a17bab350',
+  'engine/server.mjs':
+    'e0ba7c357f688b096c60d7d09937d68ff2102424c329ea55d58a3ddd108e8e80',
+  'engine/haze-strict/integration.mjs':
+    '8fa11bc9801d62f70a86f7183e4ab3524e1bc49fc5578f3d602e85c03b23233c',
+  'engine/haze-strict/handler.mjs':
+    '8c709532e5845419b177ff8edc4bcaac345a19ff2aa81d476802cc051422c5d0',
+};
+export function reviewedNightshiftJobSourceHashes(
+  actual: Readonly<Record<string, string>>,
+): boolean {
+  const matches = (expected: Record<string, string>) =>
+    Object.entries(expected).every(([path, hash]) => actual[path] === hash);
+  return (
+    matches(REVIEWED_SOURCE_HASHES) ||
+    matches({ ...REVIEWED_SOURCE_HASHES, ...REVIEWED_STRICT_SOURCE_HASHES })
+  );
+}
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -239,12 +264,20 @@ export function discoverNightshiftCli(
 function reviewedInstallation(command: NightshiftCliCommand): boolean {
   if (!command.installationRoot) return false;
   try {
-    return Object.entries(REVIEWED_SOURCE_HASHES).every(
-      ([path, hash]) =>
-        createHash('sha256')
-          .update(readFileSync(join(command.installationRoot!, path)))
-          .digest('hex') === hash,
-    );
+    const paths = Object.keys(REVIEWED_SOURCE_HASHES);
+    const actual: Record<string, string> = {};
+    const readHash = (path: string) =>
+      createHash('sha256')
+        .update(readFileSync(join(command.installationRoot!, path)))
+        .digest('hex');
+    for (const path of paths) actual[path] = readHash(path);
+    if (
+      actual['engine/host.mjs'] ===
+      REVIEWED_STRICT_SOURCE_HASHES['engine/host.mjs']
+    )
+      for (const path of Object.keys(REVIEWED_STRICT_SOURCE_HASHES))
+        actual[path] = readHash(path);
+    return reviewedNightshiftJobSourceHashes(actual);
   } catch {
     return false;
   }
@@ -544,7 +577,8 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
           readNightshiftControl(this.env, '/admin/status', signal),
         ]);
         localCompute = inspectLocalCompute(fleets, status);
-        base.options.fleets = localCompute.fleets;
+        // This runtime records fleet_id as metadata; it does not select a
+        // different compute roster. Do not advertise it as a submission choice.
       }
       base.local_compute_available = localCompute.available;
       const contractAvailable =
@@ -556,7 +590,7 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       base.ready = contractAvailable && localCompute.available;
       base.can_reconcile = contractAvailable;
       base.reason = base.ready
-        ? 'Local-only text jobs are available. Exact native-request reconciliation requires a stored server nonce; cloud grants remain disabled.'
+        ? 'Local-only text jobs use ready local runtime lanes; explicit fleet selection is unsupported. Exact native-request reconciliation requires a stored server nonce; cloud grants remain disabled.'
         : !sourceContract
           ? 'The installed job privacy contract has not been reviewed for this build.'
           : contractAvailable && !localCompute.available
@@ -586,18 +620,18 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
         'Nightshift job options violate the admitted local-only contract.',
       );
     }
+    if (request.fleet !== undefined)
+      throw new NightshiftJobTransportError(
+        'rejected-before-acceptance',
+        'fleet_unverified',
+        'The installed runtime records fleet names as metadata and cannot select compute by fleet; use runtime selection.',
+      );
     const readiness = await this.readiness(signal);
     if (!readiness.ready)
       throw new NightshiftJobTransportError(
         'rejected-before-acceptance',
         'unavailable',
         'Nightshift local-job readiness is not established.',
-      );
-    if (request.fleet && !readiness.options.fleets.includes(request.fleet))
-      throw new NightshiftJobTransportError(
-        'rejected-before-acceptance',
-        'fleet_unverified',
-        'The installed CLI cannot verify this fleet selection; use runtime selection.',
       );
     const args = [
       'generate',
@@ -616,7 +650,6 @@ export class CliNightshiftJobAdapter implements NightshiftJobPort {
       'local-only',
       '--max-spend',
       '0',
-      ...(request.fleet ? ['--fleet', request.fleet] : []),
     ];
     const result = record(
       await this.invoke(args, signal, request.prompt, true),

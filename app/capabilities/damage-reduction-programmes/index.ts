@@ -297,6 +297,27 @@ export function createReductionProgrammeExtension(
       readArtifact,
       readTask,
       assertEvidenceCurrent,
+      retainSelection(selection, identity, key) {
+        const { artifact } = host.store.importArtifact(
+          {
+            schema_version: 'haze.artifact.import.v3',
+            filename: 'programme-operator-selection.json',
+            media_type: 'application/json',
+            declared_origin:
+              'Exact operator selection declaration; it supplies no additional efficacy evidence.',
+            content_base64: Buffer.from(JSON.stringify(selection)).toString(
+              'base64',
+            ),
+          },
+          identity,
+          key,
+        );
+        return {
+          id: artifact.id,
+          version: artifact.version,
+          sha256: artifact.sha256,
+        };
+      },
       pinTaskInputs(taskId, refs, identity) {
         const pinned = new Set<string>();
         const pin = (ref: ArtifactRef): void => {
