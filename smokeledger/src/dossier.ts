@@ -292,6 +292,10 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
       ? `- Confidence: ${confidence} by SmokeLedger's rule (high when the concession share varies by 10 percentage points or less across wind speeds, medium up to 25), since pct_concession is ${stated(7).low.toFixed(1)}% to ${stated(7).high.toFixed(1)}% across the wind_speed_scale values, which are the run's ensemble windScales ${id(eSplit)} ${id(eRun)}.`
       : `- Confidence: not assessed, because the concession share cannot be computed without a concession map ${id(eRun)}.`,
   );
+  // The calculation itself, stated from the run's recorded PARAMS so it is checked like any finding.
+  L.push(
+    `- How each share is calculated: a fire's weight is its fire radiative power, multiplied by the peatEmissionFactor ${PARAMS.peatEmissionFactor} if on peat, by exp(-d^2/2 sigma^2) for its distance d from the air path with sigma = ${PARAMS.kernel.sigmaKm0} km + ${PARAMS.kernel.sigmaKmPerHour} km per hour back (fires beyond ${PARAMS.kernel.maxSigmas} sigma do not count), and by 1 - |time gap| / ${PARAMS.kernel.timeTolHours} h (${PARAMS.kernel.peatTimeTolHours} h on peat), summed over every path point that passes it; a share is a group's summed weight divided by all fires' summed weight, and the range repeats this at each of the ensemble windScales ${id(eRun)}.`,
+  );
   if (holders.length) {
     L.push("");
     L.push("## Concession holders whose land the smoke-relevant fires were on");
@@ -318,6 +322,9 @@ export async function buildDossier(r: BackwardResult, opts: { useLlm?: boolean }
   }
   L.push("");
   L.push("## What this does and does not show");
+  L.push(
+    `- The peat factor (${PARAMS.peatEmissionFactor}x) is an uncalibrated assumption that peat smoulders and smokes more than surface fires; fire radiative power stands in for smoke output. Shares are of the modelled smoke signal at the town, not measured PM2.5.`,
+  );
   L.push("- A fire inside a concession shows where land burned, not who started it. Treat names here as leads for investigation.");
   L.push("- Concession boundaries come from public compilations and may be outdated; the map source and date are listed with each concession.");
   L.push("- Area names come from latitude/longitude boxes, not province or national boundaries; hotspot positions are grid-cell centres.");

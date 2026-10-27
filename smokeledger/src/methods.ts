@@ -140,9 +140,9 @@ export async function traceMethod(b: Body) {
   if (!scope) return unsupportedResponse(runId, unsupported!);
   // The embedding app's World Model is the fact authority, so no SmokeLedger World Model writes.
   const { result, provenance } = await counted(runId, "trace", async () => {
-    const { assessment, evidence } = await investigate(scope, runId, false);
+    const { assessment, evidence, explain } = await investigate(scope, runId, false);
     const draft = await synthesize(scope, null, null, assessment, [], false);
-    return { assessment, evidence, draft };
+    return { assessment, evidence, draft, explain };
   });
   // Map layers are display data; a failure to draw them never fails the cited trace.
   const map = await mapLayers(
@@ -154,6 +154,7 @@ export async function traceMethod(b: Body) {
       concession: !result.assessment.claims.some((c) => /^Fires inside mapped concessions: not assessed/.test(c.text)),
       peat: !result.assessment.claims.some((c) => /^Fires on peat: not assessed/.test(c.text)),
     },
+    result.explain,
   ).catch(() => null);
   return methodResponse(runId, result.draft, result.evidence, { sources: result.assessment, map }, provenance, {
     start: new Date(scope.startMs).toISOString(),
