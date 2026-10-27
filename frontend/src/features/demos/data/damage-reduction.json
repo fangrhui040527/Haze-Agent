@@ -1,0 +1,1927 @@
+{
+  "schema_version": "haze.browser-demo.v1",
+  "recorded_at": "2026-10-27T12:02:59.318Z",
+  "preview": {
+    "schema_version": "haze.reduction.preview-view.v1",
+    "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+    "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+    "objective_revision": 1,
+    "state": "current",
+    "selection": {
+      "artifact": {
+        "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+        "version": 1,
+        "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+      },
+      "value": {
+        "schema_version": "haze.reduction.input-selection.v1",
+        "target": {
+          "scope": {
+            "endpoint": "synthetic lost healthy days",
+            "unit": "person-days",
+            "population": "synthetic outdoor workforce",
+            "geography": "synthetic district",
+            "pollutant": "synthetic haze boundary",
+            "period": {
+              "start": "2027-01-01",
+              "end": "2027-01-31"
+            },
+            "coverage": "One declared synthetic stratum; supplied point estimates only.",
+            "missingness": "None in this engineering fixture.",
+            "exclusions": [
+              "All other endpoints; costs; valuation; delivered effects."
+            ]
+          },
+          "target_fraction": "0.1",
+          "relation": "at_least",
+          "comparator": "Synthetic ordinary-management schedule with existing protections",
+          "intervention": "Synthetic proposed exposure-alert and schedule service",
+          "assessment_rule": "point_estimate"
+        },
+        "scope_sha256": "d95c95436290a3a146448587c69a6119b50aaef4fc9308070ebf79db9ae7cf39",
+        "method_id": "reduction.imported-residual-comparison.v1",
+        "method_version": "1",
+        "sources": [
+          {
+            "artifact": {
+              "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+              "version": 1,
+              "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+            },
+            "row_ids": ["baseline-1", "intervention-1"]
+          }
+        ]
+      }
+    },
+    "assessment": {
+      "artifact": {
+        "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+        "version": 1,
+        "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+      },
+      "value": {
+        "schema_version": "haze.reduction.assessment.v1",
+        "selection_ref": {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        "method_id": "reduction.imported-residual-comparison.v1",
+        "method_version": "1",
+        "status": "supported",
+        "reasons": [],
+        "origin": "synthetic",
+        "baseline_damage": "1000",
+        "intervention_damage": "880",
+        "absolute_reduction": "120",
+        "relative_reduction": {
+          "numerator": "120",
+          "denominator": "1000"
+        },
+        "target_met": true,
+        "scientific_qualification": "unqualified",
+        "limitations": [
+          "Comparison of supplied residual point estimates only; no causal, exposure-response, efficacy or adoption estimation.",
+          "Scientific applicability is unqualified. A named non-synthetic reference case and scientific-owner applicability review are outstanding.",
+          "Declared atomic support is checked for consistency; population membership and source scientific methods are not independently measured.",
+          "A scenario cannot establish delivered actions or achieved damage reduction; World Model publication and acceptance remain separate."
+        ]
+      }
+    },
+    "arithmetic_review": {
+      "artifact": {
+        "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+        "version": 1,
+        "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+      },
+      "value": {
+        "schema_version": "haze.reduction.review.v1",
+        "verdict": "supported",
+        "reviewed_artifacts": [
+          {
+            "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+            "version": 1,
+            "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+          },
+          {
+            "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+            "version": 1,
+            "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+          }
+        ],
+        "reviewer": {
+          "assignment_id": "d4076c20-eff2-4db4-b3da-06555349205b",
+          "revision": 1
+        },
+        "checks": [
+          {
+            "code": "independent_reviewer",
+            "passed": true,
+            "detail": "Reviewer must differ from the assessment producer."
+          },
+          {
+            "code": "selection_contract",
+            "passed": true,
+            "detail": "Selection must satisfy the bounded physical residual contract."
+          },
+          {
+            "code": "assessment_contract",
+            "passed": true,
+            "detail": "Assessment must satisfy the bounded unqualified prediction contract."
+          },
+          {
+            "code": "selection_hash",
+            "passed": true,
+            "detail": "Selection reference must bind the exact saved selection."
+          },
+          {
+            "code": "assessment_hash",
+            "passed": true,
+            "detail": "Assessment reference must bind the exact saved output."
+          },
+          {
+            "code": "selection_link",
+            "passed": true,
+            "detail": "Assessment must refer to the reviewed input selection."
+          },
+          {
+            "code": "independent_status",
+            "passed": true,
+            "detail": "Independent original-input reconstruction requires supported."
+          },
+          {
+            "code": "exact_origin",
+            "passed": true,
+            "detail": "origin must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_baseline_damage",
+            "passed": true,
+            "detail": "baseline_damage must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_intervention_damage",
+            "passed": true,
+            "detail": "intervention_damage must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_absolute_reduction",
+            "passed": true,
+            "detail": "absolute_reduction must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_relative_reduction",
+            "passed": true,
+            "detail": "relative_reduction must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_target_met",
+            "passed": true,
+            "detail": "target_met must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "explicit_gaps",
+            "passed": true,
+            "detail": "Unavailable or incompatible assessment must retain a precise reason."
+          },
+          {
+            "code": "prediction_only",
+            "passed": true,
+            "detail": "Arithmetic does not establish scientific applicability or achieved reduction."
+          }
+        ],
+        "findings": [],
+        "limitations": [
+          "Independent reconstruction checks original decimal inputs, declared support and numerical comparison only.",
+          "Scientific qualification is unqualified; no achieved reduction, delivery or causal effectiveness is established."
+        ],
+        "claim_eligibility": "arithmetic_checked_scenario",
+        "scientific_qualification": "unqualified",
+        "achieved_reduction": false
+      }
+    },
+    "plan": {
+      "artifact": {
+        "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+        "version": 1,
+        "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+      },
+      "value": {
+        "schema_version": "haze.reduction.conditional-plan.v1",
+        "method_id": "reduction.conditional-plan.v1",
+        "method_version": "1",
+        "target": {
+          "scope": {
+            "endpoint": "synthetic lost healthy days",
+            "unit": "person-days",
+            "population": "synthetic outdoor workforce",
+            "geography": "synthetic district",
+            "pollutant": "synthetic haze boundary",
+            "period": {
+              "start": "2027-01-01",
+              "end": "2027-01-31"
+            },
+            "coverage": "One declared synthetic stratum; supplied point estimates only.",
+            "missingness": "None in this engineering fixture.",
+            "exclusions": [
+              "All other endpoints; costs; valuation; delivered effects."
+            ]
+          },
+          "target_fraction": "0.1",
+          "relation": "at_least",
+          "comparator": "Synthetic ordinary-management schedule with existing protections",
+          "intervention": "Synthetic proposed exposure-alert and schedule service",
+          "assessment_rule": "point_estimate"
+        },
+        "selection_ref": {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        "assessment_ref": {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        "arithmetic_review_ref": {
+          "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+          "version": 1,
+          "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+        },
+        "candidate": {
+          "id": "synthetic-alert-service",
+          "version": "1",
+          "name": "Synthetic proposed exposure-alert and schedule service",
+          "kind": "exposure_alert",
+          "description": "Synthetic proposed alert service; no delivered action or established efficacy.",
+          "rule_owner": null,
+          "trigger_rule": null,
+          "action_rule": null,
+          "approval": {
+            "status": "proposed",
+            "approver": null,
+            "approved_at": null,
+            "evidence": []
+          },
+          "constraints": [],
+          "costs": [
+            {
+              "id": "service-cost",
+              "description": "Service deployment and operating cost",
+              "amount": null,
+              "unit": "unpriced",
+              "evidence": [],
+              "prerequisite": "Obtain a scoped supplied cost estimate and budget decision."
+            }
+          ],
+          "dependencies": [
+            {
+              "id": "service-capacity",
+              "description": "Authorized service configuration and delivery capacity",
+              "status": "unknown",
+              "evidence": []
+            }
+          ],
+          "claims": []
+        },
+        "candidate_sha256": "b449da01a00bbb050ef1367451ebf890642f5a4055afb644038efbc53ea34470",
+        "source_refs": [
+          {
+            "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+            "version": 1,
+            "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+          }
+        ],
+        "state": "conditional",
+        "assessment_status": "supported",
+        "point_estimate_label": "meets",
+        "origin": "synthetic",
+        "scientific_qualification": "unqualified",
+        "delivery_status": "not_delivered",
+        "achieved_reduction": false,
+        "affected_scope": {
+          "endpoint": "synthetic lost healthy days",
+          "unit": "person-days",
+          "population": "synthetic outdoor workforce",
+          "geography": "synthetic district",
+          "pollutant": "synthetic haze boundary",
+          "period": {
+            "start": "2027-01-01",
+            "end": "2027-01-31"
+          },
+          "coverage": "One declared synthetic stratum; supplied point estimates only.",
+          "missingness": "None in this engineering fixture.",
+          "exclusions": [
+            "All other endpoints; costs; valuation; delivered effects."
+          ]
+        },
+        "rules": {
+          "owner": null,
+          "trigger": null,
+          "action": null,
+          "approval": {
+            "status": "proposed",
+            "approver": null,
+            "approved_at": null,
+            "evidence": []
+          }
+        },
+        "recommendations": [
+          {
+            "id": "recommendation-1",
+            "action": "qualify_applicability",
+            "description": "A scientific owner must supply and adopt a non-synthetic applicability dossier for this exact intervention, endpoint, population, period and source method.",
+            "evidence": [],
+            "prerequisite_ids": ["scientific-applicability"]
+          },
+          {
+            "id": "recommendation-2",
+            "action": "define_rules",
+            "description": "Name the human owner accountable for the exact digital rules.",
+            "evidence": [],
+            "prerequisite_ids": ["rule-owner"]
+          },
+          {
+            "id": "recommendation-3",
+            "action": "define_rules",
+            "description": "Define the exact agreed trigger, input sources and timing for the proposed digital action.",
+            "evidence": [],
+            "prerequisite_ids": ["trigger-rule"]
+          },
+          {
+            "id": "recommendation-4",
+            "action": "define_rules",
+            "description": "Define the exact recipient/action scope and safeguards for the proposed alert or schedule change.",
+            "evidence": [],
+            "prerequisite_ids": ["action-rule"]
+          },
+          {
+            "id": "recommendation-5",
+            "action": "obtain_approval",
+            "description": "Obtain retained human approval binding the exact trigger/action rules, rule owner and affected scope; a typed approved flag alone is insufficient.",
+            "evidence": [],
+            "prerequisite_ids": ["human-rule-approval"]
+          },
+          {
+            "id": "recommendation-6",
+            "action": "resolve_constraint",
+            "description": "Identify and review feasibility, subgroup protections and hard constraints before operational use.",
+            "evidence": [],
+            "prerequisite_ids": ["feasibility-constraints"]
+          },
+          {
+            "id": "recommendation-7",
+            "action": "obtain_cost",
+            "description": "Resolve the supplied cost prerequisite before recommending implementation: Obtain a scoped supplied cost estimate and budget decision.",
+            "evidence": [],
+            "prerequisite_ids": ["cost-1"]
+          },
+          {
+            "id": "recommendation-8",
+            "action": "confirm_dependency",
+            "description": "Confirm an available, supported dependency before implementation: Authorized service configuration and delivery capacity",
+            "evidence": [],
+            "prerequisite_ids": ["dependency-1"]
+          },
+          {
+            "id": "recommendation-9",
+            "action": "consider_conditional_option",
+            "description": "Consider this supplied scenario only as a conditional option after every prerequisite and material objection is resolved; human approval and qualified applicability remain required.",
+            "evidence": [
+              {
+                "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+                "version": 1,
+                "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+              },
+              {
+                "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+                "version": 1,
+                "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+              }
+            ],
+            "prerequisite_ids": [
+              "scientific-applicability",
+              "rule-owner",
+              "trigger-rule",
+              "action-rule",
+              "human-rule-approval",
+              "feasibility-constraints",
+              "cost-1",
+              "dependency-1"
+            ]
+          }
+        ],
+        "prerequisites": [
+          {
+            "id": "scientific-applicability",
+            "description": "A scientific owner must supply and adopt a non-synthetic applicability dossier for this exact intervention, endpoint, population, period and source method.",
+            "reason": "scientific_applicability",
+            "evidence": []
+          },
+          {
+            "id": "rule-owner",
+            "description": "Name the human owner accountable for the exact digital rules.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "trigger-rule",
+            "description": "Define the exact agreed trigger, input sources and timing for the proposed digital action.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "action-rule",
+            "description": "Define the exact recipient/action scope and safeguards for the proposed alert or schedule change.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "human-rule-approval",
+            "description": "Obtain retained human approval binding the exact trigger/action rules, rule owner and affected scope; a typed approved flag alone is insufficient.",
+            "reason": "human_approval",
+            "evidence": []
+          },
+          {
+            "id": "feasibility-constraints",
+            "description": "Identify and review feasibility, subgroup protections and hard constraints before operational use.",
+            "reason": "constraint",
+            "evidence": []
+          },
+          {
+            "id": "cost-1",
+            "description": "Resolve the supplied cost prerequisite before recommending implementation: Obtain a scoped supplied cost estimate and budget decision.",
+            "reason": "cost",
+            "evidence": []
+          },
+          {
+            "id": "dependency-1",
+            "description": "Confirm an available, supported dependency before implementation: Authorized service configuration and delivery capacity",
+            "reason": "dependency",
+            "evidence": []
+          }
+        ],
+        "objections": [],
+        "limitations": [
+          "Conditional planning preview only. No alerts are sent and no work schedule is changed.",
+          "Scientific applicability is unqualified; arithmetic agreement and model agreement cannot grant scientific approval.",
+          "Candidate descriptions, rule approval and feasibility declarations are supplied attestations, not authenticated identity or independently established efficacy.",
+          "Reference integrity checks do not reproduce the semantic entailment of supplied cost, capacity, constraint or rule-approval documents; those declarations require human source-alignment review.",
+          "Source references support only their declared claims. Product specifications and mechanism descriptions are not delivered effects or proof of damage reduction.",
+          "Costs are supplied planning inputs; no monetary valuation, budget optimization, exposure-response or uptake inference is performed.",
+          "Current source access, permissions, applicability and independent reviews must be rechecked through governed task APIs when reusing this saved preview."
+        ]
+      }
+    },
+    "plan_review": {
+      "artifact": {
+        "id": "8032166e-3b1c-46e4-9b7e-65c2d7842849",
+        "version": 1,
+        "sha256": "abd8d780746de473b4bb17d147a314662b1f78aa8d7b98360e5287e2b46c7518"
+      },
+      "value": {
+        "schema_version": "haze.reduction.plan-review.v1",
+        "verdict": "supported",
+        "reviewed_artifacts": [
+          {
+            "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+            "version": 1,
+            "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+          },
+          {
+            "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+            "version": 1,
+            "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+          },
+          {
+            "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+            "version": 1,
+            "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+          },
+          {
+            "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+            "version": 1,
+            "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+          },
+          {
+            "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+            "version": 1,
+            "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+          }
+        ],
+        "reviewer": {
+          "assignment_id": "64c315d1-0a63-4251-a9ac-630e167f9e3b",
+          "revision": 1
+        },
+        "checks": [
+          {
+            "code": "preview_contract",
+            "passed": true,
+            "detail": "Preview request must satisfy its bounded operator-input contract."
+          },
+          {
+            "code": "plan_contract",
+            "passed": true,
+            "detail": "Conditional plan must satisfy the bounded unqualified, not-delivered contract."
+          },
+          {
+            "code": "independent_planning_reviewer",
+            "passed": true,
+            "detail": "Plan reviewer must differ from the exact plan producer."
+          },
+          {
+            "code": "plan_hash",
+            "passed": true,
+            "detail": "Plan reference must bind the exact saved conditional-plan artifact."
+          },
+          {
+            "code": "reconstructed_scenario",
+            "passed": true,
+            "detail": "Selected originals must independently reconstruct the checked assessment before supporting its planning labels."
+          },
+          {
+            "code": "arithmetic_claim_alignment",
+            "passed": true,
+            "detail": "Saved arithmetic review claim and checks must agree with current independent reconstruction."
+          },
+          {
+            "code": "target_and_scope",
+            "passed": true,
+            "detail": "Plan must preserve the exact selected target and affected scope."
+          },
+          {
+            "code": "candidate_version",
+            "passed": true,
+            "detail": "Candidate identity, version, supplied assertions and exact hash must remain unchanged."
+          },
+          {
+            "code": "exact_scenario_references",
+            "passed": true,
+            "detail": "Plan must bind the exact selection, assessment and independent arithmetic review."
+          },
+          {
+            "code": "source_closure",
+            "passed": true,
+            "detail": "Plan supporting sources must contain exactly selected originals and explicitly cited candidate evidence."
+          },
+          {
+            "code": "exact_rule_attestation",
+            "passed": true,
+            "detail": "Human rule ownership, approval and trigger/action rules must be retained as supplied attestations."
+          },
+          {
+            "code": "checked_point_estimate_label",
+            "passed": true,
+            "detail": "Point-estimate label and evidence status must come from the exact checked scenario."
+          },
+          {
+            "code": "honest_origin",
+            "passed": true,
+            "detail": "Synthetic numerical or candidate evidence must not be relabelled empirical."
+          },
+          {
+            "code": "complete_prerequisites",
+            "passed": true,
+            "detail": "Every unresolved scientific, rule, cost, capacity, subgroup, source or scenario prerequisite must remain explicit and bound to its evidence."
+          },
+          {
+            "code": "prerequisite_intent",
+            "passed": true,
+            "detail": "Prerequisites must retain a concrete conditional evidence/approval action; supplied prose cannot replace them with implementation or effect assertions."
+          },
+          {
+            "code": "retained_objections",
+            "passed": true,
+            "detail": "Hard constraint violations, unmet targets and unsupported effect/specification/delivery assertions must retain independent objections."
+          },
+          {
+            "code": "planning_state",
+            "passed": true,
+            "detail": "A hard constraint or unsupported effect assertion blocks the option; missing comparative evidence remains an evidence gap."
+          },
+          {
+            "code": "supported_recommendations",
+            "passed": true,
+            "detail": "Each material recommendation must use checked scenario evidence or one exact stated prerequisite; unsupported effects and immediate implementation cannot be recommended."
+          },
+          {
+            "code": "conditional_scientific_limits",
+            "passed": true,
+            "detail": "The preview cannot establish scientific approval, live delivery, available capacity or achieved reduction."
+          }
+        ],
+        "findings": [],
+        "limitations": [
+          "Checks exact source/claim lineage, independently reconstructed numerical support and supplied feasibility objections only.",
+          "Candidate narratives, source authenticity, professional credentials and scientific applicability are not independently established.",
+          "Cost, capacity, constraint and approval declarations remain supplied attestations; exact accessible references do not reproduce document entailment or authenticate their author.",
+          "Human approval is a retained local attestation; this preview sends no alert and changes no schedule."
+        ],
+        "planning_state": "conditional",
+        "scientific_qualification": "unqualified",
+        "delivery_status": "not_delivered",
+        "achieved_reduction": false
+      }
+    },
+    "claims": {
+      "schema_version": "haze.reduction.claim-eligibility.v1",
+      "selection_ref": {
+        "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+        "version": 1,
+        "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+      },
+      "assessment_ref": {
+        "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+        "version": 1,
+        "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+      },
+      "review_ref": {
+        "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+        "version": 1,
+        "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+      },
+      "claim_eligibility": "arithmetic_checked_scenario",
+      "point_estimate_label": "meets",
+      "origin": "synthetic",
+      "scientific_qualification": "unqualified",
+      "achieved_reduction": false,
+      "reasons": [],
+      "checked_at": "2026-10-27T12:02:59.739Z"
+    },
+    "plan_eligibility": "conditional",
+    "source_refs": [
+      {
+        "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+        "version": 1,
+        "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+      }
+    ],
+    "reasons": []
+  },
+  "artifacts": [
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+      "version": 1,
+      "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "kind": "source.import",
+      "producer": {
+        "kind": "user",
+        "id": "local-user"
+      },
+      "created_at": "2026-10-27T12:02:54.563Z",
+      "dependencies": [],
+      "required_tools": [],
+      "content": {
+        "schema_version": "haze.reduction.physical-import.v1",
+        "origin": "synthetic",
+        "records": [
+          {
+            "row_id": "baseline-1",
+            "role": "baseline",
+            "scenario": "Synthetic ordinary-management schedule with existing protections",
+            "evidence_basis": "prospective",
+            "scope": {
+              "endpoint": "synthetic lost healthy days",
+              "unit": "person-days",
+              "population": "synthetic outdoor workforce",
+              "geography": "synthetic district",
+              "pollutant": "synthetic haze boundary",
+              "period": {
+                "start": "2027-01-01",
+                "end": "2027-01-31"
+              },
+              "coverage": "One declared synthetic stratum; supplied point estimates only.",
+              "missingness": "None in this engineering fixture.",
+              "exclusions": [
+                "All other endpoints; costs; valuation; delivered effects."
+              ]
+            },
+            "stratum_id": "synthetic-stratum-1",
+            "support_ids": ["synthetic-atomic-population-1"],
+            "quantity": "1000",
+            "original_method": {
+              "id": "synthetic-supplied-estimate",
+              "version": "1"
+            },
+            "applicability": "Synthetic engineering fixture only; scientific applicability is unqualified."
+          },
+          {
+            "row_id": "intervention-1",
+            "role": "intervention",
+            "scenario": "Synthetic proposed exposure-alert and schedule service",
+            "evidence_basis": "prospective",
+            "scope": {
+              "endpoint": "synthetic lost healthy days",
+              "unit": "person-days",
+              "population": "synthetic outdoor workforce",
+              "geography": "synthetic district",
+              "pollutant": "synthetic haze boundary",
+              "period": {
+                "start": "2027-01-01",
+                "end": "2027-01-31"
+              },
+              "coverage": "One declared synthetic stratum; supplied point estimates only.",
+              "missingness": "None in this engineering fixture.",
+              "exclusions": [
+                "All other endpoints; costs; valuation; delivered effects."
+              ]
+            },
+            "stratum_id": "synthetic-stratum-1",
+            "support_ids": ["synthetic-atomic-population-1"],
+            "quantity": "880",
+            "original_method": {
+              "id": "synthetic-supplied-estimate",
+              "version": "1"
+            },
+            "applicability": "Synthetic engineering fixture only; scientific applicability is unqualified."
+          }
+        ]
+      },
+      "original_byte_sha256": "ec000d623fcb91ba13d96579b6b1fb52f2224cf2255a74b4637990fc48cd12d9",
+      "media_type": "application/json",
+      "filename": "synthetic-reduction-demo.json",
+      "declared_origin": "Explicit synthetic demonstration. Invented physical residuals and proposed alert service; no empirical data or delivered intervention.",
+      "evidence_origin": "user_supplied"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+      "version": 1,
+      "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "e1b88ffc-260d-4eda-bcd9-049aac035b2d",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "reduction.input-selection",
+      "producer": {
+        "kind": "assignment",
+        "id": "e1b88ffc-260d-4eda-bcd9-049aac035b2d"
+      },
+      "created_at": "2026-10-27T12:02:55.594Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        }
+      ],
+      "required_tools": [
+        "reduction.pin-selection",
+        "world.lookup",
+        "world.context",
+        "world.lineage"
+      ],
+      "content": {
+        "schema_version": "haze.reduction.input-selection.v1",
+        "target": {
+          "scope": {
+            "endpoint": "synthetic lost healthy days",
+            "unit": "person-days",
+            "population": "synthetic outdoor workforce",
+            "geography": "synthetic district",
+            "pollutant": "synthetic haze boundary",
+            "period": {
+              "start": "2027-01-01",
+              "end": "2027-01-31"
+            },
+            "coverage": "One declared synthetic stratum; supplied point estimates only.",
+            "missingness": "None in this engineering fixture.",
+            "exclusions": [
+              "All other endpoints; costs; valuation; delivered effects."
+            ]
+          },
+          "target_fraction": "0.1",
+          "relation": "at_least",
+          "comparator": "Synthetic ordinary-management schedule with existing protections",
+          "intervention": "Synthetic proposed exposure-alert and schedule service",
+          "assessment_rule": "point_estimate"
+        },
+        "scope_sha256": "d95c95436290a3a146448587c69a6119b50aaef4fc9308070ebf79db9ae7cf39",
+        "method_id": "reduction.imported-residual-comparison.v1",
+        "method_version": "1",
+        "sources": [
+          {
+            "artifact": {
+              "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+              "version": 1,
+              "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+            },
+            "row_ids": ["baseline-1", "intervention-1"]
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "760737b8-7f41-4185-a1b4-308a64e12059",
+      "version": 1,
+      "sha256": "6e3bd1dddefcfed75d870fb26fcd9782603e2c43550adf730fda2551b6f8685e",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "e1b88ffc-260d-4eda-bcd9-049aac035b2d",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "assignment.summary",
+      "producer": {
+        "kind": "assignment",
+        "id": "e1b88ffc-260d-4eda-bcd9-049aac035b2d"
+      },
+      "created_at": "2026-10-27T12:02:55.714Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        }
+      ],
+      "required_tools": [
+        "reduction.pin-selection",
+        "world.lookup",
+        "world.context",
+        "world.lineage"
+      ],
+      "content": {
+        "status": "completed",
+        "summary": "Retained the immutable operator-selected target, original artifact references and rows.",
+        "support": "supported",
+        "uncertainty": [],
+        "outputs": [
+          {
+            "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+            "version": 1,
+            "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+      "version": 1,
+      "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "1f8abcf3-129c-4625-9d8b-6b7c3a5dfb4b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "reduction.assessment",
+      "producer": {
+        "kind": "assignment",
+        "id": "1f8abcf3-129c-4625-9d8b-6b7c3a5dfb4b"
+      },
+      "created_at": "2026-10-27T12:02:56.098Z",
+      "dependencies": [
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        }
+      ],
+      "required_tools": [
+        "reduction.imported-residual-comparison.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection"
+      ],
+      "content": {
+        "schema_version": "haze.reduction.assessment.v1",
+        "selection_ref": {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        "method_id": "reduction.imported-residual-comparison.v1",
+        "method_version": "1",
+        "status": "supported",
+        "reasons": [],
+        "origin": "synthetic",
+        "baseline_damage": "1000",
+        "intervention_damage": "880",
+        "absolute_reduction": "120",
+        "relative_reduction": {
+          "numerator": "120",
+          "denominator": "1000"
+        },
+        "target_met": true,
+        "scientific_qualification": "unqualified",
+        "limitations": [
+          "Comparison of supplied residual point estimates only; no causal, exposure-response, efficacy or adoption estimation.",
+          "Scientific applicability is unqualified. A named non-synthetic reference case and scientific-owner applicability review are outstanding.",
+          "Declared atomic support is checked for consistency; population membership and source scientific methods are not independently measured.",
+          "A scenario cannot establish delivered actions or achieved damage reduction; World Model publication and acceptance remain separate."
+        ]
+      },
+      "evidence_origin": "synthetic_fixture"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "9e83da56-c848-4ca1-a08f-a35ad2e754a5",
+      "version": 1,
+      "sha256": "b8ccd553124431d80443258dc5ab5dcf162faf0cf9dd4240b968f4c1e3b5e4a3",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "1f8abcf3-129c-4625-9d8b-6b7c3a5dfb4b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "assignment.summary",
+      "producer": {
+        "kind": "assignment",
+        "id": "1f8abcf3-129c-4625-9d8b-6b7c3a5dfb4b"
+      },
+      "created_at": "2026-10-27T12:02:56.189Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        },
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "760737b8-7f41-4185-a1b4-308a64e12059",
+          "version": 1,
+          "sha256": "6e3bd1dddefcfed75d870fb26fcd9782603e2c43550adf730fda2551b6f8685e"
+        }
+      ],
+      "required_tools": [
+        "reduction.imported-residual-comparison.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection"
+      ],
+      "content": {
+        "status": "completed",
+        "summary": "Supplied scenario: baseline 1000, intervention 880, absolute reduction 120; point estimate meets target. Scientific qualification remains unqualified; achieved reduction is not established.",
+        "support": "supported",
+        "uncertainty": [
+          "Comparison of supplied residual point estimates only; no causal, exposure-response, efficacy or adoption estimation.",
+          "Scientific applicability is unqualified. A named non-synthetic reference case and scientific-owner applicability review are outstanding.",
+          "Declared atomic support is checked for consistency; population membership and source scientific methods are not independently measured.",
+          "A scenario cannot establish delivered actions or achieved damage reduction; World Model publication and acceptance remain separate."
+        ],
+        "outputs": [
+          {
+            "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+            "version": 1,
+            "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+      "version": 1,
+      "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "d4076c20-eff2-4db4-b3da-06555349205b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "reduction.review",
+      "producer": {
+        "kind": "assignment",
+        "id": "d4076c20-eff2-4db4-b3da-06555349205b"
+      },
+      "created_at": "2026-10-27T12:02:56.766Z",
+      "dependencies": [
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        }
+      ],
+      "required_tools": [
+        "reduction.independent-check.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1"
+      ],
+      "content": {
+        "schema_version": "haze.reduction.review.v1",
+        "verdict": "supported",
+        "reviewed_artifacts": [
+          {
+            "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+            "version": 1,
+            "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+          },
+          {
+            "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+            "version": 1,
+            "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+          }
+        ],
+        "reviewer": {
+          "assignment_id": "d4076c20-eff2-4db4-b3da-06555349205b",
+          "revision": 1
+        },
+        "checks": [
+          {
+            "code": "independent_reviewer",
+            "passed": true,
+            "detail": "Reviewer must differ from the assessment producer."
+          },
+          {
+            "code": "selection_contract",
+            "passed": true,
+            "detail": "Selection must satisfy the bounded physical residual contract."
+          },
+          {
+            "code": "assessment_contract",
+            "passed": true,
+            "detail": "Assessment must satisfy the bounded unqualified prediction contract."
+          },
+          {
+            "code": "selection_hash",
+            "passed": true,
+            "detail": "Selection reference must bind the exact saved selection."
+          },
+          {
+            "code": "assessment_hash",
+            "passed": true,
+            "detail": "Assessment reference must bind the exact saved output."
+          },
+          {
+            "code": "selection_link",
+            "passed": true,
+            "detail": "Assessment must refer to the reviewed input selection."
+          },
+          {
+            "code": "independent_status",
+            "passed": true,
+            "detail": "Independent original-input reconstruction requires supported."
+          },
+          {
+            "code": "exact_origin",
+            "passed": true,
+            "detail": "origin must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_baseline_damage",
+            "passed": true,
+            "detail": "baseline_damage must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_intervention_damage",
+            "passed": true,
+            "detail": "intervention_damage must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_absolute_reduction",
+            "passed": true,
+            "detail": "absolute_reduction must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_relative_reduction",
+            "passed": true,
+            "detail": "relative_reduction must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "exact_target_met",
+            "passed": true,
+            "detail": "target_met must match independently reconstructed exact original inputs."
+          },
+          {
+            "code": "explicit_gaps",
+            "passed": true,
+            "detail": "Unavailable or incompatible assessment must retain a precise reason."
+          },
+          {
+            "code": "prediction_only",
+            "passed": true,
+            "detail": "Arithmetic does not establish scientific applicability or achieved reduction."
+          }
+        ],
+        "findings": [],
+        "limitations": [
+          "Independent reconstruction checks original decimal inputs, declared support and numerical comparison only.",
+          "Scientific qualification is unqualified; no achieved reduction, delivery or causal effectiveness is established."
+        ],
+        "claim_eligibility": "arithmetic_checked_scenario",
+        "scientific_qualification": "unqualified",
+        "achieved_reduction": false
+      },
+      "evidence_origin": "synthetic_fixture"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "6f18cbd6-702f-488c-a6a6-d43d6b90c7d7",
+      "version": 1,
+      "sha256": "4ac4ba460f85e0e44a8dce655b53ca58efbe5aba5adcc0366ab726760d534a38",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "d4076c20-eff2-4db4-b3da-06555349205b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "assignment.summary",
+      "producer": {
+        "kind": "assignment",
+        "id": "d4076c20-eff2-4db4-b3da-06555349205b"
+      },
+      "created_at": "2026-10-27T12:02:56.862Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        },
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "760737b8-7f41-4185-a1b4-308a64e12059",
+          "version": 1,
+          "sha256": "6e3bd1dddefcfed75d870fb26fcd9782603e2c43550adf730fda2551b6f8685e"
+        },
+        {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        {
+          "id": "9e83da56-c848-4ca1-a08f-a35ad2e754a5",
+          "version": 1,
+          "sha256": "b8ccd553124431d80443258dc5ab5dcf162faf0cf9dd4240b968f4c1e3b5e4a3"
+        }
+      ],
+      "required_tools": [
+        "reduction.independent-check.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1"
+      ],
+      "content": {
+        "status": "completed",
+        "summary": "Independent reconstruction agrees with the saved supported result. Scientific qualification remains unqualified; no achieved reduction is established.",
+        "support": "supported",
+        "uncertainty": [
+          "Independent reconstruction checks original decimal inputs, declared support and numerical comparison only.",
+          "Scientific qualification is unqualified; no achieved reduction, delivery or causal effectiveness is established."
+        ],
+        "outputs": [
+          {
+            "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+            "version": 1,
+            "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+      "version": 1,
+      "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "b0199578-ada9-4993-8abe-960de2aa2669",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "reduction.conditional-plan",
+      "producer": {
+        "kind": "assignment",
+        "id": "b0199578-ada9-4993-8abe-960de2aa2669"
+      },
+      "created_at": "2026-10-27T12:02:57.585Z",
+      "dependencies": [
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        {
+          "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+          "version": 1,
+          "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+        },
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        }
+      ],
+      "required_tools": [
+        "reduction.conditional-plan.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1",
+        "reduction.independent-check.v1"
+      ],
+      "content": {
+        "schema_version": "haze.reduction.conditional-plan.v1",
+        "method_id": "reduction.conditional-plan.v1",
+        "method_version": "1",
+        "target": {
+          "scope": {
+            "endpoint": "synthetic lost healthy days",
+            "unit": "person-days",
+            "population": "synthetic outdoor workforce",
+            "geography": "synthetic district",
+            "pollutant": "synthetic haze boundary",
+            "period": {
+              "start": "2027-01-01",
+              "end": "2027-01-31"
+            },
+            "coverage": "One declared synthetic stratum; supplied point estimates only.",
+            "missingness": "None in this engineering fixture.",
+            "exclusions": [
+              "All other endpoints; costs; valuation; delivered effects."
+            ]
+          },
+          "target_fraction": "0.1",
+          "relation": "at_least",
+          "comparator": "Synthetic ordinary-management schedule with existing protections",
+          "intervention": "Synthetic proposed exposure-alert and schedule service",
+          "assessment_rule": "point_estimate"
+        },
+        "selection_ref": {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        "assessment_ref": {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        "arithmetic_review_ref": {
+          "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+          "version": 1,
+          "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+        },
+        "candidate": {
+          "id": "synthetic-alert-service",
+          "version": "1",
+          "name": "Synthetic proposed exposure-alert and schedule service",
+          "kind": "exposure_alert",
+          "description": "Synthetic proposed alert service; no delivered action or established efficacy.",
+          "rule_owner": null,
+          "trigger_rule": null,
+          "action_rule": null,
+          "approval": {
+            "status": "proposed",
+            "approver": null,
+            "approved_at": null,
+            "evidence": []
+          },
+          "constraints": [],
+          "costs": [
+            {
+              "id": "service-cost",
+              "description": "Service deployment and operating cost",
+              "amount": null,
+              "unit": "unpriced",
+              "evidence": [],
+              "prerequisite": "Obtain a scoped supplied cost estimate and budget decision."
+            }
+          ],
+          "dependencies": [
+            {
+              "id": "service-capacity",
+              "description": "Authorized service configuration and delivery capacity",
+              "status": "unknown",
+              "evidence": []
+            }
+          ],
+          "claims": []
+        },
+        "candidate_sha256": "b449da01a00bbb050ef1367451ebf890642f5a4055afb644038efbc53ea34470",
+        "source_refs": [
+          {
+            "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+            "version": 1,
+            "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+          }
+        ],
+        "state": "conditional",
+        "assessment_status": "supported",
+        "point_estimate_label": "meets",
+        "origin": "synthetic",
+        "scientific_qualification": "unqualified",
+        "delivery_status": "not_delivered",
+        "achieved_reduction": false,
+        "affected_scope": {
+          "endpoint": "synthetic lost healthy days",
+          "unit": "person-days",
+          "population": "synthetic outdoor workforce",
+          "geography": "synthetic district",
+          "pollutant": "synthetic haze boundary",
+          "period": {
+            "start": "2027-01-01",
+            "end": "2027-01-31"
+          },
+          "coverage": "One declared synthetic stratum; supplied point estimates only.",
+          "missingness": "None in this engineering fixture.",
+          "exclusions": [
+            "All other endpoints; costs; valuation; delivered effects."
+          ]
+        },
+        "rules": {
+          "owner": null,
+          "trigger": null,
+          "action": null,
+          "approval": {
+            "status": "proposed",
+            "approver": null,
+            "approved_at": null,
+            "evidence": []
+          }
+        },
+        "recommendations": [
+          {
+            "id": "recommendation-1",
+            "action": "qualify_applicability",
+            "description": "A scientific owner must supply and adopt a non-synthetic applicability dossier for this exact intervention, endpoint, population, period and source method.",
+            "evidence": [],
+            "prerequisite_ids": ["scientific-applicability"]
+          },
+          {
+            "id": "recommendation-2",
+            "action": "define_rules",
+            "description": "Name the human owner accountable for the exact digital rules.",
+            "evidence": [],
+            "prerequisite_ids": ["rule-owner"]
+          },
+          {
+            "id": "recommendation-3",
+            "action": "define_rules",
+            "description": "Define the exact agreed trigger, input sources and timing for the proposed digital action.",
+            "evidence": [],
+            "prerequisite_ids": ["trigger-rule"]
+          },
+          {
+            "id": "recommendation-4",
+            "action": "define_rules",
+            "description": "Define the exact recipient/action scope and safeguards for the proposed alert or schedule change.",
+            "evidence": [],
+            "prerequisite_ids": ["action-rule"]
+          },
+          {
+            "id": "recommendation-5",
+            "action": "obtain_approval",
+            "description": "Obtain retained human approval binding the exact trigger/action rules, rule owner and affected scope; a typed approved flag alone is insufficient.",
+            "evidence": [],
+            "prerequisite_ids": ["human-rule-approval"]
+          },
+          {
+            "id": "recommendation-6",
+            "action": "resolve_constraint",
+            "description": "Identify and review feasibility, subgroup protections and hard constraints before operational use.",
+            "evidence": [],
+            "prerequisite_ids": ["feasibility-constraints"]
+          },
+          {
+            "id": "recommendation-7",
+            "action": "obtain_cost",
+            "description": "Resolve the supplied cost prerequisite before recommending implementation: Obtain a scoped supplied cost estimate and budget decision.",
+            "evidence": [],
+            "prerequisite_ids": ["cost-1"]
+          },
+          {
+            "id": "recommendation-8",
+            "action": "confirm_dependency",
+            "description": "Confirm an available, supported dependency before implementation: Authorized service configuration and delivery capacity",
+            "evidence": [],
+            "prerequisite_ids": ["dependency-1"]
+          },
+          {
+            "id": "recommendation-9",
+            "action": "consider_conditional_option",
+            "description": "Consider this supplied scenario only as a conditional option after every prerequisite and material objection is resolved; human approval and qualified applicability remain required.",
+            "evidence": [
+              {
+                "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+                "version": 1,
+                "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+              },
+              {
+                "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+                "version": 1,
+                "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+              }
+            ],
+            "prerequisite_ids": [
+              "scientific-applicability",
+              "rule-owner",
+              "trigger-rule",
+              "action-rule",
+              "human-rule-approval",
+              "feasibility-constraints",
+              "cost-1",
+              "dependency-1"
+            ]
+          }
+        ],
+        "prerequisites": [
+          {
+            "id": "scientific-applicability",
+            "description": "A scientific owner must supply and adopt a non-synthetic applicability dossier for this exact intervention, endpoint, population, period and source method.",
+            "reason": "scientific_applicability",
+            "evidence": []
+          },
+          {
+            "id": "rule-owner",
+            "description": "Name the human owner accountable for the exact digital rules.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "trigger-rule",
+            "description": "Define the exact agreed trigger, input sources and timing for the proposed digital action.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "action-rule",
+            "description": "Define the exact recipient/action scope and safeguards for the proposed alert or schedule change.",
+            "reason": "missing_rule",
+            "evidence": []
+          },
+          {
+            "id": "human-rule-approval",
+            "description": "Obtain retained human approval binding the exact trigger/action rules, rule owner and affected scope; a typed approved flag alone is insufficient.",
+            "reason": "human_approval",
+            "evidence": []
+          },
+          {
+            "id": "feasibility-constraints",
+            "description": "Identify and review feasibility, subgroup protections and hard constraints before operational use.",
+            "reason": "constraint",
+            "evidence": []
+          },
+          {
+            "id": "cost-1",
+            "description": "Resolve the supplied cost prerequisite before recommending implementation: Obtain a scoped supplied cost estimate and budget decision.",
+            "reason": "cost",
+            "evidence": []
+          },
+          {
+            "id": "dependency-1",
+            "description": "Confirm an available, supported dependency before implementation: Authorized service configuration and delivery capacity",
+            "reason": "dependency",
+            "evidence": []
+          }
+        ],
+        "objections": [],
+        "limitations": [
+          "Conditional planning preview only. No alerts are sent and no work schedule is changed.",
+          "Scientific applicability is unqualified; arithmetic agreement and model agreement cannot grant scientific approval.",
+          "Candidate descriptions, rule approval and feasibility declarations are supplied attestations, not authenticated identity or independently established efficacy.",
+          "Reference integrity checks do not reproduce the semantic entailment of supplied cost, capacity, constraint or rule-approval documents; those declarations require human source-alignment review.",
+          "Source references support only their declared claims. Product specifications and mechanism descriptions are not delivered effects or proof of damage reduction.",
+          "Costs are supplied planning inputs; no monetary valuation, budget optimization, exposure-response or uptake inference is performed.",
+          "Current source access, permissions, applicability and independent reviews must be rechecked through governed task APIs when reusing this saved preview."
+        ]
+      },
+      "evidence_origin": "synthetic_fixture"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "d6b92610-fbaa-4c01-9783-62bca3458c2d",
+      "version": 1,
+      "sha256": "f2d2256794702e16e268b57d153f5fe12a0cb2772520939d03907a779aeb7975",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "b0199578-ada9-4993-8abe-960de2aa2669",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "assignment.summary",
+      "producer": {
+        "kind": "assignment",
+        "id": "b0199578-ada9-4993-8abe-960de2aa2669"
+      },
+      "created_at": "2026-10-27T12:02:57.708Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        },
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "760737b8-7f41-4185-a1b4-308a64e12059",
+          "version": 1,
+          "sha256": "6e3bd1dddefcfed75d870fb26fcd9782603e2c43550adf730fda2551b6f8685e"
+        },
+        {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        {
+          "id": "9e83da56-c848-4ca1-a08f-a35ad2e754a5",
+          "version": 1,
+          "sha256": "b8ccd553124431d80443258dc5ab5dcf162faf0cf9dd4240b968f4c1e3b5e4a3"
+        },
+        {
+          "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+          "version": 1,
+          "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+        },
+        {
+          "id": "6f18cbd6-702f-488c-a6a6-d43d6b90c7d7",
+          "version": 1,
+          "sha256": "4ac4ba460f85e0e44a8dce655b53ca58efbe5aba5adcc0366ab726760d534a38"
+        }
+      ],
+      "required_tools": [
+        "reduction.conditional-plan.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1",
+        "reduction.independent-check.v1"
+      ],
+      "content": {
+        "status": "completed",
+        "summary": "Conditional planning preview: conditional. 8 prerequisites and 0 objections remain visible. Rules require human approval; scientific applicability is unqualified and no action was delivered.",
+        "support": "supported",
+        "uncertainty": [
+          "Conditional planning preview only. No alerts are sent and no work schedule is changed.",
+          "Scientific applicability is unqualified; arithmetic agreement and model agreement cannot grant scientific approval.",
+          "Candidate descriptions, rule approval and feasibility declarations are supplied attestations, not authenticated identity or independently established efficacy.",
+          "Reference integrity checks do not reproduce the semantic entailment of supplied cost, capacity, constraint or rule-approval documents; those declarations require human source-alignment review.",
+          "Source references support only their declared claims. Product specifications and mechanism descriptions are not delivered effects or proof of damage reduction.",
+          "Costs are supplied planning inputs; no monetary valuation, budget optimization, exposure-response or uptake inference is performed.",
+          "Current source access, permissions, applicability and independent reviews must be rechecked through governed task APIs when reusing this saved preview.",
+          "A scientific owner must supply and adopt a non-synthetic applicability dossier for this exact intervention, endpoint, population, period and source method.",
+          "Name the human owner accountable for the exact digital rules.",
+          "Define the exact agreed trigger, input sources and timing for the proposed digital action.",
+          "Define the exact recipient/action scope and safeguards for the proposed alert or schedule change.",
+          "Obtain retained human approval binding the exact trigger/action rules, rule owner and affected scope; a typed approved flag alone is insufficient.",
+          "Identify and review feasibility, subgroup protections and hard constraints before operational use.",
+          "Resolve the supplied cost prerequisite before recommending implementation: Obtain a scoped supplied cost estimate and budget decision.",
+          "Confirm an available, supported dependency before implementation: Authorized service configuration and delivery capacity"
+        ],
+        "outputs": [
+          {
+            "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+            "version": 1,
+            "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "8032166e-3b1c-46e4-9b7e-65c2d7842849",
+      "version": 1,
+      "sha256": "abd8d780746de473b4bb17d147a314662b1f78aa8d7b98360e5287e2b46c7518",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "64c315d1-0a63-4251-a9ac-630e167f9e3b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "reduction.plan-review",
+      "producer": {
+        "kind": "assignment",
+        "id": "64c315d1-0a63-4251-a9ac-630e167f9e3b"
+      },
+      "created_at": "2026-10-27T12:02:58.660Z",
+      "dependencies": [
+        {
+          "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+          "version": 1,
+          "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+        }
+      ],
+      "required_tools": [
+        "reduction.conditional-plan-check.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.conditional-plan.v1",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1",
+        "reduction.independent-check.v1"
+      ],
+      "content": {
+        "schema_version": "haze.reduction.plan-review.v1",
+        "verdict": "supported",
+        "reviewed_artifacts": [
+          {
+            "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+            "version": 1,
+            "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+          },
+          {
+            "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+            "version": 1,
+            "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+          },
+          {
+            "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+            "version": 1,
+            "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+          },
+          {
+            "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+            "version": 1,
+            "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+          },
+          {
+            "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+            "version": 1,
+            "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+          }
+        ],
+        "reviewer": {
+          "assignment_id": "64c315d1-0a63-4251-a9ac-630e167f9e3b",
+          "revision": 1
+        },
+        "checks": [
+          {
+            "code": "preview_contract",
+            "passed": true,
+            "detail": "Preview request must satisfy its bounded operator-input contract."
+          },
+          {
+            "code": "plan_contract",
+            "passed": true,
+            "detail": "Conditional plan must satisfy the bounded unqualified, not-delivered contract."
+          },
+          {
+            "code": "independent_planning_reviewer",
+            "passed": true,
+            "detail": "Plan reviewer must differ from the exact plan producer."
+          },
+          {
+            "code": "plan_hash",
+            "passed": true,
+            "detail": "Plan reference must bind the exact saved conditional-plan artifact."
+          },
+          {
+            "code": "reconstructed_scenario",
+            "passed": true,
+            "detail": "Selected originals must independently reconstruct the checked assessment before supporting its planning labels."
+          },
+          {
+            "code": "arithmetic_claim_alignment",
+            "passed": true,
+            "detail": "Saved arithmetic review claim and checks must agree with current independent reconstruction."
+          },
+          {
+            "code": "target_and_scope",
+            "passed": true,
+            "detail": "Plan must preserve the exact selected target and affected scope."
+          },
+          {
+            "code": "candidate_version",
+            "passed": true,
+            "detail": "Candidate identity, version, supplied assertions and exact hash must remain unchanged."
+          },
+          {
+            "code": "exact_scenario_references",
+            "passed": true,
+            "detail": "Plan must bind the exact selection, assessment and independent arithmetic review."
+          },
+          {
+            "code": "source_closure",
+            "passed": true,
+            "detail": "Plan supporting sources must contain exactly selected originals and explicitly cited candidate evidence."
+          },
+          {
+            "code": "exact_rule_attestation",
+            "passed": true,
+            "detail": "Human rule ownership, approval and trigger/action rules must be retained as supplied attestations."
+          },
+          {
+            "code": "checked_point_estimate_label",
+            "passed": true,
+            "detail": "Point-estimate label and evidence status must come from the exact checked scenario."
+          },
+          {
+            "code": "honest_origin",
+            "passed": true,
+            "detail": "Synthetic numerical or candidate evidence must not be relabelled empirical."
+          },
+          {
+            "code": "complete_prerequisites",
+            "passed": true,
+            "detail": "Every unresolved scientific, rule, cost, capacity, subgroup, source or scenario prerequisite must remain explicit and bound to its evidence."
+          },
+          {
+            "code": "prerequisite_intent",
+            "passed": true,
+            "detail": "Prerequisites must retain a concrete conditional evidence/approval action; supplied prose cannot replace them with implementation or effect assertions."
+          },
+          {
+            "code": "retained_objections",
+            "passed": true,
+            "detail": "Hard constraint violations, unmet targets and unsupported effect/specification/delivery assertions must retain independent objections."
+          },
+          {
+            "code": "planning_state",
+            "passed": true,
+            "detail": "A hard constraint or unsupported effect assertion blocks the option; missing comparative evidence remains an evidence gap."
+          },
+          {
+            "code": "supported_recommendations",
+            "passed": true,
+            "detail": "Each material recommendation must use checked scenario evidence or one exact stated prerequisite; unsupported effects and immediate implementation cannot be recommended."
+          },
+          {
+            "code": "conditional_scientific_limits",
+            "passed": true,
+            "detail": "The preview cannot establish scientific approval, live delivery, available capacity or achieved reduction."
+          }
+        ],
+        "findings": [],
+        "limitations": [
+          "Checks exact source/claim lineage, independently reconstructed numerical support and supplied feasibility objections only.",
+          "Candidate narratives, source authenticity, professional credentials and scientific applicability are not independently established.",
+          "Cost, capacity, constraint and approval declarations remain supplied attestations; exact accessible references do not reproduce document entailment or authenticate their author.",
+          "Human approval is a retained local attestation; this preview sends no alert and changes no schedule."
+        ],
+        "planning_state": "conditional",
+        "scientific_qualification": "unqualified",
+        "delivery_status": "not_delivered",
+        "achieved_reduction": false
+      },
+      "evidence_origin": "synthetic_fixture"
+    },
+    {
+      "schema_version": "haze.artifact.v3",
+      "id": "4d174b3c-3b03-4f0a-8557-b9a66c1d58dc",
+      "version": 1,
+      "sha256": "b9c5861b2c33480f8ca26c01a3a1103de0a8c74be4a940965bcc6b91d6545020",
+      "identity": {
+        "principal": "local-user",
+        "workspace": "local-workspace"
+      },
+      "task_id": "c529aaeb-72bb-4904-8f1d-dc4c37504cad",
+      "run_id": "a8256f91-0fac-4674-97d8-2543aab621fc",
+      "assignment_id": "64c315d1-0a63-4251-a9ac-630e167f9e3b",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "kind": "assignment.summary",
+      "producer": {
+        "kind": "assignment",
+        "id": "64c315d1-0a63-4251-a9ac-630e167f9e3b"
+      },
+      "created_at": "2026-10-27T12:02:58.802Z",
+      "dependencies": [
+        {
+          "id": "bd4f6abb-74e6-41f7-a0a9-fb31ea2238e9",
+          "version": 1,
+          "sha256": "48b0703ce2d5190ec6871a53659fdf163ec09952d8bf9238d49e3a9db4a20108"
+        },
+        {
+          "id": "23b160dc-5f9f-4bd0-938a-1835e27bd1d1",
+          "version": 1,
+          "sha256": "4cc1945fb328a51f1815f762b59a368393d0323a03be743a54cfccc5d6bda7a0"
+        },
+        {
+          "id": "760737b8-7f41-4185-a1b4-308a64e12059",
+          "version": 1,
+          "sha256": "6e3bd1dddefcfed75d870fb26fcd9782603e2c43550adf730fda2551b6f8685e"
+        },
+        {
+          "id": "91b08194-a5da-48bd-9c9d-60e6a81144d9",
+          "version": 1,
+          "sha256": "89f3c067d4d0bac30709cbbda3ed8e47cc2987fb3fe426af3b93ad53b8696768"
+        },
+        {
+          "id": "9e83da56-c848-4ca1-a08f-a35ad2e754a5",
+          "version": 1,
+          "sha256": "b8ccd553124431d80443258dc5ab5dcf162faf0cf9dd4240b968f4c1e3b5e4a3"
+        },
+        {
+          "id": "6687b0c1-6be7-46ff-85e1-27c34f1bf78e",
+          "version": 1,
+          "sha256": "2ec711322a69a54020e6913ab53da37a1ccd929c096df04a344d45afdcac20d2"
+        },
+        {
+          "id": "6f18cbd6-702f-488c-a6a6-d43d6b90c7d7",
+          "version": 1,
+          "sha256": "4ac4ba460f85e0e44a8dce655b53ca58efbe5aba5adcc0366ab726760d534a38"
+        },
+        {
+          "id": "ec9babf2-2a40-45ff-b676-d8728b4e8e13",
+          "version": 1,
+          "sha256": "c6426070cd8e9468d001e7bf85b170266f207c16203a56b66442dcdd0cfecaf1"
+        },
+        {
+          "id": "d6b92610-fbaa-4c01-9783-62bca3458c2d",
+          "version": 1,
+          "sha256": "f2d2256794702e16e268b57d153f5fe12a0cb2772520939d03907a779aeb7975"
+        }
+      ],
+      "required_tools": [
+        "reduction.conditional-plan-check.v1",
+        "world.lookup",
+        "world.context",
+        "world.lineage",
+        "reduction.pin-selection",
+        "reduction.imported-residual-comparison.v1",
+        "reduction.independent-check.v1",
+        "reduction.conditional-plan.v1"
+      ],
+      "content": {
+        "status": "completed",
+        "summary": "Independent conditional-plan review agrees with the retained conditional result. Scientific approval and live delivery remain separate.",
+        "support": "supported",
+        "uncertainty": [
+          "Checks exact source/claim lineage, independently reconstructed numerical support and supplied feasibility objections only.",
+          "Candidate narratives, source authenticity, professional credentials and scientific applicability are not independently established.",
+          "Cost, capacity, constraint and approval declarations remain supplied attestations; exact accessible references do not reproduce document entailment or authenticate their author.",
+          "Human approval is a retained local attestation; this preview sends no alert and changes no schedule."
+        ],
+        "outputs": [
+          {
+            "id": "8032166e-3b1c-46e4-9b7e-65c2d7842849",
+            "version": 1,
+            "sha256": "abd8d780746de473b4bb17d147a314662b1f78aa8d7b98360e5287e2b46c7518"
+          }
+        ]
+      },
+      "evidence_origin": "derived"
+    }
+  ]
+}

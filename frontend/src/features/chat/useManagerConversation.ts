@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  ManagerChatQuestion,
-  ManagerChatRequest,
+import {
+  MANAGER_CHAT_MAX_TIMEOUT_MS,
+  type ManagerChatQuestion,
+  type ManagerChatRequest,
 } from '../../../../app/contracts/manager-chat.ts';
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import { agentService, AgentRunError } from '../../services/agents/index.ts';
@@ -204,7 +205,10 @@ export function useManagerConversation(
         );
       const response = await agentService.managerChat(
         request,
-        AbortSignal.any([controller.signal, AbortSignal.timeout(130_000)]),
+        AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(MANAGER_CHAT_MAX_TIMEOUT_MS + 10_000),
+        ]),
       );
       if (
         controller.signal.aborted ||

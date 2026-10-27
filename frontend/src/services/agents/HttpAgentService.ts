@@ -1,6 +1,9 @@
 import type { TaskRecord } from '../../../../app/contracts/tasks.ts';
 import type { ArtifactImport } from '../../../../app/contracts/artifacts.ts';
-import type { ManagerChatRequest } from '../../../../app/contracts/manager-chat.ts';
+import {
+  MANAGER_CHAT_MAX_TIMEOUT_MS,
+  type ManagerChatRequest,
+} from '../../../../app/contracts/manager-chat.ts';
 import type {
   TaskControl,
   TaskUpdate,
@@ -157,7 +160,7 @@ export class HttpAgentService implements AgentService {
   }
   async managerChat(
     request: ManagerChatRequest,
-    signal = AbortSignal.timeout(130_000),
+    signal = AbortSignal.timeout(MANAGER_CHAT_MAX_TIMEOUT_MS + 10_000),
   ) {
     const { managerChatRequestSchema, managerChatResponseSchema } =
       await import('../../../../app/contracts/manager-chat.ts');

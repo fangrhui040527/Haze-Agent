@@ -1,0 +1,242 @@
+{
+  "schema_version": "haze.damage.source-research.v1",
+  "research_date": "2026-10-27",
+  "timezone": "Asia/Singapore",
+  "purpose": "Source discovery registry for future web search; not a production adapter or scientifically approved input manifest.",
+  "sources": [
+    {
+      "id": "open-meteo-air-quality",
+      "input": "ambient_pm25",
+      "website": "https://open-meteo.com/en/docs/air-quality-api",
+      "api_base": "https://air-quality-api.open-meteo.com/v1/air-quality",
+      "authentication": "No key for permitted free noncommercial use; service terms and attribution apply.",
+      "verified_level": "sample_acquired",
+      "sample_file": "open-meteo-klang-modeled-pm25.json",
+      "coverage": "Global archive from August 2022; verify selected date and returned grid support.",
+      "limitations": "Modeled ambient concentrations, not observations or selected-fire-removed exposure.",
+      "discovery_query": "site:open-meteo.com/en/docs/air-quality-api pm2_5 CAMS global historical"
+    },
+    {
+      "id": "nasa-firms",
+      "input": "fire_detections",
+      "website": "https://firms.modaps.eosdis.nasa.gov/api/area/",
+      "api_url_template": "https://firms.modaps.eosdis.nasa.gov/api/area/csv/{MAP_KEY}/{SOURCE}/{WEST,SOUTH,EAST,NORTH}/{DAY_RANGE}/{YYYY-MM-DD}",
+      "authentication": "Free NASA FIRMS MAP_KEY; placeholders are not credentials.",
+      "verified_level": "documentation_checked",
+      "limitations": "1-5 days/request; verify product/date availability. Detections are not emissions or receptor attribution.",
+      "discovery_query": "site:firms.modaps.eosdis.nasa.gov/api area data availability VIIRS"
+    },
+    {
+      "id": "cams-gfas",
+      "input": "fire_emissions",
+      "website": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-fire-emissions-gfas?tab=overview",
+      "api_base": "https://ads.atmosphere.copernicus.eu/api",
+      "authentication": "Copernicus ADS account/personal access token; manually accepted dataset terms.",
+      "verified_level": "documentation_checked",
+      "coverage": "v1.2 daily 2003-2025; v1.4.2 hourly/daily from 2026; 0.1-degree grid.",
+      "limitations": "Estimated emissions need transport/attribution processing.",
+      "discovery_query": "site:ads.atmosphere.copernicus.eu cams-global-fire-emissions-gfas PM2.5"
+    },
+    {
+      "id": "era5-single-levels",
+      "input": "meteorology",
+      "website": "https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview",
+      "api_base": "https://cds.climate.copernicus.eu/api",
+      "authentication": "Copernicus CDS account/personal access token and dataset terms.",
+      "verified_level": "documentation_checked",
+      "limitations": "Select required variables, domain, levels and period for a reviewed transport model.",
+      "discovery_query": "site:cds.climate.copernicus.eu reanalysis-era5-single-levels hourly"
+    },
+    {
+      "id": "cams-eac4",
+      "input": "historical_pm25_grid",
+      "website": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-reanalysis-eac4?tab=overview",
+      "authentication": "ADS account/token and dataset terms.",
+      "verified_level": "documentation_checked",
+      "coverage": "Catalogue lists 2003-2025; 0.75-degree global, three-hourly output.",
+      "limitations": "Not a promised 2026 source. Verify PM2.5 kg/m3 conversion and district-scale suitability.",
+      "discovery_query": "site:ads.atmosphere.copernicus.eu cams-global-reanalysis-eac4 PM2.5"
+    },
+    {
+      "id": "cams-global-forecast",
+      "input": "recent_pm25_grid",
+      "website": "https://ads.atmosphere.copernicus.eu/datasets/cams-global-atmospheric-composition-forecasts?tab=overview",
+      "authentication": "ADS account/token and dataset terms.",
+      "verified_level": "documentation_checked",
+      "coverage": "Forecast archive from 2015 onward.",
+      "limitations": "Modeled fields, version changes and grid suitability require review.",
+      "discovery_query": "site:ads.atmosphere.copernicus.eu cams-global-atmospheric-composition-forecasts"
+    },
+    {
+      "id": "malaysia-monthly-pollution",
+      "input": "pollution_context",
+      "website": "https://data.gov.my/data-catalogue/air_pollution",
+      "api_url": "https://api.data.gov.my/data-catalogue?id=air_pollution&contains=2.5%40pollutant&sort=-date&limit=3",
+      "authentication": "No token; documented catalogue rate limit 4 requests/minute.",
+      "verified_level": "sample_acquired",
+      "sample_file": "malaysia-monthly-pm25.json",
+      "limitations": "Monthly aggregate through 2024, no station/district field; not event-specific Klang exposure.",
+      "discovery_query": "site:data.gov.my/data-catalogue/air_pollution monthly PM2.5"
+    },
+    {
+      "id": "doe-apims",
+      "input": "station_status_and_data_request_lead",
+      "website": "https://eqms.doe.gov.my/apims/main",
+      "authentication": "Public dashboard; historical numerical data route not verified.",
+      "verified_level": "documentation_checked",
+      "limitations": "API means Air Pollutant Index on this site. No documented historical raw station API verified.",
+      "discovery_query": "site:doe.gov.my APIMS PM2.5 historical station data"
+    },
+    {
+      "id": "asmc-episode-evidence",
+      "input": "episode_and_smoke_context",
+      "website": "https://asmc.asean.org/asmc-alerts/",
+      "catalogue": "https://wis2.asmc.asean.org/data-catalog/",
+      "authentication": "Public pages/products.",
+      "verified_level": "documentation_checked",
+      "limitations": "Checked map endpoints serve PNG/GIF; dispersion product is PM10, not PM2.5 counterfactual data.",
+      "discovery_query": "site:asmc.asean.org Malaysia haze alert Klang episode"
+    },
+    {
+      "id": "dosm-district-population",
+      "input": "population_totals_and_strata",
+      "website": "https://open.dosm.gov.my/data-catalogue/population_district",
+      "download_url": "https://storage.dosm.gov.my/population/population_district.csv",
+      "authentication": "Public CSV download; no key.",
+      "verified_level": "csv_acquired_api_filter_failed",
+      "sample_file": "klang-population.json",
+      "coverage": "Annual district data 2020-2026; source population unit thousands of persons.",
+      "limitations": "Filtered catalogue/OpenDOSM API requests returned HTTP400 with empty valid column list. Use verified CSV route. District totals are not a grid.",
+      "discovery_query": "site:open.dosm.gov.my/data-catalogue/population_district population age ethnicity"
+    },
+    {
+      "id": "worldpop-population-grid",
+      "input": "population_grid",
+      "website": "https://hub.worldpop.org/rest/data/pop",
+      "catalogue": "https://stac.worldpop.org/collections/MYS",
+      "authentication": "Exploration unauthenticated; documented 1000 REST calls/day without a key.",
+      "verified_level": "catalogue_checked",
+      "coverage": "R2025A 2015-2030 at 100m/1km listed.",
+      "limitations": "Specific raster, release, strata, year, terms and alignment not yet acquired/validated.",
+      "discovery_query": "site:worldpop.org Malaysia population R2025A 100m"
+    },
+    {
+      "id": "dosm-district-boundary",
+      "input": "administrative_geometry",
+      "website": "https://github.com/dosm-malaysia/data-open/tree/main/datasets/geodata",
+      "download_url": "https://raw.githubusercontent.com/dosm-malaysia/data-open/main/datasets/geodata/administrative_2_district.geojson",
+      "authentication": "Public download.",
+      "verified_level": "source_checked_not_retained",
+      "limitations": "Simplified geometry; pin commit and boundary meaning/year before analysis.",
+      "discovery_query": "site:github.com/dosm-malaysia/data-open administrative_2_district Klang"
+    },
+    {
+      "id": "dosm-district-deaths",
+      "input": "all_cause_mortality_context",
+      "website": "https://data.gov.my/data-catalogue/deaths_district_sex",
+      "api_url": "https://api.data.gov.my/data-catalogue?id=deaths_district_sex&filter=Klang%40district%2Cboth%40sex&sort=-date&limit=3",
+      "authentication": "No token; documented catalogue rate limit 4 requests/minute.",
+      "verified_level": "sample_acquired",
+      "sample_file": "klang-annual-deaths.json",
+      "limitations": "Annual all-cause counts and rate per1000, through2025; no selected cause/age/day detail or haze attribution.",
+      "discovery_query": "site:data.gov.my/data-catalogue/deaths_district_sex Klang deaths"
+    },
+    {
+      "id": "moh-health-baseline",
+      "input": "morbidity_baseline_and_admissions",
+      "website": "https://www.moh.gov.my/en/publications-and-reports/infographics-reports-statistics/health-facts/list-of-health-facts",
+      "restricted_data_portal": "https://myhdw.moh.gov.my/public/home",
+      "authentication": "Public summary reports; detailed MyHDW access requires registration/permission.",
+      "verified_level": "source_lead_checked",
+      "limitations": "No public event-day diagnosis-specific Klang-resident admission API verified.",
+      "discovery_query": "site:moh.gov.my respiratory admissions health facts MyHDW"
+    },
+    {
+      "id": "who-health-response-methods",
+      "input": "health_risk_function_method",
+      "website": "https://www.who.int/tools/airq",
+      "guidance": "https://www.who.int/publications/b/81870",
+      "authentication": "Public tool/guidance, not a coefficient API.",
+      "verified_level": "documentation_checked",
+      "limitations": "No risk coefficient selected. Endpoint/metric/duration/lag and applicability need review.",
+      "discovery_query": "site:who.int HRAPIE-2 AirQ concentration response short term PM2.5"
+    },
+    {
+      "id": "dosm-selangor-wages",
+      "input": "wage_valuation_context",
+      "website": "https://open.dosm.gov.my/data-catalogue/wages_state",
+      "api_url": "https://api.data.gov.my/data-catalogue?id=wages_state&filter=Selangor%40state%2Cboth%40sex&sort=-date&limit=3",
+      "authentication": "No token; documented catalogue rate limit 4 requests/minute.",
+      "verified_level": "sample_acquired",
+      "sample_file": "selangor-annual-wages.json",
+      "limitations": "Monthly RM wages reported annually for covered citizen employees; not haze-attributable absence.",
+      "discovery_query": "site:open.dosm.gov.my/data-catalogue/wages_state Selangor wages"
+    },
+    {
+      "id": "dosm-cpi",
+      "input": "price_year_context",
+      "website": "https://open.dosm.gov.my/data-catalogue/cpi_state",
+      "api_candidate": "https://api.data.gov.my/data-catalogue?id=cpi_state&limit=3",
+      "authentication": "Public documented catalogue candidate; no token.",
+      "verified_level": "documentation_checked_request_not_tested",
+      "limitations": "Select appropriate price basis/deflator; not a unit medical cost.",
+      "discovery_query": "site:open.dosm.gov.my/data-catalogue/cpi_state index"
+    },
+    {
+      "id": "bnm-exchange-rates",
+      "input": "currency_conversion_context",
+      "website": "https://data.gov.my/data-catalogue/exchangerates_daily_1700",
+      "api_candidate": "https://api.data.gov.my/data-catalogue?id=exchangerates_daily_1700&limit=3",
+      "authentication": "Public documented catalogue candidate; no token.",
+      "verified_level": "documentation_checked_request_not_tested",
+      "limitations": "Select buying/selling/middle and date. Does not resolve price year or value transfer.",
+      "discovery_query": "site:data.gov.my/data-catalogue/exchangerates_daily_1700 BNM"
+    },
+    {
+      "id": "moh-patient-fees",
+      "input": "patient_financial_incidence",
+      "website": "https://www.moh.gov.my/en/core/health-information/service-rates/caj-pesakit-luar",
+      "authentication": "Public fee schedule; no API verified.",
+      "verified_level": "documentation_checked",
+      "limitations": "Patient charges are not total treatment resource costs.",
+      "discovery_query": "site:moh.gov.my caj pesakit luar service rates"
+    },
+    {
+      "id": "oecd-mortality-valuation",
+      "input": "mortality_welfare_valuation_method",
+      "website": "https://www.oecd.org/en/publications/mortality-risk-valuation-in-policy-assessment_76ca89a2-en.html",
+      "authentication": "Public report/linked data.",
+      "verified_level": "documentation_checked",
+      "limitations": "No Malaysian value selected; transfer, currency/year and sensitivity review required.",
+      "discovery_query": "site:oecd.org mortality risk valuation policy assessment 2025"
+    },
+    {
+      "id": "doe-klang-intervention-evidence",
+      "input": "intervention_design_cost_effectiveness",
+      "website": "https://www.doe.gov.my/en/open-burning/",
+      "local_authority": "https://www.mbdk.gov.my/en/department/jabatan-penguatkuasa",
+      "authentication": "Public policy/operational pages; project-specific records may require request.",
+      "verified_level": "source_lead_checked",
+      "limitations": "No verified project-cost or causal-effectiveness API. Define activity and obtain incremental cost/effect evidence.",
+      "discovery_query": "site:mbdk.gov.my open burning enforcement budget annual report Klang"
+    }
+  ],
+  "web_search_connectors_documented_only": [
+    {
+      "provider": "Brave Web Search",
+      "documentation": "https://api-dashboard.search.brave.com/api-reference/web/search/get",
+      "endpoint": "https://api.search.brave.com/res/v1/web/search",
+      "method": "GET",
+      "authentication": "X-Subscription-Token header; provider API key required.",
+      "status": "Documentation checked; not provisioned or called."
+    },
+    {
+      "provider": "Tavily Search",
+      "documentation": "https://help.tavily.com/articles/4840311948-tavily-search-api",
+      "endpoint": "https://api.tavily.com/search",
+      "method": "POST",
+      "authentication": "Bearer provider API key.",
+      "status": "Documentation checked; not provisioned or called."
+    }
+  ]
+}

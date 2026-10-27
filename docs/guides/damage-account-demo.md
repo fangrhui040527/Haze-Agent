@@ -1,5 +1,17 @@
 # Damage account demo
 
+Open the regular frontend and choose **Demos → Damage account**, or go directly
+to `/demos/damage-account`. The completed synthetic account, numerical tables,
+component references and independent reviews are bundled with the frontend.
+Exact source links open the matching recorded artifact, including its version
+and hash. No separate demo command or model provider is needed to view it.
+
+The page is a read-only recording of a completed fixture run. Its reviews
+describe that saved example; they do not revalidate current live evidence.
+Use **Build your own account** to open the normal account workspace.
+
+## Execute a fresh demo workflow
+
 Run this from the repository root with the pinned Node/npm versions and the
 root and frontend dependencies installed:
 

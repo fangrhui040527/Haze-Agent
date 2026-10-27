@@ -7,6 +7,22 @@ import { DetailPage } from '../features/detail/DetailPage.tsx';
 import { TaskPage } from '../features/task-report/TaskPage.tsx';
 import { AppLayout, NotFoundPage, RouteErrorPage } from './AppLayout.tsx';
 
+const DemosPage = lazy(() =>
+  import('../features/demos/DemosPage.tsx').then((module) => ({
+    default: module.DemosPage,
+  })),
+);
+const DamageAccountDemoPage = lazy(() =>
+  import('../features/demos/DamageAccountDemoPage.tsx').then((module) => ({
+    default: module.DamageAccountDemoPage,
+  })),
+);
+const DamageReductionDemoPage = lazy(() =>
+  import('../features/demos/DamageReductionDemoPage.tsx').then((module) => ({
+    default: module.DamageReductionDemoPage,
+  })),
+);
+
 const DamageAccountPage = lazy(() =>
   import('../features/damage-account/DamageAccountPage.tsx').then((module) => ({
     default: module.DamageAccountPage,
@@ -60,6 +76,35 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <DashboardPage /> },
       { path: 'item/:id', element: <DetailPage /> },
       { path: 'demo-data', element: <DemoDataPage /> },
+      {
+        path: 'demos',
+        element: (
+          <Suspense fallback={<p role="status">Opening demos...</p>}>
+            <DemosPage />
+          </Suspense>
+        ),
+      },
+      ...[
+        'demos/damage-account',
+        'demos/damage-account/artifacts/:artifactId',
+      ].map((path) => ({
+        path,
+        element: (
+          <Suspense fallback={<p role="status">Opening the account demo...</p>}>
+            <DamageAccountDemoPage />
+          </Suspense>
+        ),
+      })),
+      {
+        path: 'demos/damage-reduction',
+        element: (
+          <Suspense
+            fallback={<p role="status">Opening the reduction demo...</p>}
+          >
+            <DamageReductionDemoPage />
+          </Suspense>
+        ),
+      },
       {
         path: 'nightshift/:jobId?',
         element: (
