@@ -42,6 +42,7 @@ export function createEvidenceCollectionCapability(): CapabilityDefinition {
         'Collects each provider’s current documented window; arbitrary historical dates are unsupported.',
         'Collected evidence remains unreviewed and is not automatically accepted into either World Model.',
         'Live readiness requires a captured configured source execution.',
+        'Optional web search returns third-party documents, not measurements: no unit, resolution or station checks apply, provider ranking is not reproducible, and the retained snippets are never accepted into either World Model.',
       ],
     },
     matches: (request) =>

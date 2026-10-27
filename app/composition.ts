@@ -49,6 +49,10 @@ import {
   createEvidenceCollectionCapability,
   createEvidenceCollectionTools,
 } from './capabilities/evidence-collection/index.js';
+import {
+  WEB_SEARCH_TOOL_ID,
+  createWebSearchTools,
+} from './capabilities/evidence-collection/web-search.js';
 import { ModelRouteRegistry } from './adapters/model-routes.js';
 import type { ModelRouteService } from './orchestration/model-service.js';
 import { CliNightshiftJobAdapter } from './adapters/nightshift/jobs.js';
@@ -175,18 +179,31 @@ export function createExecutionRegistry(options: {
     ...createDamageAccountIntakeAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
-  ])
-    registry.registerAssignment({
-      ...assignment,
+  ]) {
+    const optional = [
       ...(['HazeOps', 'WorkerShield', 'EvidenceCritic'].includes(
         assignment.agent,
       )
-        ? { optional_tools: [...NIGHTSHIFT_TOOL_IDS] }
-        : {}),
+        ? NIGHTSHIFT_TOOL_IDS
+        : []),
+      // Web search is scoped to evidence collection, not to every HazeOps
+      // assignment: it gathers unreviewed third-party documents, which is
+      // collection rather than review, protective analysis or planning.
+      // Widening it to another assignment should be a deliberate decision.
+      ...(assignment.agent === 'HazeOps' &&
+      assignment.capability === 'evidence-collection'
+        ? [WEB_SEARCH_TOOL_ID]
+        : []),
+    ];
+    registry.registerAssignment({
+      ...assignment,
+      ...(optional.length ? { optional_tools: optional } : {}),
     });
+  }
   for (const tool of createPm25Tools(options)) registry.registerTool(tool);
   for (const tool of createEvidenceCollectionTools(options))
     registry.registerTool(tool);
+  for (const tool of createWebSearchTools(options)) registry.registerTool(tool);
   for (const tool of createDamageAppraisalTools(options))
     registry.registerTool(tool);
   return registry;
