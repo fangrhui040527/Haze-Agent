@@ -3,7 +3,7 @@
 // Detections show where land burned, not who lit it; names are leads for verification.
 
 import { HOUR } from "../config.ts";
-import { runBackward } from "../engine.ts";
+import { runBackward, type BackwardResult } from "../engine.ts";
 import { buildDossier } from "../dossier.ts";
 import { db } from "../db.ts";
 import type { Claim, EvidenceRef, Scope, SourceAssessment } from "../orchestration/types.ts";
@@ -13,7 +13,11 @@ import { ref, shortHash } from "./common.ts";
 export const PEATFIRE_VERSION = "peatfire-sentinel-1.0";
 
 // recordConcessions=false leaves facts to an embedding app's own World Model (single authority).
-export async function investigate(scope: Scope, runId: string, recordConcessions = true): Promise<{ assessment: SourceAssessment; evidence: EvidenceRef[] }> {
+export async function investigate(
+  scope: Scope,
+  runId: string,
+  recordConcessions = true,
+): Promise<{ assessment: SourceAssessment; evidence: EvidenceRef[]; explain: BackwardResult["explain"] }> {
   const windowHours = Math.max(1, Math.round((scope.endMs - scope.startMs) / HOUR));
   const r = await runBackward(scope.town, scope.endMs, windowHours, shortHash(runId));
   const d = await buildDossier(r);
@@ -45,5 +49,6 @@ export async function investigate(scope: Scope, runId: string, recordConcessions
       dossier_file: d.file,
     },
     evidence: d.evidence.map((e) => ref(e, "peatfire")),
+    explain: r.explain,
   };
 }

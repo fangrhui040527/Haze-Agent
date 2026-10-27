@@ -191,6 +191,7 @@ export interface ManagerContext {
     reasons?: string[];
     templates?: AssignmentPlan[];
     exact_templates?: boolean;
+    renders_answer?: boolean;
     peer_requirements?: { definitions: [string, string]; purpose: string }[];
     prerequisites?: {
       definition_id: string;

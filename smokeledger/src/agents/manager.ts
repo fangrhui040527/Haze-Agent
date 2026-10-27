@@ -91,7 +91,10 @@ export async function synthesize(
     const inferences = src.claims.filter((c) => c.kind === "inference");
     const hotspots = inferences.filter((c) => /^Fire hotspot/.test(c.text));
     const rest = inferences.filter((c) => !/^Fire hotspot/.test(c.text));
-    summary = [...rest.slice(0, 1), ...hotspots.slice(0, 1), ...rest.slice(1, 4)].map((c) => c.text).join(" ");
+    // ...followed by how each share is calculated, so no share reaches a reader without its method.
+    const how = rest.filter((c) => /^How each share is calculated/.test(c.text));
+    const shares = rest.filter((c) => !/^How each share is calculated/.test(c.text));
+    summary = [...shares.slice(0, 1), ...hotspots.slice(0, 1), ...shares.slice(1, 4), ...how].map((c) => c.text).join(" ");
     rationale = src.claims.find((c) => c.kind === "calculation")?.text ?? "";
   }
 

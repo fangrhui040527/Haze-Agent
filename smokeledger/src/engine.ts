@@ -6,7 +6,7 @@ import path from "node:path";
 import { CONFIG, HOUR, PARAMS } from "./config.ts";
 import { db, insertMany } from "./db.ts";
 import { haversineKm } from "./geo.ts";
-import { attribute, clusterFires, smokeIndex, type Cluster, type Fire, type SmokeHour } from "./plume.ts";
+import { attribute, clusterFires, smokeIndex, type Cluster, type Fire, type SmokeHour, type FireExplanation } from "./plume.ts";
 import { backwardFromTown, ensemble, type MemberPath } from "./trajectory.ts";
 import { bestSeries, project, type PmPoint, type ProjectionHour } from "./closure.ts";
 import { WindField, type WindSample } from "./wind.ts";
@@ -107,6 +107,8 @@ export interface BackwardResult {
   members: number;
   firesConsidered: number;
   firesWithWeight: number;
+  /** Per-fire weight breakdown at the central wind speed (not persisted). */
+  explain: Map<string, FireExplanation>;
 }
 
 /**
@@ -120,7 +122,8 @@ export async function runBackward(townName: string, centerMs: number, windowHour
   const fields = await loadWindFields(fromMs, centerMs + HOUR);
   const fires = await loadFireRows(fromMs - PARAMS.kernel.peatTimeTolHours * HOUR, centerMs);
   const paths = backwardFromTown(fields, town, centerMs, windowHours);
-  const weights = attribute(fires, paths);
+  const explain = new Map<string, FireExplanation>();
+  const weights = attribute(fires, paths, explain);
 
   const runId = `bw-${slug(town.town)}-${stamp(centerMs)}${tag ? `-${tag}` : ""}`;
   await saveRun(runId, "backward", town.town, centerMs, {
@@ -145,6 +148,7 @@ export async function runBackward(townName: string, centerMs: number, windowHour
     members: paths.length,
     firesConsidered: fires.length,
     firesWithWeight: weights.size,
+    explain,
   };
 }
 

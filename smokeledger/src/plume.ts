@@ -50,7 +50,22 @@ function* near<T>(index: Map<string, T[]>, lat: number, lon: number, radiusKm: n
  * time (triangular in time) receive weight proportional to their emission.
  * Returns fire_id -> (wind scale -> weight), averaged over the members of each scale.
  */
-export function attribute(fires: Fire[], paths: MemberPath[]): Map<string, Map<number, number>> {
+/** How one fire earned its weight at the central wind speed: its strongest contact with the air. */
+export interface FireExplanation {
+  contacts: number;
+  weight: number;
+  frp: number;
+  peatFactor: number;
+  best: { distanceKm: number; sigmaKm: number; gapHours: number; windowHours: number; spaceFactor: number; timeFactor: number; hoursBack: number };
+}
+
+/**
+ * weight(fire) = sum over air-path points near it of
+ *   FRP x peat factor x exp(-d^2 / 2 sigma^2) x (1 - |dt| / window) / paths at that wind speed,
+ * with sigma = sigmaKm0 + sigmaKmPerHour x hours back, d <= maxSigmas x sigma and |dt| <= window.
+ * `explain` (optional) receives each fire's central-wind-speed breakdown.
+ */
+export function attribute(fires: Fire[], paths: MemberPath[], explain?: Map<string, FireExplanation>): Map<string, Map<number, number>> {
   const idx = gridIndex(fires);
   const membersPerScale = new Map<number, number>();
   for (const p of paths) membersPerScale.set(p.scale, (membersPerScale.get(p.scale) ?? 0) + 1);
@@ -67,8 +82,24 @@ export function attribute(fires: Fire[], paths: MemberPath[]): Map<string, Map<n
         if (dt > tolMs) continue;
         const d = haversineKm(pt.lat, pt.lon, f.lat, f.lon);
         if (d > maxSigmas * sigma) continue;
-        const w = emissionOf(f) * Math.exp(-(d * d) / (2 * sigma * sigma)) * (1 - dt / tolMs) * norm;
+        const space = Math.exp(-(d * d) / (2 * sigma * sigma));
+        const time = 1 - dt / tolMs;
+        const w = emissionOf(f) * space * time * norm;
         if (w <= 0) continue;
+        if (explain && path.scale === 1) {
+          const e = explain.get(f.fire_id) ?? {
+            contacts: 0,
+            weight: 0,
+            frp: f.frp,
+            peatFactor: f.on_peat ? PARAMS.peatEmissionFactor : 1,
+            best: { distanceKm: 0, sigmaKm: 0, gapHours: 0, windowHours: 0, spaceFactor: 0, timeFactor: 0, hoursBack: 0 },
+          };
+          e.contacts++;
+          e.weight += w;
+          if (space * time > e.best.spaceFactor * e.best.timeFactor)
+            e.best = { distanceKm: d, sigmaKm: sigma, gapHours: dt / HOUR, windowHours: tolMs / HOUR, spaceFactor: space, timeFactor: time, hoursBack: pt.hoursFromRelease };
+          explain.set(f.fire_id, e);
+        }
         let byScale = out.get(f.fire_id);
         if (!byScale) out.set(f.fire_id, (byScale = new Map()));
         byScale.set(path.scale, (byScale.get(path.scale) ?? 0) + w);

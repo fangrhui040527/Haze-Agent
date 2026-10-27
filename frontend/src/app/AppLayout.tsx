@@ -52,15 +52,6 @@ function Header() {
           </NavLink>
           <NavLink
             viewTransition
-            to="/manager"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Manager Workspace
-          </NavLink>
-          <NavLink
-            viewTransition
             to="/damage-account"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -76,33 +67,6 @@ function Header() {
             }
           >
             Damage reduction
-          </NavLink>
-          <NavLink
-            viewTransition
-            to="/world-model"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            World Model
-          </NavLink>
-          <NavLink
-            viewTransition
-            to="/nightshift"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Nightshift
-          </NavLink>
-          <NavLink
-            viewTransition
-            to="/demo-data"
-            className={({ isActive }) =>
-              `${styles.navLink} ${isActive ? styles.active : ''}`
-            }
-          >
-            Demo Data
           </NavLink>
           <NavLink
             to="/demos"

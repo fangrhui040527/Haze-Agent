@@ -68,7 +68,7 @@ export interface AgentModel {
 
 const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
-const OVERLOAD_STATUSES = new Set([429, 502, 503, 504]);
+const OVERLOAD_STATUSES = new Set([429, 500, 502, 503, 504]);
 const OVERLOAD_BACKOFF_MS = 4000;
 /**
  * Warm configured routes answer in seconds, but a cold endpoint can take far
@@ -401,16 +401,39 @@ export function resolveAgentModel(
     try {
       const request = async () => {
         requestSignal.throwIfAborted();
-        const response = await fetcher(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-          },
-          body,
-          signal: requestSignal,
-          redirect: 'error',
-        });
+        const send = () =>
+          fetcher(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            },
+            body,
+            signal: requestSignal,
+            redirect: 'error',
+          });
+        let response = await send();
+        // A rate-limited, overloaded or failing provider returned no completion, so a
+        // bounded resend cannot execute it twice; other failures are never resent.
+        for (
+          let retry = 1;
+          retry <= overloadRetries && OVERLOAD_STATUSES.has(response.status);
+          retry++
+        ) {
+          void response.body?.cancel().catch(() => undefined);
+          await new Promise<void>((resolve, reject) => {
+            const wait = setTimeout(resolve, OVERLOAD_BACKOFF_MS * retry);
+            requestSignal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(wait);
+                reject(new Error('Aborted'));
+              },
+              { once: true },
+            );
+          });
+          response = await send();
+        }
         if (!response.ok) {
           void response.body?.cancel().catch(() => undefined);
           // The status is the only way to tell a rejected request from an

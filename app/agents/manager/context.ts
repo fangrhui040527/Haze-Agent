@@ -148,6 +148,12 @@ export function assembleManagerContext(
                 .map((plan) => managerAssignmentPlanSchema.parse(plan))
             : [],
         ...(capability.exact_templates ? { exact_templates: true } : {}),
+        // Its saved answer is rendered from reviewed artifacts, not Manager prose
+        // (only flagged where a fixed plan uses it, to keep other contexts unchanged).
+        ...(capability.exact_templates &&
+        registry.finalRenderers.has(capability.card.id)
+          ? { renders_answer: true }
+          : {}),
         peer_requirements: relevant ? (capability.peer_requirements ?? []) : [],
         prerequisites: relevant ? (capability.prerequisites ?? []) : [],
         review_requirements: relevant

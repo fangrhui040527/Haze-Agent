@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { TaskQuestions } from '../chat/TaskQuestions.tsx';
 import { TaskResult } from '../chat/TaskResult.tsx';
@@ -14,8 +15,13 @@ import { Spinner } from '../../shared/ui/States.tsx';
 import styles from './TaskPage.module.css';
 import { BackLink } from '../../shared/ui/BackLink.tsx';
 import { ExternalWaitObserver } from '../nightshift/ExternalWaits.tsx';
+import { useSmokeLedgerTrace } from '../chat/SmokeLedgerGlobe.tsx';
+import { SmokeLedgerReport, readSmokeTrace } from './SmokeLedgerReport.tsx';
 import { TraceTimeline } from './TraceTimeline.tsx';
 import { timeAgo } from '../../shared/lib/time.ts';
+
+const SMOKELEDGER_CAPABILITY = 'smokeledger-episode';
+const NO_PRODUCTS: never[] = [];
 
 /** Restore this report's identity rather than whichever task was last open. */
 export function GeneralTaskPage({ taskId }: { taskId: string }) {
@@ -69,6 +75,86 @@ export function GeneralTaskReport({
 }) {
   const task = run.task?.id === taskId ? run.task : null;
   const record = task?.record;
+  const smoke = Boolean(
+    record?.assignments.some(
+      (assignment) => assignment.capability === SMOKELEDGER_CAPABILITY,
+    ),
+  );
+  const content = useSmokeLedgerTrace(
+    smoke && record?.result ? record.result.work_products : NO_PRODUCTS,
+  );
+  const trace = useMemo(() => readSmokeTrace(content), [content]);
+  if (!smoke)
+    return (
+      <article
+        className={styles.page}
+        aria-busy={!record || run.status === 'running'}
+      >
+        <BackLink>Back to the dashboard</BackLink>
+        <ReportDetails taskId={taskId} run={run} worldModel={worldModel} />
+      </article>
+    );
+  const error =
+    record?.error?.message ??
+    run.observationError ??
+    (record && ['failed', 'timed_out'].includes(record.status)
+      ? `The trace ended with status ${record.status.replace('_', ' ')}.`
+      : null);
+  return (
+    <article className={styles.page} aria-busy={!trace && !error}>
+      <BackLink>Back to the dashboard</BackLink>
+      {trace && record?.result ? (
+        <SmokeLedgerReport
+          trace={trace}
+          content={content}
+          result={record.result}
+        />
+      ) : (
+        <div className={styles.doc}>
+          <h1 className={styles.title}>Where did the smoke come from?</h1>
+          {record && (
+            <blockquote className={styles.quote}>
+              <span className={styles.label}>You asked</span>
+              <p className={styles.block}>
+                {record.original_request.objective}
+              </p>
+            </blockquote>
+          )}
+          {error ? (
+            <p className={styles.error} role="alert">
+              The trace did not finish. {error}
+            </p>
+          ) : (
+            <p className={styles.placeholder} role="status">
+              <Spinner />{' '}
+              {record?.result
+                ? 'Loading the result…'
+                : 'Tracing the smoke back to its source and checking the result. This usually takes 3–4 minutes; this page updates by itself.'}
+            </p>
+          )}
+          {record && <TaskQuestions run={run} />}
+        </div>
+      )}
+      <details>
+        <summary>Technical details (for reviewers)</summary>
+        <ReportDetails taskId={taskId} run={run} worldModel={worldModel} />
+      </details>
+    </article>
+  );
+}
+
+/** Saved state, receipts, review checks and World Model status, in full. */
+function ReportDetails({
+  taskId,
+  run,
+  worldModel,
+}: {
+  taskId: string;
+  run: AgentRun;
+  worldModel?: WorldModelStatusState;
+}) {
+  const task = run.task?.id === taskId ? run.task : null;
+  const record = task?.record;
   const status = record ? STATUS[record.status] : null;
   const error =
     record?.error?.message ??
@@ -86,11 +172,7 @@ export function GeneralTaskReport({
     record?.questions.some((question) => question.status === 'open') ?? false;
   const nextStep = Boolean(stopped) || openQuestions;
   return (
-    <article
-      className={styles.page}
-      aria-busy={loading || run.status === 'running'}
-    >
-      <BackLink>Back to the dashboard</BackLink>
+    <>
       <div className={styles.doc}>
         <span className={styles.label}>Task report</span>
         <h1 className={styles.title}>
@@ -205,6 +287,6 @@ export function GeneralTaskReport({
           </a>
         </p>
       )}
-    </article>
+    </>
   );
 }

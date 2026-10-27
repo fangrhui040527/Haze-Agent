@@ -178,3 +178,63 @@
     border-radius: 0;
   }
 }
+
+.explain {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.explain summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #fff;
+}
+
+.explain h4 {
+  margin: 0;
+}
+
+.explain p {
+  margin: 6px 0;
+}
+
+.explain button {
+  border: 0;
+  background: transparent;
+  color: #f3ece4;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.factors,
+.steps {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.factors li,
+.steps li {
+  margin: 3px 0;
+}
+
+.sums {
+  width: 100%;
+  margin: 8px 0;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.sums th,
+.sums td {
+  padding: 3px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.central td {
+  color: #fff;
+  font-weight: 600;
+}
