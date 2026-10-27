@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createExecutionRegistry } from '../../app/composition.js';
 import {
   artifactSchema,
@@ -376,6 +376,13 @@ function stable(value: unknown): unknown {
   return value;
 }
 
+// Every test here drives SQLite + LangGraph end to end; the file takes ~160s on
+// an idle machine. The 30s project default leaves too little headroom once
+// vitest runs these in parallel with other runtime suites, which produced an
+// intermittent timeout rather than a real failure. Budget generously -- a
+// genuine hang still fails, just later.
+vi.setConfig({ testTimeout: 120_000 });
+
 describe('pilot and digital-action recordkeeping integration', () => {
   it.each([
     'comparator',
@@ -406,7 +413,7 @@ describe('pilot and digital-action recordkeeping integration', () => {
       expect(scene.pilot.achieved_reduction).toBe(false);
       expect(scene.pilot.live_delivery).toBe('deferred');
     },
-    40_000,
+    120_000,
   );
 
   it('pins and independently reviews complete synthetic feasibility/protocol drafts without scientific qualification', async () => {

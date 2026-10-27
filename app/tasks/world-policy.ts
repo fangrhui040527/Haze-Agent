@@ -59,7 +59,14 @@ export function resolveWorldAcceptancePolicy(
 ): WorldAcceptancePolicy {
   if (configured === undefined || configured === null || configured === false)
     return disabledPolicy;
-  if (configured === 'research-v1') return researchPolicy;
+  // `HAZE_WORLD_ACCEPTANCE_POLICY=` in server configuration yields '' from
+  // process.env. That declares the setting without selecting a policy, which
+  // means "leave acceptance off" — not "unknown policy". Whitespace-only is the
+  // same case. Any other value still fails closed.
+  const selected =
+    typeof configured === 'string' ? configured.trim() : configured;
+  if (selected === '') return disabledPolicy;
+  if (selected === 'research-v1') return researchPolicy;
   throw new Error('Unknown World Model acceptance policy; refusing to start.');
 }
 

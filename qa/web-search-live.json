@@ -1,0 +1,85 @@
+{
+  "probe": "haze-web-search live",
+  "skipped": false,
+  "query": {
+    "schema_version": "haze.websearch.query.v1",
+    "query": "Malaysia transboundary haze air quality October 2026",
+    "max_results": 4,
+    "recency_days": 30
+  },
+  "capture": {
+    "schema_version": "haze.websearch.capture.v1",
+    "mode": "live",
+    "evidence_origin": "external_source",
+    "provider": "tavily",
+    "query": "Malaysia transboundary haze air quality October 2026",
+    "retrieved_at": "2026-10-27T12:57:29.501Z",
+    "response_sha256": "1dc7a481209b56a92e8f6243bac600295b0eb8bba07bcb2584b109b3645facc3",
+    "result_count": 4,
+    "results": [
+      {
+        "title": "October 8, 2026: Kuala Lumpur among top 10 most polluted cities in the world",
+        "url": "https://www.iqair.com/newsroom/october-8-2026-kuala-lumpur-among-top-10-most-polluted-cities-in-the-world",
+        "snippet": "However, this improvement may be temporary, as smoke from fires in Sumatra and Kalimantan continues to affect Peninsular Malaysia, with an ongoing risk of further transboundary haze.\n\nImage 12_Air quality map of Kuala Lumpur, Malaysia, as of October 8, 2026. Source: IQAir._\n\n### What is causing poor air quality in Kuala Lumpur? [...] October 8, 2026: Kuala Lumpur among top 10 most polluted cities in the world\n\nIQAir Staff Writers\n\nImage 9\n\n## Is the air quality good in Kuala Lumpur?\n\nAs of October 8, 2026, at 8:00 PM (local time), air quality in Kuala Lumpur, Malaysia is very unhealthy, with an AQI of 203, driven by traffic emissions, regional haze, and weather conditions. [...] Kuala Lumpur’s poor air quality is being worsened by smoke from fires in Sumatra and Kalimantan, Indonesia. Moderate to dense smoke haze is affecting parts of Peninsular Malaysia, with prevailing winds allowing pollution from these fires to spread across national borders (1).",
+        "score": 0.90810597
+      },
+      {
+        "title": "2026 Southeast Asian haze - Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze",
+        "snippet": "36. ↑ Hussein, Izz Laily (6 September 2026). \"More than 10 hectares of peatland catch fire in Pengerang | New Straits Times\". NST Online. Retrieved 19 October 2026.\n37. ↑ \"Air quality plummets to unhealthy levels across half of Malaysia as of 8am\". Archived from the original on 18 September 2026. Retrieved 18 September 2026.\n38. 1 2 \"All schools in Johor to close for two days amid worsening haze\". CNA. 7 October 2026. Archived from the original on 7 October 2026. Retrieved 7 October 2026. [...] The 2026 Southeast Asian haze crisis is an air pollution event and the current continuous transboundary haze season that is affecting several countries in Southeast Asia since 1 August 2026, including Brunei, Indonesia, Malaysia, the Philippines, Thailand, Timor Leste, and Singapore. As wildfires are also happening in Papua New Guinea, the haze has affected the country as well as causing transboundary haze to several islands of Eastern Indonesia including Lesser Sunda, Maluku, Papua and [...] 123. ↑ Hancock, Adam (6 October 2026). \"F1 drivers face 'unhealthy' Singapore air as 'super' El Niño fuels wildfire haze\". The Guardian. ISSN \"ISSN (identifier)\") 0261-3077. Retrieved 6 October 2026.\n124. ↑ Ellingworth, James (30 September 2026). \"Why Malaysia is hosting F1's Bahrain Grand Prix in a haze of air pollution\". WTHR. Retrieved 7 October 2026.\n125. ↑ \"Singaporeans mask up, cut back on outdoor activities as haze level hits season high\". CNA. Retrieved 9 October 2026.",
+        "score": 0.8296166
+      },
+      {
+        "title": "Environmental Awareness | The transboundary haze crisis across Southeast Asia escalated severely on October 20, 2026, as agricultural and peatland fires in Indonesia blanketed ... | Facebook",
+        "url": "https://www.facebook.com/groups/102138850392400/posts/2129794600960138",
+        "snippet": "Log in\n\nLog in\n\nForgotten account?\n\n issued urgent public health warnings as particulate pollution metrics breached hazardous limits, posing severe risks to vulnerable demographics.\n\nImage 1: Southeast Asia transboundary haze crisis intensifies forcing school closures in Malaysia and health warnings in Singapore - Tree Take\n\ntreetake.com Southeast Asia transboundary haze crisis intensifies forcing school closures in Malaysia and health warnings in Singapore - Tree Take\n\nLike\n\nComment\n\nShare [...] Comment\n\nShare\n\nSee more on Facebook\n\nSee more on Facebook\n\nEmail address or phone number\n\n \n\nPassword\n\n \n\nLog in\n\nForgotten password?\n\nor\n\nCreate new account\n\nImage 2",
+        "score": 0.7769112
+      },
+      {
+        "title": "Southeast Asia’s haze crisis will persist until polluters pay | Environment | Al Jazeera",
+        "url": "https://www.aljazeera.com/opinions/2026/10/20/southeast-asias-haze-crisis-will-persist-until-polluters-pay",
+        "snippet": "Save\n\nShare\n\nA woman wearing a face mask walks along a street in Kuala Lumpur as Malaysia continues to be shrouded in haze caused by fires in Indonesia\n\nA woman wearing a face mask walks along a street in Kuala Lumpur on October 19, 2026, as Malaysia continues to be shrouded in haze caused by fires in Indonesia [Jam Star Rosa/AFP]",
+        "score": 0.72348577
+      }
+    ]
+  },
+  "results": [
+    {
+      "name": "fixture mode stays synthetic even with a key present",
+      "ok": true,
+      "evidence_origin": "synthetic_fixture",
+      "retrieved_at": "2026-10-24T12:00:00.000Z"
+    },
+    {
+      "name": "live Tavily search returns usable evidence",
+      "ok": true,
+      "provider": "tavily",
+      "evidence_origin": "external_source",
+      "result_count": 4,
+      "response_sha256": "1dc7a481209b…",
+      "retrieved_at": "2026-10-27T12:57:29.501Z",
+      "elapsed_ms": 777
+    },
+    {
+      "name": "every result carries a title, absolute URL and snippet",
+      "ok": true,
+      "urls": [
+        "https://www.iqair.com/newsroom/october-8-2026-kuala-lumpur-among-top-10-most-polluted-cities-in-the-world",
+        "https://en.wikipedia.org/wiki/2026_Southeast_Asian_haze",
+        "https://www.facebook.com/groups/102138850392400/posts/2129794600960138",
+        "https://www.aljazeera.com/opinions/2026/10/20/southeast-asias-haze-crisis-will-persist-until-polluters-pay"
+      ]
+    },
+    {
+      "name": "the requested result cap is respected",
+      "ok": true,
+      "requested": 4,
+      "returned": 4
+    },
+    {
+      "name": "the provider key never appears in the retained capture",
+      "ok": true,
+      "key_leaked": false
+    }
+  ]
+}

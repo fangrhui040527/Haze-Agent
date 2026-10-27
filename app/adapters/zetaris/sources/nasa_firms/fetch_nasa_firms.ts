@@ -381,8 +381,17 @@ async function removeStagingDirectory(directory: string): Promise<void> {
   await fs.rm(resolved, { recursive: true, force: true });
 }
 
-async function getCsvFiles(dir: string): Promise<string[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
+export async function getCsvFiles(dir: string): Promise<string[]> {
+  // A cache directory that was never created is simply empty. Throwing ENOENT
+  // here would defeat the --skip-api guard, which needs a zero length to raise
+  // its actionable "No cached FIRMS CSV snapshot exists" message.
+  let entries;
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
   let files: string[] = [];
   for (const entry of entries) {
     const res = path.join(dir, entry.name);
@@ -534,8 +543,7 @@ export function parseCliArgs(args = process.argv.slice(2), env: NodeJS.ProcessEn
   return { locationIds, dayRange, container, skipApi, dryRun };
 }
 
-async function commitCache(staging: string, replaceCsv: boolean): Promise<void> {
-  const names = replaceCsv ? ["firms_csv", "firms_flat"] : ["firms_flat"];
+async function commitCache(staging: string, names: string[]): Promise<void> {
   const committed: Array<{ name: string; hadPrevious: boolean }> = [];
   try {
     for (const name of names) {
@@ -616,9 +624,22 @@ export async function main(): Promise<void> {
       await fs.writeFile(path.join(stagedFlat, "empty.csv"), header, "utf8");
       if (!skipApi) await fs.writeFile(path.join(stagedCsv, "empty.csv"), header, "utf8");
     }
-    await publishToContainer(stagedFlat, container);
-    await registerTable(false);
-    await commitCache(staging, !skipApi);
+    // Persist the raw snapshot BEFORE the publish step. A Zetaris outage must
+    // not throw away a successful NASA fetch: this cache is exactly what makes
+    // the documented --skip-api retry possible. Without it, a failed publish
+    // discarded the data and --skip-api could never find a snapshot to reuse.
+    if (!skipApi) await commitCache(staging, ["firms_csv"]);
+    try {
+      await publishToContainer(stagedFlat, container);
+      await registerTable(false);
+    } catch (error) {
+      if (!skipApi)
+        console.error(
+          "The fetched FIRMS snapshot was cached locally. Once Zetaris is reachable, retry the publish with --skip-api instead of re-fetching.",
+        );
+      throw error;
+    }
+    await commitCache(staging, ["firms_flat"]);
     console.log("NASA FIRMS active fire ingestion completed.");
   } finally {
     await removeStagingDirectory(staging);

@@ -1,0 +1,251 @@
+{
+  "use_case": "UC-31 HTTP API end-to-end contract",
+  "port": 19643,
+  "state_dir": "C:\\Users\\USER\\AppData\\Local\\Temp\\haze-api-e2e-9zJ3G3",
+  "totals": {
+    "total": 33,
+    "pass": 33,
+    "fail": 0
+  },
+  "checks": [
+    {
+      "name": "server boots on fresh STATE_DIR",
+      "ok": true
+    },
+    {
+      "name": "GET /api/capabilities returns registered capabilities",
+      "ok": true,
+      "status": 200,
+      "keys": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ]
+    },
+    {
+      "name": "capabilities route rejects an unsupported query key",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "POST without Origin rejected 403 same_origin_required",
+      "ok": true,
+      "status": 403,
+      "code": "same_origin_required"
+    },
+    {
+      "name": "POST with foreign Origin rejected 403",
+      "ok": true,
+      "status": 403,
+      "code": "same_origin_required"
+    },
+    {
+      "name": "GET with Sec-Fetch-Site: cross-site rejected 403",
+      "ok": true,
+      "status": 403,
+      "code": "same_origin_required"
+    },
+    {
+      "name": "Non-localhost Host header rejected 403 local_only",
+      "ok": true,
+      "status": 403,
+      "code": "local_only"
+    },
+    {
+      "name": "POST non-JSON content-type rejected 415 json_required",
+      "ok": true,
+      "status": 415,
+      "code": "json_required"
+    },
+    {
+      "name": "POST without Idempotency-Key rejected (4xx)",
+      "ok": true,
+      "status": 400,
+      "code": "idempotency_key_required"
+    },
+    {
+      "name": "Retired haze.task.request.v1 rejected with v3 guidance",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_task_request",
+      "mentions_v3": true
+    },
+    {
+      "name": "Retired haze.task.request.v2 rejected with v3 guidance",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_task_request",
+      "mentions_v3": true
+    },
+    {
+      "name": "Client-supplied identity/permissions rejected",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_task_request"
+    },
+    {
+      "name": "POST valid v3 request admitted",
+      "ok": true,
+      "status": 202,
+      "id": "fd98cef1-09cd-4abf-b277-7509cd6bf38a",
+      "bodyKeys": [
+        "task_id",
+        "status_url",
+        "events_url",
+        "reused"
+      ]
+    },
+    {
+      "name": "Identical redelivery under same Idempotency-Key returns recorded receipt",
+      "ok": true,
+      "status": 202,
+      "id": "fd98cef1-09cd-4abf-b277-7509cd6bf38a",
+      "expected": "fd98cef1-09cd-4abf-b277-7509cd6bf38a"
+    },
+    {
+      "name": "Redelivery is flagged reused=true (not admitted as new work)",
+      "ok": true,
+      "first_reused": false,
+      "replay_reused": true
+    },
+    {
+      "name": "Different content under same Idempotency-Key fails",
+      "ok": true,
+      "status": 409,
+      "code": "idempotency_conflict"
+    },
+    {
+      "name": "GET /api/tasks/:id returns task",
+      "ok": true,
+      "status": 200,
+      "keys": [
+        "schema_version",
+        "id",
+        "original_request",
+        "objective_revision",
+        "current_run_id",
+        "generation",
+        "state_revision",
+        "identity",
+        "permissions",
+        "mode",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "GET events?after=0 returns durable events",
+      "ok": true,
+      "status": 200,
+      "count": 52
+    },
+    {
+      "name": "events cursor is exclusive (after=N omits N)",
+      "ok": true,
+      "status": 200,
+      "firstSeq": 1,
+      "returned": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "name": "GET /api/tasks/:id/world responds",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "task-world route rejects an unsupported query key",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "events route rejects an unsupported query key (policy parity with other routes)",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "events route rejects a duplicate `after` key rather than silently using the first",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query",
+      "returned_events": 0
+    },
+    {
+      "name": "task-read route rejects an unsupported query key",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "CONTROL: task-list route rejects unsupported query key (expected to pass)",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "POST control pause accepted or returns structured refusal",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_control",
+      "body": {
+        "error": {
+          "code": "invalid_control",
+          "message": "Send a strict haze.task.control.v3 mutation with current run and state revisions."
+        }
+      }
+    },
+    {
+      "name": "Unknown control action rejected",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_control"
+    },
+    {
+      "name": "Oversize artifact (>1MiB decoded) rejected",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_artifact_import"
+    },
+    {
+      "name": "Valid artifact import accepted",
+      "ok": true,
+      "status": 201,
+      "id": "b1843f78-c7ce-402a-a611-5cde45d896d0"
+    },
+    {
+      "name": "GET artifact returns immutable record with hash",
+      "ok": true,
+      "status": 200,
+      "has_sha256": true
+    },
+    {
+      "name": "artifact-read route rejects an unsupported query key",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_query"
+    },
+    {
+      "name": "Disallowed artifact media_type rejected",
+      "ok": true,
+      "status": 400,
+      "code": "invalid_artifact_import"
+    },
+    {
+      "name": "Unknown route returns 404",
+      "ok": true,
+      "status": 404
+    }
+  ],
+  "server_log_tail": "Local Haze application API (EXPLICIT FIXTURE): http://127.0.0.1:19643/api/tasks (dashboard, HazeOps and World Model share this runtime)\n"
+}

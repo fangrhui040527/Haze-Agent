@@ -1,0 +1,89 @@
+{
+  "probe": "upstream data source retrieval",
+  "note": "Hits each upstream directly with the same endpoint construction the Zetaris source scripts use. Zetaris itself is NOT required for this probe; the scripts normally register these endpoints as Zetaris REST tables.",
+  "location": {
+    "name": "Kuala Lumpur",
+    "latitude": 3.1412,
+    "longitude": 101.68653
+  },
+  "totals": {
+    "total": 5,
+    "live": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "source": "open-meteo wind (open_meteo_wind, wind)",
+      "status": "LIVE",
+      "http_status": 200,
+      "elapsed_ms": 850,
+      "hours": 96,
+      "numeric_wind_speeds": 96,
+      "has_850hPa": true,
+      "sample": {
+        "time": "2026-10-26T00:00",
+        "wind_speed_10m": 1.6,
+        "wind_direction_10m": 346
+      },
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=3.14120&longitude=101.68653&hourly=wind_speed_10m%2Cwind_direction_10m%2Cwind_speed_850hPa%2Cwind_direction_850hPa&wind_speed_unit=ms&past_days=1&forecast_days=3&timezone=GMT"
+    },
+    {
+      "source": "open-meteo air quality (air_quality, open_meteo_pm25)",
+      "status": "LIVE",
+      "http_status": 200,
+      "elapsed_ms": 730,
+      "hours": 72,
+      "numeric_pm2_5": 72,
+      "pm2_5_min": 14.5,
+      "pm2_5_max": 90.8,
+      "sample": {
+        "time": "2026-10-26T00:00",
+        "pm2_5": 32.4,
+        "pm10": 33.2
+      },
+      "url": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=3.14120&longitude=101.68653&hourly=pm2_5%2Cpm10&past_days=1&forecast_days=2&timezone=GMT"
+    },
+    {
+      "source": "NASA POWER daily point (nasa_power)",
+      "status": "LIVE",
+      "http_status": 200,
+      "elapsed_ms": 1694,
+      "day_requested": "20261020",
+      "parameters_returned": 20,
+      "parameters_missing": [],
+      "sample": {
+        "T2M": 27.17,
+        "WS10M": 0.66
+      },
+      "url": "https://power.larc.nasa.gov/api/temporal/daily/point?parameters=WS10M,WD10M,RH2M,QV2M,GWETTOP,GWETROOT,PRECTOTCORR,T2M,T2M_MAX,T2M_MIN,T2MDEW,WS10M_MAX,GWETPROF,WS2M,T2MWET,PS,WS50M,WD50M,TS,EVLAND&community=AG&longitude=101.68653&latitude=3.1412&start=20261020&end=20261020&format=JSON"
+    },
+    {
+      "source": "data.gov.my weather forecast (weather)",
+      "status": "LIVE",
+      "http_status": 200,
+      "elapsed_ms": 85,
+      "rows": 3,
+      "keys": [
+        "location",
+        "date",
+        "morning_forecast",
+        "afternoon_forecast",
+        "night_forecast",
+        "summary_forecast",
+        "summary_when",
+        "min_temp"
+      ],
+      "url": "https://api.data.gov.my/weather/forecast/?limit=3"
+    },
+    {
+      "source": "NASA FIRMS active fire CSV (nasa_firms)",
+      "status": "LIVE",
+      "http_status": 200,
+      "elapsed_ms": 1037,
+      "header_fields": 14,
+      "data_rows": 0,
+      "has_expected_columns": true
+    }
+  ]
+}
