@@ -331,3 +331,47 @@ button.tile:hover {
   color: var(--color-muted);
   font-weight: 500;
 }
+
+/* ── Layout pass: facts and key/values as tables, cards in columns ── */
+.tile,
+.card {
+  background: var(--color-panel);
+}
+.tileValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.facts,
+.kv {
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 0;
+  border: var(--hairline);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.facts > div {
+  display: contents;
+}
+.facts dt,
+.facts dd,
+.kv dt,
+.kv dd {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--hairline);
+}
+.facts dt,
+.kv dt {
+  background: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  align-items: start;
+}
+.table {
+  composes: data-table from global;
+}

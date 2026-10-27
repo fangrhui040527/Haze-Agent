@@ -51,12 +51,6 @@ const WorldModelPage = lazy(() =>
   })),
 );
 
-const MemoryPage = lazy(() =>
-  import('../features/memory/MemoryPage.tsx').then((module) => ({
-    default: module.MemoryPage,
-  })),
-);
-
 const NightshiftPage = lazy(() =>
   import('../features/nightshift/NightshiftPage.tsx').then((module) => ({
     default: module.NightshiftPage,
@@ -118,14 +112,6 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<p role="status">Opening World Model...</p>}>
             <WorldModelPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'memory',
-        element: (
-          <Suspense fallback={<p role="status">Opening Memory...</p>}>
-            <MemoryPage />
           </Suspense>
         ),
       },

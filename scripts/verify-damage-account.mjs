@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { createReductionVerificationReader } from './reduction-verification-http.mjs';
 import { createSyntheticDamageImport } from '../dist/capabilities/damage-appraisal/fixtures.js';
 import {
   damageAccountSchema,
@@ -33,7 +34,12 @@ async function boot() {
     new URL('./serve-tasks.mjs', import.meta.url),
     fixture ? ['--fixture'] : [],
     {
-      env: { ...process.env, STATE_DIR: root, HAZE_TASK_PORT: '0' },
+      env: {
+        ...process.env,
+        STATE_DIR: root,
+        HAZE_TASK_STATE_DIR: root,
+        HAZE_TASK_PORT: '0',
+      },
       stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
     },
   );
@@ -63,26 +69,10 @@ async function stop() {
     child.kill('SIGTERM');
   });
 }
-async function read(origin, path, body, key = randomUUID()) {
-  const response = await fetch(
-    `${origin}${path}`,
-    body === undefined
-      ? undefined
-      : {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Origin: origin,
-            'Idempotency-Key': key,
-          },
-          body: JSON.stringify(body),
-        },
-  );
-  const data = await response.json();
-  if (!response.ok)
-    throw new Error(`HTTP ${response.status}: ${JSON.stringify(data)}`);
-  return data;
-}
+const transportRetries = [];
+const read = createReductionVerificationReader({
+  onRetry: (entry) => transportRetries.push(entry),
+});
 async function settle(origin, id) {
   const deadline = Date.now() + 310000;
   for (;;) {
@@ -200,6 +190,7 @@ try {
     checked_at: new Date().toISOString(),
     mode: fixture ? 'fixture' : 'live',
     passed,
+    transport_retries: transportRetries,
     restart,
     duplicate_delivery: duplicate.task_id === admission.task_id,
     exact_component_closure: exactClosure,

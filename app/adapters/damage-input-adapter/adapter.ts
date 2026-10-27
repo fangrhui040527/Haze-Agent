@@ -365,6 +365,14 @@ export class WorldModelDamageInputAdapter {
       )
         throw new Error('A supporting World Model source has an active hold.');
     }
+    const evidence = this.evidence(candidate, context);
+    if (inputs.scope.reporting) {
+      if (!this.policy.checkScientificInputs)
+        throw new Error(
+          'Scientific input review is required before World Model reuse.',
+        );
+      this.policy.checkScientificInputs(inputs, evidence);
+    }
     this.reconstruct(candidate, context);
   }
 

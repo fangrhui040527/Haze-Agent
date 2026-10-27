@@ -119,7 +119,6 @@ export const STATIONS: Record<AgentId, Station> = {
   ),
   worldmodel: station(15, 3, desk(14, 4, 3, 'books'), 'read', 'World Model'),
   workershield: station(7, 8, desk(6, 9, 3, 'helmet'), 'type', 'WorkerShield'),
-  hmem: station(16, 8, desk(15, 9, 3, 'folders'), 'read', 'H-Mem'),
 };
 
 export const MEETING_TABLE: Furniture = {

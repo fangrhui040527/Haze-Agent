@@ -202,17 +202,6 @@ export const LOOKS: Record<AgentId, Look> = {
       P: '#2b2b33',
     },
   },
-  hmem: {
-    palette: {
-      ...base,
-      H: '#c9c9c9',
-      S: '#e2b08a',
-      D: '#bb8763',
-      C: '#2a9d8f',
-      T: '#bfe8e2',
-      P: '#33443f',
-    },
-  },
   evidencecritic: {
     palette: {
       ...base,

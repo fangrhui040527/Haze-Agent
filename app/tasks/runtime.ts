@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { evidenceResearchToolGranted } from '../contracts/evidence-tools.js';
 import type {
   ManagerConversationFactory,
   ManagerConversationService,
@@ -832,6 +833,7 @@ export class TaskRuntime {
       },
       tools: [...this.options.registry.tools.values()]
         .filter((tool) => tool.mode === (this.options.mode ?? 'live'))
+        .filter((tool) => evidenceResearchToolGranted(request, tool.id))
         .filter(
           (tool) =>
             !NIGHTSHIFT_TOOL_IDS.includes(tool.id as NightshiftToolId) ||
@@ -3201,6 +3203,23 @@ export class TaskRuntime {
         ))
     );
   }
+  private toolCallCount(
+    task: TaskRecord,
+    assignment: Assignment,
+    toolId: string,
+  ): number {
+    return this.store
+      .attempts(task.id, task.identity)
+      .filter(
+        (attempt) =>
+          attempt.kind === 'tool' &&
+          attempt.assignment_id === assignment.id &&
+          typeof attempt.details === 'object' &&
+          attempt.details !== null &&
+          !Array.isArray(attempt.details) &&
+          attempt.details.tool === toolId,
+      ).length;
+  }
   private async executeAssignment(
     task: TaskRecord,
     assignment: Assignment,
@@ -3363,8 +3382,20 @@ export class TaskRuntime {
                   input: parsed,
                 },
                 signal,
-                async () =>
-                  tool.outputSchema.parse(
+                async () => {
+                  // The current operation has already charged its attempt;
+                  // graph replay returns its receipt before entering this body.
+                  if (
+                    tool.max_calls_per_assignment !== undefined &&
+                    this.toolCallCount(task, assignment, id) >
+                      tool.max_calls_per_assignment
+                  )
+                    throw new TaskError(
+                      422,
+                      'tool_assignment_limit',
+                      'This assignment exhausted the registered tool call limit; retain the existing result or schedule a new bounded assignment.',
+                    );
+                  return tool.outputSchema.parse(
                     await (NIGHTSHIFT_TOOL_IDS.includes(id as NightshiftToolId)
                       ? this.executeNightshiftTool(
                           id as NightshiftToolId,
@@ -3377,7 +3408,8 @@ export class TaskRuntime {
                           identity: structuredClone(context.identity),
                           inputs: structuredClone(context.inputs),
                         })),
-                  ),
+                  );
+                },
                 (output) => ({ output: json(output) }),
               );
         // Governed context tools can durably pin inputs while an assignment runs.
@@ -3597,6 +3629,14 @@ export class TaskRuntime {
           },
           toolCards: assignment.tools
             .filter((id) => task.permissions.tools.includes(id))
+            .filter((id) => {
+              const tool = this.options.registry.tools.get(id);
+              return (
+                tool?.max_calls_per_assignment === undefined ||
+                this.toolCallCount(task, assignment, id) <
+                  tool.max_calls_per_assignment
+              );
+            })
             .map((id) => ({
               id,
               description: this.options.registry.tools.get(id)?.description,

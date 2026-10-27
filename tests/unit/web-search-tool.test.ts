@@ -173,6 +173,49 @@ describe('HazeOps web search evidence tool', () => {
     expect(String(error)).toContain('<redacted>');
   });
 
+  it('preserves original bytes, provider usage and missing publication dates separately from observations', async () => {
+    const fetched = bytes({
+      results: [
+        {
+          title: 'Official source',
+          url: 'https://example.invalid/undated',
+          content: 'A retained discovery lead.',
+          published_date: null,
+        },
+        {
+          title: 'Updated source',
+          url: 'https://example.invalid/updated',
+          content: 'Another lead.',
+          published_date: 'Tue, 27 Oct 2026 12:00:00 GMT',
+        },
+      ],
+      request_id: 'provider-request-123',
+      usage: { credits: 1 },
+    });
+    const search = vi.fn<SearchFn>().mockResolvedValue(fetched);
+    const result = (await tool('live', search).execute(
+      query({ topic: 'general', language: 'ms', start_date: '2026-01-01' }),
+      context(),
+    )) as Record<string, unknown>;
+    expect(Buffer.from(result.raw_response_base64 as string, 'base64')).toEqual(
+      fetched.raw,
+    );
+    expect(result.usage).toEqual({ credits: 1 });
+    expect(result.provider_request_id).toBe('provider-request-123');
+    expect((result.results as Record<string, unknown>[])[0]).not.toHaveProperty(
+      'published_date',
+    );
+    expect((result.results as Record<string, unknown>[])[0]?.reference).toEqual(
+      { response_sha256: fetched.sha256, result_index: 0 },
+    );
+    expect(result).not.toHaveProperty('observation_period');
+    expect(search.mock.calls[0]?.[0]).toMatchObject({
+      topic: 'general',
+      language: 'ms',
+      start_date: '2026-01-01',
+    });
+  });
+
   it('refuses an oversize provider response', async () => {
     const huge = Buffer.alloc(1024 * 1024 + 1, 0x20);
     const search = vi.fn<SearchFn>().mockResolvedValue({
@@ -194,6 +237,27 @@ describe('HazeOps web search evidence tool', () => {
     await expect(
       tool('live', search).execute(query(), context()),
     ).rejects.toThrow();
+  });
+
+  it('rejects executable result links and credentials in source URLs', async () => {
+    for (const url of [
+      'javascript:alert(1)',
+      'data:text/html,test',
+      'https://user:password@example.invalid/source',
+    ]) {
+      const search = vi
+        .fn<SearchFn>()
+        .mockResolvedValue(
+          bytes({
+            results: [
+              { url, title: 'Unsafe result', content: 'Untrusted text.' },
+            ],
+          }),
+        );
+      await expect(
+        tool('live', search).execute(query(), context()),
+      ).rejects.toThrow();
+    }
   });
 
   it('rejects an unusable query or an out-of-range result count', () => {

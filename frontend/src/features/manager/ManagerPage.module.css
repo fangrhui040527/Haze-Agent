@@ -1,5 +1,5 @@
 .page {
-  max-width: 62rem;
+  max-width: var(--content-max);
   margin-inline: auto;
   padding-block: var(--space-4) var(--space-6);
   display: grid;
@@ -131,4 +131,65 @@
 
 .permissions input {
   accent-color: var(--color-accent);
+}
+
+/* ── Layout: controls and context on the left, the workspace on the right ── */
+.columns {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.side,
+.mainCol {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.side > * {
+  padding: var(--space-4);
+  border: var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+}
+
+@media (min-width: 1024px) {
+  .columns {
+    grid-template-columns: minmax(300px, 4fr) minmax(0, 8fr);
+  }
+
+  .side {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+.facts {
+  width: 100%;
+  font-size: var(--text-sm);
+}
+
+.facts th,
+.facts td {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  border-bottom: var(--hairline);
+  text-align: left;
+  vertical-align: top;
+}
+
+.facts th {
+  width: 9rem;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.facts td {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }

@@ -58,6 +58,20 @@ import type { ModelRouteService } from './orchestration/model-service.js';
 import { CliNightshiftJobAdapter } from './adapters/nightshift/jobs.js';
 import type { NightshiftJobPort } from './orchestration/ports.js';
 import { NIGHTSHIFT_TOOL_IDS } from './tasks/nightshift-tools.js';
+import {
+  createDamageEvidenceResearchCapability,
+  createDamageEvidenceResearchAssignments,
+  createCapturedExcerptTools,
+} from './capabilities/damage-evidence-research/index.js';
+import {
+  DamageEvidenceMaintenance,
+  createDamageEvidenceMaintenanceExtension,
+} from './capabilities/damage-evidence-maintenance/index.js';
+import {
+  createDamageEvidenceReviewAssignments,
+  createDamageEvidenceReviewTools,
+  assertScientificInputBindings,
+} from './capabilities/damage-evidence-review/index.js';
 
 export function createNightshiftJobAdapter(
   env: NodeJS.ProcessEnv,
@@ -112,6 +126,18 @@ export function createDashboardServices(options: {
   }
 }
 
+/** Compose domain collectors at the application boundary, outside core HTTP routing. */
+export function startApplicationServices(
+  runtime: { extension(id: string): { service?: unknown } | undefined },
+  dashboard: ReturnType<typeof createDashboardServices>,
+): void {
+  const maintenance = runtime.extension('damage-evidence-maintenance')?.service;
+  if (maintenance instanceof DamageEvidenceMaintenance)
+    maintenance.attach(dashboard.hazeops);
+  dashboard.hazeops.start();
+  dashboard.view.start();
+}
+
 /** The single composition root owns all domain imports and executable registration. */
 export function createExecutionRegistry(options: {
   mode: ExecutionMode;
@@ -119,15 +145,22 @@ export function createExecutionRegistry(options: {
 }): ExecutionRegistry {
   const registry = new ExecutionRegistry();
   registry.registerExtension(createReductionProgrammeExtension);
+  registry.registerExtension(
+    createDamageEvidenceMaintenanceExtension(options.env),
+  );
   registry.registerTaskView('reduction-preview', readDamageReductionPreview);
   registry.registerTaskView('reduction-pilot', readPilotTaskView);
   registry.registerStoreTools((store, mode) => [
-    createWorldModelDamageInputTool(store, mode, damageWorldInputPolicy),
+    createWorldModelDamageInputTool(store, mode, {
+      ...damageWorldInputPolicy,
+      checkScientificInputs: assertScientificInputBindings,
+    }),
     createDamageReductionSelectionTool(store, mode),
     ...createDamageReductionTools({ store, mode }),
     createDamageReductionClaimTool(store, mode),
     ...createConditionalPlanningTools(store, mode),
     ...createPilotTools(store, mode),
+    ...createCapturedExcerptTools(store, mode),
   ]);
   for (const agent of [
     managerAgent,
@@ -138,23 +171,31 @@ export function createExecutionRegistry(options: {
   ])
     registry.registerAgent(agent);
   const reduction = createDamageReductionCapability();
+  const research = createDamageEvidenceResearchCapability();
+  registry.registerCapability(research);
   registry.registerCapability(reduction);
   const calculatedDamage = createDamageAppraisalCapability();
   registry.registerCapability({
     ...calculatedDamage,
     // Supplied manifest scopes belong to the separate account-intake workflow.
     matches: (request) =>
+      !research.matches(request) &&
       !reduction.matches(request) &&
       !damageAccountScopeSchema.safeParse(request.scope).success &&
       calculatedDamage.matches(request),
   });
   const collection = createEvidenceCollectionCapability();
-  registry.registerCapability(collection);
+  registry.registerCapability({
+    ...collection,
+    matches: (request) =>
+      !research.matches(request) && collection.matches(request),
+  });
   const pm25 = createPm25Capability();
   registry.registerCapability({
     ...pm25,
     // Explicit fresh collection is separate from summarizing stored samples.
     matches: (request) =>
+      !research.matches(request) &&
       !reduction.matches(request) &&
       !collection.matches(request) &&
       pm25.matches(request),
@@ -164,6 +205,7 @@ export function createExecutionRegistry(options: {
     ...componentIntake,
     // Manifest intake and calculation advertise different starting plans.
     matches: (request) =>
+      !research.matches(request) &&
       !reduction.matches(request) &&
       componentIntake.matches(request) &&
       (!calculatedDamage.matches(request) ||
@@ -173,6 +215,8 @@ export function createExecutionRegistry(options: {
   registry.registerCapability(createEvidenceSynthesisCapability());
   for (const assignment of [
     ...createDamageReductionAssignments(),
+    ...createDamageEvidenceResearchAssignments(),
+    ...createDamageEvidenceReviewAssignments(),
     ...createDamageAppraisalAssignments(),
     ...createPm25Assignments(),
     ...createEvidenceCollectionAssignments(),
@@ -204,6 +248,8 @@ export function createExecutionRegistry(options: {
   for (const tool of createEvidenceCollectionTools(options))
     registry.registerTool(tool);
   for (const tool of createWebSearchTools(options)) registry.registerTool(tool);
+  for (const tool of createDamageEvidenceReviewTools(options))
+    registry.registerTool(tool);
   for (const tool of createDamageAppraisalTools(options))
     registry.registerTool(tool);
   return registry;

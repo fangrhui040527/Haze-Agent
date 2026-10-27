@@ -11,6 +11,7 @@ import type { z } from 'zod';
 import type { AgentModelCompletion } from '../adapters/agent-model.js';
 import { parseContractJson } from '../contracts/json.js';
 import { artifactRefSchema } from '../contracts/artifacts.js';
+import { toolPreviewSchema } from '../contracts/tool-preview.js';
 import { TaskError } from '../contracts/tasks.js';
 import { VersionedCheckpointer } from '../graph.js';
 import { graphThreadId, SPECIALIST_TOPOLOGY } from '../tasks/graph-ledger.js';
@@ -44,11 +45,16 @@ const MAX_CORRECTIONS = 2;
  * persisted by reference. Short scalar and string fields survive so a
  * reviewer can still read a verdict and its stated limitations.
  */
-function digest(value: unknown): unknown {
+export function digest(value: unknown): unknown {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return { items: value.length };
   const summary: Record<string, unknown> = {};
   for (const [field, item] of Object.entries(value)) {
+    if (field === 'model_preview') {
+      const preview = toolPreviewSchema.safeParse(item);
+      if (preview.success) summary[field] = preview.data;
+      continue;
+    }
     if (item === null || typeof item === 'boolean' || typeof item === 'number')
       summary[field] = item;
     else if (typeof item === 'string')
@@ -370,6 +376,19 @@ export function createSpecialistGraph(
                 action_id: action.id,
                 tool: action.tool,
                 status: 'completed',
+                saved: (state.history ?? []).some((entry) => {
+                  if (
+                    typeof entry !== 'object' ||
+                    entry === null ||
+                    !('action' in entry)
+                  )
+                    return false;
+                  const savedAction = entry.action as AgentAction;
+                  return (
+                    savedAction.type === 'save_tool_result' &&
+                    savedAction.tool_action_id === action.id
+                  );
+                }),
                 ...(typeof kind === 'string' ? { artifact_kind: kind } : {}),
               },
             ];
