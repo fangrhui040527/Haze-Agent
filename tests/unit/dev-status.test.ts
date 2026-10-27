@@ -218,6 +218,7 @@ describe('development startup status display', () => {
       [8, 'BLOCKED'],
       [9, 'UNCONFIGURED'],
       [10, 'BLOCKED'],
+      [11, 'READY'],
     ] as const)
       display.update(index, status);
     display.urls(['http://localhost:5173/'], [], 3.5);

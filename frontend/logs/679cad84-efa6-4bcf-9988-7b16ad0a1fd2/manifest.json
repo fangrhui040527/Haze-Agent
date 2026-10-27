@@ -1,0 +1,25 @@
+{
+  "schema_version": "haze.trace.files.v1",
+  "task_id": "87a361a5-fe30-4128-b392-4b072790f7d1",
+  "run_id": "679cad84-efa6-4bcf-9988-7b16ad0a1fd2",
+  "snapshot_cursor": 92,
+  "record_count": 84,
+  "capture": [
+    "native"
+  ],
+  "omissions": [],
+  "sink_health": {
+    "files_enabled": true,
+    "stdout": "key",
+    "processed_cursor": 108,
+    "pending_records": 12,
+    "failed_operations": 0,
+    "stdout_disabled_after_failure": false
+  },
+  "stdout_delivery": "best_effort; historical records are not replayed",
+  "files": [
+    "events.jsonl",
+    "manifest.json",
+    "summary.md"
+  ]
+}
