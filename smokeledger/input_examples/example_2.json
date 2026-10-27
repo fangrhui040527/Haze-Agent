@@ -1,0 +1,11 @@
+{
+  "run_id": "judge-002",
+  "input": {
+    "operation": "plan_outdoor_work",
+    "district_id": "my-selangor-klang",
+    "timezone": "Asia/Kuala_Lumpur",
+    "time_window": { "start": "2026-10-09T08:00:00+08:00", "end": "2026-10-09T12:00:00+08:00" },
+    "query": "Plan one outdoor maintenance crew's shift; explain why. (The sample forecast ends at 08:00 local on 9 Oct, so most of this shift has no evidence.)"
+  },
+  "options": { "sample_mode": true }
+}

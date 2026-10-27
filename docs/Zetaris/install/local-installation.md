@@ -5,6 +5,12 @@ repository-root `compose.yaml` and shared root `.env`. Deployment assets remain
 under `app/adapters/zetaris/zetaris-platform/`. The original standalone bundle
 was tested on a fresh install; see the [test record](zetaris-installation-test-record.md).
 For a managed compute cluster in your AWS account, use [Managed AWS cluster](managed-aws-cluster-guide.md).
+For a short Windows walkthrough, see the [Windows quick start](quick-start-windows.md).
+
+The Zetaris web interface is available at <http://localhost:3000> after the
+platform starts. You do not need to run `npm run dev` just to open Zetaris.
+That command launches the Haze development application and its launcher also
+starts this Compose stack.
 
 ## 1. Obtain the distribution and access
 
@@ -30,8 +36,10 @@ You need the platform archive, its matching `.env`, registry credentials and a Z
 If your organisation has already arranged access, use the supplied archive and registry credentials. The Apache licence in the `getting-started` repository covers the data recipes only, not the platform images.
 
 The `getting-started` repository contains recipes and guides, not the platform
-images. Keep the supplied deployment assets together and merge its matching `.env` settings
-into the Haze root `.env` without replacing existing Haze settings.
+images. Keep the supplied deployment assets together and merge its matching
+`.env` settings into the Haze root `.env` without replacing existing Haze
+settings. Copy the issued image references exactly; the driver, API and UI
+images must come from the same bundle.
 Some older bundle comments refer to `.env.example` or `env/make-env.sh`; those
 files are absent from this distribution. Ask the distributor for a matching
 `.env` if it is missing, and keep the supplied image references as a set.
@@ -41,6 +49,8 @@ files are absent from this distribution. Ask the distributor for a matching
 ### 2.1 Prepare the machine
 
 Install [Docker Desktop](https://docs.docker.com/desktop/) on macOS/Windows, or [Docker Engine with the Compose plugin](https://docs.docker.com/engine/install/) on Linux. On Windows, run the shell commands from WSL2 with Docker Desktop integration enabled.
+The `bash` preflight and verification scripts require WSL2 on Windows; Docker
+Compose commands can also be run from PowerShell at the repository root.
 
 | Requirement  | Guidance for this bundle                                                                 |
 | ------------ | ---------------------------------------------------------------------------------------- |
@@ -73,12 +83,29 @@ Resolve every preflight failure before proceeding. The registry check detects a 
 
 ### 2.3 Configure before first startup
 
-For a new checkout, copy root `.env.example` to root `.env` without overwriting an
-existing file. Merge the matching deployment settings from the supplied bundle
-into root `.env`; keep its issued image references and existing credentials. Set or confirm:
+Run the following from the Haze repository root. For a new checkout, create
+`.env` only if it does not already exist. `.env.example` is a template, not an
+empty file; never overwrite an existing `.env`:
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+In root `.env`, update the existing entries rather than appending another copy
+of each setting. Merge the matching deployment settings from the supplied
+bundle without replacing unrelated Haze settings. Each variable should have
+one definition only; duplicate entries can cause Compose to use a later value
+instead of the one you intended. The repository's `.env.example` keeps each
+Zetaris setting in one place.
+
+Set or confirm:
 
 | Variable                 | Local value or action                                      |
 | ------------------------ | ---------------------------------------------------------- |
+| `DRIVER_IMAGE`           | Driver image reference from the matching Zetaris bundle    |
+| `API_IMAGE`              | API image reference from that same bundle                  |
+| `UI_IMAGE`               | UI image reference from that same bundle                   |
+| `POSTGRES_PASSWORD`      | Strong password for the local metadata database            |
 | `ZETARIS_ADMIN_EMAIL`    | Initial administrator email                                |
 | `ZETARIS_ADMIN_PASSWORD` | Your own strong password, following the policy below       |
 | `ZETARIS_ADMIN_ORG`      | Initial organisation name; choose before the first startup |
@@ -93,15 +120,21 @@ into root `.env`; keep its issued image references and existing credentials. Set
 | `ZETARIS_SEED_TPCH`      | `true` to retain the supplied sample-data setup            |
 
 The administrator password must be at least eight characters and contain lowercase, uppercase, a digit and one of `$ @ ! % * ? &`. Other punctuation is rejected.
+Docker Compose treats `$` specially in unquoted `.env` values. If a password
+contains `$`, wrap the value in single quotes in `.env`, or choose another
+allowed special character.
 
-Keep `.env` private and out of version control:
+Keep `.env` private and out of version control. On Linux/macOS, restrict its
+permissions; on Windows, keep it in the repository's ignored `.env` file and
+do not share or commit it. Validate the Compose configuration without printing
+resolved secrets:
 
 ```bash
 chmod 600 .env
 docker compose config --quiet
 ```
 
-`--quiet` validates the configuration without printing resolved secrets.
+On Windows PowerShell, run `docker compose config --quiet` (omit `chmod`).
 
 ### 2.4 Pull and start
 
@@ -145,6 +178,19 @@ If you use a shipped default password, change it immediately.
 
 Changing `ZETARIS_ADMIN_PASSWORD` or the organisation in `.env` after bootstrap does not recreate or reset existing accounts. After a UI password change, the verifier needs a matching credential value in `.env`; otherwise its login check can fail even though the services are healthy.
 
+### Optional Haze/API authentication
+
+The web interface works without an API key. To let Haze's Zetaris integrations
+authenticate, open the API key page in the Zetaris interface, create a key,
+copy it, and add it to the single `ZETARIS_API_KEY` entry in root `.env`. Keep
+the key private. If using username/password authentication instead, set the single
+`ZETARIS_USERNAME` and `ZETARIS_PASSWORD` entries to a Zetaris account's
+credentials. Do not add duplicate entries; update the existing lines.
+
+Run `npm run dev` from the Haze repository root only if you also want to start
+the Haze development application. Its launcher starts the Zetaris Compose stack
+as part of startup, but the command is not needed just to use the Zetaris UI.
+
 <a id="4-verify-the-data-recipes"></a>
 <a id="parquetcsv"></a>
 <a id="rest"></a>
@@ -156,7 +202,7 @@ When you are ready to connect another source, choose a [Cookbook](../guides/reci
 
 ## 5. Stop and tear down
 
-Run from the platform directory:
+Run from the Haze repository root:
 
 ```bash
 docker compose stop          # stop containers, retaining data

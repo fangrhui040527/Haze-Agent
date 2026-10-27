@@ -454,6 +454,52 @@ describe('Manager conversational routing', () => {
     expect(injected.complete).toHaveBeenCalledTimes(2);
   });
 
+  it('corrects a chat reply to a dated smoke-source question towards a task', async () => {
+    const injected = model((_input, call) =>
+      call === 0
+        ? reply('I do not have historical data for those dates.')
+        : {
+            type: 'start_task',
+            title: 'Smoke sources over Kuching',
+            objective:
+              'Where did the smoke over Kuching on 24–25 October 2026 come from?',
+          },
+    );
+    const { service } = await setup({ model: injected });
+    const result = await resolve(
+      service,
+      'Where did the smoke over Kuching on 24–25 October 2026 come from?',
+    );
+    expect(result.kind).toBe('start_task');
+    expect(injected.complete).toHaveBeenCalledTimes(2);
+  });
+
+  it('treats blank optional retrieval fields as not given', async () => {
+    const injected = model((_input, call) =>
+      call === 0
+        ? {
+            type: 'retrieve',
+            operation: 'world_lookup',
+            query: '',
+            kind: '',
+            record_id: '',
+            location: '',
+            provider: null,
+            period: null,
+          }
+        : reply('Nothing is stored yet.'),
+    );
+    const { service, store } = await setup({ model: injected });
+    const lookup = vi.spyOn(store.world, 'lookup');
+    const result = await resolve(service, 'Look up stored information');
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      kind: 'reply',
+      paragraphs: ['Nothing is stored yet.'],
+    });
+    expect(result).not.toHaveProperty('error');
+  });
+
   it('bounds repeated retrieval to four actual operations', async () => {
     const injected = model(() => ({
       type: 'retrieve',

@@ -1,0 +1,14 @@
+# SmokeLedger's evidence store. Zetaris registers this database as a datasource.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: smokeledger
+      POSTGRES_PASSWORD: smokeledger
+      POSTGRES_DB: smokeledger
+    ports:
+      - "5433:5432"
+    volumes:
+      - sl_pgdata:/var/lib/postgresql/data
+volumes:
+  sl_pgdata:

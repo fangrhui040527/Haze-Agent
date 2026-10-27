@@ -922,6 +922,136 @@ describe('registered Manager decision layer', () => {
       });
     },
   );
+  // Live Managers selected an EvidenceCritic review as a source.
+  it('replaces EvidenceCritic references with the products they reviewed and renumbers citations', async () => {
+    const { context } = await setup();
+    const product = { id: randomUUID(), version: 1, sha256: 'd'.repeat(64) };
+    const review = { id: randomUUID(), version: 1, sha256: 'e'.repeat(64) };
+    const critic = randomUUID();
+    context.assignments = [
+      ...context.assignments,
+      {
+        id: critic,
+        role: 'EvidenceCritic',
+        revision: 1,
+        status: 'completed',
+      } as (typeof context.assignments)[number],
+    ];
+    context.artifacts = [
+      {
+        ref: review,
+        kind: 'review',
+        assignment_id: critic,
+        current: true,
+      },
+      {
+        ref: product,
+        kind: 'smokeledger.trace_sources',
+        current: true,
+      },
+    ];
+    context.reviews = [
+      {
+        artifact: product,
+        producer_assignment_id: randomUUID(),
+        producer_revision: 1,
+        reviewer_assignment_id: critic,
+        reviewer_revision: 1,
+        verdict: 'supported',
+        review_artifact: review,
+        limitations: [],
+      },
+    ];
+    let calls = 0;
+    const result = await decide({
+      context,
+      model() {
+        calls++;
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action: {
+              type: 'finalize',
+              answer: 'Reviewed [E1]. Fires were mostly in Sumatra [E2].',
+              work_products: [product, review],
+              sources: [review, product],
+              uncertainty: [],
+              unfinished: [],
+            },
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(calls).toBe(1);
+    expect(result.action).toMatchObject({
+      type: 'finalize',
+      answer: 'Reviewed [E1]. Fires were mostly in Sumatra [E1].',
+      sources: [product],
+      work_products: [product],
+    });
+  });
+  it('requests one changed model turn when an initial plan rewrites exact templates', async () => {
+    const { context } = await setup();
+    const definition = context.definitions[0]!.id;
+    const template = {
+      key: 'trace-sources',
+      definition_id: definition,
+      brief: 'Trace the smoke back.',
+      depends_on: [],
+      input: { town: 'Klang', window: { start: 'a', end: 'b' } },
+    };
+    context.capabilities = [
+      {
+        card: { id: 'exact.capability' },
+        available: true,
+        templates: [template],
+        exact_templates: true,
+      },
+    ];
+    const inputs: unknown[] = [];
+    const plan = (input: unknown) => ({
+      ...response(context),
+      action: {
+        type: 'apply_plan',
+        assignments: [{ ...template, brief: 'Reworded brief.', input }],
+        retain_assignment_ids: [],
+        reason: 'Apply the starting plan.',
+      },
+    });
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify(
+            inputs.length === 1
+              ? plan({ town: 'Klang', start_utc: 'a', end_utc: 'b' })
+              : plan(template.input),
+          ),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: { correction: 1, code: 'exact_templates_required' },
+    });
+    expect(result.action).toMatchObject({
+      type: 'apply_plan',
+      assignments: [{ key: 'trace-sources', input: template.input }],
+    });
+  });
   it.each(['id', 'version', 'sha256'])(
     'requests a complete supplied artifact reference when %s is missing',
     async (field) => {

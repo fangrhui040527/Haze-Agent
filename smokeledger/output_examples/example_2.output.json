@@ -1,0 +1,325 @@
+{
+  "run_id": "judge-002",
+  "status": "partial",
+  "mode": "offline_sample",
+  "reasoning_backend": "deterministic",
+  "source_backend": "sample_fixture",
+  "engine_versions": {
+    "hmem": {
+      "engine_name": "meterless-hmem",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/hmem",
+      "path": "engines/hmem/reference",
+      "vendored_to": "vendor/hmem",
+      "src_sha256": "e899794d6db656f91112b953e7c897ccc9354c126a143e953c24f084faee9007"
+    },
+    "world_model": {
+      "engine_name": "meterless-world-model",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/world-model",
+      "path": "engines/world-model/reference",
+      "vendored_to": "vendor/world-model",
+      "src_sha256": "52d8ee1bf697a4d309d2053a442fc4bca3b1fad53a2c824ce729a2f7337519e8"
+    },
+    "app": {
+      "name": "smokeledger-haze-harness",
+      "version": "0.7.0",
+      "workflowVersion": "haze-graph-1"
+    }
+  },
+  "workflow_backend": "langgraph",
+  "workflow_version": "haze-graph-1",
+  "thread_id": "judge-002",
+  "checkpoint_id": "1f1ce0d9-5940-6ac0-8010-e46d6cea5acb",
+  "engine_operations_executed": {
+    "world_model.upsertEntity": 2,
+    "world_model.relate": 1,
+    "hmem.query": 2,
+    "world_model.assertFact": 4,
+    "hmem.add": 1
+  },
+  "remote_calls_executed": {},
+  "remote_calls_skipped": {
+    "zetaris.sql": 12
+  },
+  "output": {
+    "summary": "Outdoor crew plan for Klang, 08:00-12:00 MYT: 1 of 4 hours are planned on forecast evidence, with heavy work at 08:00-09:00 where indicative hourly API is 65 [E-3acbb3c9be][E-0639088c6f]. The rest of the shift is not planned because no forecast covers it.",
+    "narrative": null,
+    "proposed_plan": {
+      "proposal_id": "P-c439d33a-2",
+      "revision": 2,
+      "schedule": [
+        {
+          "label": "08:00-09:00",
+          "task": "drain clearing",
+          "intensity": "heavy",
+          "api_hourly": 65,
+          "band": "moderate",
+          "action": "Normal work; sensitive workers limit long heavy exertion.",
+          "basis": "forecast"
+        },
+        {
+          "label": "09:00-10:00",
+          "task": null,
+          "intensity": null,
+          "api_hourly": null,
+          "band": null,
+          "action": "No evidence for this hour: not planned.",
+          "basis": "unserved"
+        },
+        {
+          "label": "10:00-11:00",
+          "task": null,
+          "intensity": null,
+          "api_hourly": null,
+          "band": null,
+          "action": "No evidence for this hour: not planned.",
+          "basis": "unserved"
+        },
+        {
+          "label": "11:00-12:00",
+          "task": null,
+          "intensity": null,
+          "api_hourly": null,
+          "band": null,
+          "action": "No evidence for this hour: not planned.",
+          "basis": "unserved"
+        }
+      ],
+      "controls": [
+        "Normal work; sensitive workers limit long heavy exertion."
+      ],
+      "unmet_constraints": [
+        "drain clearing: 1 of 2 h could not be placed within the guidance and constraints; reschedule.",
+        "verge trimming: 1 of 1 h could not be placed within the guidance and constraints; reschedule.",
+        "signage inspection: 1 of 1 h could not be placed within the guidance and constraints; reschedule."
+      ]
+    },
+    "claims": [
+      {
+        "id": "judge-002-h-obs",
+        "kind": "observation",
+        "text": "In the 24 hours before the assessment time, model PM2.5 at Klang averaged 30.0 ug/m3 over 24 hours [E-8fbdd72984].",
+        "evidence_ids": [
+          "E-8fbdd72984"
+        ]
+      },
+      {
+        "id": "judge-002-h-1791504000000",
+        "kind": "forecast",
+        "basis": "forecast",
+        "text": "08:00-09:00 MYT: projected hourly PM2.5 18.6 ug/m3 (indicative hourly API 65); 24-hour API 62 with a 0% chance of exceeding the school-closure level [E-3acbb3c9be].",
+        "evidence_ids": [
+          "E-3acbb3c9be"
+        ]
+      },
+      {
+        "id": "judge-002-w-1791504000000",
+        "kind": "recommendation",
+        "basis": "forecast",
+        "guidance_version": "0.1-placeholder",
+        "memory_ids": [],
+        "text": "08:00-09:00 MYT: drain clearing (heavy); indicative hourly API 65, moderate band: Normal work; sensitive workers limit long heavy exertion [E-3acbb3c9be][E-0639088c6f].",
+        "evidence_ids": [
+          "E-3acbb3c9be",
+          "E-0639088c6f"
+        ]
+      },
+      {
+        "id": "judge-002-w-1791507600000",
+        "kind": "unserved",
+        "basis": "unserved",
+        "text": "09:00-10:00 MYT: not planned because the forecast query has no row for this hour [E-3acbb3c9be].",
+        "evidence_ids": [
+          "E-3acbb3c9be"
+        ]
+      },
+      {
+        "id": "judge-002-w-1791511200000",
+        "kind": "unserved",
+        "basis": "unserved",
+        "text": "10:00-11:00 MYT: not planned because the forecast query has no row for this hour [E-3acbb3c9be].",
+        "evidence_ids": [
+          "E-3acbb3c9be"
+        ]
+      },
+      {
+        "id": "judge-002-w-1791514800000",
+        "kind": "unserved",
+        "basis": "unserved",
+        "text": "11:00-12:00 MYT: not planned because the forecast query has no row for this hour [E-3acbb3c9be].",
+        "evidence_ids": [
+          "E-3acbb3c9be"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-3acbb3c9be",
+        "sha256": "3acbb3c9be8c58c0cd65b3b3dc43492e1fd471f93804b3a20b53cdead74414b3",
+        "row_count": 4,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch, pm25_hour, pm25_24h, api, p_close, smoke_index\n       FROM projections WHERE run_id = 'fw-2026100812-h-c439d3' AND town = 'Klang'\n        AND valid_utc >= CAST('2026-10-09T00:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-09T04:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      },
+      {
+        "evidence_id": "E-8fbdd72984",
+        "sha256": "8fbdd7298426dc2d2f3b8443338f934746ce319850930a83a0a588f566602b26",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "hazeops",
+        "sql": "SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT)) AS latest_epoch FROM pm25\n      WHERE town = 'Klang' AND valid_utc > CAST('2026-10-07T12:00:00.000Z' AS TIMESTAMP) AND valid_utc <= CAST('2026-10-08T12:00:00.000Z' AS TIMESTAMP)\n      GROUP BY kind ORDER BY kind"
+      },
+      {
+        "evidence_id": "E-0639088c6f",
+        "sha256": "0639088c6f21deb468c286b1d5b1af009ec03cbad596cc49de4463a208404b39",
+        "row_count": 5,
+        "backend": "postgres",
+        "produced_by": "workershield",
+        "sql": "SELECT band, api_min, api_max, action, heavy_work, version, status FROM guidance\n      WHERE guidance_id = 'outdoor-work' AND version = '0.1-placeholder' ORDER BY api_min"
+      },
+      {
+        "evidence_id": "E-b0c91bac4f",
+        "sha256": "b0c91bac4fdffd54dff7ba324e0784a384bddfb641a279e4466ea8a2f12231a7",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "critic",
+        "sql": "SELECT CAST(EXTRACT(EPOCH FROM valid_utc) AS BIGINT) AS valid_epoch FROM projections\n        WHERE run_id = 'fw-2026100812-h-c439d3' AND town = 'Klang' AND pm25_hour IS NOT NULL\n          AND valid_utc >= CAST('2026-10-09T00:00:00.000Z' AS TIMESTAMP) AND valid_utc < CAST('2026-10-09T04:00:00.000Z' AS TIMESTAMP) ORDER BY valid_utc"
+      }
+    ],
+    "limitations": [
+      "Guidance outdoor-work v0.1-placeholder is a PLACEHOLDER written for this demo, not official DOSH guidance.",
+      "Hourly API is an indicative hourly equivalent; official APIMS readings are 24-hour averages.",
+      "No evidence for 09:00-12:00 MYT (2026-10-09): that part of the shift is not planned. Re-check when a newer forecast arrives.",
+      "Future hours use archived model values (hindsight), as in a replay or the offline sample: a test of the method, not a true forecast."
+    ],
+    "validity": {
+      "start": "2026-10-09T00:00:00.000Z",
+      "end": "2026-10-09T04:00:00.000Z",
+      "unserved": [
+        "09:00-12:00 MYT (2026-10-09)"
+      ]
+    },
+    "messages": {
+      "bound_to": "fact_5b212cd10df3ac24",
+      "previews": [
+        {
+          "audience": "crew",
+          "language": "ms",
+          "text": "Taklimat kru, Klang, Jumaat, 9 Oktober 2026\n08:00-09:00: drain clearing\n09:00-10:00: belum dirancang (tiada ramalan)\n10:00-11:00: belum dirancang (tiada ramalan)\n11:00-12:00: belum dirancang (tiada ramalan)\nKawalan:\nNormal work; sensitive workers limit long heavy exertion.\nLaporkan segera jika ada sesak nafas atau pening."
+        },
+        {
+          "audience": "crew",
+          "language": "en",
+          "text": "Crew briefing, Klang\n08:00-09:00: drain clearing\n09:00-10:00: not planned (no forecast)\n10:00-11:00: not planned (no forecast)\n11:00-12:00: not planned (no forecast)\nNormal work; sensitive workers limit long heavy exertion.\nReport breathing difficulty or dizziness immediately."
+        }
+      ],
+      "status": "preview"
+    }
+  },
+  "rationale": "Each hour's band and action come from guidance 0.1-placeholder applied to HazeOps hourly projections [E-3acbb3c9be][E-0639088c6f].",
+  "guidance_versions": [
+    "0.1-placeholder"
+  ],
+  "assumptions": [
+    "District conditions are represented by Klang town-centre data."
+  ],
+  "change_reason": null,
+  "parent_run_id": null,
+  "critic": {
+    "final": {
+      "decision": "approve",
+      "findings": [],
+      "required_evidence": [],
+      "checks_run": [
+        "citations",
+        "independent re-query of cited evidence",
+        "coverage of requested window",
+        "guidance binding",
+        "hindsight disclosure"
+      ],
+      "independent_queries": [
+        "re-run:E-3acbb3c9be",
+        "re-run:E-8fbdd72984",
+        "re-run:E-0639088c6f",
+        "E-b0c91bac4f"
+      ]
+    },
+    "rounds": 2,
+    "history": [
+      {
+        "decision": "revise",
+        "findings": [
+          "coverage_gap"
+        ]
+      },
+      {
+        "decision": "approve",
+        "findings": []
+      }
+    ]
+  },
+  "agents": [
+    {
+      "role": "manager",
+      "version": "manager-1.0",
+      "executions": 10
+    },
+    {
+      "role": "hazeops",
+      "version": "hazeops-1.0",
+      "executions": 1
+    },
+    {
+      "role": "workershield",
+      "version": "workershield-1.0",
+      "executions": 2
+    },
+    {
+      "role": "evidence_critic",
+      "version": "evidence-critic-1.0",
+      "executions": 2
+    },
+    {
+      "role": "communityalert",
+      "version": "communityalert-1.0",
+      "executions": 1
+    }
+  ],
+  "memory": {
+    "recalled": [],
+    "captured": "mem-1",
+    "audit_entries": 1
+  },
+  "snapshot_id": "S-aa2ffcb5c8ae",
+  "conclusion_revision_id": "fact_5b212cd10df3ac24",
+  "conclusion_status": "current",
+  "trace_id": "judge-002",
+  "log_file": "/tmp/tmp.AEa1m1xTCV/logs/trace-judge-002.jsonl",
+  "execution_time_seconds": 0.4,
+  "sponsor_integration_evidence": {
+    "zetaris": {
+      "executed": 0,
+      "skipped": 12,
+      "request_ids": []
+    },
+    "meterless_hmem": {
+      "hmem.query": 2,
+      "hmem.add": 1
+    },
+    "meterless_world_model": {
+      "world_model.upsertEntity": 2,
+      "world_model.relate": 1,
+      "world_model.assertFact": 4
+    },
+    "nightshift": {
+      "executed": 0,
+      "skipped": 0,
+      "available": false,
+      "model_route": "meterless/auto"
+    }
+  },
+  "error": null
+}

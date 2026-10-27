@@ -150,6 +150,8 @@ syncBuiltinESMExports();
       '--import',
       pathToFileURL(preload).href,
       resolve(root, 'scripts/dev.mjs'),
+      // The sidecar's own spawns would shift the stubbed call order asserted below.
+      '--no-smokeledger',
       ...args,
     ],
     {

@@ -46,7 +46,12 @@ export function assembleManagerContext(
     .find((c) => c.scope !== undefined);
   const templateRequest = {
     ...request,
-    ...(scopedCorrection ? { objective: scopedCorrection.passage } : {}),
+    // Text-only corrections must reach the plan templates too, not only capability matching.
+    objective: scopedCorrection
+      ? scopedCorrection.passage
+      : [request.objective, ...task.corrections.map((c) => c.passage)].join(
+          '\n',
+        ),
   };
   const matchingRequest = {
     ...request,
@@ -142,6 +147,7 @@ export function assembleManagerContext(
                 .assignments(templateRequest)
                 .map((plan) => managerAssignmentPlanSchema.parse(plan))
             : [],
+        ...(capability.exact_templates ? { exact_templates: true } : {}),
         peer_requirements: relevant ? (capability.peer_requirements ?? []) : [],
         prerequisites: relevant ? (capability.prerequisites ?? []) : [],
         review_requirements: relevant
@@ -217,6 +223,11 @@ export function assembleManagerContext(
         ),
         excerpt: summary ?? content.slice(0, 1600),
         truncated: summary !== undefined || content.length > 1600,
+        // Final-synthesis numbering: user-supplied sources cite as [S…], every other source as [E…].
+        ...(artifact.producer.kind === 'user' ||
+        artifact.kind === 'source.import'
+          ? { citation_letter: 'S' as const }
+          : {}),
       };
     }),
     inspections: structuredClone(
@@ -287,9 +298,12 @@ export function assembleManagerContext(
       );
       status.truncated = true;
     }
-    const starting = context.capabilities.find(
+    // A capability whose templates are its exact plan keeps them over looser starting points.
+    const offered = context.capabilities.filter(
       (capability) => capability.available && capability.templates?.length,
     );
+    const starting =
+      offered.find((capability) => capability.exact_templates) ?? offered[0];
     for (const capability of context.capabilities)
       if (capability !== starting) capability.templates = [];
     for (const capability of context.capabilities)

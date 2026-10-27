@@ -44,6 +44,27 @@
   font-size: var(--text-sm);
 }
 
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.titleText {
+  display: grid;
+  gap: var(--space-2);
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+
+.reportButton {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
 .objective {
   display: grid;
   gap: var(--space-1);

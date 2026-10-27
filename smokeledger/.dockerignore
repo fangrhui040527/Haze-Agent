@@ -1,0 +1,9 @@
+node_modules
+vendor
+.state
+logs
+outbox
+data/raw
+data/geo
+.env
+*.zip

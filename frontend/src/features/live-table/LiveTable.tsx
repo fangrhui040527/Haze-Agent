@@ -9,7 +9,7 @@ import {
   Minus,
   Search,
 } from 'lucide-react';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useLiveData } from '../../app/liveDataContext.ts';
 import {
@@ -118,13 +118,16 @@ export function LiveTable() {
 
   const update = (patch: Partial<Filters>) =>
     setFilters({ ...filters, ...patch });
-  const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggle = useCallback(
+    (id: string) =>
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
   const filtersActive =
     JSON.stringify({ ...filters, sort: NO_FILTERS.sort }) !==
     JSON.stringify(NO_FILTERS);
@@ -392,103 +395,16 @@ export function LiveTable() {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((r, index) => {
-                  const open = expanded.has(r.item.id);
-                  const breakdownId = `rank-${r.item.id}`;
-                  return (
-                    <Fragment key={r.item.id}>
-                      <tr
-                        className={[
-                          live.freshIds.has(r.item.id) ? styles.fresh : '',
-                          r.item.status === 'retracted' ? styles.retracted : '',
-                        ].join(' ')}
-                      >
-                        <td className={styles.num}>
-                          {filters.sort === 'rank' ? r.rank : index + 1}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className={styles.scoreButton}
-                            aria-expanded={open}
-                            aria-controls={breakdownId}
-                            onClick={() => toggle(r.item.id)}
-                            title="Why this rank?"
-                          >
-                            <span>{r.score}</span>
-                            <Info
-                              size={13}
-                              strokeWidth={2.2}
-                              aria-hidden="true"
-                            />
-                            <span className="visually-hidden">
-                              {' '}
-                              — show why this item has rank {r.rank}
-                            </span>
-                          </button>
-                        </td>
-                        <td className={styles.nowrap}>
-                          <TimeAgo iso={r.item.updatedAt} prefix="Updated" />
-                        </td>
-                        <td className={styles.locationCol}>
-                          <LocationName
-                            location={r.location}
-                            iso={r.item.observedAt}
-                          />
-                        </td>
-                        <td className={styles.categoryCol}>
-                          {CATEGORY_LABELS[r.item.category]}
-                        </td>
-                        <td className={styles.summary} title={r.item.summary}>
-                          {r.item.headline}
-                        </td>
-                        <td className={styles.airQualityCol}>
-                          <BandBadge
-                            band={itemBand(r.item)}
-                            pm25={itemPm25(r.item)}
-                            compact
-                            className={
-                              itemBand(r.item) === 'sensitive'
-                                ? styles.airQualityWrap
-                                : styles.airQualityNowrap
-                            }
-                          />
-                        </td>
-                        <td className={styles.trendCol}>
-                          <TrendCell trend={r.item.trend} />
-                        </td>
-                        <td>
-                          <EvidenceCell item={r.item} />
-                        </td>
-                        <td className={styles.statusCol}>
-                          <StatusBadge status={r.item.status} />
-                        </td>
-                        <td>
-                          <Link
-                            to={`/item/${encodeURIComponent(r.item.id)}`}
-                            className={styles.readMoreBtn}
-                            title="Read more"
-                            aria-label={`Read more about ${r.item.headline}`}
-                          >
-                            <FileText size={16} aria-hidden="true" />
-                            <span className="visually-hidden">
-                              {' '}
-                              about {r.item.headline}
-                            </span>
-                          </Link>
-                        </td>
-                      </tr>
-                      {open && (
-                        <tr id={breakdownId} className={styles.breakdownRow}>
-                          <td />
-                          <td colSpan={10}>
-                            <RankBreakdown parts={r.parts} score={r.score} />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
+                {visible.map((r, index) => (
+                  <TableRow
+                    key={r.item.id}
+                    r={r}
+                    position={filters.sort === 'rank' ? r.rank : index + 1}
+                    fresh={live.freshIds.has(r.item.id)}
+                    open={expanded.has(r.item.id)}
+                    onToggle={toggle}
+                  />
+                ))}
               </tbody>
             </table>
           ))}
@@ -530,6 +446,102 @@ function LocationName({
     </span>
   );
 }
+
+const TableRow = memo(function TableRow({
+  r,
+  position,
+  fresh,
+  open,
+  onToggle,
+}: {
+  r: RankedItem;
+  position: number;
+  fresh: boolean;
+  open: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const breakdownId = `rank-${r.item.id}`;
+  return (
+    <>
+      <tr
+        className={[
+          fresh ? styles.fresh : '',
+          r.item.status === 'retracted' ? styles.retracted : '',
+        ].join(' ')}
+      >
+        <td className={styles.num}>{position}</td>
+        <td>
+          <button
+            type="button"
+            className={styles.scoreButton}
+            aria-expanded={open}
+            aria-controls={breakdownId}
+            onClick={() => onToggle(r.item.id)}
+            title="Why this rank?"
+          >
+            <span>{r.score}</span>
+            <Info size={13} strokeWidth={2.2} aria-hidden="true" />
+            <span className="visually-hidden">
+              {' '}
+              — show why this item has rank {r.rank}
+            </span>
+          </button>
+        </td>
+        <td className={styles.nowrap}>
+          <TimeAgo iso={r.item.updatedAt} prefix="Updated" />
+        </td>
+        <td className={styles.locationCol}>
+          <LocationName location={r.location} iso={r.item.observedAt} />
+        </td>
+        <td className={styles.categoryCol}>
+          {CATEGORY_LABELS[r.item.category]}
+        </td>
+        <td className={styles.summary} title={r.item.summary}>
+          {r.item.headline}
+        </td>
+        <td className={styles.airQualityCol}>
+          <BandBadge
+            band={itemBand(r.item)}
+            pm25={itemPm25(r.item)}
+            compact
+            className={
+              itemBand(r.item) === 'sensitive'
+                ? styles.airQualityWrap
+                : styles.airQualityNowrap
+            }
+          />
+        </td>
+        <td className={styles.trendCol}>
+          <TrendCell trend={r.item.trend} />
+        </td>
+        <td>
+          <EvidenceCell item={r.item} />
+        </td>
+        <td className={styles.statusCol}>
+          <StatusBadge status={r.item.status} />
+        </td>
+        <td>
+          <Link
+            to={`/item/${encodeURIComponent(r.item.id)}`}
+            className={styles.readMoreBtn}
+            title="Read more"
+            aria-label={`Read more about ${r.item.headline}`}
+          >
+            <FileText size={16} aria-hidden="true" />
+            <span className="visually-hidden"> about {r.item.headline}</span>
+          </Link>
+        </td>
+      </tr>
+      {open && (
+        <tr id={breakdownId} className={styles.breakdownRow}>
+          <td colSpan={11}>
+            <RankBreakdown parts={r.parts} score={r.score} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+});
 
 function TrendCell({ trend }: { trend: Trend | null }) {
   if (trend === null) {
@@ -597,12 +609,17 @@ export function RankBreakdown({
 }) {
   return (
     <div className={styles.breakdown}>
-      <p className={styles.breakdownTitle}>Why this score ({score} / 100)</p>
+      <p className={styles.breakdownTitle}>
+        Why this score{' '}
+        <span className={styles.breakdownTotal}>{score} / 100</span>
+      </p>
       <ul>
         {parts.map((p) => (
           <li key={p.key}>
             <span className={styles.partLabel}>{p.label}</span>
-            <span className={styles.partPoints}>
+            <span
+              className={`${styles.partPoints} ${p.points < 0 ? styles.partNegative : ''}`}
+            >
               {p.points > 0 ? '+' : ''}
               {p.points}
               {p.max > 0 && <span className={styles.muted}> / {p.max}</span>}

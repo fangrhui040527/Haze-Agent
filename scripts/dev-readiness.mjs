@@ -10,6 +10,7 @@ export const STARTUP_COMPONENTS = [
   { id: 'nightshift-jobs', label: 'Nightshift candidate jobs' },
   { id: 'nightshift-inference', label: 'Nightshift inference' },
   { id: 'nightshift-automation', label: 'Nightshift automation' },
+  { id: 'smokeledger', label: 'SmokeLedger sidecar' },
 ];
 
 const text = (value) =>

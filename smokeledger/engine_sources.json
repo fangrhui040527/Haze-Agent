@@ -1,0 +1,16 @@
+{
+  "generated_utc": "2026-10-27T21:55:32.158Z",
+  "repository": "https://github.com/meterless/meterless",
+  "revision": "1742dec56a66e58eef9dda2d2b865823758ca8cd",
+  "licence": "Apache-2.0",
+  "hmem": {
+    "path": "engines/hmem/reference",
+    "vendored_to": "vendor/hmem",
+    "src_sha256": "e899794d6db656f91112b953e7c897ccc9354c126a143e953c24f084faee9007"
+  },
+  "world_model": {
+    "path": "engines/world-model/reference",
+    "vendored_to": "vendor/world-model",
+    "src_sha256": "52d8ee1bf697a4d309d2053a442fc4bca3b1fad53a2c824ce729a2f7337519e8"
+  }
+}

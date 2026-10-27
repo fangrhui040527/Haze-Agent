@@ -19,6 +19,10 @@ import styles from './RegionView.module.css';
 const GLOBE_RADIUS = 100;
 const SWAY_DEG = 2.5;
 const SWAY_MS = 14_000;
+// Retina canvases cost up to 4x the fill rate for little visible gain on a tinted globe.
+const MAX_PIXEL_RATIO = 1.5;
+// Each ring is its own mesh rebuilt every frame, so only the strongest fires pulse.
+const MAX_RINGS = 40;
 
 interface OverlayTile {
   id: string;
@@ -86,6 +90,9 @@ export default function RegionGlobe({
       .atmosphereAltitude(0.18)
       .pointOfView(MALAYSIA_VIEW, 0);
     globeRef.current = globe;
+    globe
+      .renderer()
+      .setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
 
     const controls = globe.controls();
     controls.minDistance = GLOBE_RADIUS * 1.35;
@@ -102,6 +109,13 @@ export default function RegionGlobe({
     });
     resize.observe(host);
 
+    // Stop the render loop while the globe is scrolled out of view.
+    const visibility = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) globe.resumeAnimation();
+      else globe.pauseAnimation();
+    });
+    visibility.observe(host);
+
     // Gentle sway around the region instead of a full spin; off for reduced motion.
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     let dir = 1;
@@ -117,6 +131,7 @@ export default function RegionGlobe({
     return () => {
       window.clearInterval(sway);
       resize.disconnect();
+      visibility.disconnect();
       globe._destructor();
       host.replaceChildren();
       globeRef.current = null;
@@ -149,17 +164,25 @@ export default function RegionGlobe({
       .htmlLat((d) => (d as CityReading).city.lat)
       .htmlLng((d) => (d as CityReading).city.lng)
       .htmlAltitude(0.015)
-      .htmlElement((d) =>
-        buildMarker(d as CityReading, {
-          layer: layers.primary,
-          wind: layers.wind,
-          selected: (d as CityReading).city.id === selectedId,
-          onSelect,
-        }),
-      );
+      .htmlElement((d) => {
+        // globe.gl overwrites the element's transform to centre it on the point, which would
+        // drop the marker's own dot anchor and shift every city by half its label. A zero-size
+        // anchor takes that transform instead, so the dot lands on the coordinate as in Leaflet.
+        const anchor = document.createElement('div');
+        anchor.className = styles.globeAnchor;
+        anchor.append(
+          buildMarker(d as CityReading, {
+            layer: layers.primary,
+            wind: layers.wind,
+            selected: (d as CityReading).city.id === selectedId,
+            onSelect,
+          }),
+        );
+        return anchor;
+      });
   }, [readings, layers.primary, layers.wind, selectedId, onSelect]);
 
-  // Fire hotspots: ember dots with a pulsing ring.
+  // Fire hotspots: ember dots drawn as one particle cloud (a single draw call), plus a pulsing ring on the strongest.
   useEffect(() => {
     const globe = globeRef.current;
     const host = hostRef.current;
@@ -174,7 +197,12 @@ export default function RegionGlobe({
     ).matches;
     globe
       .ringsData(
-        reduced ? [] : hotspots.filter((h) => (h.frp ?? 0) >= 20).slice(0, 120),
+        reduced
+          ? []
+          : hotspots
+              .filter((h) => (h.frp ?? 0) >= 20)
+              .sort((a, b) => (b.frp ?? 0) - (a.frp ?? 0))
+              .slice(0, MAX_RINGS),
       )
       .ringLat((d) => (d as FireHotspot).lat)
       .ringLng((d) => (d as FireHotspot).lng)
@@ -182,13 +210,13 @@ export default function RegionGlobe({
       .ringMaxRadius(1.2)
       .ringPropagationSpeed(0.8)
       .ringRepeatPeriod(1600)
-      .labelsData(hotspots)
-      .labelLat((d) => (d as FireHotspot).lat)
-      .labelLng((d) => (d as FireHotspot).lng)
-      .labelText(() => '')
-      .labelDotRadius(0.12)
-      .labelColor(() => fire)
-      .labelAltitude(0.004);
+      .particlesData(hotspots.length ? [hotspots] : [])
+      .particleLat((d) => (d as FireHotspot).lat)
+      .particleLng((d) => (d as FireHotspot).lng)
+      .particleAltitude(0.004)
+      .particlesSize(3)
+      .particlesSizeAttenuation(false)
+      .particlesColor(() => fire);
   }, [fires, layers.fires]);
 
   // Region overlays: borders/coastlines always, plus the chosen satellite layer.

@@ -839,12 +839,16 @@ export class TaskRuntime {
           max_tool_calls: 40,
           max_assignments: 16,
           max_artifacts: 64,
+          // A cited synthesis of several reviewed specialists does not fit the
+          // short-lookup answer size; larger models exceed 1200 tokens.
+          max_model_output_tokens: 4000,
         }
       : {
           max_model_calls: 6,
           max_tool_calls: 6,
           max_assignments: 6,
           max_artifacts: 16,
+          max_model_output_tokens: 1200,
         };
     const admitted = this.store.admit(request, identity, key, {
       mode: this.options.mode ?? 'live',
@@ -856,7 +860,6 @@ export class TaskRuntime {
             (this.options.taskTimeoutMs ?? (investigation ? 300000 : 90000)),
         ).toISOString(),
         max_model_input_bytes: 24576,
-        max_model_output_tokens: 1200,
         reserved_model_calls: 2,
         ...this.options.limits,
       },

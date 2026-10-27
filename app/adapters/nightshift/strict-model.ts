@@ -40,6 +40,8 @@ export function resolveStrictNightshiftModel(
         HAZE_MODEL: model,
         HAZE_PROVIDER_BASE_URL: `${baseUrl}/haze`,
         HAZE_PROVIDER_API_KEY: token,
+        // The strict contract never replays a charged call, even after an overload.
+        HAZE_OVERLOAD_RETRIES: '0',
       },
       strictFetch,
     );

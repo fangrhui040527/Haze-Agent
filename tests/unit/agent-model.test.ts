@@ -170,6 +170,33 @@ describe('office agent model adapter', () => {
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(body.max_completion_tokens).toBe(191);
   });
+  // Live NVIDIA routes returned 503 under load; the request was never processed.
+  it('resends a bounded number of times only when the provider is overloaded', async () => {
+    vi.useFakeTimers();
+    try {
+      const overloaded = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response(null, { status: 503 }))
+        .mockResolvedValueOnce(new Response(null, { status: 429 }))
+        .mockResolvedValue(completion());
+      const result = run(overloaded);
+      await vi.runAllTimersAsync();
+      expect(JSON.stringify(await result)).toContain(
+        'Observed conditions support the proposed schedule.',
+      );
+      expect(overloaded).toHaveBeenCalledTimes(3);
+
+      const rejected = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(null, { status: 400 }));
+      const failure = run(rejected).catch((error: unknown) => error);
+      await vi.runAllTimersAsync();
+      expect(String(await failure)).toContain('HTTP 400');
+      expect(rejected).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('retains real provider receipts and bounded redacted partial text when generation is incomplete', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       Response.json({

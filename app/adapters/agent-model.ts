@@ -68,6 +68,8 @@ export interface AgentModel {
 
 const NVIDIA_API_BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+const OVERLOAD_STATUSES = new Set([429, 502, 503, 504]);
+const OVERLOAD_BACKOFF_MS = 4000;
 /**
  * Warm configured routes answer in seconds, but a cold endpoint can take far
  * longer, and a timeout here is charged as an unknown outcome that pauses the
@@ -258,6 +260,8 @@ export function resolveAgentModel(
   const timeoutMs = localSampleDefault ? 300_000 : TIMEOUT_MS;
   env = sampleModelEnvironment(env);
   const provider = env.HAZE_PROVIDER?.trim() || 'offline';
+  // Strict Nightshift inference never resends; direct providers may after an overload.
+  const overloadRetries = env.HAZE_OVERLOAD_RETRIES === '0' ? 0 : 2;
   if (provider === 'nightshift') {
     // Nightshift requires the registry's authenticated asynchronous negotiation.
     // Raw resolution must never use its general compatible routing endpoint.
