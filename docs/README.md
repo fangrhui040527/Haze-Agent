@@ -4,6 +4,7 @@ Start with the [project README](../README.md) for setup and current behavior.
 
 ## Start here
 
+- [Haze core goals and product specification](architecture/haze-core-goals.md): agreed scope, three goals and acceptance criteria.
 - [General task engine](orchestration/general-engine.md): execution, ownership, controls and recovery.
 - [Architecture and specifications](architecture/README.md): runtime, World Model, schemas and supplied references.
 - [Test the Manager in isolation](testing/manager-testing.md) and [inspect the World Model control plane](testing/world-model-control-plane.md).

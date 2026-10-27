@@ -4,6 +4,10 @@
 
 These documents describe architecture, contracts and scientific method boundaries. Delivery work is indexed under [plans](../plans/README.md); executed findings are under [reports](../reports/README.md).
 
+## Product scope
+
+- [Haze core goals and product specification](haze-core-goals.md): evidence collection, damage accounting, 10% reduction planning and hackathon acceptance criteria.
+
 ## Runtime and World Model
 
 - [Executable LangGraph runtime](langgraph-runtime.md).

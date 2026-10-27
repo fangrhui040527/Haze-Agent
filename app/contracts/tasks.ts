@@ -7,6 +7,7 @@ import {
 } from './artifacts.js';
 import { agentRoleSchema } from './capabilities.js';
 import { managerStateSchema, artifactReviewCheckSchema } from './manager.js';
+import { evidenceResearchToolIdSchema } from './evidence-tools.js';
 
 const text = z.string().min(1).max(4096);
 const count = z.number().int().nonnegative();
@@ -22,6 +23,8 @@ export const taskRequestSchema = z.strictObject({
   context_refs: z.array(artifactRefSchema).max(64).default([]),
   constraints: z.array(text).max(32).default([]),
   desired_deliverables: z.array(text).max(32).default([]),
+  /** Explicit research opt-in; an explicit research capability scope also grants these tools. */
+  evidence_tools: z.array(evidenceResearchToolIdSchema).max(5).optional(),
   /** Explicit opt-in; registration alone grants no external job authority. */
   nightshift_tools: z
     .array(

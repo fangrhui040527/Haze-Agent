@@ -247,6 +247,13 @@ export function createSpecialistActionContract(
       (result) =>
         result.status === 'completed' && typeof result.action_id === 'string',
     );
+  // A declared retained result must acquire its exact durable reference before
+  // further reasoning or retrieval. This prevents repeated paid retrievals and
+  // ensures source bytes cannot be replaced by model-authored summaries.
+  const pendingRetention = retained.filter(
+    (result) =>
+      result.saved === false && typeof result.artifact_kind === 'string',
+  );
   const jobs = list(ctx.acknowledged_jobs)
     .filter(record)
     .filter(
@@ -292,6 +299,7 @@ export function createSpecialistActionContract(
     shape?: Record<string, z.ZodType>,
   ) => {
     if (supportedTypes.size && !supportedTypes.has(type)) return;
+    if (pendingRetention.length && type !== 'save_tool_result') return;
     const option = agentActionSchema.options.find(
       (item) => item.shape.type.value === type,
     )!;
@@ -343,6 +351,11 @@ export function createSpecialistActionContract(
   }
   if (knownKinds.length) add('save', { kind: z.enum(knownKinds) });
   for (const result of retained) {
+    if (
+      result.saved === true ||
+      (pendingRetention.length && !pendingRetention.includes(result))
+    )
+      continue;
     if (typeof result.artifact_kind !== 'string' && !knownKinds.length)
       continue;
     add('save_tool_result', {

@@ -28,4 +28,9 @@ export interface DamageWorldInputPolicy {
     structured: boolean,
   ): 'match' | 'mismatch' | 'scope_required';
   reconstruct(inputs: DamageInputs, sources: readonly Artifact[]): DamageInputs;
+  /** Domain-owned scientific gate for versioned reporting claims; absence never grants acceptance. */
+  checkScientificInputs?(
+    inputs: DamageInputs,
+    evidence: readonly Artifact[],
+  ): void;
 }

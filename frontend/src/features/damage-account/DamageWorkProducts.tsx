@@ -12,6 +12,7 @@ import {
   damageArtifactReview,
 } from './DamageAccountResult.tsx';
 import styles from '../chat/ChatPanel.module.css';
+import { DamageEvidenceResult } from '../chat/DamageEvidenceResult.tsx';
 export function DamageWorkProducts({
   products,
   baseUrl = '',
@@ -161,6 +162,12 @@ function WorkProduct({
                 reviewStatus={reviewStatus}
                 checks={reviewChecks}
                 stale={stale}
+              />
+            )}
+            {!rejected && !stale && (
+              <DamageEvidenceResult
+                content={artifact.content}
+                baseUrl={baseUrl}
               />
             )}
             {account?.success && (

@@ -1,0 +1,1010 @@
+{
+  "schema_version": "haze.damage.evidence.case-selection.v1",
+  "selected_candidate": null,
+  "decision": "no_supported_candidate_yet",
+  "selection_basis": "Compatible retained evidence completeness; published effects and reviewed methods remain mandatory.",
+  "selected_sources": [],
+  "rejected_alternatives": [
+    {
+      "id": "malaysia-2015-september-october",
+      "score": 4,
+      "reason": "Lower compatible evidence score or deterministic tie-break; not evidence of scientific inapplicability."
+    },
+    {
+      "id": "malaysia-2019-september",
+      "score": 4,
+      "reason": "Lower compatible evidence score or deterministic tie-break; not evidence of scientific inapplicability."
+    }
+  ],
+  "findings": [
+    {
+      "id": "malaysia-2006-september-october",
+      "score": 4,
+      "rationale": "Primary-study lead for the 2006 event; original acquisition and historical compatibility remain gaps.",
+      "plan": {
+        "schema_version": "haze.damage.evidence.plan.v1",
+        "scope": {
+          "geography": {
+            "country": "MY",
+            "level": "country",
+            "id": "MY",
+            "name": "Malaysia",
+            "boundary_version": null
+          },
+          "occurrence_period": {
+            "start": "2006-09-01",
+            "end": "2006-10-31"
+          },
+          "outcome": "deaths",
+          "attribution_basis": "fire_attributed",
+          "monetary_view": "physical_only",
+          "currency": null,
+          "price_year": null
+        },
+        "requirements": [
+          {
+            "id": "episode_definition",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "asmc-episode-evidence"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:asmc.asean.org Malaysia ASMC episode and smoke context",
+                "ms": "site:asmc.asean.org Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "population",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": ["dosm-district-population"],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:open.dosm.gov.my population district Malaysia methodology",
+                "ms": "site:open.dosm.gov.my penduduk daerah metodologi"
+              }
+            ]
+          },
+          {
+            "id": "physical_effect_method",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "who-health-response-methods"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.who.int Malaysia WHO AirQ health response guidance",
+                "ms": "site:www.who.int Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "published_physical_effect",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "fire_attribution",
+            "stage": "missing",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": []
+          }
+        ],
+        "interventions": [
+          {
+            "id": "A",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "A.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          },
+          {
+            "id": "B",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "B.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          }
+        ],
+        "feasibility": "blocked",
+        "quantified_outputs_permitted": false,
+        "lower_budget_B_verified": false,
+        "gaps": [
+          "No reviewed physical-effect input is available yet.",
+          "A/B must share the exact baseline version and B must have a lower compatible evidenced cost."
+        ]
+      }
+    },
+    {
+      "id": "malaysia-2015-september-october",
+      "score": 4,
+      "rationale": "Primary-study leads address the 2015 event; original acquisition, country-specific endpoint and duration applicability remain gates before any estimate is imported.",
+      "plan": {
+        "schema_version": "haze.damage.evidence.plan.v1",
+        "scope": {
+          "geography": {
+            "country": "MY",
+            "level": "country",
+            "id": "MY",
+            "name": "Malaysia",
+            "boundary_version": null
+          },
+          "occurrence_period": {
+            "start": "2015-09-01",
+            "end": "2015-10-31"
+          },
+          "outcome": "deaths",
+          "attribution_basis": "fire_attributed",
+          "monetary_view": "physical_only",
+          "currency": null,
+          "price_year": null
+        },
+        "requirements": [
+          {
+            "id": "episode_definition",
+            "stage": "discovered",
+            "retained_captures": [
+              "02628ebd86e0ee90ab43bac0b1778c22f0e1d558e1b51772e1a394ec70bf0328"
+            ],
+            "retained_capture_count": 1,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "asmc-episode-evidence"
+            ],
+            "gaps": [
+              "Document access challenge or denial was returned; retained bytes are not the requested source document.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:asmc.asean.org Malaysia ASMC episode and smoke context",
+                "ms": "site:asmc.asean.org Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "population",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": ["dosm-district-population"],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:open.dosm.gov.my population district Malaysia methodology",
+                "ms": "site:open.dosm.gov.my penduduk daerah metodologi"
+              }
+            ]
+          },
+          {
+            "id": "physical_effect_method",
+            "stage": "discovered",
+            "retained_captures": [
+              "02628ebd86e0ee90ab43bac0b1778c22f0e1d558e1b51772e1a394ec70bf0328"
+            ],
+            "retained_capture_count": 1,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "who-health-response-methods"
+            ],
+            "gaps": [
+              "Document access challenge or denial was returned; retained bytes are not the requested source document.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.who.int Malaysia WHO AirQ health response guidance",
+                "ms": "site:www.who.int Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "published_physical_effect",
+            "stage": "discovered",
+            "retained_captures": [
+              "02628ebd86e0ee90ab43bac0b1778c22f0e1d558e1b51772e1a394ec70bf0328"
+            ],
+            "retained_capture_count": 1,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality"
+            ],
+            "gaps": [
+              "Document access challenge or denial was returned; retained bytes are not the requested source document.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "fire_attribution",
+            "stage": "missing",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": []
+          }
+        ],
+        "interventions": [
+          {
+            "id": "A",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "A.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          },
+          {
+            "id": "B",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "B.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          }
+        ],
+        "feasibility": "blocked",
+        "quantified_outputs_permitted": false,
+        "lower_budget_B_verified": false,
+        "gaps": [
+          "No reviewed physical-effect input is available yet.",
+          "A/B must share the exact baseline version and B must have a lower compatible evidenced cost."
+        ]
+      }
+    },
+    {
+      "id": "malaysia-2019-september",
+      "score": 4,
+      "rationale": "Candidate requiring further published physical-effect discovery; current acquired annual 2024 rows cannot support a 2019 fire-attributed estimate.",
+      "plan": {
+        "schema_version": "haze.damage.evidence.plan.v1",
+        "scope": {
+          "geography": {
+            "country": "MY",
+            "level": "country",
+            "id": "MY",
+            "name": "Malaysia",
+            "boundary_version": null
+          },
+          "occurrence_period": {
+            "start": "2019-09-01",
+            "end": "2019-09-30"
+          },
+          "outcome": "deaths",
+          "attribution_basis": "fire_attributed",
+          "monetary_view": "physical_only",
+          "currency": null,
+          "price_year": null
+        },
+        "requirements": [
+          {
+            "id": "episode_definition",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "asmc-episode-evidence"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:asmc.asean.org Malaysia ASMC episode and smoke context",
+                "ms": "site:asmc.asean.org Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "population",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": ["dosm-district-population"],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:open.dosm.gov.my population district Malaysia methodology",
+                "ms": "site:open.dosm.gov.my penduduk daerah metodologi"
+              }
+            ]
+          },
+          {
+            "id": "physical_effect_method",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality",
+              "who-health-response-methods"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.who.int Malaysia WHO AirQ health response guidance",
+                "ms": "site:www.who.int Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "published_physical_effect",
+            "stage": "discovered",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [
+              "crippa-2016-acute-mortality-pmc",
+              "koplitz-2016-fire-mortality",
+              "crippa-2016-acute-mortality"
+            ],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": [
+              {
+                "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+                "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+                "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+              },
+              {
+                "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+                "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+              }
+            ]
+          },
+          {
+            "id": "fire_attribution",
+            "stage": "missing",
+            "retained_captures": [],
+            "retained_capture_count": 0,
+            "omitted_retained_capture_count": 0,
+            "source_ids": [],
+            "gaps": [
+              "No retained compatible evidence.",
+              "Scientific applicability has not been reviewed for this exact scope and evidence version."
+            ],
+            "omitted_gap_count": 0,
+            "queries": []
+          }
+        ],
+        "interventions": [
+          {
+            "id": "A",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "A.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "A.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          },
+          {
+            "id": "B",
+            "stage": "missing",
+            "categories_considered": [
+              "source_prevention",
+              "exposure_protection"
+            ],
+            "requirements": [
+              {
+                "id": "B.mechanism",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.implementation_scope",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.adoption",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.effectiveness",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.incremental_lifecycle_cost",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              },
+              {
+                "id": "B.prerequisites",
+                "stage": "missing",
+                "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+              }
+            ],
+            "estimate": null
+          }
+        ],
+        "feasibility": "blocked",
+        "quantified_outputs_permitted": false,
+        "lower_budget_B_verified": false,
+        "gaps": [
+          "No reviewed physical-effect input is available yet.",
+          "A/B must share the exact baseline version and B must have a lower compatible evidenced cost."
+        ]
+      }
+    }
+  ],
+  "unresolved_requirements": [
+    {
+      "id": "episode_definition",
+      "stage": "discovered",
+      "retained_captures": [],
+      "retained_capture_count": 0,
+      "omitted_retained_capture_count": 0,
+      "source_ids": [
+        "crippa-2016-acute-mortality-pmc",
+        "koplitz-2016-fire-mortality",
+        "crippa-2016-acute-mortality",
+        "asmc-episode-evidence"
+      ],
+      "gaps": [
+        "No retained compatible evidence.",
+        "Scientific applicability has not been reviewed for this exact scope and evidence version."
+      ],
+      "omitted_gap_count": 0,
+      "queries": [
+        {
+          "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+          "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+          "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+          "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:asmc.asean.org Malaysia ASMC episode and smoke context",
+          "ms": "site:asmc.asean.org Malaysia jerebu bukti kajian"
+        }
+      ]
+    },
+    {
+      "id": "population",
+      "stage": "discovered",
+      "retained_captures": [],
+      "retained_capture_count": 0,
+      "omitted_retained_capture_count": 0,
+      "source_ids": ["dosm-district-population"],
+      "gaps": [
+        "No retained compatible evidence.",
+        "Scientific applicability has not been reviewed for this exact scope and evidence version."
+      ],
+      "omitted_gap_count": 0,
+      "queries": [
+        {
+          "en": "site:open.dosm.gov.my population district Malaysia methodology",
+          "ms": "site:open.dosm.gov.my penduduk daerah metodologi"
+        }
+      ]
+    },
+    {
+      "id": "physical_effect_method",
+      "stage": "discovered",
+      "retained_captures": [],
+      "retained_capture_count": 0,
+      "omitted_retained_capture_count": 0,
+      "source_ids": [
+        "crippa-2016-acute-mortality-pmc",
+        "koplitz-2016-fire-mortality",
+        "crippa-2016-acute-mortality",
+        "who-health-response-methods"
+      ],
+      "gaps": [
+        "No retained compatible evidence.",
+        "Scientific applicability has not been reviewed for this exact scope and evidence version."
+      ],
+      "omitted_gap_count": 0,
+      "queries": [
+        {
+          "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+          "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+          "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+          "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:www.who.int Malaysia WHO AirQ health response guidance",
+          "ms": "site:www.who.int Malaysia jerebu bukti kajian"
+        }
+      ]
+    },
+    {
+      "id": "published_physical_effect",
+      "stage": "discovered",
+      "retained_captures": [],
+      "retained_capture_count": 0,
+      "omitted_retained_capture_count": 0,
+      "source_ids": [
+        "crippa-2016-acute-mortality-pmc",
+        "koplitz-2016-fire-mortality",
+        "crippa-2016-acute-mortality"
+      ],
+      "gaps": [
+        "No retained compatible evidence.",
+        "Scientific applicability has not been reviewed for this exact scope and evidence version."
+      ],
+      "omitted_gap_count": 0,
+      "queries": [
+        {
+          "en": "site:pmc.ncbi.nlm.nih.gov Malaysia Crippa et al. 2016 original article in PubMed Central",
+          "ms": "site:pmc.ncbi.nlm.nih.gov Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:projects.iq.harvard.edu Malaysia Koplitz et al. 2016 modeled 2006/2015 fire mortality",
+          "ms": "site:projects.iq.harvard.edu Malaysia jerebu bukti kajian"
+        },
+        {
+          "en": "site:www.nature.com Malaysia Crippa et al. 2016 acute 2015 fire mortality",
+          "ms": "site:www.nature.com Malaysia jerebu bukti kajian"
+        }
+      ]
+    },
+    {
+      "id": "fire_attribution",
+      "stage": "missing",
+      "retained_captures": [],
+      "retained_capture_count": 0,
+      "omitted_retained_capture_count": 0,
+      "source_ids": [],
+      "gaps": [
+        "No retained compatible evidence.",
+        "Scientific applicability has not been reviewed for this exact scope and evidence version."
+      ],
+      "omitted_gap_count": 0,
+      "queries": []
+    }
+  ],
+  "intervention_specs": [
+    {
+      "id": "A",
+      "stage": "missing",
+      "categories_considered": ["source_prevention", "exposure_protection"],
+      "requirements": [
+        {
+          "id": "A.mechanism",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "A.implementation_scope",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "A.adoption",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "A.effectiveness",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "A.incremental_lifecycle_cost",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "A.prerequisites",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        }
+      ],
+      "estimate": null
+    },
+    {
+      "id": "B",
+      "stage": "missing",
+      "categories_considered": ["source_prevention", "exposure_protection"],
+      "requirements": [
+        {
+          "id": "B.mechanism",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "B.implementation_scope",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "B.adoption",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "B.effectiveness",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "B.incremental_lifecycle_cost",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        },
+        {
+          "id": "B.prerequisites",
+          "stage": "missing",
+          "gap": "Requires compatible public evidence or an explicitly labelled assumption; no value is inferred."
+        }
+      ],
+      "estimate": null
+    }
+  ],
+  "quantified_outputs_permitted": false,
+  "retained_manifest_ref": "case:a952bbcb42a1b7d92f18fc8e7725e6a6cacd4143f225c07b556b774db745d4b1"
+}

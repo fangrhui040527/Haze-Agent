@@ -321,6 +321,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   outputSchema: z.ZodType<O>;
   /** When declared, a retained result may only be saved as this artifact kind. */
   output_artifact_kind?: string;
+  /** Charged attempts per stable assignment id, including restarts and rebriefs. */
+  max_calls_per_assignment?: number;
   execute(input: I, context: ToolContext): Promise<O>;
 }
 export interface AssignmentServices {
