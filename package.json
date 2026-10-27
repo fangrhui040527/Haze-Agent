@@ -65,6 +65,7 @@
     "test:crashes": "node scripts/verify-langgraph-crashes.mjs",
     "test:rollback": "node scripts/verify-langgraph-rollback.mjs",
     "state:migrate": "node scripts/migrate-general-state.mjs",
+    "test:zetaris-scripts": "python -m unittest discover -s app/adapters/zetaris/scripts -t app/adapters/zetaris/scripts -p \"test_*.py\"",
     "qa:suite": "node qa/run-usecases.mjs",
     "testrail:report": "vitest run --project unit --reporter=json --outputFile=qa/vitest-results.json",
     "testrail:status": "node qa/testrail/cli.mjs status",

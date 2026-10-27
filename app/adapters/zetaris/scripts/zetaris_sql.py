@@ -8,11 +8,13 @@ never printed.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
 import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = ROOT.parents[2]
 PLACEHOLDER_UA = "YOUR_APP_NAME YOUR_CONTACT_EMAIL"
 DEFAULT_REST_URL = "http://localhost:8888/api/v1.0"
+DEFAULT_BASE_URL = "http://localhost:3000"
+LOGIN_PATH = "/api/auth/login"
+# Refresh slightly early so a token cannot lapse between the check and the call.
+TOKEN_SKEW_SECONDS = 60
 DEFAULT_JDBC_URL = "jdbc:zetaris:lightning@localhost:10000"
 DRIVER_CLASS = "com.zetaris.lightning.jdbc.LightningDriver"
 ALREADY_EXISTS = re.compile(r"already exists", re.I)
@@ -181,16 +187,84 @@ class Result:
         self.rows = rows or []
 
 
+def _token_expired(token: str) -> bool:
+    """True when a JWT access token has passed its exp.
+
+    /api/auth/login issues a short-lived token (about an hour). A non-JWT value
+    is treated as a durable key and never considered expired.
+    """
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+    try:
+        padded = parts[1] + "=" * (-len(parts[1]) % 4)
+        exp = json.loads(base64.urlsafe_b64decode(padded).decode()).get("exp")
+    except Exception:
+        return False
+    if not isinstance(exp, (int, float)):
+        return False
+    return exp - TOKEN_SKEW_SECONDS <= time.time()
+
+
+def _mint_token() -> str:
+    """Exchange ZETARIS_USERNAME/ZETARIS_PASSWORD for a fresh access token.
+
+    Without this an unattended job depends on a token a human pasted into .env,
+    which lapses about an hour later and fails as a bare HTTP 400.
+    """
+    require("ZETARIS_USERNAME", "ZETARIS_PASSWORD")
+    base = os.environ.get("ZETARIS_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
+    req = Request(
+        base + LOGIN_PATH,
+        data=json.dumps(
+            {
+                "username": os.environ["ZETARIS_USERNAME"],
+                "password": os.environ["ZETARIS_PASSWORD"],
+            }
+        ).encode(),
+        method="POST",
+        headers={"Content-Type": "application/json", "X-Request-ID": str(uuid.uuid4())},
+    )
+    try:
+        with urlopen(req, timeout=60) as resp:
+            body = json.loads(resp.read().decode() or "null")
+    except HTTPError as e:
+        # The body is deliberately not read or echoed: a rejected login can
+        # quote back what was sent, which would put the password in the error.
+        raise ZetarisError(f"Zetaris login failed: HTTP {e.code}") from e
+    except (URLError, OSError) as e:
+        raise ZetarisError(
+            f"Cannot reach {base} to sign in: {getattr(e, 'reason', e)}"
+        ) from e
+    for field in ("idToken", "token", "accessToken"):
+        value = body.get(field) if isinstance(body, dict) else None
+        if isinstance(value, str) and value:
+            return value
+    raise ZetarisError("Zetaris login returned no access token.")
+
+
 class RestChannel:
     name = "rest"
 
     def __init__(self) -> None:
-        require("ZETARIS_API_KEY")
         self.base = os.environ.get("ZETARIS_REST_URL", DEFAULT_REST_URL).rstrip("/")
         self.org = os.environ.get("ZETARIS_ORG_ID", "1")
-        self._key = os.environ["ZETARIS_API_KEY"]
+        self._can_refresh = bool(
+            os.environ.get("ZETARIS_USERNAME") and os.environ.get("ZETARIS_PASSWORD")
+        )
+        self._key = os.environ.get("ZETARIS_API_KEY", "").strip()
+        if not self._key and not self._can_refresh:
+            raise ZetarisError(
+                "Missing in the environment or root .env: ZETARIS_API_KEY, or "
+                "ZETARIS_USERNAME and ZETARIS_PASSWORD so a short-lived token "
+                "can be minted."
+            )
+        # A stored token that has already lapsed is refreshed up front rather
+        # than spending a request to discover it.
+        if self._can_refresh and (not self._key or _token_expired(self._key)):
+            self._key = _mint_token()
 
-    def _call(self, path: str, body: dict | None = None) -> Any:
+    def _call(self, path: str, body: dict | None = None, _retried: bool = False) -> Any:
         req = Request(
             self.base + path,
             data=json.dumps(body).encode() if body is not None else None,
@@ -206,7 +280,21 @@ class RestChannel:
             with urlopen(req, timeout=600) as resp:
                 return json.loads(resp.read().decode() or "null")
         except HTTPError as e:
-            raise ZetarisError(f"HTTP {e.code}: {_short(e.read().decode(errors='replace'))}") from e
+            detail = _short(e.read().decode(errors="replace"))
+            # An expired token surfaces as a bare 400 Bad Request, so decide by
+            # decoding the token rather than by trusting the status code. A 400
+            # from bad SQL with a still-valid token must not spend a login.
+            stale = e.code in (401, 403) or _token_expired(self._key)
+            if stale and self._can_refresh and not _retried:
+                self._key = _mint_token()
+                return self._call(path, body, _retried=True)
+            if stale:
+                raise ZetarisError(
+                    f"HTTP {e.code}: {detail} -- the access token may have expired; "
+                    "set ZETARIS_USERNAME and ZETARIS_PASSWORD so it is refreshed "
+                    "automatically."
+                ) from e
+            raise ZetarisError(f"HTTP {e.code}: {detail}") from e
         except (URLError, OSError) as e:
             raise ZetarisError(f"Cannot reach {self.base}: {getattr(e, 'reason', e)}") from e
 
