@@ -88,15 +88,6 @@ function Header() {
           </NavLink>
           <NavLink
             viewTransition
-            to="/memory"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Memory
-          </NavLink>
-          <NavLink
-            viewTransition
             to="/nightshift"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')

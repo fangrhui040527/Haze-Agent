@@ -337,7 +337,7 @@ export function EvaluationTaskResults({
             />
             <p className={styles.note}>
               Publication: {label(learning.publication)}. World Model acceptance
-              and H-MEM publication require separate integrations.
+              requires a separate integration.
             </p>
           </>
         ) : (

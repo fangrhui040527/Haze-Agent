@@ -39,7 +39,7 @@ export const CITIES: readonly City[] = [
 ];
 
 /** Opening view: all of Malaysia (peninsula + Sabah/Sarawak) first, with Singapore and nearby Indonesia. */
-export const MALAYSIA_VIEW = { lat: 3.2, lng: 109, altitude: 0.95 } as const;
+export const MALAYSIA_VIEW = { lat: 3.2, lng: 109, altitude: 0.4 } as const;
 /** Same framing for the flat map: Malaysia's extent plus a margin for Singapore and Sumatra/Kalimantan. */
 export const MALAYSIA_BOUNDS = { south: -1.5, west: 98.5, north: 7.8, east: 119.5 } as const;
 /** Region box for satellite overlays and fire detections: lat -10..12, lng 92..120. */
