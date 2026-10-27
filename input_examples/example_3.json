@@ -1,0 +1,8 @@
+{
+  "schema_version": "haze.sample.request.v1",
+  "scenario_id": "damage-reduction",
+  "request": {
+    "schema_version": "haze.task.request.v3",
+    "objective": "Prepare a conditional damage-reduction planning preview from the supplied synthetic prospective baseline and intervention residual person-days for two non-overlapping workforce strata. Assess the declared target, independently review arithmetic and plan, and identify missing rules, approval, cost, capacity and worker-income protection. Retain exact sources and scientific prerequisites. Do not treat the supplied scenario as an achieved intervention or scientifically qualified effectiveness estimate. First calculate and independently review the comparison from the supplied residuals, then produce the conditional preview. Keep explicitly unknown costs, approval, rules, capacity and income safeguards as unresolved prerequisites in that preview; do not ask the user to perform the analysis or invent missing values."
+  }
+}

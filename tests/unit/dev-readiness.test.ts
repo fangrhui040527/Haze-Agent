@@ -97,6 +97,29 @@ function application(
 }
 
 describe('named startup component readiness', () => {
+  it('keeps configured model readiness active while sample data collectors are disabled', async () => {
+    const { client } = application({
+      '/api/health': {
+        ok: true,
+        mode: 'live',
+        sampleMode: true,
+        watchers: [],
+        hazeops: {
+          scheduler: 'disabled',
+          reason: 'synthetic evidence selected',
+        },
+      },
+    });
+    const rows = await client.startupChecks();
+    const byId = Object.fromEntries(rows.map((value) => [value.id, value]));
+    expect(byId.hazeops?.status).toBe('DISABLED');
+    expect(byId.hazeops?.detail).toContain('Sample evidence from data/');
+    expect(byId.agents?.status).toBe('UNVERIFIED');
+    expect(byId['nightshift-inference']?.status).toBe('UNVERIFIED');
+    expect(byId['nightshift-runtime']?.status).toBe('RUNNING');
+    expect(byId['nightshift-jobs']?.status).toBe('READY');
+    expect(byId.tasks?.detail).toContain('sample evidence; configured models');
+  });
   it('checks data access and reports active and unverified components separately', async () => {
     const { client, fetchImpl } = application();
     const published: ReadinessRow[] = [];
@@ -257,22 +280,6 @@ describe('named startup component readiness', () => {
     expect(
       rows.find((value) => value.id === 'nightshift-inference')?.status,
     ).toBe('UNVERIFIED');
-  });
-
-  it('distinguishes deliberately disabled inspection from a failed connection', async () => {
-    const { client } = application({
-      '/api/health': { ok: true, mode: 'fixture', sampleMode: true },
-    });
-    const rows = await client.startupChecks();
-    expect(rows.find((value) => value.id === 'agents')?.status).toBe(
-      'DISABLED',
-    );
-    expect(
-      rows.find((value) => value.id === 'nightshift-runtime')?.status,
-    ).toBe('DISABLED');
-    expect(rows.find((value) => value.id === 'nightshift-jobs')?.status).toBe(
-      'DISABLED',
-    );
   });
 
   it('requires release evidence before marking automatic chains ready', async () => {

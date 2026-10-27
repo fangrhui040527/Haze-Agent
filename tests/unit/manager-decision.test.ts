@@ -125,6 +125,472 @@ function response(context: ManagerContext) {
   });
 }
 describe('registered Manager decision layer', () => {
+  it('corrects a premature completion claim rather than finalizing unexecuted requested work', async () => {
+    const { context } = await setup(
+      'Build a damage account from the supplied quantities.',
+    );
+    const inputs: unknown[] = [];
+    const action = {
+      type: 'apply_plan' as const,
+      assignments: [
+        {
+          key: 'inspect-source',
+          definition_id: 'test.source.inspect',
+          brief: 'Inspect the admitted source.',
+          depends_on: [],
+        },
+      ],
+      retain_assignment_ids: [],
+      reason: 'Perform the work before claiming completion.',
+    };
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action:
+              inputs.length === 1
+                ? {
+                    type: 'finalize',
+                    answer:
+                      'The damage account has been built. An independent accounting review is obtained.',
+                    work_products: [],
+                    sources: [],
+                    uncertainty: [],
+                    unfinished: [],
+                  }
+                : action,
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: { code: 'unsupported_completion_claim' },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(result.action).toEqual(action);
+    expect(context.assignments).toEqual([]);
+  });
+  it('does not accept a repeated empty-product completion claim after its bounded correction', async () => {
+    const { context } = await setup('Compile a reviewed damage account.');
+    let calls = 0;
+    await expect(
+      decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: 'The damage account has been compiled.',
+                work_products: [],
+                sources: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'unsupported_completion_claim' });
+    expect(calls).toBe(2);
+  });
+  it.each([
+    [
+      'Explain how damage accounts work.',
+      'An account is built by combining compatible quantities and unit values.',
+    ],
+    [
+      'Build a damage account.',
+      'The account has not been built; required inputs are unavailable.',
+    ],
+  ])(
+    'preserves conceptual explanations and truthful unfinished-work reports: %s',
+    async (objective, answer) => {
+      const { context } = await setup(objective);
+      let calls = 0;
+      const result = await decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer,
+                work_products: [],
+                sources: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(result.action.type).toBe('finalize');
+      expect(calls).toBe(1);
+    },
+  );
+  it('explains that proposed plan keys are not retained assignment IDs and allows a corrected full plan', async () => {
+    const { context } = await setup();
+    const action = {
+      type: 'apply_plan' as const,
+      assignments: [
+        {
+          key: 'new-source',
+          definition_id: 'test.source.inspect',
+          brief: 'Inspect the admitted source.',
+          depends_on: [],
+        },
+      ],
+      retain_assignment_ids: [],
+      reason: 'Admit new work.',
+    };
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action:
+              inputs.length === 1
+                ? { ...action, retain_assignment_ids: ['new-source'] }
+                : action,
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: {
+        code: 'invalid_retain_assignment_ids',
+        message: expect.stringContaining('must be []') as string,
+      },
+    });
+    expect(result.action).toEqual(action);
+    expect(context.assignments).toEqual([]);
+  });
+  it('corrects delegated analysis questions with a fresh model-chosen action before asking the user', async () => {
+    const { context } = await setup();
+    const inputs: unknown[] = [];
+    const plan = {
+      type: 'apply_plan' as const,
+      assignments: [
+        {
+          key: 'inspect-source',
+          definition_id: 'test.source.inspect',
+          brief: 'Analyze the admitted source using the registered method.',
+          depends_on: [],
+        },
+      ],
+      retain_assignment_ids: [],
+      reason: 'Do the requested source analysis.',
+    };
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action:
+              inputs.length === 1
+                ? {
+                    type: 'question',
+                    prompt:
+                      'Explain the evidence gap in the supplied synthetic data.',
+                  }
+                : plan,
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: { code: 'delegated_user_analysis' },
+    });
+    expect(result.action).toEqual(plan);
+    expect(context.assignments).toEqual([]);
+  });
+  it.each([
+    'Which location and UTC period should this investigation cover?',
+    'Explain what you mean by the baseline scenario.',
+    'Please summarize which of the supplied datasets you want compared.',
+  ])(
+    'allows genuine scope clarification without a correction: %s',
+    async (prompt) => {
+      const { context } = await setup();
+      let calls = 0;
+      const result = await decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: { type: 'question', prompt },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(result.action).toEqual({ type: 'question', prompt });
+      expect(calls).toBe(1);
+    },
+  );
+  it.each(['participants', 'purpose'] as const)(
+    'corrects an invalid peer %s before it can consume a channel',
+    async (field) => {
+      const { context } = await setup();
+      context.plan_objective_revision = context.objective_revision;
+      context.assignments = [
+        'test.produce',
+        'test.review',
+        'test.retrieve',
+      ].map((definition_id, index) => ({
+        id: randomUUID(),
+        role: index === 1 ? 'EvidenceCritic' : 'HazeOps',
+        revision: index + 1,
+        definition_id,
+        status: 'queued',
+        support: 'unknown',
+        usability: 'needs_review',
+      }));
+      context.capabilities[0]!.peer_requirements = [
+        {
+          definitions: ['test.produce', 'test.review'],
+          purpose: 'independent-check',
+        },
+      ];
+      const participants = context.assignments
+        .slice(0, 2)
+        .map(({ id, revision }) => ({ assignment_id: id, revision })) as [
+        { assignment_id: string; revision: number },
+        { assignment_id: string; revision: number },
+      ];
+      const required = {
+        type: 'coordinate' as const,
+        participants,
+        purpose: 'independent-check',
+      };
+      const invalid =
+        field === 'purpose'
+          ? { ...required, purpose: 'A description of the check' }
+          : {
+              ...required,
+              participants: [
+                participants[0],
+                { assignment_id: context.assignments[2]!.id, revision: 3 },
+              ],
+            };
+      const inputs: unknown[] = [];
+      const result = await decide({
+        context,
+        model(input) {
+          inputs.push(input);
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: inputs.length === 1 ? invalid : required,
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(result.action).toEqual(required);
+      expect(inputs).toHaveLength(2);
+      expect(inputs[1]).toMatchObject({
+        decision_feedback: {
+          code: 'invalid_peer_coordination',
+          peer_prerequisite: required,
+        },
+      });
+      expect(context.peer_grants).toEqual([]);
+    },
+  );
+  it('asks the model to replace an already-granted exact coordination without reopening it', async () => {
+    const { context } = await setup();
+    const participants = [
+      { assignment_id: randomUUID(), revision: 1 },
+      { assignment_id: randomUUID(), revision: 2 },
+    ] as [
+      { assignment_id: string; revision: number },
+      { assignment_id: string; revision: number },
+    ];
+    context.peer_grants = [{ participants, purpose: 'independent-check' }];
+    const before = structuredClone(context.peer_grants);
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify({
+            ...response(context),
+            action:
+              inputs.length === 1
+                ? {
+                    type: 'coordinate',
+                    participants,
+                    purpose: 'independent-check',
+                  }
+                : { type: 'wait', reason: 'Wait for admitted work.' },
+          }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(result.action.type).toBe('wait');
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: { code: 'duplicate_peer_coordination' },
+    });
+    expect(context.peer_grants).toEqual(before);
+  });
+  it.each(['review', 'prerequisite'] as const)(
+    'corrects a plan missing its registered %s before admission',
+    async (missing) => {
+      const { context } = await setup();
+      context.definitions = [
+        {
+          id: 'test.produce',
+          capability: 'test.source',
+          agent: 'HazeOps',
+          tools: [],
+        },
+        {
+          id: 'test.review',
+          capability: 'test.source',
+          agent: 'EvidenceCritic',
+          tools: [],
+        },
+      ];
+      context.capabilities[0]!.review_requirements = [
+        {
+          artifact_kind: 'test.finding',
+          producer_definition_ids: ['test.produce'],
+          review_definition_id: 'test.review',
+        },
+      ];
+      context.capabilities[0]!.prerequisites = [
+        {
+          definition_id: 'test.review',
+          depends_on_definitions: ['test.produce'],
+        },
+      ];
+      const producer = {
+        key: 'produce',
+        definition_id: 'test.produce',
+        brief: 'Produce evidence.',
+        depends_on: [],
+      };
+      const reviewer = {
+        key: 'review',
+        definition_id: 'test.review',
+        brief: 'Independently review evidence.',
+        depends_on: ['produce'],
+      };
+      const action = {
+        type: 'apply_plan' as const,
+        assignments: [producer, reviewer],
+        retain_assignment_ids: [],
+        reason: 'Admit the complete plan.',
+      };
+      const inputs: unknown[] = [];
+      const result = await decide({
+        context,
+        model(input) {
+          inputs.push(input);
+          const first = {
+            ...action,
+            assignments:
+              missing === 'review'
+                ? [producer]
+                : [producer, { ...reviewer, depends_on: [] }],
+          };
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: inputs.length === 1 ? first : action,
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      });
+      expect(result.action).toEqual(action);
+      expect(inputs).toHaveLength(2);
+      expect(inputs[1]).toMatchObject({
+        decision_feedback: {
+          code:
+            missing === 'review'
+              ? 'independent_review_required'
+              : 'missing_prerequisite',
+          plan_requirements: [
+            {
+              definition_id: 'test.review',
+              depends_on_definitions: ['test.produce'],
+            },
+          ],
+        },
+      });
+      expect(context.assignments).toEqual([]);
+    },
+  );
   it('retains product references whose current producer uses a compact assignment index', async () => {
     const { context } = await setup();
     context.plan_objective_revision = context.objective_revision;
@@ -299,6 +765,102 @@ describe('registered Manager decision layer', () => {
       answer: 'The supplied source is limited. [S1]',
       sources: [source],
     });
+  });
+  it('allows a second correction when repairing schema exposes a distinct citation issue', async () => {
+    const { context } = await setup();
+    const source = { id: randomUUID(), version: 1, sha256: 'c'.repeat(64) };
+    context.artifacts = [{ ref: source, kind: 'source.import', current: true }];
+    const valid = {
+      ...response(context),
+      action: {
+        type: 'finalize' as const,
+        answer: 'The supplied source has limited coverage. [S1]',
+        work_products: [],
+        sources: [source],
+        uncertainty: ['This is a supplied source, not an observation.'],
+        unfinished: [],
+      },
+    };
+    const proposals = [
+      {
+        ...valid,
+        action: {
+          ...valid.action,
+          sources: [{ ...source, kind: 'source.import' }],
+        },
+      },
+      {
+        ...valid,
+        action: {
+          ...valid.action,
+          answer: 'The supplied source has limited coverage.',
+        },
+      },
+      valid,
+    ];
+    const inputs: unknown[] = [];
+    const result = await decide({
+      context,
+      model(input) {
+        inputs.push(input);
+        return Promise.resolve({
+          text: JSON.stringify(proposals[inputs.length - 1]),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(inputs).toHaveLength(3);
+    expect(inputs[1]).toMatchObject({
+      decision_feedback: { correction: 1, code: 'invalid_decision_schema' },
+    });
+    expect(inputs[2]).toMatchObject({
+      run_id: context.run_id,
+      event_cursor: context.event_cursor,
+      decision_feedback: { correction: 2, code: 'missing_source_citation' },
+    });
+    expect(result).toEqual(valid);
+  });
+  it('stops after three proposals even when each reveals a different validation issue', async () => {
+    const { context } = await setup();
+    const source = { id: randomUUID(), version: 1, sha256: 'c'.repeat(64) };
+    context.artifacts = [{ ref: source, kind: 'source.import', current: true }];
+    let calls = 0;
+    await expect(
+      decide({
+        context,
+        model() {
+          calls++;
+          return Promise.resolve({
+            text: JSON.stringify({
+              ...response(context),
+              action: {
+                type: 'finalize',
+                answer: calls === 3 ? 'A finding. [S1] [E1]' : 'A finding.',
+                work_products: [],
+                sources:
+                  calls === 1
+                    ? [{ ...source, kind: 'source.import' }]
+                    : [source],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+            receipt: {
+              response_model: null,
+              response_id: null,
+              input_tokens: null,
+              output_tokens: null,
+            },
+          });
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_source_citation' });
+    expect(calls).toBe(3);
   });
   it.each([true, false])(
     'bounds correction of citation markers outside selected sources (repaired=%s)',
@@ -635,12 +1197,15 @@ describe('registered Manager decision layer', () => {
       event_cursor: context.event_cursor,
       decision_feedback: {
         correction: 1,
-        code: 'invalid_decision_schema',
+        code: 'invalid_retain_assignment_ids',
         message: expect.stringContaining(
-          'action.retain_assignment_ids.0',
+          'retain_assignment_ids must be []',
         ) as unknown,
       },
     });
+    expect(JSON.stringify(inputs[1])).toContain(
+      'NEW proposed assignments are not existing IDs',
+    );
     expect(result).toEqual(response(context));
     expect(context.assignments).toEqual([]);
   });
@@ -696,7 +1261,7 @@ describe('registered Manager decision layer', () => {
       expect(calls).toBe(1);
     },
   );
-  it.each(['duplicate_work', 'wait'] as const)(
+  it.each(['duplicate_work', 'duplicate_definition', 'wait'] as const)(
     'corrects %s using only an exact missing required peer channel hint',
     async (proposal) => {
       const { context } = await setup();
@@ -708,6 +1273,7 @@ describe('registered Manager decision layer', () => {
           ...first,
           role: 'HazeOps',
           definition_id: 'test.produce',
+          brief: 'Repeat the exact admitted work.',
           status: 'queued',
           support: 'unknown',
           usability: 'needs_review',
@@ -750,10 +1316,16 @@ describe('registered Manager decision layer', () => {
                         type: 'apply_plan',
                         assignments: [
                           {
-                            key: first.id,
+                            key:
+                              proposal === 'duplicate_definition'
+                                ? 'new-copy'
+                                : first.id,
                             definition_id: 'test.produce',
-                            brief: 'Duplicate existing work.',
+                            brief: 'Repeat the exact admitted work.',
                             depends_on: [],
+                            ...(proposal === 'duplicate_definition'
+                              ? { input: {} }
+                              : {}),
                           },
                         ],
                         retain_assignment_ids: [first.id, second.id],
@@ -827,6 +1399,55 @@ describe('registered Manager decision layer', () => {
       }
     },
   );
+  it('allows explicitly scoped parallel work with the same definition and brief', async () => {
+    const { context } = await setup();
+    context.plan_objective_revision = context.objective_revision;
+    const existing = randomUUID();
+    context.assignments = [
+      {
+        id: existing,
+        role: 'HazeOps',
+        definition_id: 'test.source.inspect',
+        brief: 'Inspect the exact scoped source.',
+        revision: 1,
+        status: 'queued',
+        support: 'unknown',
+        usability: 'needs_review',
+      },
+    ];
+    const action = {
+      type: 'apply_plan' as const,
+      assignments: [
+        {
+          key: 'distinct-scope',
+          definition_id: 'test.source.inspect',
+          brief: 'Inspect the exact scoped source.',
+          depends_on: [],
+          input: { location: 'Another explicitly declared location' },
+        },
+      ],
+      retain_assignment_ids: [existing],
+      reason: 'Run a separate explicitly scoped source inspection.',
+    };
+    let calls = 0;
+    const result = await decide({
+      context,
+      model() {
+        calls++;
+        return Promise.resolve({
+          text: JSON.stringify({ ...response(context), action }),
+          receipt: {
+            response_model: null,
+            response_id: null,
+            input_tokens: null,
+            output_tokens: null,
+          },
+        });
+      },
+    });
+    expect(calls).toBe(1);
+    expect(result.action).toEqual(action);
+  });
   it.each([
     'run_id',
     'generation',

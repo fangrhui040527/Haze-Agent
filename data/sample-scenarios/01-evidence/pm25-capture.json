@@ -1,0 +1,81 @@
+{
+  "source": "zetaris-open-meteo-pm25",
+  "kind": "modeled",
+  "units": "µg/m³",
+  "location": "Sample Coastal District",
+  "retrieved_at": "2026-10-01T06:15:00Z",
+  "issued_at": null,
+  "rows": [
+    {
+      "start": "2026-10-01T00:00:00.000Z",
+      "end": "2026-10-01T00:00:00.000Z",
+      "value": 22,
+      "issued_at": null,
+      "location": "Sample Coastal District",
+      "ingested_at": "2026-10-01T06:10:00.000Z",
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "start": "2026-10-01T01:00:00.000Z",
+      "end": "2026-10-01T01:00:00.000Z",
+      "value": 28,
+      "issued_at": null,
+      "location": "Sample Coastal District",
+      "ingested_at": "2026-10-01T06:10:00.000Z",
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "start": "2026-10-01T02:00:00.000Z",
+      "end": "2026-10-01T02:00:00.000Z",
+      "value": null,
+      "issued_at": null,
+      "location": "Sample Coastal District",
+      "ingested_at": "2026-10-01T06:10:00.000Z",
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "start": "2026-10-01T04:00:00.000Z",
+      "end": "2026-10-01T04:00:00.000Z",
+      "value": 64,
+      "issued_at": null,
+      "location": "Sample Coastal District",
+      "ingested_at": "2026-10-01T06:10:00.000Z",
+      "latitude": null,
+      "longitude": null
+    },
+    {
+      "start": "2026-10-01T05:00:00.000Z",
+      "end": "2026-10-01T05:00:00.000Z",
+      "value": 57,
+      "issued_at": null,
+      "location": "Sample Coastal District",
+      "ingested_at": "2026-10-01T06:10:00.000Z",
+      "latitude": null,
+      "longitude": null
+    }
+  ],
+  "raw": "{\"data\":[{\"town\":\"Sample Coastal District\",\"valid_utc\":\"2026-10-01T00:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":22,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T06:10:00.000Z\",\"lat\":null,\"lon\":null},{\"town\":\"Sample Coastal District\",\"valid_utc\":\"2026-10-01T01:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":28,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T06:10:00.000Z\",\"lat\":null,\"lon\":null},{\"town\":\"Sample Coastal District\",\"valid_utc\":\"2026-10-01T02:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":null,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T06:10:00.000Z\",\"lat\":null,\"lon\":null},{\"town\":\"Sample Coastal District\",\"valid_utc\":\"2026-10-01T04:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":64,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T06:10:00.000Z\",\"lat\":null,\"lon\":null},{\"town\":\"Sample Coastal District\",\"valid_utc\":\"2026-10-01T05:00:00.000Z\",\"kind\":\"model\",\"issued_utc\":null,\"pm25\":57,\"source\":\"open-meteo-air-quality\",\"ingested_utc\":\"2026-10-01T06:10:00.000Z\",\"lat\":null,\"lon\":null}]}",
+  "selection": {
+    "backend": "zetaris-rest",
+    "query": "LOCAL SAMPLE FILE: data/sample-scenarios/01-evidence/pm25-capture.json. Synthetic transport-compatible records; no SQL or network request was executed.",
+    "request_id": "local-sample-coastal-pm25-v1",
+    "row_limit": 1500,
+    "returned_rows": 5,
+    "truncated": false,
+    "source_filter": "open-meteo-air-quality",
+    "selected_raw_row_indices": [0, 1, 2, 3, 4]
+  },
+  "limitations": [
+    "Locally authored synthetic source data; no live source was queried.",
+    "One sample value is null and one hourly timestamp is absent; missing values are not zero.",
+    "No observations, provider issuance time, fire attribution, model grid support or town-wide representativeness is supplied."
+  ],
+  "mode": "fixture",
+  "evidence_origin": "synthetic_fixture",
+  "temporal_support": "instantaneous",
+  "sample_interval_minutes": 60,
+  "units_reference": "https://open-meteo.com/en/docs/air-quality-api"
+}

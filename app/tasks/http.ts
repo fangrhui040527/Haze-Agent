@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { sampleModeEnabled } from '../adapters/sample-mode.js';
 import { parseContractJson } from '../contracts/json.js';
 import { TaskError, type TaskIdentity } from '../contracts/tasks.js';
 import {
@@ -141,6 +142,20 @@ export function createTaskHandler(
     });
   const runtime = new TaskRuntime({
     ...options,
+    ...(options.taskTimeoutMs === undefined &&
+    sampleModeEnabled(options.env ?? process.env) &&
+    (options.mode ?? 'live') === 'live'
+      ? { taskTimeoutMs: 900_000 }
+      : {}),
+    limits: {
+      // Scoped sample reports include exact component and review references.
+      // Keep enough bounded output space for the ordinary Manager to finish.
+      ...(sampleModeEnabled(options.env ?? process.env) &&
+      (options.mode ?? 'live') === 'live'
+        ? { max_model_input_bytes: 65_536, max_model_output_tokens: 6400 }
+        : {}),
+      ...options.limits,
+    },
     conversationFactory:
       options.conversationFactory ?? createManagerConversation,
     modelRoutes,

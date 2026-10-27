@@ -5,6 +5,7 @@ const selected = {
   HAZE_PROVIDER: 'openai-compatible',
   HAZE_MODEL: 'selected-model',
   HAZE_PROVIDER_BASE_URL: 'http://localhost:11434/v1/',
+  HAZE_PROVIDER_API_KEY: 'test-secret',
 };
 
 afterEach(() => {
@@ -33,23 +34,35 @@ describe('selected-provider compatibility probe', () => {
   );
 
   it.each(['true', '1', 'yes'])(
-    'SAMPLE_MODE=%s disables even an explicitly selected provider',
+    'SAMPLE_MODE=%s preserves the configured provider probe',
     async (sampleMode) => {
-      const fetchMock = vi.fn<typeof fetch>();
+      const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          choices: [{ message: { role: 'assistant', content: 'HAZE_OK' } }],
+        }),
+      );
       vi.stubGlobal('fetch', fetchMock);
       const provider = resolveProbeProvider({
-        HAZE_PROVIDER: 'openai-compatible',
+        ...selected,
+        HAZE_PROVIDER_API_KEY: 'configured-secret',
         SAMPLE_MODE: sampleMode,
       });
 
       expect(await provider.probe()).toMatchObject({
-        status: 'skipped',
-        provider: 'offline',
-        reason: expect.stringContaining(
-          'disabled the selected provider',
-        ) as string,
+        status: 'passed',
+        provider: 'openai-compatible',
+        model: 'selected-model',
       });
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+        new URL('http://localhost:11434/v1/chat/completions'),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer configured-secret',
+          },
+          redirect: 'error',
+        }),
+      );
     },
   );
 
@@ -109,14 +122,59 @@ describe('selected-provider compatibility probe', () => {
     );
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(resolveProbeProvider(selected).probe()).resolves.toMatchObject(
-      {
-        status: 'passed',
-      },
-    );
+    await expect(
+      resolveProbeProvider({
+        ...selected,
+        SAMPLE_MODE: 'true',
+        HAZE_PROVIDER_API_KEY: '',
+      }).probe(),
+    ).resolves.toMatchObject({
+      status: 'passed',
+    });
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({
       'Content-Type': 'application/json',
     });
+  });
+
+  it('uses the local sample fallback without sending any credential and blocks unauthenticated remote probes', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation((url) =>
+      Promise.resolve(
+        new URL(String(url)).pathname === '/api/show'
+          ? Response.json({ parameters: 'num_ctx 16384' })
+          : Response.json({
+              choices: [{ message: { role: 'assistant', content: 'HAZE_OK' } }],
+            }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    expect(
+      await resolveProbeProvider({ SAMPLE_MODE: 'true' }).probe(),
+    ).toMatchObject({
+      status: 'passed',
+      model: 'haze-sample-qwen2.5-7b-16k-v1:latest',
+    });
+    const inference = fetchMock.mock.calls.find(
+      ([url]) => new URL(String(url)).pathname === '/v1/chat/completions',
+    );
+    expect(inference?.[0]).toEqual(
+      new URL('http://127.0.0.1:11434/v1/chat/completions'),
+    );
+    expect(inference?.[1]?.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+    expect(JSON.parse(inference?.[1]?.body as string)).toMatchObject({
+      max_tokens: 32,
+    });
+    fetchMock.mockClear();
+    expect(
+      await resolveProbeProvider({
+        ...selected,
+        SAMPLE_MODE: 'true',
+        HAZE_PROVIDER_BASE_URL: 'https://hosted.example/v1',
+        HAZE_PROVIDER_API_KEY: '',
+      }).probe(),
+    ).toMatchObject({ status: 'blocked' });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('keeps an uncredentialed NVIDIA selection blocked without network access', async () => {

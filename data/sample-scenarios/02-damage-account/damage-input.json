@@ -1,0 +1,258 @@
+{
+  "schema_version": "haze.damage.import.v1",
+  "scope": {
+    "schema_version": "haze.damage.scope.v1",
+    "account_id": "sample-coastal-damage",
+    "event_id": "invented-coastal-episode",
+    "intended_use": "Demonstrate scoped accounting from synthetic supplied quantities, keeping monetary views and evidence gaps distinct.",
+    "source_scope": "Invented episode effect boundary only; no actual source-fire attribution.",
+    "smoke_boundary": "Supplied synthetic treatment and lost-work effects.",
+    "source_fire_boundary": "Direct source-fire impacts are not estimated.",
+    "countries": ["Sample Coastal District"],
+    "social_boundary_members": [
+      "households",
+      "government",
+      "providers",
+      "firms"
+    ],
+    "population": "Invented worker households; no real population estimate.",
+    "emissions_period": {
+      "start": "2026-10-01",
+      "end": "2026-10-07"
+    },
+    "effect_period": {
+      "start": "2026-10-01",
+      "end": "2026-10-07"
+    },
+    "valuation_date": "2026-10-07",
+    "currency": "CU",
+    "price_year": 2026,
+    "endpoints": ["treatment", "productivity", "mortality"],
+    "historical_scenario_id": "historical",
+    "baseline_scenario_id": "no-target-episode",
+    "approved_method_ids": [
+      "damage.imported-quantity.v1",
+      "damage.declared-unit-value.v1",
+      "damage.accounting.v1",
+      "damage.project-scenario.v1"
+    ],
+    "presentation_decimal_places": 2
+  },
+  "effects": [
+    {
+      "scenario_id": "historical",
+      "baseline_id": "no-target-episode",
+      "geography": "Sample Coastal District",
+      "period": {
+        "start": "2026-10-01",
+        "end": "2026-10-07"
+      },
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic",
+      "causal_method": "Hand-authored attributable quantities are supplied as inputs; no exposure-response or causal attribution model has been run.",
+      "applicability": "Invented local sample only; does not apply to actual people, health outcomes or regional damage.",
+      "uncertainty": {
+        "interpretation": "not_quantified",
+        "basis": "Synthetic central inputs with no statistical interval."
+      },
+      "source_refs": [],
+      "effect_id": "historical-treatment",
+      "endpoint_id": "treatment",
+      "quantity": 150,
+      "unit": "treatment_cases",
+      "status": "available",
+      "accounting_lens": "social_welfare",
+      "overlap_group": "treatment-only",
+      "included": true,
+      "unit_value_id": "treatment-unit-value"
+    },
+    {
+      "scenario_id": "historical",
+      "baseline_id": "no-target-episode",
+      "geography": "Sample Coastal District",
+      "period": {
+        "start": "2026-10-01",
+        "end": "2026-10-07"
+      },
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic",
+      "causal_method": "Hand-authored attributable quantities are supplied as inputs; no exposure-response or causal attribution model has been run.",
+      "applicability": "Invented local sample only; does not apply to actual people, health outcomes or regional damage.",
+      "uncertainty": {
+        "interpretation": "not_quantified",
+        "basis": "Synthetic central inputs with no statistical interval."
+      },
+      "source_refs": [],
+      "effect_id": "historical-productivity",
+      "endpoint_id": "productivity",
+      "quantity": 400,
+      "unit": "lost_workdays",
+      "status": "available",
+      "accounting_lens": "social_welfare",
+      "overlap_group": "productivity-only",
+      "included": true,
+      "unit_value_id": "workday-unit-value"
+    },
+    {
+      "scenario_id": "historical",
+      "baseline_id": "no-target-episode",
+      "geography": "Sample Coastal District",
+      "period": {
+        "start": "2026-10-01",
+        "end": "2026-10-07"
+      },
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic",
+      "causal_method": "Hand-authored attributable quantities are supplied as inputs; no exposure-response or causal attribution model has been run.",
+      "applicability": "Invented local sample only; does not apply to actual people, health outcomes or regional damage.",
+      "uncertainty": {
+        "interpretation": "not_quantified",
+        "basis": "Synthetic central inputs with no statistical interval."
+      },
+      "source_refs": [],
+      "effect_id": "historical-mortality",
+      "endpoint_id": "mortality",
+      "quantity": null,
+      "unit": "expected_deaths",
+      "status": "not_estimated",
+      "accounting_lens": "physical_only",
+      "overlap_group": "mortality",
+      "included": false,
+      "exclusion_reason": "No attributable mortality quantity or compatible mortality unit value was supplied."
+    }
+  ],
+  "unit_values": [
+    {
+      "unit_value_id": "treatment-unit-value",
+      "compatible_unit": "treatment_cases",
+      "amount": 120,
+      "included_components": ["treatment"],
+      "transfer_assumptions": "Synthetic resource value excludes lost workdays, mortality and non-financial discomfort.",
+      "method_id": "damage.declared-unit-value.v1",
+      "method_version": "1",
+      "currency": "CU",
+      "price_year": 2026,
+      "valuation_date": "2026-10-07",
+      "horizon": {
+        "start": "2026-10-01",
+        "end": "2026-10-07"
+      },
+      "discount_assumptions": "One-week period, no discount adjustment.",
+      "applicability": "Invented CU unit value for this software sample only.",
+      "source_refs": []
+    },
+    {
+      "unit_value_id": "workday-unit-value",
+      "compatible_unit": "lost_workdays",
+      "amount": 80,
+      "included_components": ["productivity"],
+      "transfer_assumptions": "Synthetic productivity value excludes treatment costs, mortality and non-financial discomfort.",
+      "method_id": "damage.declared-unit-value.v1",
+      "method_version": "1",
+      "currency": "CU",
+      "price_year": 2026,
+      "valuation_date": "2026-10-07",
+      "horizon": {
+        "start": "2026-10-01",
+        "end": "2026-10-07"
+      },
+      "discount_assumptions": "One-week period, no discount adjustment.",
+      "applicability": "Invented CU unit value for this software sample only.",
+      "source_refs": []
+    }
+  ],
+  "incidence": [
+    {
+      "entry_id": "household-treatment-financing",
+      "effect_id": "historical-treatment",
+      "transaction_id": "household-treatment-payment",
+      "payer": "households",
+      "recipient": "providers",
+      "payer_in_boundary": true,
+      "recipient_in_boundary": true,
+      "amount": 6000,
+      "currency": "CU",
+      "price_year": 2026,
+      "financing_type": "resource_financing",
+      "source_refs": []
+    },
+    {
+      "entry_id": "government-treatment-financing",
+      "effect_id": "historical-treatment",
+      "transaction_id": "government-treatment-payment",
+      "payer": "government",
+      "recipient": "providers",
+      "payer_in_boundary": true,
+      "recipient_in_boundary": true,
+      "amount": 12000,
+      "currency": "CU",
+      "price_year": 2026,
+      "financing_type": "resource_financing",
+      "source_refs": []
+    },
+    {
+      "entry_id": "internal-penalty",
+      "effect_id": "historical-treatment",
+      "transaction_id": "internal-penalty-payment",
+      "payer": "firms",
+      "recipient": "government",
+      "payer_in_boundary": true,
+      "recipient_in_boundary": true,
+      "amount": 2000,
+      "currency": "CU",
+      "price_year": 2026,
+      "financing_type": "transfer",
+      "source_refs": []
+    }
+  ],
+  "coverage": [
+    {
+      "endpoint_id": "treatment",
+      "status": "available",
+      "monetary_inclusion": true,
+      "reason": "Synthetic cases and a compatible per-case resource value are supplied.",
+      "geography": "Sample Coastal District",
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic"
+    },
+    {
+      "endpoint_id": "productivity",
+      "status": "available",
+      "monetary_inclusion": true,
+      "reason": "Synthetic lost workdays and a compatible per-day value are supplied.",
+      "geography": "Sample Coastal District",
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic"
+    },
+    {
+      "endpoint_id": "mortality",
+      "status": "not_estimated",
+      "monetary_inclusion": false,
+      "reason": "Mortality inputs are absent; this is a gap rather than a zero loss.",
+      "geography": "Sample Coastal District",
+      "population_stratum": "Invented worker households",
+      "origin": "synthetic"
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "historical",
+      "kind": "historical",
+      "comparator_id": "no-target-episode",
+      "description": "Invented one-week episode compared with a declared absent-episode counterfactual.",
+      "effectiveness": "No intervention efficacy is asserted.",
+      "adoption": "Not applicable to the historical scenario.",
+      "maintenance": "Not applicable to the historical scenario.",
+      "durability": "One declared week only.",
+      "displacement": "No displacement estimate is supplied.",
+      "costs_and_adverse_effects": "No intervention cost or return is asserted."
+    }
+  ],
+  "source_fire_categories": [
+    {
+      "category": "direct-source-fire-loss",
+      "status": "not_estimated",
+      "reason": "No source-fire inputs were supplied."
+    }
+  ]
+}

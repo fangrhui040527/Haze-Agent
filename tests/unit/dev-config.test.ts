@@ -15,6 +15,7 @@ interface Configuration {
   keys: string[];
   execute(tokens: string[]): Promise<string>;
   redact(value: string): string;
+  launchEnvironment(): NodeJS.ProcessEnv;
 }
 
 const { createDevConfig } = (await import(
@@ -47,6 +48,38 @@ afterEach(async () => {
 });
 
 describe('development console configuration', () => {
+  it('loads sample mode from .env and isolates its default state without changing model settings', async () => {
+    const content = [
+      'SAMPLE_MODE=true',
+      'STATE_DIR=.state/general-v2',
+      'HAZE_PROVIDER=nightshift',
+      'HAZE_MODEL=sample-test-model',
+      '',
+    ].join('\n');
+    const { root, configuration } = await workspace(content);
+    expect(configuration.launchEnvironment()).toMatchObject({
+      SAMPLE_MODE: 'true',
+      HAZE_TASK_STATE_DIR: '.state/sample-mode',
+      HAZE_PROVIDER: 'nightshift',
+      HAZE_MODEL: 'sample-test-model',
+    });
+    expect(
+      await configuration.execute(['config', 'get', 'HAZE_TASK_STATE_DIR']),
+    ).toContain('sample mode default');
+    expect(await readFile(join(root, '.env'), 'utf8')).toBe(content);
+    expect(
+      createDevConfig({
+        root,
+        env: { SAMPLE_MODE: 'false' },
+      }).launchEnvironment().HAZE_TASK_STATE_DIR,
+    ).toBeUndefined();
+    expect(
+      createDevConfig({
+        root,
+        env: { HAZE_TASK_STATE_DIR: '.state/custom-sample' },
+      }).launchEnvironment().HAZE_TASK_STATE_DIR,
+    ).toBe('.state/custom-sample');
+  });
   it.each(managerLimits)(
     'shows the default %s and persists supported boundary values',
     async (key, defaultValue, minimum, maximum) => {

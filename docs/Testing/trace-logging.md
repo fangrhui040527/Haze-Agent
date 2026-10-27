@@ -49,6 +49,8 @@ Older events can be reconstructed on demand for API/export with explicit missing
 
 Run `npm run traces:examples` to execute three frozen, scripted scenarios and regenerate [submission examples](../../output_examples/orchestration/traces/README.md). The generator reopens SQLite and file projection, then checks agreement between paginated report data, JSONL and the bundle on complete sanitized records, exact references and final outcome. Examples demonstrate successful evidence-backed work, rejected review followed by revision, and failure followed by recovery.
 
+The command streams each scenario's actual console output while it runs with `HAZE_TRACE_STDOUT=all`. It saves the captured stdout as `logs/<run UUID>/stdout.txt` beside `events.jsonl`, `manifest.json` and `summary.md`, and copies it into the corresponding submission example directory. Every console trace line must match the saved record's ID, timestamp, actor, action and summary in order; missing, duplicate or differing lines fail generation. The capture also retains the evaluator's completion JSON. Reopening the projector checks file recovery without replaying historical stdout.
+
 Run `npm run traces:test:crashes` to exercise abrupt worker exits before projection, after JSONL append but before manifest writing, and after a torn final line. Recovery checks compare the reopened authority, files and evidence bundle and reject duplicate event IDs.
 
 These are local deterministic fixtures/replays. They do not establish live model quality, live Zetaris retrieval or real Meterless operations. Live verification requires a separately configured run and its actual receipts.
