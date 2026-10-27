@@ -33,7 +33,7 @@ await mkdir(root, { recursive: true });
 const frozenCases = JSON.parse(
   await readFile(
     new URL(
-      '../docs/Testing/damage-reduction-programme-cases.json',
+      '../docs/testing/cases/damage-reduction-programme-cases.json',
       import.meta.url,
     ),
     'utf8',

@@ -1,13 +1,9 @@
 import type { EvidenceCheck } from '../../contracts/haze-evidence.js';
 
 /**
- * HazeOps evidence checks. Per Spec §4.2 there are four layers:
- *   1. identity and integrity      -> HazeOps (here)
- *   2. coverage and alignment      -> HazeOps (here)
- *   3. numbers and operating checks -> independent checker (EvidenceCritic)
- *   4. scientific applicability     -> qualified human review
- * Layers 3–4 are reported as pending, never as passed: HazeOps "cannot grant
- * scientific acceptance" (Guide §2) and does not check its own work.
+ * HazeOps runs identity/integrity and coverage/alignment checks during collection.
+ * Scientific applicability still requires qualified human review; automated
+ * collection checks do not grant scientific acceptance.
  */
 
 export function hashCheck(sha256: string, bytes: number): EvidenceCheck {
@@ -125,23 +121,14 @@ export function decisionTimeCheck(
   };
 }
 
-export function pendingReviewChecks(): EvidenceCheck[] {
-  return [
-    {
-      id: 'review.independent',
-      label: 'Independent check (EvidenceCritic)',
-      result: 'pending',
-      detail:
-        'Not connected yet. HazeOps does not check its own work, so these values are not independently verified.',
-    },
-    {
-      id: 'review.applicability',
-      label: 'Intended-use review',
-      result: 'pending',
-      detail:
-        'No qualified reviewer has assessed this source for a named use. Shown for information only.',
-    },
-  ];
+export function intendedUseReviewCheck(): EvidenceCheck {
+  return {
+    id: 'review.applicability',
+    label: 'Intended-use review',
+    result: 'pending',
+    detail:
+      'No qualified reviewer has assessed this source for a named use. Shown for information only.',
+  };
 }
 
 /** Computed when an item is read, because staleness depends on the current time. */

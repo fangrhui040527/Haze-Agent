@@ -12,7 +12,7 @@ import { createManagerSandboxRegistry } from './manager-sandbox.mjs';
 import { restrictManagerEvaluationTools } from './manager-evaluation-support.mjs';
 import {
   ManagerChatSession,
-  managerOnlyModel,
+  managerOnlyModelRoutes,
 } from './manager-chat-session.mjs';
 
 const help = `Talk directly to the configured live Manager with synthetic specialist results.
@@ -51,14 +51,19 @@ const [
   { TaskRuntime, localTaskIdentity },
   { ExecutionRegistry },
   { managerAgent },
-  { resolveAgentModel },
+  { ModelRouteRegistry },
 ] = await Promise.all([
   load('tasks/runtime.js'),
   load('orchestration/ports.js'),
   load('agents/manager/index.js'),
-  load('adapters/agent-model.js'),
+  load('adapters/model-routes.js'),
 ]);
-const model = managerOnlyModel(resolveAgentModel(process.env));
+const modelRoutes = managerOnlyModelRoutes(new ModelRouteRegistry(process.env));
+const managerRoute = modelRoutes.snapshot().routes.Manager;
+const model = await modelRoutes.prepare(
+  managerRoute,
+  AbortSignal.timeout(3000),
+);
 const sessions = join(managerRepositoryRoot, '.state/manager-chat');
 await mkdir(sessions, { recursive: true });
 const directory = await mkdtemp(join(sessions, 'session-'));
@@ -70,7 +75,8 @@ const runtime = new TaskRuntime({
   stateDirectory: join(directory, 'state'),
   registry,
   mode: 'live',
-  model,
+  modelRoutes,
+  env: process.env,
   limits: { max_model_calls: 20, max_assignments: 16, max_artifacts: 64 },
 });
 const excludedTools = restrictManagerEvaluationTools(registry);

@@ -5,6 +5,8 @@ import {
   managerDecisionSchema,
 } from '../contracts/manager.js';
 
+type JsonSchema = z.core.JSONSchema.JSONSchema;
+
 export const MANAGER_REFERENCE_CONTRACT_VERSION = 'haze.manager-references.v1';
 
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -63,11 +65,9 @@ function explicitlyNoReferences(context: unknown): boolean {
 }
 
 /** The complete authority schema also determines the runtime's input reservation. */
-export function managerReferenceOutputSchema(
-  baseJSON: Record<string, unknown>,
-) {
-  const empty = { type: 'array', items: {}, maxItems: 0 };
-  const policy = {
+export function managerReferenceOutputSchema(baseJSON: JsonSchema): JsonSchema {
+  const empty: JsonSchema = { type: 'array', items: {}, maxItems: 0 };
+  const policy: JsonSchema = {
     type: 'object',
     properties: {
       references: empty,
@@ -99,10 +99,7 @@ export function managerReferenceOutputSchema(
   };
   return {
     ...baseJSON,
-    allOf: [
-      ...(Array.isArray(baseJSON.allOf) ? (baseJSON.allOf as unknown[]) : []),
-      policy,
-    ],
+    allOf: [...(Array.isArray(baseJSON.allOf) ? baseJSON.allOf : []), policy],
   };
 }
 
@@ -112,7 +109,7 @@ export function createManagerReferenceContract<
 >(
   context: unknown,
   baseSchema: Schema = managerDecisionSchema as unknown as Schema,
-  baseOutputSchema?: Record<string, unknown>,
+  baseOutputSchema?: JsonSchema,
 ) {
   const baseJSON = baseOutputSchema ?? z.toJSONSchema(baseSchema);
   const constrained = explicitlyNoReferences(context);

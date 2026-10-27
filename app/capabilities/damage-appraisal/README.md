@@ -106,6 +106,6 @@ assembly and independent numerical-check workflow.
 | [fixtures.ts](fixtures.ts)                                           | Explicit synthetic imports and known accounting expectations.                                              |
 
 For setup and execution modes, see the [project README](../../../README.md).
-The [adapter report](../../../docs/orchestration/world-model-damage-input-adapter-report.md)
-and [accounting implementation report](../../../docs/orchestration/damage-accountant-implementation-report.md)
+The [adapter report](../../../docs/reports/orchestration/world-model-damage-input-adapter-report.md)
+and [accounting implementation report](../../../docs/reports/orchestration/damage-accountant-implementation-report.md)
 explain the integration and accounting rules in more detail.

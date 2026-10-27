@@ -75,5 +75,5 @@ preserve explicit version handling. Existing public v1/v2 task tags are retired;
 the current intake tag is `haze.task.request.v3`.
 
 See the [general task engine guide](../../docs/orchestration/general-engine.md)
-for API behavior and the [schema catalog](../../docs/architecture/schema-catalog-v014.md)
+for API behavior and the [schema catalog](../../docs/architecture/schemas/schema-catalog-v014.md)
 for the wider schema inventory.

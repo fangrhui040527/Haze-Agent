@@ -40,6 +40,8 @@ export interface AgentRun {
   startedAt: number | null;
   serviceLabel: string;
   ask(request: AskRequest): Promise<AgentAnswer>;
+  /** Follow an already admitted task for the office without blocking conversation. */
+  observeTask?(taskId: string): void;
   cancel(): void;
   /** Forget the dashboard selection without changing the saved server task. */
   reset(): void;
@@ -301,6 +303,39 @@ export function useAgentRun(
     [observe, onTask],
   );
   const cancel = useCallback(() => controllerRef.current?.abort(), []);
+  const observeTask = useCallback(
+    (taskId: string) => {
+      if (
+        !agentService.watchTask ||
+        (initialTaskId !== undefined && initialTaskId !== taskId)
+      )
+        return;
+      if (taskRef.current?.id === taskId && controllerRef.current) return;
+      restorationRef.current?.abort();
+      restorationRef.current = null;
+      const previousObserver = controllerRef.current;
+      controllerRef.current = null;
+      previousObserver?.abort();
+      taskRef.current = null;
+      setTask(null);
+      setEvents([]);
+      setStartedAt(Date.now());
+      setLatestAnswer(null);
+      setReceipt(null);
+      setOperationError(null);
+      setObservationError(null);
+      onTask({
+        id: taskId,
+        schemaVersion: 'haze.task.v3',
+        taskUrl: `${typeof import.meta.env.VITE_API_BASE_URL === 'string' ? import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '') : ''}/api/tasks/${taskId}`,
+        status: 'queued',
+      });
+      void observe((signal, event, readback) =>
+        agentService.watchTask!(taskId, event, signal, readback),
+      ).catch(() => {});
+    },
+    [initialTaskId, observe, onTask],
+  );
   const reset = useCallback(() => {
     // Reports opened at a task URL stay pinned to that task.
     if (initialTaskId !== undefined) return;
@@ -490,6 +525,7 @@ export function useAgentRun(
       ? `${task.mode} execution - actual receipts`
       : agentService.label,
     ask,
+    observeTask,
     cancel,
     reset,
     task,

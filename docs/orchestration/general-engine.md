@@ -1,6 +1,6 @@
 # General task engine (v3)
 
-The task API retains TypeScript, LangGraph, SQLite and the existing application. The registered `manager.v4` decision entry frames, supervises and replans work through an executable Manager graph. Independently checkpointed specialist graphs continue while the Manager evaluates another decision. The Manager may answer directly, ask a question, inspect evidence, perform explicitly granted read-only lookups, apply or steer a bounded dependency graph, grant peer coordination, wait or finalize. Specialists cannot delegate. See the [LangGraph architecture](../architecture/langgraph-runtime.md) and [implementation report](langgraph-implementation-report.md) for runtime verification; [Manager reasoning readiness](manager-completion-report.md) remains separate.
+The task API retains TypeScript, LangGraph, SQLite and the existing application. The registered `manager.v4` decision entry frames, supervises and replans work through an executable Manager graph. Independently checkpointed specialist graphs continue while the Manager evaluates another decision. The Manager may answer directly, ask a question, inspect evidence, perform explicitly granted read-only lookups, apply or steer a bounded dependency graph, grant peer coordination, wait or finalize. Specialists cannot delegate. See the [LangGraph architecture](../architecture/langgraph-runtime.md) and [implementation report](../reports/orchestration/langgraph-implementation-report.md) for runtime verification; [Manager reasoning readiness](../reports/orchestration/manager-completion-report.md) remains separate.
 
 ## Ownership
 
@@ -14,7 +14,7 @@ The task API retains TypeScript, LangGraph, SQLite and the existing application.
 
 PM2.5 scope, SQL construction, retained-source semantics, producer calculations and the separate independent checker live in `app/capabilities/pm25`. Numerical availability is a PM2.5 artifact, not a required global result field.
 
-Imported damage accounting lives in `app/capabilities/damage-account`, with browser-safe versioned contracts in `app/contracts/damage-account.ts`. Composition registers it before PM2.5 and catch-all synthesis. Its optional Manager template collects exact imports, binds scope, compiles three accounting views, assembles the component manifest and independently reviews it. Numerical components and manifests require exact reviews throughout their transitive dependency closure before finalization. Scope corrections hold conflicting old inputs and require matching imports. An explicitly selected optional revision branch decomposes changes and requires its own independent review. See the [implementation report](damage-accountant-implementation-report.md).
+Imported damage accounting lives in `app/capabilities/damage-account`, with browser-safe versioned contracts in `app/contracts/damage-account.ts`. Composition registers it before PM2.5 and catch-all synthesis. Its optional Manager template collects exact imports, binds scope, compiles three accounting views, assembles the component manifest and independently reviews it. Numerical components and manifests require exact reviews throughout their transitive dependency closure before finalization. Scope corrections hold conflicting old inputs and require matching imports. An explicitly selected optional revision branch decomposes changes and requires its own independent review. See the [implementation report](../reports/orchestration/damage-accountant-implementation-report.md).
 
 ## API
 
@@ -113,6 +113,6 @@ v3 authority; no legacy import or external effects are performed.
 
 ## Verification
 
-Use pinned Node 24.22.1 and npm 11.8.0. `npm run check` runs the repository checks, frontend verification and explicit fixture process/restart verification. `npm run tasks:verify -- --fixture` captures a durable synthetic report; `--live LOCATION UTC_START UTC_END` exercises configured model/source adapters without fallback. Only a captured genuine model/tool trace can establish live readiness. See [general-engine-verification.md](general-engine-verification.md).
+Use pinned Node 24.22.1 and npm 11.8.0. `npm run check` runs the repository checks, frontend verification and explicit fixture process/restart verification. `npm run tasks:verify -- --fixture` captures a durable synthetic report; `--live LOCATION UTC_START UTC_END` exercises configured model/source adapters without fallback. Only a captured genuine model/tool trace can establish live readiness. See [general-engine-verification.md](../reports/orchestration/general-engine-verification.md).
 
 The legacy source and orchestration documents remain historical references. Public v1/v2 protocol tags and frontend routing flags are retired. External effects, memory capture, monitoring, and additional scientific domain families are outside this release.

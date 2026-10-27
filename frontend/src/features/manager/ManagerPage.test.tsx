@@ -82,6 +82,11 @@ describe('dedicated Manager page', () => {
     expect(markup).toContain('Start a task on the dashboard');
     expect(markup).toContain('Open a saved task');
     expect(markup).toContain('Task ID');
+    expect(markup).toContain('Next task permissions');
+    expect(markup).toContain(
+      'Allow Nightshift candidate tools for the next admitted task',
+    );
+    expect(markup).not.toContain('checked=""');
     expect(useAgentRun).not.toHaveBeenCalled();
   });
 
@@ -205,6 +210,19 @@ describe('dedicated Manager page', () => {
     expect(markup).toContain('Continue this legacy Manager in a linked run.');
     expect(markup).toContain('Continue in a new run');
     expect(markup).not.toContain('Resume task');
+  });
+
+  it('keeps lifecycle details and task permission revocation in the workspace', () => {
+    const run = taskRun();
+    run.task!.record!.status = 'running';
+    run.task!.record!.permissions.tools = ['nightshift.submit'];
+    const markup = renderView(run);
+    expect(markup).toContain('Pause task');
+    expect(markup).toContain('Cancel task');
+    expect(markup).toContain('objective revision');
+    expect(markup).toContain('Tool permissions');
+    expect(markup).toContain('Revoke selected permissions');
+    expect(markup).toContain('Next task permissions');
   });
 
   it('reports loading and failed readback without inventing Manager state', () => {

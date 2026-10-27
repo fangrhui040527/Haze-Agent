@@ -6,7 +6,7 @@ The retirement covers schedule-specific admission/result/handoff contracts, prod
 
 Before cleanup, a verified external source archive was created as `legacy-retirement-20261025T092637Z/source-before-cleanup.zip`, with 519 files. It preserves the removed immutable fixture bytes, hashes and review context for recovery. Git history also preserves previously committed files. Restoring that package would require a deliberate migration; old planning payloads are not converted into current task requests.
 
-The current [v1 PM2.5 task API](../evidence/milestone-v014.md), [v2 orchestration scaffold](../orchestration/orchestration-scaffold.md), shared JSON/hash utilities, metadata examples, checkpoint compatibility proof, pinned Meterless engines and Zetaris tooling remain. Supplied architecture/reference PDFs are preserved. Older frontend discovery documents and the v0.8 HTML remain labeled historical; the UI design document is still referenced by the frontend.
+The current [v1 PM2.5 task API](../evidence/milestone-v014.md), [v2 orchestration scaffold](orchestration/orchestration-scaffold.md), shared JSON/hash utilities, metadata examples, checkpoint compatibility proof, pinned Meterless engines and Zetaris tooling remain. Supplied architecture/reference PDFs are preserved. Older frontend discovery documents and the v0.8 HTML remain labeled historical; the UI design document is still referenced by the frontend.
 
 Historical verification records retain their original scope and test counts. They do not certify the repository after retirement. Current validation belongs to the retirement change's executed check results; live source readiness still requires a successful configured source-backed run.
 

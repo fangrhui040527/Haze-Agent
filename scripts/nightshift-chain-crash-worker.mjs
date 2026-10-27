@@ -136,6 +136,8 @@ function setup() {
   const chain = store.nightshift.admitChain(
     {
       schema_version: 'haze.nightshift.chain.admission.v2',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       task_id: task.id,
       ...expected(task),
       total_runs: 3,
@@ -159,6 +161,8 @@ function setup() {
   const job = store.nightshift.reserveJob(
     {
       schema_version: 'haze.nightshift.job.submit.v1',
+      privacy: 'local-only',
+      max_spend_usd: 0,
       chain_id: chain.id,
       ...expected(task),
       expected_assignment_id: assignment.id,

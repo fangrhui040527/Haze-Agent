@@ -232,7 +232,7 @@ describe('development startup status display', () => {
     expect(visible).not.toMatch(/STARTING|WAITING/);
     expect(visible).toMatch(/World Model \(SQLite\)[^\n]*READY/);
     expect(visible).toMatch(/H-MEM[^\n]*DISABLED/);
-    expect(visible).toMatch(/Nightshift local jobs[^\n]*BLOCKED/);
+    expect(visible).toMatch(/Nightshift candidate jobs[^\n]*BLOCKED/);
     expect(visible).toContain('http://localhost:5173/');
     expect(visible).toContain('Started in 3.5s');
     display.close();

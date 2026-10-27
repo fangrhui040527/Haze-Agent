@@ -30,7 +30,10 @@ const expected = (task: TaskRecord) => ({
   expected_state_revision: task.state_revision,
 });
 
-function fixture(consume = true) {
+function fixture(
+  consume = true,
+  privacy: 'local-only' | 'cloud-ok' = 'cloud-ok',
+) {
   // A short grant exposes expiry without waiting; fixture setup must not spend
   // that lifetime on a slow runner.
   const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
@@ -40,6 +43,10 @@ function fixture(consume = true) {
   const store = new TaskStore(directory, { recover: false });
   resources.push({ store, directory });
   const tools = ['nightshift.result'];
+  const policy = {
+    privacy,
+    max_spend_usd: privacy === 'local-only' ? 0 : null,
+  };
   let task = store.admit(
     taskRequestSchema.parse({
       schema_version: 'haze.task.request.v3',
@@ -79,6 +86,7 @@ function fixture(consume = true) {
       task_id: task.id,
       ...expected(task),
       lifetime_seconds: 1,
+      ...policy,
     },
     'chain',
     localTaskIdentity,
@@ -94,6 +102,7 @@ function fixture(consume = true) {
       prompt: 'Unreviewed candidate.',
       n: 1,
       role: 'HazeOps',
+      ...policy,
     },
     'job',
     localTaskIdentity,
@@ -131,7 +140,7 @@ function fixture(consume = true) {
       terminal: true,
       generated: 1,
       requested_attempts: 1,
-      privacy: 'local-only',
+      privacy: job.options.privacy,
       fleet: null,
       runtime_version: 'fixture',
     },
@@ -181,19 +190,43 @@ function fixture(consume = true) {
       input,
       'nightshift-result.v1',
     );
-  return { store, task, authority, chain, clock, call };
+  return { store, task, authority, chain, job, remote, clock, call };
 }
 
-it('replays eligible candidate bytes without charging or dispatching again', () => {
-  const f = fixture();
-  const first = f.call();
-  expect(first.output).toBe('Unreviewed candidate bytes.');
-  const before = f.store.read(f.task.id, localTaskIdentity).usage.tool_calls;
-  expect(f.call()).toEqual(first);
-  expect(f.store.read(f.task.id, localTaskIdentity).usage.tool_calls).toBe(
-    before,
-  );
-});
+it.each(['local-only', 'cloud-ok'] as const)(
+  'replays eligible %s candidate bytes without charging or dispatching again',
+  (privacy) => {
+    const f = fixture(true, privacy);
+    const first = f.call();
+    expect(first.output).toBe('Unreviewed candidate bytes.');
+    const before = f.store.read(f.task.id, localTaskIdentity).usage.tool_calls;
+    expect(f.call()).toEqual(first);
+    expect(f.store.read(f.task.id, localTaskIdentity).usage.tool_calls).toBe(
+      before,
+    );
+  },
+);
+
+it.each(['local-only', 'cloud-ok'] as const)(
+  'blocks %s candidate consumption when the native result reports a different privacy policy',
+  (privacy) => {
+    const f = fixture(true, privacy);
+    f.store.nightshift.observation(f.job.id, f.remote, {
+      remote_id: f.remote,
+      execution_state: 'completed',
+      terminal: true,
+      generated: 1,
+      requested_attempts: 1,
+      privacy: privacy === 'local-only' ? 'cloud-ok' : 'local-only',
+      fleet: null,
+      runtime_version: 'fixture',
+    });
+    expect(() => f.call()).toThrow('original admitted execution policy');
+    expect(
+      f.store.externalWaits.candidateContext(f.authority, localTaskIdentity),
+    ).toEqual([]);
+  },
+);
 
 it('rejects completed-result replay after chain expiry without altering its accepted receipt or charges', () => {
   const f = fixture();

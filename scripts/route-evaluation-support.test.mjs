@@ -311,7 +311,7 @@ test('Manager evaluation applies the production empty-reference boundary without
 
 test('preparing every frozen specialist probe preserves its context, criteria and limits', () => {
   const path = new URL(
-    '../docs/Testing/route-evaluation-cases.json',
+    '../docs/testing/cases/route-evaluation-cases.json',
     import.meta.url,
   );
   const bytes = readFileSync(path);

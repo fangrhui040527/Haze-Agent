@@ -1,6 +1,6 @@
 # First v0.14 milestone: read-only PM2.5 evidence
 
-Implemented locally; **live integration readiness remains blocked**. This is an informational evidence summary, not canonical acceptance, publication, a notification, monitoring or an operational action. The original scheduling contracts, fixtures and connected demo UI were subsequently [retired](../history/legacy-retirement.md). This document describes the retained v1 PM2.5 milestone; the opt-in [v2 orchestration scaffold](../orchestration/orchestration-scaffold.md) adds separate role assignments and server cancellation.
+Implemented locally; **live integration readiness remains blocked**. This is an informational evidence summary, not canonical acceptance, publication, a notification, monitoring or an operational action. The original scheduling contracts, fixtures and connected demo UI were subsequently [retired](../history/legacy-retirement.md). This document describes the retained v1 PM2.5 milestone; the opt-in [v2 orchestration scaffold](../history/orchestration/orchestration-scaffold.md) adds separate role assignments and server cancellation.
 
 ## Implementation plan and delivered path
 

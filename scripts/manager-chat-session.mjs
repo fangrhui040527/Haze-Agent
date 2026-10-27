@@ -193,3 +193,18 @@ export function managerOnlyModel(model) {
       : {}),
   };
 }
+
+/** Keep live route admission and per-call negotiation while guarding the sandbox. */
+export function managerOnlyModelRoutes(registry) {
+  return {
+    snapshot: () => registry.snapshot(),
+    readiness: () => registry.readiness(),
+    resolve: (route) => managerOnlyModel(registry.resolve(route)),
+    async prepare(route, signal) {
+      const model = registry.prepare
+        ? await registry.prepare(route, signal)
+        : registry.resolve(route);
+      return managerOnlyModel(model);
+    },
+  };
+}

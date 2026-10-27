@@ -83,6 +83,14 @@ function Header() {
             Damage Appraisal
           </NavLink>
           <NavLink
+            to="/damage-reduction"
+            className={({ isActive }) =>
+              [styles.navLink, isActive ? styles.active : ''].join(' ')
+            }
+          >
+            Damage reduction
+          </NavLink>
+          <NavLink
             to="/world-model"
             className={({ isActive }) =>
               [styles.navLink, isActive ? styles.active : ''].join(' ')
@@ -105,14 +113,6 @@ function Header() {
             }
           >
             Nightshift
-          </NavLink>
-          <NavLink
-            to="/damage-reduction"
-            className={({ isActive }) =>
-              [styles.navLink, isActive ? styles.active : ''].join(' ')
-            }
-          >
-            Damage reduction
           </NavLink>
           <NavLink
             to="/demo-data"

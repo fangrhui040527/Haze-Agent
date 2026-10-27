@@ -88,4 +88,4 @@ The [cutover and rollback runbook](../orchestration/langgraph-cutover-runbook.md
 
 ## Verification scope
 
-The [implementation report](../orchestration/langgraph-implementation-report.md) records the actual checks and remaining gaps. `scripts/verify-langgraph-crashes.mjs` kills a separate runtime process at prepared-operation, in-flight remote-call, persisted-response and local-effect/checkpoint boundaries, then starts a new process against the same isolated directory. Scripted model responses demonstrate runtime behavior, not model reasoning quality or successful live source retrieval.
+The [implementation report](../reports/orchestration/langgraph-implementation-report.md) records the actual checks and remaining gaps. `scripts/verify-langgraph-crashes.mjs` kills a separate runtime process at prepared-operation, in-flight remote-call, persisted-response and local-effect/checkpoint boundaries, then starts a new process against the same isolated directory. Scripted model responses demonstrate runtime behavior, not model reasoning quality or successful live source retrieval.

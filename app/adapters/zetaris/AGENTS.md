@@ -1,10 +1,10 @@
 # Agent instructions
 
-This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `../../../docs/Zetaris/guides/`. You are acting as a data engineer against a Zetaris instance.
+This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `../../../docs/zetaris/guides/`. You are acting as a data engineer against a Zetaris instance.
 
 ## Connect first
 
-The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `../../../docs/Zetaris/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
+The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `../../../docs/zetaris/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
 
 - **JDBC:** use `ZETARIS_JDBC_JAR` if set; otherwise ask the user for the full path to the driver JAR. Do not assume or search for it.
 - **REST:** the key is `ZETARIS_API_KEY` in `.env`, created by the user in the Zetaris GUI. Never create, request, print, log or put it in a URL.
@@ -43,7 +43,7 @@ Run `python3 scripts/preflight.py` (add `--jdbc --jar <path>` for JDBC). It is r
 - Zetaris Lightning SQL only. Not Spark SQL or Hive SQL, and never start a local Spark session.
 - One statement per call, no trailing semicolon, qualified names (`<source>.<table>`). A `_create.sql` script holds many statements; `scripts/run_sql.py` splits and sends them for you.
 - **USL:** `lightning.metastore` must exist before `CREATE NAMESPACE IF NOT EXISTS lightning.metastore.<name>` works; check with `SHOW NAMESPACES OR TABLES IN lightning.metastore` (on an uninitialised instance the statement fails with "parent namespace : metastore is not existing"). A multi-table `COMPILE USL` must be sent as one whole statement, so do not split it on `;`. It works over JDBC and REST that way. Use `SHOW DQ ALL INVALID TABLE <namespace.usl.table>` (the `TABLE` clause is required).
-- Read `../../../docs/Zetaris/guides/zetaris-lightning-sql-commands.md` for syntax and `../../../docs/Zetaris/guides/zetaris-lightning-sql-companion.md` for confirmed gotchas and platform limitations before writing new SQL.
+- Read `../../../docs/zetaris/guides/zetaris-lightning-sql-commands.md` for syntax and `../../../docs/zetaris/guides/zetaris-lightning-sql-companion.md` for confirmed gotchas and platform limitations before writing new SQL.
 
 ## Running scripts
 

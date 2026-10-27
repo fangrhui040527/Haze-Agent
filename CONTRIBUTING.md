@@ -53,7 +53,7 @@ Keep changes focused and explain their resulting behavior, relevant checks and l
 - Server-owned identity, permissions, scope and resource limits remain enforced in code.
 - Exact evidence versions, hashes, selected rows, uncertainty and intended use remain visible.
 - Cancellation, restart and late-result behavior remain truthful; adapters do not silently retry or substitute fixtures.
-- Component readiness is supported by recorded evidence in [the current verification record](docs/orchestration/general-engine-verification.md).
+- Component readiness is supported by recorded evidence in [the current verification record](docs/reports/orchestration/general-engine-verification.md).
 - Direct dependencies remain exactly pinned and local/CI behavior agree.
 - Secrets, databases, logs and generated build output are absent from the diff.
 

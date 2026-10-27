@@ -44,7 +44,10 @@ export function ChainSummary({
           {new Date(chain.expires_at).toLocaleString()}
         </time>
         . Authorized automatic follow-ups: {chain.grant.automatic_followup_runs}
-        . Local-only / $0 cloud spend.
+        .{' '}
+        {chain.grant.privacy === 'cloud-ok'
+          ? 'Cloud allowed / No cloud spend cap.'
+          : 'Local only / $0 cloud spend.'}
       </p>
       <dl className={styles.grant}>
         <div>
@@ -101,9 +104,11 @@ export function ChainSummary({
         </div>
       </dl>
       <p>
-        Job spend policy: local-only, $0 cloud spend. Haze agent-provider model
-        calls and per-call token limits are separate; job budgets do not cap
-        those provider calls.
+        Job spend policy:{' '}
+        {chain.grant.privacy === 'cloud-ok'
+          ? 'cloud allowed, no cloud spend cap.'
+          : 'local only, $0 cloud spend.'}{' '}
+        Normal Haze agent calls use separate model routes and call/token limits.
       </p>
       {chain.stop_reason ? (
         <p role="status">Stop reason: {chain.stop_reason}</p>
@@ -193,6 +198,12 @@ export function JobDetails({
         Progress: {job.progress.generated ?? 'unknown'} /{' '}
         {job.progress.requested_attempts ?? job.options.n} attempts. Remote
         handle: <code>{job.remote_id ?? 'not acknowledged'}</code>.
+      </p>
+      <p>
+        Candidate compute policy:{' '}
+        {job.options.privacy === 'cloud-ok'
+          ? 'Cloud allowed · No cloud spend cap.'
+          : 'Local only · $0 cloud spend.'}
       </p>
       <p>
         <Link to={`/task/${job.task_id}`}>Originating task</Link> · chain{' '}

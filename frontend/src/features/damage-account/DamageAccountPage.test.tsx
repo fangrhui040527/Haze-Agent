@@ -120,6 +120,8 @@ describe('dedicated damage accounting page', () => {
     expect(markup).not.toContain('id="manager-workspace-title"');
     expect(markup).not.toContain('Interpreted objective');
     expect(markup).not.toContain('Manager decisions and execution details');
+    expect(markup).not.toContain('Continue in a new run');
+    expect(markup).not.toContain('Tool permissions');
   });
 
   it('marks rejected historical results before artifacts load', () => {

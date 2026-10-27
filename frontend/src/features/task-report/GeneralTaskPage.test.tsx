@@ -64,7 +64,8 @@ describe('general task reports', () => {
     expect(markup).toContain('needs review');
     expect(markup).toContain('Stale result');
     expect(markup).toContain('Exact source');
-    expect(markup).toContain('Continue in a new run');
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).not.toContain('Continue in a new run');
     expect(markup).not.toContain('Filled in from a template');
     expect(markup).not.toContain('href="/task/');
     expect(markup).toContain(
@@ -111,7 +112,7 @@ describe('general task reports', () => {
     expect(markup).not.toContain('Stop waiting');
   });
 
-  it('renders waiting questions and paused controls without claiming active work', () => {
+  it('renders waiting questions and links paused controls to the workspace', () => {
     const run = taskRun();
     run.status = 'waiting';
     run.statusText = 'Waiting for clarification or source material.';
@@ -137,7 +138,8 @@ describe('general task reports', () => {
     run.task!.record!.status = 'paused';
     const paused = render(run);
     expect(paused).toContain('Server task: paused');
-    expect(paused).toContain('Resume task');
+    expect(paused).toContain('Open Manager workspace');
+    expect(paused).not.toContain('Resume task');
     expect(paused).toContain('aria-busy="false"');
     expect(paused).toContain(
       '<details open=""><summary>Actual execution receipts (0)</summary>',
@@ -274,7 +276,7 @@ describe('general task reports', () => {
     expect(markup).toContain('Saved result');
   });
 
-  it('offers explicit linked continuation for unfinished legacy Manager tasks', () => {
+  it('links unfinished legacy Manager tasks to their workspace for continuation', () => {
     const run = taskRun();
     run.status = 'paused';
     const record = run.task!.record!;
@@ -285,9 +287,19 @@ describe('general task reports', () => {
         'This run used the previous Manager. Continue in a linked run to use the current version.',
     };
     const markup = render(run);
-    expect(markup).toContain('This run used the previous Manager.');
-    expect(markup).toContain('Continue in a new run');
-    expect(markup).toContain('fresh bounded resources');
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).not.toContain('Continue in a new run');
     expect(markup).not.toContain('Resume task');
+  });
+
+  it('leaves task permission revocation in the Manager workspace', () => {
+    const run = taskRun();
+    run.task!.record!.permissions.tools = ['nightshift.submit'];
+    const markup = render(run);
+    expect(markup).toContain('Open Manager workspace');
+    expect(markup).not.toContain('Tool permissions');
+    expect(markup).not.toContain('Revoke selected permissions');
+    expect(markup).not.toContain('Next task permissions');
   });
 });
