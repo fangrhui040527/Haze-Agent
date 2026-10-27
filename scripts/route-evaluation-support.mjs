@@ -1,6 +1,10 @@
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import {
+  createManagerReferenceContract,
+  MANAGER_REFERENCE_CONTRACT_VERSION,
+} from '../dist/agents/manager/reference-contract.js';
+import {
   createSpecialistActionContract,
   SPECIALIST_ACTION_CONTRACT_VERSION,
 } from '../dist/orchestration/action-contract.js';
@@ -13,11 +17,17 @@ export function prepareRouteEvaluation(agent, context, maxOutputTokens) {
     agent.id === 'Manager'
       ? undefined
       : createSpecialistActionContract(context, baseSchema);
+  const managerContract =
+    agent.id === 'Manager'
+      ? createManagerReferenceContract(context, baseSchema)
+      : undefined;
   return {
-    schema: contract?.schema ?? baseSchema,
-    action_contract_version: contract
-      ? SPECIALIST_ACTION_CONTRACT_VERSION
-      : undefined,
+    schema: contract?.schema ?? managerContract?.schema ?? baseSchema,
+    action_contract_version: managerContract?.constrained
+      ? MANAGER_REFERENCE_CONTRACT_VERSION
+      : contract
+        ? SPECIALIST_ACTION_CONTRACT_VERSION
+        : undefined,
     input: {
       role: agent.id,
       instruction: agent.instructions,
@@ -30,7 +40,10 @@ export function prepareRouteEvaluation(agent, context, maxOutputTokens) {
             },
           }
         : context,
-      output_schema: contract?.outputSchema ?? z.toJSONSchema(baseSchema),
+      output_schema:
+        contract?.outputSchema ??
+        managerContract?.outputSchema ??
+        z.toJSONSchema(baseSchema),
       max_output_tokens: maxOutputTokens,
       json_mode: true,
     },

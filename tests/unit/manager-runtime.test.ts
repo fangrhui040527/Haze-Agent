@@ -77,6 +77,8 @@ async function setup(
   options: {
     definitions?: AssignmentDefinition[];
     configure?: (registry: ExecutionRegistry) => void;
+    source?: string;
+    inputBytes?: number[];
   } = {},
 ) {
   const registry = new ExecutionRegistry()
@@ -117,6 +119,7 @@ async function setup(
     model: {
       selection: { provider: 'scripted', model: 'manager-invariant' },
       async complete(input) {
+        options.inputBytes?.push(Buffer.byteLength(JSON.stringify(input)));
         expect(input.output_schema).toBeTypeOf('object');
         expect(JSON.stringify(input.output_schema)).not.toContain(
           '"propertyNames"',
@@ -157,10 +160,30 @@ async function setup(
     await instance.close();
     await rm(directory, { recursive: true, force: true });
   });
+  const source =
+    options.source === undefined
+      ? undefined
+      : instance.importArtifact(
+          {
+            schema_version: 'haze.artifact.import.v3',
+            filename: 'source.md',
+            media_type: 'text/markdown',
+            content_base64: Buffer.from(options.source).toString('base64'),
+            declared_origin: 'Explicit synthetic test source.',
+          },
+          randomUUID(),
+        );
   const admitted = instance.admit(
     {
       schema_version: 'haze.task.request.v3',
       objective: 'Exercise the registered testing capability.',
+      ...(source
+        ? {
+            context_refs: [
+              { id: source.id, version: source.version, sha256: source.sha256 },
+            ],
+          }
+        : {}),
     },
     randomUUID(),
   );
@@ -184,6 +207,337 @@ const terminal = (task: TaskRecord) =>
   ['completed', 'failed', 'paused'].includes(task.status);
 
 describe('persistent Manager supervision', () => {
+  it('reserves the complete Manager reference policy before compacting a near-limit catalog', async () => {
+    const registry = new ExecutionRegistry().registerAgent(managerAgent);
+    for (let index = 0; index < 20; index++)
+      registry.registerCapability({
+        card: {
+          id: `catalog.capability-${index}`,
+          version: '1',
+          purpose: 'Catalog metadata. '.padEnd(450, 'x'),
+          work_products: [],
+          required_tools: [],
+          roles: [],
+          readiness: 'implemented',
+          limitations: [],
+        },
+        matches: () => false,
+        assignments: () => [],
+      });
+    const directory = await mkdtemp(join(tmpdir(), 'haze-manager-budget-'));
+    const inputBytes: number[] = [];
+    const instance = new TaskRuntime({
+      stateDirectory: directory,
+      registry,
+      mode: 'live',
+      model: {
+        selection: { provider: 'scripted', model: 'manager-input-budget' },
+        complete(input) {
+          const size = Buffer.byteLength(JSON.stringify(input));
+          inputBytes.push(size);
+          expect(size).toBeLessThanOrEqual(24576);
+          const context = input.context as ManagerContext;
+          expect(context.capabilities).toHaveLength(20);
+          expect(context.request.objective).toBe('Explain an evidence gap.');
+          expect(context.request.context_refs).toEqual([]);
+          return Promise.resolve(
+            JSON.stringify({
+              id: randomUUID(),
+              run_id: context.run_id,
+              generation: context.generation,
+              objective_revision: context.objective_revision,
+              plan_revision: context.plan_revision,
+              event_cursor: context.event_cursor,
+              explanation: 'A conceptual answer needs no artifact sources.',
+              references: [],
+              action: {
+                type: 'finalize',
+                answer: 'An evidence gap is missing support for a conclusion.',
+                sources: [],
+                work_products: [],
+                uncertainty: [],
+                unfinished: [],
+              },
+            }),
+          );
+        },
+      },
+    });
+    cleanups.push(async () => {
+      await instance.close();
+      await rm(directory, { recursive: true, force: true });
+    });
+    const admitted = instance.admit(
+      {
+        schema_version: 'haze.task.request.v3',
+        objective: 'Explain an evidence gap.',
+        context_refs: [],
+      },
+      randomUUID(),
+    );
+    const completed = await until(instance, admitted.task_id, terminal);
+    expect(completed.status).toBe('completed');
+    expect(completed.limits.max_model_input_bytes).toBe(24576);
+    expect(completed.usage.model_calls).toBe(1);
+    expect(inputBytes).toHaveLength(1);
+  });
+
+  it('dispatches admitted work after its exact peer grant without another unchanged Manager turn', async () => {
+    let started = false;
+    let reviewed = false;
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const producing: AssignmentDefinition = {
+      ...producer,
+      async execute(services) {
+        started = true;
+        await gate;
+        return producer.execute!(services);
+      },
+    };
+    const reviewing: AssignmentDefinition = {
+      id: 'test.review',
+      version: '1',
+      capability: 'test',
+      agent: 'EvidenceCritic',
+      tools: [],
+      instructions: 'Verify that the dependent branch was dispatched.',
+      execute() {
+        reviewed = true;
+        return {
+          status: 'completed',
+          summary: 'The dependent branch completed.',
+          support: 'supported',
+          uncertainty: [],
+          outputs: [],
+        };
+      },
+    };
+    let unchangedTurns = 0;
+    const { instance, id, contexts } = await setup(
+      (context) => {
+        if (!context.assignments.length)
+          return {
+            type: 'apply_plan',
+            assignments: [
+              {
+                key: 'work',
+                definition_id: 'test.produce',
+                brief: 'Produce the finding.',
+                depends_on: [],
+              },
+              {
+                key: 'review',
+                definition_id: 'test.review',
+                brief: 'Run the dependent review branch.',
+                depends_on: ['work'],
+              },
+            ],
+            retain_assignment_ids: [],
+            reason: 'Admit the registered dependent work.',
+          };
+        if (!context.peer_grants.length) {
+          expect(started).toBe(false);
+          return {
+            type: 'coordinate',
+            participants: context.assignments.map((assignment) => ({
+              assignment_id: assignment.id,
+              revision: assignment.revision,
+            })) as [
+              { assignment_id: string; revision: number },
+              { assignment_id: string; revision: number },
+            ],
+            purpose: 'independent-check',
+          };
+        }
+        if (!started) {
+          unchangedTurns++;
+          return {
+            type: 'apply_plan',
+            assignments: context.assignments.map((assignment) => ({
+              key: assignment.id,
+              definition_id: assignment.definition_id!,
+              brief: assignment.brief!,
+              depends_on: [],
+            })),
+            retain_assignment_ids: context.assignments.map(({ id }) => id),
+            reason: 'Incorrectly repeat queued work before worker progress.',
+          };
+        }
+        return context.assignments.every(
+          (assignment) => assignment.status === 'completed',
+        )
+          ? finish(context)
+          : { type: 'wait', reason: 'Wait for the admitted dependent work.' };
+      },
+      {
+        definitions: [producing, reviewing],
+        configure(registry) {
+          registry.capabilities.get('test')!.peer_requirements = [
+            {
+              definitions: ['test.produce', 'test.review'],
+              purpose: 'independent-check',
+            },
+          ];
+        },
+      },
+    );
+    try {
+      const running = await until(instance, id, () => started);
+      expect(running.usage.model_calls).toBe(2);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(contexts).toHaveLength(2);
+      expect(unchangedTurns).toBe(0);
+      release();
+      const task = await until(instance, id, terminal);
+      expect(task.status, task.error?.message).toBe('completed');
+      expect(reviewed).toBe(true);
+      expect(unchangedTurns).toBe(0);
+      expect(
+        instance.store.peerChannelForRun(task.current_run_id)?.status,
+      ).toBe('closed');
+    } finally {
+      release();
+    }
+  });
+  it('withholds a late reviewer whose current pair never received the required peer grant', async () => {
+    let reviewed = false;
+    const reviewing: AssignmentDefinition = {
+      id: 'test.late-review',
+      version: '1',
+      capability: 'test',
+      agent: 'EvidenceCritic',
+      tools: [],
+      instructions: 'Do not run without the required exact pair grant.',
+      execute() {
+        reviewed = true;
+        return {
+          status: 'completed',
+          summary: 'Unexpected ungranted review.',
+          support: 'supported',
+          uncertainty: [],
+          outputs: [],
+        };
+      },
+    };
+    const { instance, id } = await setup(
+      (context) => {
+        if (!context.assignments.length) return plan();
+        const producing = context.assignments.find(
+          (assignment) => assignment.definition_id === 'test.produce',
+        )!;
+        if (
+          !context.assignments.some(
+            (assignment) => assignment.definition_id === 'test.late-review',
+          )
+        )
+          return {
+            type: 'apply_plan',
+            assignments: [
+              {
+                key: 'late-review',
+                definition_id: 'test.late-review',
+                brief: 'Review the retained producer.',
+                depends_on: [producing.id],
+              },
+            ],
+            retain_assignment_ids: [producing.id],
+            reason: 'Add a review after the producer completed.',
+          };
+        return {
+          type: 'question',
+          prompt:
+            'The required exact peer pair was never granted; explicitly revise the plan.',
+        };
+      },
+      {
+        definitions: [producer, reviewing],
+        configure(registry) {
+          registry.capabilities.get('test')!.peer_requirements = [
+            {
+              definitions: ['test.produce', 'test.late-review'],
+              purpose: 'independent-check',
+            },
+          ];
+        },
+      },
+    );
+    const task = await until(
+      instance,
+      id,
+      (current) => current.status === 'waiting' || terminal(current),
+    );
+    expect(task.status, task.error?.message).toBe('waiting');
+    expect(reviewed).toBe(false);
+    expect(
+      instance.store.peerChannelForRun(task.current_run_id),
+    ).toBeUndefined();
+  });
+  it('reserves room for a charged correction when an assembler fills its entire admitted context budget', async () => {
+    let calls = 0;
+    const inputBytes: number[] = [];
+    const { instance, id, contexts } = await setup(
+      (context) => {
+        calls++;
+        const source = context.artifacts.find(
+          (artifact) => artifact.kind === 'source.import',
+        )!.ref;
+        return {
+          ...finish(context, []),
+          answer:
+            calls === 1
+              ? 'The supplied source is limited.'
+              : 'The supplied source is limited. [S1]',
+          sources: [source],
+        };
+      },
+      {
+        inputBytes,
+        configure(registry) {
+          registry.agents.set('Manager', {
+            ...managerAgent,
+            assembleContext(...args) {
+              const context = managerAgent.assembleContext!(...args);
+              const limit = args[3].maxBytes!;
+              context.context_status.bytes = limit;
+              const padded = { ...context, test_budget_padding: '' };
+              padded.test_budget_padding = 'x'.repeat(
+                limit - Buffer.byteLength(JSON.stringify(padded)),
+              );
+              expect(Buffer.byteLength(JSON.stringify(padded))).toBe(limit);
+              return padded;
+            },
+          });
+        },
+        source:
+          'This synthetic source establishes only a bounded test statement.',
+      },
+    );
+    const task = await until(instance, id, terminal);
+    expect(task.status, task.error?.message).toBe('completed');
+    expect(task.usage.model_calls).toBe(2);
+    expect(inputBytes).toHaveLength(2);
+    expect(
+      inputBytes.every((bytes) => bytes <= task.limits.max_model_input_bytes),
+    ).toBe(true);
+    expect(contexts).toHaveLength(2);
+    expect(contexts[1]).toMatchObject({
+      decision_feedback: { code: 'missing_source_citation' },
+    });
+    expect(instance.store.actions(id, localTaskIdentity)).toHaveLength(1);
+    const operationKeys = instance.store.db
+      .prepare(
+        'SELECT key FROM graph_operations WHERE run_id=? AND key LIKE ? ORDER BY rowid',
+      )
+      .all(task.current_run_id, 'manager:%:model%')
+      .map((row) => row.key);
+    expect(operationKeys).toEqual([
+      'manager:1:decision:0:model',
+      'manager:1:decision:0:model:repair:1',
+    ]);
+  });
   it('retains a failed Manager generation receipt without accepting partial synthesis', async () => {
     const { instance, id } = await setup(() => {
       throw new AgentModelResponseError(
@@ -845,7 +1199,10 @@ describe('persistent Manager supervision', () => {
     }));
     const task = await until(instance, id, terminal);
     expect(task.status).toBe('failed');
-    expect(task.error?.code).toBe('artifact_not_found');
+    expect(task.error?.code).toBe('execution_failed');
+    expect(task.error?.message).toContain(
+      'No artifact references are admitted in this context',
+    );
     expect(task.result).toBeUndefined();
     expect(task.usage.model_calls).toBe(1);
   });

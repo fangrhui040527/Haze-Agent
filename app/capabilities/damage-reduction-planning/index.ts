@@ -70,6 +70,7 @@ export function matchesDamageReduction(request: TaskRequest): boolean {
         'haze.reduction.input-selection.v1',
         'haze.reduction.selection-request.v1',
         'haze.reduction.preview-request.v1',
+        'haze.reduction.preview-selection-request.v1',
         'haze.reduction.pilot-request.v1',
         'haze.reduction.evaluation-request.v1',
       ].some((version) => version === scope.schema_version)) ||

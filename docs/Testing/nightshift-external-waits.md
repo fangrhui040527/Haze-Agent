@@ -4,6 +4,12 @@ Plan 3 extends the existing job supervisor with durable assignment waits and
 task-capacity admission. It does not enable automatic successor runs. A retained
 remote result and permission to execute are separate facts.
 
+After required dependencies are consumed, a later optional result is retained
+for its exact target without reopening the wait or scheduling a wake. An active,
+authorized assignment can explicitly read it; historical retention alone grants
+no execution authority. Completed result receipts containing text are checked
+against current candidate eligibility on replay, including chain expiry.
+
 Task admission can explicitly request the optional `nightshift_tools` array in
 `haze.task.request.v3`, containing only `nightshift.submit`, `nightshift.result`
 and `nightshift.cancel`. Omitting that field grants none of those tools. The

@@ -4,18 +4,9 @@
   gap: var(--space-3);
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    'actions'
     'table'
     'chat'
     'office';
-}
-
-.actions {
-  grid-area: actions;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: flex-end;
 }
 
 .table {
@@ -35,7 +26,6 @@
   .grid {
     grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr);
     grid-template-areas:
-      'actions actions'
       'table table'
       'office chat';
   }

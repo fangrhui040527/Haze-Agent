@@ -427,7 +427,10 @@ function ProgrammeWorkspace({ programmeId }: { programmeId: string }) {
           </p>
         )
       )}
-      <ProgrammeListPanel currentId={programmeId} />
+      <ProgrammeListPanel
+        currentId={programmeId}
+        currentRevision={view?.programme.revision}
+      />
     </article>
   );
 }

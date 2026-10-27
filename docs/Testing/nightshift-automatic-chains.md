@@ -5,6 +5,11 @@ Existing v1 grants remain manual-only after upgrade. A chain's authorized mode
 and the server's release readiness are separate facts: a saved automatic grant
 does not bypass an unmet live or recovery gate.
 
+See the [27 October recheck](../architecture/nightshift-04-automatic-chains-recheck-report.md)
+for current fixes and verification. Redundant chain Pause must preserve a
+`no_progress` stop; Resume still needs validated refinement. V2 admission checks
+release again after native runtime discovery before saving a grant.
+
 ## Admission and controls
 
 Open `/nightshift`. The automatic follow-up checkbox starts unchecked and is

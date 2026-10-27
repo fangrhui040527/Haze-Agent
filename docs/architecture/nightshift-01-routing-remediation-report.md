@@ -2,6 +2,10 @@
 
 Date: 27 October 2026, Asia/Singapore.
 
+Subsequent role-decision corrections and retained comparisons are recorded in
+the [role-decision quality follow-up](nightshift-01-role-quality-fix-report.md).
+The results below retain the earlier remediation evidence.
+
 The repeated PM2.5 retrieval loop is removed from the registered workflow.
 Retrieval, capture persistence, analysis and independent checking now use
 capability-owned deterministic executors. The general fixture verification

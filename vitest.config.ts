@@ -8,6 +8,9 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['tests/unit/**/*.test.ts'],
+          // Each fork starts SQLite/LangGraph runtimes. Bound their aggregate
+          // resource use so the default check does not oversubscribe the host.
+          maxWorkers: 2,
           // Runtime integration tests run SQLite + LangGraph end to end; shared
           // CI runners are slow enough that 10s timed out passing tests.
           testTimeout: 30_000,

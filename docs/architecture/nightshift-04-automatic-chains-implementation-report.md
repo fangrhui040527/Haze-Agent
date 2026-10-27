@@ -2,6 +2,12 @@
 
 Implementation date: 27 October 2026.
 
+Current follow-up: the [automatic chains recheck](nightshift-04-automatic-chains-recheck-report.md)
+fixes a no-progress Pause/Resume bypass and an admission release-check race,
+records current focused verification, and distinguishes resolved historical
+warnings from the remaining live release gates. The results below describe the
+original implementation snapshot.
+
 Finite automatic-chain support is implemented behind a server-owned release
 gate. Production automatic mode remains unreleased because the earlier live
 routing, local generation, specialist-wait and latency gates have not passed.

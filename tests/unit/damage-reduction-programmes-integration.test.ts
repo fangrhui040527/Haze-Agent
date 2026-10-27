@@ -5,7 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createExecutionRegistry } from '../../app/composition.js';
-import { artifactSchema } from '../../app/contracts/artifacts.js';
+import {
+  artifactSchema,
+  type ArtifactRef,
+} from '../../app/contracts/artifacts.js';
 import {
   reductionProgrammeHistorySchema,
   reductionProgrammeListSchema,
@@ -23,6 +26,9 @@ import {
   exactReductionRef,
 } from '../../app/capabilities/damage-reduction-planning/inputs.js';
 import { syntheticReductionCandidate } from '../../app/capabilities/damage-reduction-planning/planning-fixtures.js';
+import { createReductionCapacityFixture } from '../../app/capabilities/damage-reduction-planning/capacity-fixtures.js';
+import { reductionPreviewSelectionRequestSchema } from '../../app/contracts/damage-reduction-plan.js';
+import { reductionSelectionRequestSchema } from '../../app/contracts/damage-reduction.js';
 import { ReductionProgrammeService } from '../../app/capabilities/damage-reduction-programmes/service.js';
 import { createTaskHandler } from '../../app/tasks/http.js';
 import {
@@ -216,6 +222,186 @@ function stable(value: unknown): unknown {
 }
 
 describe('damage reduction programme integration', () => {
+  it('retains the maximum-byte programme assessment and conditional plan through restart', async () => {
+    const api = await setup();
+    const fixture = createReductionCapacityFixture(500, 16, 524_288);
+    const sources: ArtifactRef[] = [];
+    for (const [index, artifact] of fixture.artifacts.entries()) {
+      const imported = await api.call('/api/artifacts', {
+        schema_version: 'haze.artifact.import.v3',
+        filename: `programme-capacity-${index}.json`,
+        media_type: 'application/json',
+        declared_origin: 'Explicit synthetic maximum-byte programme fixture.',
+        content_base64: Buffer.from(JSON.stringify(artifact.content)).toString(
+          'base64',
+        ),
+      });
+      expect(imported.status, JSON.stringify(imported.body)).toBe(201);
+      sources.push(exactReductionRef(artifactSchema.parse(imported.body)));
+    }
+    const request = {
+      schema_version: 'haze.reduction.programme.create.v1',
+      expected_revision: 0,
+      title: 'Synthetic maximum-byte programme',
+      accountable_owner: 'Synthetic local operator',
+      scientific_owner: null,
+      preview: {
+        schema_version: 'haze.reduction.preview-request.v1',
+        selection: createReductionSelection(
+          fixture.target,
+          fixture.selection.sources.map((source, index) => ({
+            ...source,
+            artifact: sources[index]!,
+          })),
+        ),
+        candidate: {
+          ...syntheticReductionCandidate(),
+          name: fixture.target.intervention,
+        },
+      },
+    };
+    const created = await api.call('/api/reduction-programmes', request);
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const id = reductionProgrammeMutationReceiptSchema.parse(
+      created.body,
+    ).programme_id;
+    const assessment = await start(api, id, 'assessment');
+    const assessmentTask = await settle(api, assessment.task_id);
+    expect(assessmentTask.status, JSON.stringify(assessmentTask.error)).toBe(
+      'completed',
+    );
+    const planning = await start(api, id, 'planning', assessment.id);
+    const planningTask = await settle(api, planning.task_id);
+    expect(planningTask.status, JSON.stringify(planningTask.error)).toBe(
+      'completed',
+    );
+    expect(planningTask.limits.max_model_input_bytes).toBe(24_576);
+    const before = await programme(api, id);
+    expect(
+      Buffer.byteLength(JSON.stringify(before.programme)),
+    ).toBeLessThanOrEqual(65_536);
+    const result = before.attempts.find(
+      ({ attempt }) => attempt.id === planning.id,
+    )!;
+    expect(result.currency).toBe('current');
+    expect(result.preview?.assessment?.value).toMatchObject({
+      baseline_damage: '25000',
+      intervention_damage: '22000',
+      absolute_reduction: '3000',
+      target_met: true,
+    });
+    expect(result.preview?.plan_review?.value.verdict).toBe('supported');
+    expect(result.preview?.plan_eligibility).toBe('conditional');
+    await api.restart();
+    expect(stable(await programme(api, id))).toEqual(stable(before));
+  }, 90_000);
+  it('keeps the admitted declaration material for inline copies and rejects a substituted programme selection', async () => {
+    let selected: ReturnType<typeof createReductionSelection> | undefined;
+    const api = await setup({
+      configureRegistry(registry) {
+        const capability = registry.capabilities.get(
+          'damage-reduction-planning',
+        )!;
+        const assignments = capability.assignments.bind(capability);
+        capability.assignments = (request) =>
+          assignments(request).map((entry) =>
+            entry.definition_id === 'reduction.select' && selected
+              ? { ...entry, input: structuredClone(selected) }
+              : entry,
+          );
+      },
+    });
+    const created = await createProgramme(api);
+    selected = created.request.selection;
+    const id = created.receipt.programme_id;
+    const assessment = await start(api, id, 'assessment');
+    expect((await settle(api, assessment.task_id)).status).toBe('completed');
+    const planning = await start(api, id, 'planning', assessment.id);
+    const plannedTask = await settle(api, planning.task_id);
+    expect(plannedTask.status, JSON.stringify(plannedTask.error)).toBe(
+      'completed',
+    );
+    const scope = reductionPreviewSelectionRequestSchema.parse(
+      plannedTask.original_request.scope,
+    );
+    const declaration = api.runtime.store.artifact(
+      scope.selection_ref.id,
+      localTaskIdentity,
+      scope.selection_ref,
+    );
+    expect(declaration.content).toEqual(selected);
+    const selection = plannedTask.artifacts
+      .map(({ artifact }) =>
+        api.runtime.store.artifact(artifact.id, localTaskIdentity, artifact),
+      )
+      .find(
+        (artifact) =>
+          artifact.kind === 'reduction.input-selection' &&
+          artifact.task_id === plannedTask.id,
+      )!;
+    expect(selection.dependencies).toContainEqual(scope.selection_ref);
+    const current = await programme(api, id);
+    expect(
+      current.attempts.find(({ attempt }) => attempt.id === planning.id)
+        ?.preview?.plan?.value.candidate,
+    ).toEqual(created.request.candidate);
+    const worldScope = { ...localTaskIdentity, mode: 'fixture' as const };
+    const record = api.runtime.store.world.lookup(worldScope, {
+      kind: 'artifact_reference',
+      external_id: `artifact:${declaration.id}:${declaration.version}`,
+      limit: 2,
+    })[0]!;
+    const hold = api.runtime.store.world.hold(
+      worldScope,
+      record.ref,
+      'Operator withdrew the exact selection declaration.',
+      'unknown_impact',
+    );
+    const held = await programme(api, id);
+    expect(
+      held.attempts.every(
+        ({ currency, preview }) => currency === 'stale' && preview === null,
+      ),
+    ).toBe(true);
+    api.runtime.store.world.clearHold(
+      worldScope,
+      hold.id,
+      'Operator reinstated the exact declaration.',
+    );
+    expect(
+      (await programme(api, id)).attempts.every(
+        ({ currency }) => currency === 'current',
+      ),
+    ).toBe(true);
+
+    const other = await createProgramme(api);
+    selected = structuredClone(other.request.selection);
+    selected.target.intervention = 'An unadmitted alternative';
+    const substituted = await start(
+      api,
+      other.receipt.programme_id,
+      'assessment',
+    );
+    const rejected = await settle(api, substituted.task_id);
+    const selector = rejected.assignments.find(
+      ({ definition_id }) => definition_id === 'reduction.select',
+    );
+    expect(selector?.support).toBe('gap');
+    expect(selector?.gaps.join(' ')).toContain(
+      'Selection conflicts with the current operator-declared',
+    );
+    expect(
+      rejected.artifacts
+        .map(({ artifact }) =>
+          api.runtime.store.artifact(artifact.id, localTaskIdentity, artifact),
+        )
+        .some((artifact) =>
+          ['reduction.input-selection', 'reduction.assessment'].includes(
+            artifact.kind,
+          ),
+        ),
+    ).toBe(false);
+  }, 60_000);
   it('retains two exact explicitly started runs, note freshness, material invalidation and restart history', async () => {
     const api = await setup();
     const created = await createProgramme(api);
@@ -1085,7 +1271,9 @@ describe('damage reduction programme integration', () => {
     expect(old.preview).toBeNull();
     expect(old.historical_artifact_refs.length).toBeGreaterThan(0);
     expect(replacement.attempt.task_id).toBe(firstTask.id);
-    expect(replacement.currency).toBe('current');
+    expect(replacement.currency, JSON.stringify(replacement.reasons)).toBe(
+      'current',
+    );
     expect(replacement.preview?.claims?.point_estimate_label).toBe('meets');
     expect(after.capacity).toMatchObject({
       charged_tool_calls: 6,
@@ -1093,6 +1281,61 @@ describe('damage reduction programme integration', () => {
       remaining_runs: 10,
       remaining_attempts: { assessment: 1, planning: 3 },
     });
+    const { selection_ref: declaration } =
+      reductionSelectionRequestSchema.parse(successor.original_request.scope);
+    expect(
+      successor.artifacts.some(
+        ({ artifact, current }) =>
+          current &&
+          artifact.id === declaration.id &&
+          artifact.version === declaration.version &&
+          artifact.sha256 === declaration.sha256,
+      ),
+    ).toBe(true);
+    await api.restart();
+    expect(
+      (await programme(api, id)).attempts.find(
+        ({ attempt }) => attempt.run_id === successor.current_run_id,
+      )?.currency,
+    ).toBe('current');
+    const worldScope = { ...localTaskIdentity, mode: 'fixture' as const };
+    const worldRecord = api.runtime.store.world.lookup(worldScope, {
+      kind: 'artifact_reference',
+      external_id: `artifact:${declaration.id}:${declaration.version}`,
+      limit: 2,
+    })[0]!;
+    const hold = api.runtime.store.world.hold(
+      worldScope,
+      worldRecord.ref,
+      'Withdraw the exact selection declaration after Continue.',
+      'unknown_impact',
+    );
+    const held = await programme(api, id);
+    expect(
+      held.attempts.find(
+        ({ attempt }) => attempt.run_id === successor.current_run_id,
+      ),
+    ).toMatchObject({ currency: 'stale', preview: null });
+    const blocked = await api.call(`/api/tasks/${successor.id}/control`, {
+      schema_version: 'haze.task.control.v3',
+      ...fence(api.runtime.store.read(successor.id, localTaskIdentity)),
+      action: 'continue',
+      coordination: {
+        owner_id: id,
+        expected_revision: held.programme.revision,
+      },
+    });
+    expect(blocked.status, JSON.stringify(blocked.body)).toBe(409);
+    api.runtime.store.world.clearHold(
+      worldScope,
+      hold.id,
+      'Reinstate the same admitted declaration.',
+    );
+    expect(
+      (await programme(api, id)).attempts.find(
+        ({ attempt }) => attempt.run_id === successor.current_run_id,
+      )?.currency,
+    ).toBe('current');
   });
 
   it('releases the state owner and database when an extension factory fails during construction', async () => {

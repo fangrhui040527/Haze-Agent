@@ -7,7 +7,6 @@ import {
 import {
   conditionalPlanReviewSchema,
   conditionalReductionPlanSchema,
-  reductionPreviewRequestSchema,
   type ConditionalPlanInput,
 } from '../../contracts/damage-reduction-plan.js';
 import { contractHash } from '../../contracts/json.js';
@@ -25,6 +24,7 @@ import { exactReductionRef } from './inputs.js';
 import { draftConditionalPlan } from './planning.js';
 import { independentlyCheckConditionalPlan } from './planning-checker.js';
 import { readDamageReductionClaim } from './claims.js';
+import { resolveReductionPreviewRequest } from './request.js';
 
 const planInputSchema = z.strictObject({
   selection_ref: artifactRefSchema,
@@ -97,7 +97,7 @@ function planningInput(
   const scope =
     task.corrections.findLast((correction) => correction.scope !== undefined)
       ?.scope ?? task.original_request.scope;
-  const request = reductionPreviewRequestSchema.parse(scope);
+  const request = resolveReductionPreviewRequest(scope, context.inputs);
   const selection = produced(
     store,
     context,

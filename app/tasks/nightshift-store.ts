@@ -707,6 +707,11 @@ export class NightshiftStore {
         request,
         () => {
           const task = this.current(request.task_id, identity, request);
+          if (!['queued', 'running', 'waiting'].includes(task.status))
+            fail(
+              'nightshift_task_inactive',
+              'A paused or terminal task cannot admit a new Nightshift chain.',
+            );
           if (request.schema_version === 'haze.nightshift.chain.admission.v2') {
             this.requireAutomaticRelease();
             if (request.previous_chain_id) {
@@ -935,7 +940,8 @@ export class NightshiftStore {
             if (!OPEN.includes(chain.status))
               fail('nightshift_chain_closed', 'The chain is already closed.');
             chain.status = 'paused';
-            chain.stop_reason = 'Manual submission paused.';
+            if (!chain.stop_reason?.startsWith('no_progress:'))
+              chain.stop_reason = 'Manual submission paused.';
           } else {
             chain.status = 'closed';
             chain.stop_reason =
@@ -986,6 +992,11 @@ export class NightshiftStore {
           this.live(chain);
           this.requireChainRevision(chain, request.expected_chain_revision);
           const task = this.current(chain.task_id, identity, request);
+          if (!['queued', 'running', 'waiting'].includes(task.status))
+            fail(
+              'nightshift_task_inactive',
+              'A paused or terminal task cannot submit a new Nightshift job.',
+            );
           if (task.objective_revision !== chain.objective_revision)
             fail(
               'nightshift_objective_changed',
@@ -1211,9 +1222,13 @@ export class NightshiftStore {
       const job = this.rawJob(id);
       if (job.remote_id || job.execution_state !== 'submitting')
         fail('nightshift_dispatch_fenced', 'Submission cannot be repeated.');
-      this.db
-        .prepare('UPDATE ns_submission_attempts SET state=? WHERE job_id=?')
-        .run('dispatched', id);
+      const dispatch = this.db
+        .prepare(
+          'UPDATE ns_submission_attempts SET state=? WHERE job_id=? AND state=?',
+        )
+        .run('dispatched', id, 'intent');
+      if (Number(dispatch.changes) !== 1)
+        fail('nightshift_dispatch_fenced', 'Submission cannot be repeated.');
       this.event(
         job,
         'submission_dispatched',
@@ -2734,9 +2749,24 @@ export class NightshiftStore {
           'INSERT OR IGNORE INTO ns_chain_stops(chain_id,fingerprint,body) VALUES(?,?,?)',
         )
         .run(chain.id, fingerprint, JSON.stringify(record));
-      if (!inserted.changes) return;
-      chain.status = input.status ?? 'paused';
-      chain.stop_reason = `${input.code}: ${record.message}`;
+      const status = input.status ?? 'paused';
+      let accepted = record;
+      if (!inserted.changes) {
+        // Redelivery cannot reopen a terminal grant or undo a separate user
+        // pause. A repeated fence must still take effect if mutable state no
+        // longer reflects the original accepted stop.
+        if (!OPEN.includes(chain.status) || status === 'active') return;
+        const prior = this.db
+          .prepare(
+            'SELECT body FROM ns_chain_stops WHERE chain_id=? AND fingerprint=?',
+          )
+          .get(chain.id, fingerprint) as { body: string };
+        accepted = nightshiftStopSchema.parse(JSON.parse(prior.body));
+      }
+      const reason = `${accepted.code}: ${accepted.message}`;
+      if (chain.status === status && chain.stop_reason === reason) return;
+      chain.status = status;
+      chain.stop_reason = reason;
       chain.revision++;
       this.putChain(chain);
       if (['closed', 'expired', 'invalidated'].includes(chain.status))

@@ -215,7 +215,7 @@ export function ReductionResults({
         <h2 id={`${idPrefix}-assessment-heading`}>
           <span className={styles.step}>2</span> Assessment
         </h2>
-        <p>
+        <p className={styles.resultLabel}>
           <Badge tone={arithmeticEligible ? 'info' : 'warn'}>
             {pointLabel}
           </Badge>
@@ -317,7 +317,7 @@ export function ReductionResults({
         <h2 id={`${idPrefix}-plan-heading`}>
           <span className={styles.step}>3</span> Conditional plan
         </h2>
-        <p>
+        <p className={styles.resultLabel}>
           <Badge
             tone={
               view.plan_eligibility === 'blocked'

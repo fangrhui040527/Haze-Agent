@@ -238,7 +238,18 @@ export class ExternalWaitStore {
     return (
       this.db
         .prepare(
-          `SELECT w.body FROM external_waits w WHERE json_extract(w.body,'$.state')<>'consumed' AND (json_extract(w.body,'$.state')<>'fenced' OR EXISTS(SELECT 1 FROM json_each(w.body,'$.dependencies') dep WHERE NOT EXISTS(SELECT 1 FROM external_result_deliveries d WHERE d.wait_id=w.id AND d.job_id=json_extract(dep.value,'$.job_id')))) ORDER BY w.rowid`,
+          `SELECT w.body FROM external_waits w WHERE
+            (json_extract(w.body,'$.state')<>'consumed' AND
+              (json_extract(w.body,'$.state')<>'fenced' OR
+                EXISTS(SELECT 1 FROM json_each(w.body,'$.dependencies') dep
+                  WHERE NOT EXISTS(SELECT 1 FROM external_result_deliveries d
+                    WHERE d.wait_id=w.id AND d.job_id=json_extract(dep.value,'$.job_id')))))
+            OR (json_extract(w.body,'$.state')='consumed' AND
+              EXISTS(SELECT 1 FROM json_each(w.body,'$.dependencies') dep
+                WHERE json_extract(dep.value,'$.required')=0 AND
+                  NOT EXISTS(SELECT 1 FROM external_result_deliveries d
+                    WHERE d.wait_id=w.id AND d.job_id=json_extract(dep.value,'$.job_id'))))
+            ORDER BY w.rowid`,
         )
         .all() as Body[]
     ).map((row) => externalWaitSchema.parse(parse(row)));
@@ -789,7 +800,7 @@ export class ExternalWaitStore {
     return this.access.atomic(() => {
       let inserted = 0;
       for (const wait of this.pendingWaits()) {
-        if (wait.state === 'consumed') continue;
+        const consumed = wait.state === 'consumed';
         const task = this.task(wait.authority.task_id);
         let reason =
           wait.state === 'fenced'
@@ -834,7 +845,7 @@ export class ExternalWaitStore {
               recipient_revision: wait.authority.assignment_revision,
               target_generation: wait.authority.generation,
               thread_id: wait.thread_id,
-              retained_only: reason !== null,
+              retained_only: reason !== null || consumed,
             },
           );
           const delivery: ExternalDelivery = {
@@ -853,6 +864,10 @@ export class ExternalWaitStore {
           deliveries.push(delivery);
           inserted++;
         }
+        // Optional dependencies never reopen completed required work. Their
+        // late delivery remains auditable and explicitly readable under a live
+        // assignment, but creates no new readiness event or execution wake.
+        if (consumed) continue;
         if (reason) {
           wait.reason = reason;
           if (reason === 'external chain paused') wait.state = 'waiting';

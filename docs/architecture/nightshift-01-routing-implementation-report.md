@@ -13,6 +13,11 @@ does not establish accepted Manager or specialist quality. No role default was
 promoted, and this routing remediation adds no background jobs or automatic
 chains.
 
+Latest recheck: the [role-decision quality follow-up](nightshift-01-role-quality-fix-report.md)
+records additional reference/schema fixes and a **15/15 direct, 15/15 Nightshift**
+Ultra contract comparison. The failed comparison below remains historical
+evidence; independent role-quality review and end-to-end traces remain open.
+
 ## Changes delivered
 
 | Area                              | Changes                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -144,6 +149,10 @@ acceptance assertions, prompts and timeout limits were left unchanged.
 | Read-only installed endpoint verification            | Passed: missing authentication returns 401; an unknown model returns 409; the exact supported model negotiates the new contract. Zero inference calls.                                                                                                            |
 | Two bounded genuine Nightshift probes through Haze   | Passed. Structured JSON: 50 input / 6 output tokens, HTTP 200 / `stop`, 1,139 ms. Forced truncation: 58 input / 8 output tokens, HTTP 200 / `length`, 529 ms; rejected as a decision with its actual receipt retained.                                            |
 | Frozen live role comparison after remediation        | **Quality/acceptance gate not passed.** All 30 attempts reached inference and retained genuine HTTP 200 / `stop` provider receipts; zero routes were blocked. The Nightshift candidate passed 11/15 scenarios; the direct inherited NVIDIA baseline passed 10/15. |
+
+This table retains the original comparison. Subsequent action-contract and
+instruction fixes, with their retained live comparisons, are documented in the
+[role-decision quality follow-up](nightshift-01-role-quality-fix-report.md).
 
 The two live calls used `nvidia/nemotron-3.5-lightning-30b-a3b`. Their combined
 reported usage was 108 input tokens and 14 output tokens. They establish the

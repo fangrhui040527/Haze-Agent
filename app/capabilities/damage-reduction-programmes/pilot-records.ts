@@ -241,6 +241,20 @@ function operationalRule(rule: PilotProtocol['specification']['digital_rule']) {
       }
     : null;
 }
+type DigitalAction = Extract<PilotRecordBody, { kind: 'digital_action' }>;
+function actionIdentity(action: DigitalAction) {
+  return {
+    action_version: action.action_version,
+    permitted_action: action.permitted_action,
+    action_kind: action.action_kind,
+    rule: action.rule,
+    scope: action.scope,
+    mode: action.mode,
+    registration_id: action.registration_id,
+    trigger_refs: action.trigger_refs.map(key).sort(),
+    occurred_at: Date.parse(action.occurred_at),
+  };
+}
 export function validatePilotRecord(
   value: PilotRecordBody,
   snapshot: ReductionProgrammeSnapshot,
@@ -348,21 +362,11 @@ export function validatePilotRecord(
         item.record.action_id === record.action_id,
     );
     if (previous?.record.kind === 'digital_action') {
-      const stable = (
-        action: Extract<PilotRecordBody, { kind: 'digital_action' }>,
-      ) => ({
-        action_version: action.action_version,
-        permitted_action: action.permitted_action,
-        action_kind: action.action_kind,
-        rule: action.rule,
-        scope: action.scope,
-        mode: action.mode,
-      });
-      if (!same(stable(previous.record), stable(record)))
+      if (!same(actionIdentity(previous.record), actionIdentity(record)))
         throw new TaskError(
           409,
           'pilot_action_identity_conflict',
-          'A logical action ID cannot change version, permitted payload, kind, rule, scope or simulation/live origin. Use a new action ID for a different action.',
+          'A logical action ID cannot change version, permitted payload, kind, rule, scope, registration, triggers, occurrence time or simulation/live origin. Use a new action ID for a different action.',
         );
     }
   }
@@ -851,6 +855,13 @@ export function projectPilotRecords(
       stored.id,
     ]),
   );
+  const firstAction = new Map<string, DigitalAction>();
+  for (const stored of actionRecords)
+    if (
+      stored.record.kind === 'digital_action' &&
+      !firstAction.has(stored.record.action_id)
+    )
+      firstAction.set(stored.record.action_id, stored.record);
   const seenReceipts = new Map<string, string>();
   const unknown = new Map<string, string>();
   const simulatedIds = new Set<string>();
@@ -930,6 +941,19 @@ export function projectPilotRecords(
       reasons: [],
     };
     try {
+      // Older retained history may predate append-time identity checks. Its
+      // receipt cannot reconcile another trigger, occurrence or registration.
+      if (
+        !same(
+          actionIdentity(firstAction.get(action.action_id)!),
+          actionIdentity(action),
+        )
+      )
+        throw new TaskError(
+          409,
+          'pilot_action_identity_conflict',
+          'Retained action identity differs from its original event; exact receipt reconciliation is required for the original action.',
+        );
       for (const ref of referenced(action)) load(ref, context);
       let receiptValid = false;
       if (action.receipt_ref) {
@@ -1080,6 +1104,20 @@ export function projectPilotRecords(
         governed = false;
         view.reasons.push(
           'Rule ownership, retained approval, scoped trigger or permitted actions are incomplete.',
+        );
+      }
+      const suppliedTriggers = new Set(action.trigger_refs.map(key));
+      if (
+        !rule?.trigger_inputs.length ||
+        rule.trigger_inputs.some(
+          (input) =>
+            !input.evidence.length ||
+            input.evidence.some((ref) => !suppliedTriggers.has(key(ref))),
+        )
+      ) {
+        governed = false;
+        view.reasons.push(
+          'Action trigger evidence does not cover every exact input declared by the agreed rule.',
         );
       }
       const liveProof = [

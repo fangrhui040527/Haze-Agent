@@ -117,8 +117,30 @@ async function capture(origin, task) {
   return { task, events, artifacts };
 }
 let report;
+let general;
+let investigation;
+let stage = 'server_start';
+function retainedAttempts() {
+  const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
+    readOnly: true,
+  });
+  try {
+    return database
+      .prepare('SELECT body FROM attempts ORDER BY rowid')
+      .all()
+      .map((row) => JSON.parse(row.body));
+  } finally {
+    database.close();
+  }
+}
+async function retainReport(value) {
+  const path = resolve(root, 'report.json');
+  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
+  return path;
+}
 try {
   let origin = await boot();
+  stage = 'source_synthesis';
   const source = await read(origin, '/api/artifacts', {
     schema_version: 'haze.artifact.import.v3',
     filename: 'source.md',
@@ -131,13 +153,15 @@ try {
   const ref = source.artifact ?? source;
   const genericRequest = {
     schema_version: 'haze.task.request.v3',
-    objective: 'Explain the supplied source about evidence and attribution.',
+    objective:
+      'Use the registered evidence-synthesis workflow to create a retained source-backed synthesis artifact and an independent review of the supplied source about evidence and attribution. Explain its bounded conclusions, cite the exact source in the final answer, and select the reviewed synthesis as a work product.',
     context_refs: [{ id: ref.id, version: ref.version, sha256: ref.sha256 }],
   };
   const key = randomUUID();
   const admitted = await read(origin, '/api/tasks', genericRequest, key);
   const duplicate = await read(origin, '/api/tasks', genericRequest, key);
-  const general = await capture(origin, await settle(origin, admitted.task_id));
+  general = await capture(origin, await settle(origin, admitted.task_id));
+  stage = 'pm25_source_execution';
   const scope = {
     location: location ?? 'Fixture Town',
     period: {
@@ -155,7 +179,7 @@ try {
     '/api/tasks',
     investigationRequest,
   );
-  const investigation = await capture(
+  investigation = await capture(
     origin,
     await settle(origin, investigationAdmission.task_id),
   );
@@ -166,6 +190,7 @@ try {
     'episode-investigation',
     'evidence-synthesis',
   ];
+  stage = 'world_model_acceptance';
   const capabilities = await read(origin, '/api/capabilities');
   if (
     !requiredCapabilities.every((id) =>
@@ -181,7 +206,7 @@ try {
     ({ acceptance }) => acceptance.status === 'accepted',
   );
   if (!accepted)
-    throw new Error('The fixture synthesis did not produce an acceptance.');
+    throw new Error('The source synthesis did not produce an acceptance.');
   const recordPath = `/api/world/records/${encodeURIComponent(accepted.subject)}`;
   const acceptedDetail = await read(origin, recordPath);
   const acceptedLineage = await read(
@@ -197,6 +222,7 @@ try {
   )
     throw new Error('Authorized World Model detail or lineage read failed.');
   const currentGeneral = await read(origin, `/api/tasks/${general.task.id}`);
+  stage = 'correction_hold';
   await read(origin, `/api/tasks/${general.task.id}/updates`, {
     schema_version: 'haze.task.update.v3',
     expected_objective_revision: currentGeneral.objective_revision,
@@ -222,6 +248,7 @@ try {
     origin,
     await read(origin, `/api/tasks/${general.task.id}`),
   );
+  stage = 'restart_readback';
   await stop();
   origin = await boot();
   const afterInvestigation = await capture(
@@ -240,21 +267,25 @@ try {
   const liveReceipts = [general, investigation].every(
     ({ task }) =>
       task.result?.provenance.mode === 'live' &&
-      task.result.provenance.receipts.length > 0,
+      task.usage.model_calls > 0 &&
+      task.result.provenance.receipts.some(
+        (attempt) =>
+          attempt.kind === 'model' &&
+          attempt.status === 'completed' &&
+          attempt.accepted === true &&
+          attempt.receipt?.synthetic !== true &&
+          attempt.receipt?.http_status === 200 &&
+          attempt.receipt?.response_status === 'stop' &&
+          typeof attempt.receipt?.response_model === 'string' &&
+          typeof attempt.receipt?.response_id === 'string',
+      ),
   );
   const sourceExecuted =
     investigation.task.usage.tool_calls > 0 &&
     investigation.artifacts.some(
       (artifact) => artifact.kind === 'pm25.capture',
     );
-  const database = new DatabaseSync(resolve(root, 'tasks.sqlite'), {
-    readOnly: true,
-  });
-  const attempts = database
-    .prepare('SELECT body FROM attempts ORDER BY rowid')
-    .all()
-    .map((row) => JSON.parse(row.body));
-  database.close();
+  const attempts = retainedAttempts();
   const passed =
     general.task.status === 'completed' &&
     investigation.task.status === 'completed' &&
@@ -272,6 +303,8 @@ try {
       : 'unverified',
     live_readiness_pass: !fixture && passed,
     passed,
+    source_executed: sourceExecuted,
+    live_model_receipts: liveReceipts,
     duplicate_delivery: duplicate.task_id === admitted.task_id,
     restart,
     capabilities: await read(origin, '/api/capabilities'),
@@ -288,8 +321,7 @@ try {
       capabilities: requiredCapabilities,
     },
   };
-  const path = resolve(root, 'report.json');
-  await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
+  const path = await retainReport(report);
   console.log(
     JSON.stringify(
       {
@@ -307,6 +339,45 @@ try {
         general: general.task.status,
         investigation: investigation.task.status,
         error: investigation.task.error ?? null,
+      },
+      null,
+      2,
+    ),
+  );
+} catch (error) {
+  let attempts = [];
+  let attemptReadError;
+  try {
+    attempts = retainedAttempts();
+  } catch (readError) {
+    attemptReadError = String(readError);
+  }
+  report = {
+    checked_at: new Date().toISOString(),
+    mode: fixture ? 'fixture' : 'live',
+    readiness: 'unverified',
+    live_readiness_pass: false,
+    passed: false,
+    verification_error: {
+      stage,
+      message: error instanceof Error ? error.message : String(error),
+    },
+    attempts,
+    ...(attemptReadError ? { attempt_read_error: attemptReadError } : {}),
+    general: general ?? null,
+    investigation: investigation ?? null,
+  };
+  const path = await retainReport(report);
+  console.log(
+    JSON.stringify(
+      {
+        report: path,
+        mode: report.mode,
+        passed: false,
+        readiness: report.readiness,
+        error: report.verification_error,
+        general: general?.task.status ?? null,
+        investigation: investigation?.task.status ?? null,
       },
       null,
       2,

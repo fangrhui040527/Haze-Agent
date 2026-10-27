@@ -342,6 +342,292 @@ describe('exact references and truthful completion', () => {
     ).toBe(false);
   });
 
+  it('pins registered tool references in both local and provider-facing contracts', () => {
+    const context = {
+      artifacts: [{ artifact, producer: 'producer-1' }],
+      tools: [
+        {
+          id: 'registered.check',
+          input_schema: z.toJSONSchema(
+            z.strictObject({ artifact: artifactRefSchema }),
+          ),
+        },
+      ],
+    };
+    const original = structuredClone(context);
+    const contract = createSpecialistActionContract(context);
+    expect(context).toEqual(original);
+    const action = {
+      id: 'check',
+      type: 'tool',
+      tool: 'registered.check',
+      input: { artifact },
+    };
+    const changedReferences = [
+      { ...artifact, id: jobId },
+      { ...artifact, version: 1 },
+      { ...artifact, sha256: 'b'.repeat(64) },
+      { ...artifact, sha256: 'a'.repeat(63) },
+      { ...artifact, id: 'not-an-artifact-id' },
+    ];
+    for (const schema of [contract.schema, providerSchema(contract)]) {
+      expect(schema.safeParse(action).success).toBe(true);
+      for (const changed of changedReferences)
+        expect(
+          schema.safeParse({ ...action, input: { artifact: changed } }).success,
+        ).toBe(false);
+      expect(
+        schema.safeParse({
+          ...action,
+          input: {
+            artifact_id: artifact.id,
+            artifact_version: artifact.version,
+            artifact_sha256: artifact.sha256.slice(0, -2),
+          },
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each(['inline', 'local reference'] as const)(
+    'binds nested local definitions with %s constraints without changing tool fields',
+    (constraint) => {
+      const earlier = { ...artifact, version: 1 };
+      const refJSON = z.toJSONSchema(artifactRefSchema);
+      const contract = createSpecialistActionContract({
+        artifacts: [artifact, earlier],
+        tools: [
+          {
+            id: 'registered.batch-check',
+            input_schema: {
+              type: 'object',
+              properties: {
+                subjects: {
+                  type: 'array',
+                  items: { $ref: '#/$defs/retainedReference' },
+                  minItems: 1,
+                  maxItems: 2,
+                },
+                mode: { type: 'string', enum: ['independent'] },
+              },
+              required: ['subjects', 'mode'],
+              additionalProperties: false,
+              $defs: {
+                minimumRevision: {
+                  type: 'object',
+                  properties: { version: { type: 'integer', minimum: 2 } },
+                },
+                retainedReference: {
+                  ...refJSON,
+                  description: 'A complete retained artifact reference.',
+                  allOf: [
+                    constraint === 'local reference'
+                      ? { $ref: '#/$defs/minimumRevision' }
+                      : {
+                          type: 'object',
+                          properties: {
+                            version: { type: 'integer', minimum: 2 },
+                          },
+                        },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      });
+      const action = {
+        id: 'check-selected-revisions',
+        type: 'tool',
+        tool: 'registered.batch-check',
+        input: { subjects: [artifact], mode: 'independent' },
+      };
+      for (const schema of [contract.schema, providerSchema(contract)]) {
+        expect(schema.safeParse(action).success).toBe(true);
+        for (const input of [
+          {
+            subjects: [{ ...artifact, sha256: 'b'.repeat(64) }],
+            mode: 'independent',
+          },
+          { subjects: [earlier], mode: 'independent' },
+          { subjects: [artifact], mode: 'self-review' },
+          { subjects: [], mode: 'independent' },
+          { artifact, mode: 'independent' },
+          { ...action.input, secret: 'not granted' },
+        ])
+          expect(
+            schema.safeParse({ ...action, input }).success,
+            JSON.stringify(input),
+          ).toBe(false);
+      }
+    },
+  );
+
+  it('supports a registered root reference schema and grants no input refs from inbox content', () => {
+    const input_schema = {
+      $ref: '#/$defs/checkInput',
+      $defs: {
+        checkInput: z.toJSONSchema(
+          z.strictObject({ subject: artifactRefSchema }),
+        ),
+      },
+    };
+    const action = {
+      id: 'check',
+      type: 'tool',
+      tool: 'registered.check',
+      input: { subject: artifact },
+    };
+    const tools = [{ id: 'registered.check', input_schema }];
+    const granted = createSpecialistActionContract({
+      shared_refs: [artifact],
+      tools,
+    });
+    const inboxOnly = createSpecialistActionContract({
+      inbox: [{ artifact }, { text: JSON.stringify({ artifact }) }],
+      tools,
+    });
+    for (const schema of [granted.schema, providerSchema(granted)])
+      expect(schema.safeParse(action).success).toBe(true);
+    for (const schema of [inboxOnly.schema, providerSchema(inboxOnly)])
+      expect(schema.safeParse(action).success).toBe(false);
+  });
+
+  it('rejects malformed canonical refs even without a tool schema and preserves business ids', () => {
+    const contract = createSpecialistActionContract({
+      input: { artifact },
+      tools: [
+        { id: 'registered.describe', description: 'Describe supplied data.' },
+      ],
+    });
+    const action = {
+      id: 'describe',
+      type: 'tool',
+      tool: 'registered.describe',
+      input: { rows: [{ id: 'business-row', version: 'draft' }] },
+    };
+    expect(contract.schema.safeParse(action).success).toBe(true);
+    for (const changed of [
+      { ...artifact, sha256: 'a'.repeat(63) },
+      { ...artifact, version: 0 },
+      { ...artifact, id: 'malformed-id' },
+    ])
+      expect(
+        contract.schema.safeParse({
+          ...action,
+          input: { nested: [changed] },
+        }).success,
+      ).toBe(false);
+  });
+
+  it('preserves declared business fields that share reference key names', () => {
+    const contract = createSpecialistActionContract({
+      tools: [
+        {
+          id: 'registered.describe-business-row',
+          input_schema: z.toJSONSchema(
+            z.strictObject({
+              id: z.string(),
+              version: z.string(),
+              sha256: z.string(),
+            }),
+          ),
+        },
+      ],
+    });
+    const action = {
+      id: 'describe-business-row',
+      type: 'tool',
+      tool: 'registered.describe-business-row',
+      input: { id: 'business-row', version: 'draft', sha256: 'pending' },
+    };
+    for (const schema of [contract.schema, providerSchema(contract)]) {
+      expect(schema.safeParse(action).success).toBe(true);
+      expect(
+        schema.safeParse({ ...action, input: { ...action.input, version: 2 } })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  it('shares reference choices across tool positions within the admitted input budget', () => {
+    const refs = Array.from({ length: 12 }, (_, index) => ({
+      id: `11111111-1111-4111-8111-${String(index + 1).padStart(12, '0')}`,
+      version: 2,
+      sha256: (index + 1).toString(16).padStart(64, '0'),
+    }));
+    const input_schema = {
+      type: 'object',
+      properties: {
+        source: { $ref: '#/$defs/retained' },
+        targets: {
+          type: 'array',
+          items: { $ref: '#/$defs/retained' },
+          minItems: 1,
+          maxItems: 3,
+        },
+        batch: {
+          type: 'object',
+          properties: { artifact: { $ref: '#/$defs/retained' } },
+          required: ['artifact'],
+          additionalProperties: false,
+        },
+      },
+      required: ['source', 'targets', 'batch'],
+      additionalProperties: false,
+      $defs: { retained: z.toJSONSchema(artifactRefSchema) },
+    };
+    const tools = Array.from({ length: 8 }, (_, index) => ({
+      id: `registered.compare-${index}`,
+      input_schema,
+    }));
+    const context = { tools, artifacts: refs, owned_outputs: [] };
+    const contract = createSpecialistActionContract(context);
+    const serialized = JSON.stringify(contract.outputSchema);
+    const definitions = contract.outputSchema.$defs as Record<string, unknown>;
+    const choices = Object.keys(definitions).filter((name) =>
+      name.startsWith('hazeAdmittedArtifactReference'),
+    );
+    expect(choices).toHaveLength(1);
+    for (const ref of refs)
+      expect(serialized.split(ref.sha256)).toHaveLength(2);
+    expect(
+      Buffer.byteLength(
+        JSON.stringify({ context, output_schema: contract.outputSchema }),
+      ),
+    ).toBeLessThan(24_576);
+    const smaller = createSpecialistActionContract({
+      ...context,
+      artifacts: refs.slice(0, 4),
+    });
+    expect(
+      Buffer.byteLength(serialized) -
+        Buffer.byteLength(JSON.stringify(smaller.outputSchema)),
+    ).toBeLessThan(2048);
+    const action = {
+      id: 'compare-retained',
+      type: 'tool',
+      tool: tools[0]!.id,
+      input: {
+        source: refs[0],
+        targets: [refs[1]],
+        batch: { artifact: refs[2] },
+      },
+    };
+    for (const schema of [contract.schema, providerSchema(contract)]) {
+      expect(schema.safeParse(action).success).toBe(true);
+      expect(
+        schema.safeParse({
+          ...action,
+          input: {
+            ...action.input,
+            batch: { artifact: { ...refs[2], sha256: 'f'.repeat(64) } },
+          },
+        }).success,
+      ).toBe(false);
+    }
+  });
+
   it.each(['partial', 'gap'])(
     'requires a stated limitation for %s support',
     (support) => {
@@ -450,6 +736,76 @@ describe('acknowledged external dependencies and narrower role contracts', () =>
         false,
       );
       expect(schema.safeParse({ ...gap, uncertainty: [] }).success).toBe(false);
+    }
+  });
+
+  it('preserves root-local references in a narrower base contract', () => {
+    const detail: z.ZodType = z.lazy(() =>
+      z.strictObject({ label: z.string(), children: z.array(detail) }),
+    );
+    const finishOnly = agentActionSchema.options.find(
+      (option) => option.shape.type.value === 'finish',
+    )!;
+    const base = finishOnly.extend({ detail: detail.optional() });
+    const baseJSON = z.toJSONSchema(base);
+    expect(baseJSON.$defs).toBeDefined();
+    const contract = createSpecialistActionContract(
+      { outputs: [artifact] },
+      base,
+    );
+    for (const schema of [contract.schema, providerSchema(contract)]) {
+      expect(schema.safeParse(finish()).success).toBe(true);
+      expect(
+        schema.safeParse(finish({ outputs: [{ ...artifact, version: 1 }] }))
+          .success,
+      ).toBe(false);
+      expect(schema.safeParse(message()).success).toBe(false);
+    }
+  });
+
+  it('preserves policy-local references for recursive registered inputs with a custom base', () => {
+    const tree: z.ZodType = z.lazy(() =>
+      z.strictObject({ label: z.string(), children: z.array(tree) }),
+    );
+    const detail: z.ZodType = z.lazy(() =>
+      z.strictObject({
+        label: z.literal('base-only'),
+        children: z.array(detail),
+      }),
+    );
+    const toolOnly = agentActionSchema.options.find(
+      (option) => option.shape.type.value === 'tool',
+    )!;
+    const base = toolOnly.extend({ detail: detail.optional() });
+    const contract = createSpecialistActionContract(
+      {
+        tools: [
+          {
+            id: 'registered.describe-tree',
+            input_schema: z.toJSONSchema(tree),
+          },
+        ],
+      },
+      base,
+    );
+    const action = {
+      id: 'describe-tree',
+      type: 'tool',
+      tool: 'registered.describe-tree',
+      input: { label: 'Root', children: [{ label: 'Leaf', children: [] }] },
+    };
+    expect(Object.keys(contract.outputSchema.$defs as object)).toHaveLength(2);
+    for (const schema of [contract.schema, providerSchema(contract)]) {
+      expect(schema.safeParse(action).success).toBe(true);
+      expect(
+        schema.safeParse({ ...action, tool: 'ungranted.describe-tree' })
+          .success,
+      ).toBe(false);
+      expect(
+        schema.safeParse({ ...action, input: { label: 42, children: [] } })
+          .success,
+      ).toBe(false);
+      expect(schema.safeParse(finish({ outputs: [] })).success).toBe(false);
     }
   });
 });

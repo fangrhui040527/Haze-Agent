@@ -1,5 +1,9 @@
 # External evaluation engineering implementation report
 
+The original verification results below are historical. The
+[engineering follow-up](#engineering-follow-up-27-october-2026) records this
+later recheck and fixes.
+
 Implemented the engineering path from [Plan 05](damage-reduction-05-external-evaluation.md) on 27 October 2026. The user confirmed that no real evaluation package is available and requested the engineering path. The implementation retains imported external evaluation evidence, independently checks supported exact point comparisons, and provides programme Evaluation and learning views. Operational release remains gated on a complete reviewed non-synthetic reference trace.
 
 ## What changed
@@ -59,3 +63,80 @@ Both evaluations retained synthetic origin and honest delivery gaps. The indepen
 All evaluation examples used for this change are synthetic engineering fixtures. No real programme effect, independently qualified scientific reference case or live delivery was demonstrated. No live delivery adapter, monetary target, internal causal estimator or automatic publication was added. Operational conclusions require the scientific owner to supply and review a complete non-synthetic package, followed by exact technical review and explicit local adoption under the server predicate. Browser automation was not used; frontend validation uses compiled code and rendered component tests.
 
 The workspace includes earlier Plans 01–04 and unrelated in-progress changes. This work preserves those changes and has not been committed or deployed.
+
+## Engineering follow-up, 27 October 2026
+
+This recheck covers the implemented evaluation engineering path. Scientific
+qualification remains outside its scope, and live delivery remains deferred
+as the user requested. It does not create a non-synthetic scientific reference
+package or publish reviewed learning.
+
+Two functional defects were reproduced and fixed:
+
+- A reference-shaped proof wrapper could hide additional nested evidence
+  because traversal stopped after its `{id, version, sha256}` fields. A material
+  objection could consequently appear resolved despite concealed synthetic
+  proof. Traversal now retains the wrapper's own exact reference and checks
+  its additional fields. Regressions cover hidden synthetic evidence, held or
+  missing nested originals, and cycles; the corresponding resolution remains
+  withheld. The existing reference and traversal bounds are unchanged.
+- Independently supplied expected fractions were compared as literal objects.
+  A correct `3/25` or `0.12/1` was rejected against the producer's `120/1000`.
+  The producer and independent reviewer now perform exact cross-multiplied
+  equivalence checks using their own arithmetic. Generated outputs still use
+  the canonical difference/baseline representation. Wrong ratios, zero
+  denominators and oversized arithmetic remain rejected. No threshold,
+  uncertainty method or scientific qualification rule changed.
+
+All **24 numerical/checker tests** and **9 proof-record/evidence-boundary tests**
+pass, including the new regressions. The original **18 evaluation API tests**
+also pass under pinned Node 24.22.1, using stable isolated build output. The
+two lifecycle cases took 112.95 s and 147.69 s, within their unchanged
+180-second test guards. The four discovery-file formatting failures cited
+above have already been corrected and pass their focused formatting check.
+
+The baseline fresh-process
+[evaluation verifier](../../.state/plan05-recheck-dee71dd7533d45e3926bfce8477892bd/fresh-process/damage-reduction-evaluation-verification/df5a4cb2-6079-49a0-bced-1740944dbe5d/report.json)
+passes five explicit runs, fourteen exact original readbacks, restart,
+idempotency and method revocation. It used zero model calls, fourteen tool
+calls, 31 generated artifacts and 19 assignments, with reservations returned
+to zero. This is fixture evidence rather than configured live-model evidence.
+
+After both fixes were overlaid, the final isolated build passed with exit code
+zero and **40/40 focused tests** passed: 24 numerical/checker, seven server
+predicate, six evaluation-record and three evidence-read boundary tests.
+The [final fresh-process trace](../../.state/plan05-recheck-dee71dd7533d45e3926bfce8477892bd/final-fresh-process/damage-reduction-evaluation-verification/d7b4751f-2f52-408f-9fc9-f0f991badbb8/report.json)
+also passed with exit code zero after clean shutdown. It repeated five explicit
+runs, fourteen exact original readbacks, restart and revocation checks with
+the same zero-model usage and reconciled reservations. The final phase wall
+times were 3.830, 5.727, 8.965, 29.407 and 18.789 seconds. The
+[recheck summary](../../.state/plan05-recheck-dee71dd7533d45e3926bfce8477892bd/evaluation-recheck-summary.json)
+and [source-hash manifest](../../.state/plan05-recheck-dee71dd7533d45e3926bfce8477892bd/post-audit-overlay.json)
+identify the tested sources. The 18-API suite above was the pre-overlay
+baseline; final focused checks and fresh-process execution verified the fixes
+without repeating that complete long suite.
+
+Scoped ESLint, formatting and `git diff --check` pass. The complete repository
+`npm run check` was not rerun in this review, and no aggregate pass is claimed.
+The shared configured live-model readiness limitation documented in the
+[Report 04 follow-up](damage-reduction-04-implementation-report.md#still-unresolved-configured-live-model-readiness)
+remains open; passing evaluation fixtures do not close it. Scientific
+qualification and the non-synthetic reference requirement remain unchanged.
+
+The browser verification gap is now closed with the final compiled backend.
+The [UI report](../../.state/damage-reduction-evaluation-ui-recheck/report.json)
+and [restart comparison](../../.state/damage-reduction-evaluation-ui-recheck/restart-comparison.json)
+record exact input/dossier imports, explicit evaluation admission, a supported
+below-target comparison, source/review inspection, withdrawal safeguards,
+material objections, history and manual reload. Importing or saving records
+did not automatically start a run. Fresh-process readback retained revision 18,
+six runs, seven records, sixteen charged tool calls, zero model calls and zero
+reservations. Only two regenerated `preview.claims.checked_at` timestamps are
+excluded from the comparison. Reimported dossier bytes did not evade the prior
+withdrawal safeguard. Learning remained `insufficient_evidence` and
+`not_published`; no achieved-effect claim was granted.
+
+The frontend production build and **11 focused Evaluation UI/input tests** pass.
+Actual desktop and 390 px mobile checks found no substantive UI defect and no
+captured console warnings or errors. No frontend source change was necessary
+in this recheck, and all owned verification servers were shut down.

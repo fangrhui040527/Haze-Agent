@@ -170,6 +170,106 @@ function control(
 }
 
 describe('Nightshift durable grants and candidate inbox', () => {
+  it.each(['pause', 'cancel', 'revoke'] as const)(
+    'cannot admit the first chain after task %s',
+    (action) => {
+      const store = open();
+      const admitted = task(store);
+      control(store, admitted, action);
+      const current = store.read(admitted.id, identity);
+      expect(() => chain(store, current)).toThrow('paused or terminal');
+      expect(store.nightshift.listChains(identity)).toEqual([]);
+      expect(
+        store.db.prepare('SELECT COUNT(*) count FROM ns_chain_runs').get(),
+      ).toMatchObject({ count: 0 });
+    },
+  );
+  it.each(['failed', 'timed_out'] as const)(
+    'cannot admit the first chain for a %s task',
+    (status) => {
+      const store = open();
+      const admitted = task(store);
+      const current = store.stop(admitted.id, status, 'test_stop', 'Stopped.');
+      expect(() => chain(store, current)).toThrow('paused or terminal');
+      expect(store.nightshift.listChains(identity)).toEqual([]);
+    },
+  );
+  it('cannot admit a first chain after task completion', () => {
+    const store = open();
+    const admitted = task(store);
+    const current = store.saveResult(
+      admitted.id,
+      admitted.current_run_id,
+      admitted.generation,
+      {
+        schema_version: 'haze.task.result.v3',
+        answer: 'No reviewed finding is established.',
+        completion: 'partial',
+        work_products: [],
+        sources: [],
+        covered_scope: {},
+        uncertainty: ['No candidate has been independently reviewed.'],
+        review: {
+          status: 'needs_review',
+          scope: 'No candidate review.',
+          limitations: ['Independent review remains required.'],
+        },
+        currency: 'current',
+        next_requirements: ['Admit separate follow-up work.'],
+        provenance: {
+          mode: admitted.mode,
+          model_calls: 0,
+          tool_calls: 0,
+          capabilities: [],
+          receipts: [],
+        },
+      },
+    );
+    expect(current.status).toBe('completed');
+    expect(() => chain(store, current)).toThrow('paused or terminal');
+    expect(store.nightshift.listChains(identity)).toEqual([]);
+  });
+  it('cannot submit while the task is paused even if its chain is explicitly resumed', () => {
+    const store = open();
+    const admitted = task(store);
+    const grant = chain(store, admitted);
+    control(store, admitted, 'pause');
+    const current = store.read(admitted.id, identity);
+    const resumed = store.nightshift.controlChain(
+      grant.id,
+      {
+        schema_version: 'haze.nightshift.chain.control.v1',
+        ...authority(current),
+        expected_chain_revision: store.nightshift.chain(grant.id, identity)
+          .revision,
+        action: 'resume',
+      },
+      'resume-only-chain',
+      identity,
+    );
+    expect(resumed.status).toBe('active');
+    expect(() => submit(store, current, resumed)).toThrow('paused or terminal');
+    expect(store.nightshift.jobs(identity)).toEqual([]);
+    expect(
+      store.db.prepare('SELECT COUNT(*) count FROM ns_reservations').get(),
+    ).toMatchObject({ count: 0 });
+  });
+  it.each(['pause', 'cancel', 'revoke'] as const)(
+    'returns admitted idempotency receipts after task %s without new reservations',
+    (action) => {
+      const store = open();
+      const admitted = task(store);
+      const grant = chain(store, admitted);
+      const job = submit(store, admitted, grant);
+      control(store, admitted, action);
+      expect(chain(store, admitted).id).toBe(grant.id);
+      expect(submit(store, admitted, grant).id).toBe(job.id);
+      expect(store.nightshift.jobs(identity)).toHaveLength(1);
+      expect(
+        store.db.prepare('SELECT COUNT(*) count FROM ns_reservations').get(),
+      ).toMatchObject({ count: 1 });
+    },
+  );
   it('enrollment includes existing Haze charges and cannot enlarge the current run limits', () => {
     const store = open();
     let admitted = task(store);
@@ -243,6 +343,50 @@ describe('Nightshift durable grants and candidate inbox', () => {
         .prepare('UPDATE ns_grants SET body=body WHERE chain_id=?')
         .run(grant.id),
     ).toThrow('immutable');
+  });
+  it('commits exactly one dispatch before acknowledgement, including after reopening without recovery', () => {
+    const store = open();
+    const admitted = task(store);
+    const grant = chain(store, admitted);
+    const job = submit(store, admitted, grant);
+    store.nightshift.markDispatched(job.id);
+    expect(() => store.nightshift.markDispatched(job.id)).toThrow('repeated');
+    expect(store.nightshift.job(job.id, identity).execution_state).toBe(
+      'submitting',
+    );
+    expect(
+      store.db
+        .prepare('SELECT state FROM ns_submission_attempts WHERE job_id=?')
+        .get(job.id),
+    ).toMatchObject({ state: 'dispatched' });
+
+    const directory = store.directory;
+    store.close();
+    const reopened = open(directory);
+    expect(() => reopened.nightshift.markDispatched(job.id)).toThrow(
+      'repeated',
+    );
+    reopened.nightshift.recoverIntents();
+    expect(reopened.nightshift.job(job.id, identity).execution_state).toBe(
+      'submission_unknown',
+    );
+    expect(
+      reopened.nightshift
+        .events(job.id, 0, identity)
+        .events.filter((event) => event.type === 'submission_dispatched'),
+    ).toHaveLength(1);
+    expect(
+      reopened.db
+        .prepare(
+          'SELECT COUNT(*) count FROM ns_submission_attempts WHERE job_id=?',
+        )
+        .get(job.id),
+    ).toMatchObject({ count: 1 });
+    expect(reopened.nightshift.chain(grant.id, identity).usage).toMatchObject({
+      jobs: 1,
+      requested_attempts: 4,
+      retention_reserved: 1,
+    });
   });
   it('fences unacknowledged submission after restart and never infers identity from a similar job', () => {
     const store = open();

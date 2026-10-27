@@ -3,8 +3,10 @@
 Haze now has a manual-only job inbox at `/nightshift/:jobId?`. Direct inference
 routing remains separate. A reachable Nightshift daemon is not enough: the
 installed job contract and an eligible ready local text lane must be available.
-The inspected installation currently has ready cloud lanes but no eligible local
-lane, so new job admission is blocked.
+New job admission is blocked whenever the daemon, reviewed contract or eligible
+local compute is unavailable. See the latest
+[recheck](../architecture/nightshift-02-local-jobs-recheck-report.md) for current
+installation findings rather than treating an earlier lane inventory as live.
 
 ## Manual workflow
 
@@ -16,8 +18,9 @@ lane, so new job admission is blocked.
    for explicit user continuations. Automatic follow-ups always remain zero.
 3. Submit a text `best_of_n` brief with exact input artifact references. Defaults
    are four attempts, accuracy judge, low budget, immediate execution and runtime
-   fleet selection. Supported explicit local fleets come from authenticated
-   runtime discovery. Privacy is local-only and cloud spend is zero.
+   selection. The reviewed runtime does not implement explicit fleet selection;
+   its `fleet_id` is metadata, so the adapter rejects that option for new jobs.
+   Privacy is local-only and cloud spend is zero.
 4. Observe persisted execution, judging outcome and receipt state independently.
    Closing the page or stopping browser observation does not cancel compute.
    The server supervisor reconnects to acknowledged IDs after restart.

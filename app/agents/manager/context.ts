@@ -496,6 +496,7 @@ export function assembleManagerContext(
           'assignment_failed',
           'review_objection',
           'task_updated',
+          'operation_unknown',
         ].includes(event.type),
     );
     if (discard < 0) break;
@@ -673,6 +674,7 @@ export function assembleManagerContext(
           'review_objection',
           'task_updated',
           'world_lifecycle_changed',
+          'operation_unknown',
         ].includes(event.type)
       )
         return true;
@@ -715,6 +717,71 @@ export function assembleManagerContext(
     status.missing = status.missing.filter((note) =>
       note.startsWith('Artifact unavailable'),
     );
+  }
+  if (bytes(context) > limit) {
+    // Imported originals already retain full canonical references in the
+    // unchanged request/corrections. Encode only redundant CURRENT import
+    // catalog/applicability envelopes; never unavailable/historical sources,
+    // captures, generated products, reviews or their nonempty gaps.
+    const supplied = [
+      ...context.request.context_refs,
+      ...context.corrections.flatMap(
+        (correction) => correction.context_refs ?? [],
+      ),
+    ];
+    const retained = new Set<number>();
+    const compacted = new Set<string>();
+    const disclosure =
+      'current_import_context_ref_indices tags CURRENT imported originals in request.context_refs followed by correction context_refs; full exact refs remain there.';
+    status.missing.push(disclosure);
+    for (const artifact of [...context.artifacts]) {
+      if (bytes(context) <= limit) break;
+      if (
+        artifact.kind !== 'source.import' ||
+        !artifact.current ||
+        artifact.assignment_id !== undefined ||
+        artifact.assignment_index !== undefined ||
+        artifact.excerpt !== undefined
+      )
+        continue;
+      const index = supplied.findIndex(
+        (ref) =>
+          ref.id === artifact.ref.id &&
+          ref.version === artifact.ref.version &&
+          ref.sha256 === artifact.ref.sha256,
+      );
+      if (
+        index < 0 ||
+        supplied.some(
+          (ref) =>
+            ref.id === artifact.ref.id &&
+            (ref.version !== artifact.ref.version ||
+              ref.sha256 !== artifact.ref.sha256),
+        )
+      )
+        continue;
+      const applicability = context.source_applicability.filter(
+        (entry) => entry.id === artifact.ref.id,
+      );
+      if (
+        !applicability.length ||
+        applicability.some((entry) => !entry.current)
+      )
+        continue;
+      retained.add(index);
+      compacted.add(artifact.ref.id);
+      context.artifacts = context.artifacts.filter(
+        (entry) => entry !== artifact,
+      );
+      context.source_applicability = context.source_applicability.filter(
+        (entry) => entry.id !== artifact.ref.id,
+      );
+      context.current_import_context_ref_indices = [...retained];
+      status.omitted_artifacts++;
+      status.truncated = true;
+    }
+    if (!compacted.size)
+      status.missing = status.missing.filter((note) => note !== disclosure);
   }
   if (bytes(context) > limit)
     throw new TaskError(
