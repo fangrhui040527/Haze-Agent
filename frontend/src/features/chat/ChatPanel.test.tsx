@@ -159,8 +159,8 @@ describe('chat after crew demo retirement', () => {
       status: 'running',
     };
     const markup = renderChat(run);
-    expect(markup).toContain('Open Manager workspace');
-    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).toContain('Open the result');
+    expect(markup).toContain(`href="/task/${taskId}"`);
     expect(markup).not.toContain('Cancel task');
     expect(markup).not.toContain('Pause task');
     expect(markup).not.toContain('Stop waiting');
@@ -224,7 +224,7 @@ describe('chat after crew demo retirement', () => {
     };
     const markup = renderChat(run);
     expect(markup).toContain('Latest haze information for Singapore');
-    expect(markup).not.toContain('Open Manager workspace');
+    expect(markup).not.toContain('Open the result');
     expect(markup).not.toContain('The task is complete');
     expect(markup).not.toContain('Clear chat');
   });
@@ -257,7 +257,7 @@ describe('chat after crew demo retirement', () => {
     const markup = renderChat(run);
     expect(markup).toContain('Which evidence or source should I analyze?');
     expect(markup).toContain('Answer this question');
-    expect(markup).toContain(`href="/manager/${taskId}"`);
+    expect(markup).toContain(`href="/task/${taskId}"`);
     expect(markup).not.toContain('Clarification needed');
     expect(markup).not.toContain('Answer in task report');
     expect(markup).not.toContain('Result: full');

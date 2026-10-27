@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GlobeInstance } from 'globe.gl';
 import type { ArtifactRef } from '../../../../app/contracts/artifacts.ts';
 import { agentService } from '../../services/agents/index.ts';
@@ -155,18 +155,9 @@ const fireColor = (fire: Fire) =>
 const utc = (iso: string) =>
   `${new Date(iso).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
-/**
- * Where the air over the town came from, on a 3D globe: weighted fires as columns,
- * the backward air paths, and the concessions those fires were in. Drawn only from
- * the exact, hash-checked source-trace work product of a non-rejected result.
- */
-export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
-  const [trace, setTrace] = useState<Trace | null>(null);
-  const [hidden, setHidden] = useState<Set<LayerName>>(new Set());
-  const [picked, setPicked] = useState<Fire | null>(null);
-  const container = useRef<HTMLDivElement>(null);
-  const globe = useRef<GlobeInstance | null>(null);
-
+/** The exact, hash-checked source-trace artifact among a result's work products. */
+export function useSmokeLedgerTrace(products: ArtifactRef[]): unknown {
+  const [content, setContent] = useState<unknown>(null);
   useEffect(() => {
     if (!agentService.readArtifact || !products.length) return;
     const controller = new AbortController();
@@ -183,15 +174,35 @@ export function SmokeLedgerGlobe({ products }: { products: ArtifactRef[] }) {
           artifact.kind !== 'smokeledger.trace_sources'
         )
           continue;
-        const found = traceOf(artifact.content);
-        if (found && !controller.signal.aborted) {
-          setTrace(found);
-          return;
-        }
+        if (!controller.signal.aborted) setContent(artifact.content);
+        return;
       }
     })();
     return () => controller.abort();
   }, [products]);
+  return content;
+}
+
+/**
+ * Where the air over the town came from, on a 3D globe: weighted fires as columns,
+ * the backward air paths, and the concessions those fires were in. Drawn only from
+ * the exact, hash-checked source-trace work product of a non-rejected result.
+ */
+export function SmokeLedgerGlobe({
+  products = [],
+  content,
+}: {
+  products?: ArtifactRef[];
+  /** An already loaded trace artifact's content; skips loading `products`. */
+  content?: unknown;
+}) {
+  const loaded = useSmokeLedgerTrace(content === undefined ? products : []);
+  const source = content === undefined ? loaded : content;
+  const trace = useMemo(() => traceOf(source), [source]);
+  const [hidden, setHidden] = useState<Set<LayerName>>(new Set());
+  const [picked, setPicked] = useState<Fire | null>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const globe = useRef<GlobeInstance | null>(null);
 
   const home = () => {
     const town = trace?.layers.town;

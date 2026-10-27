@@ -303,14 +303,14 @@ function MessageBody({
               is shown.
             </p>
           )}
-          <Link to={`/manager/${encodeURIComponent(message.taskCard.task_id)}`}>
-            Open Manager workspace
+          <Link to={`/task/${encodeURIComponent(message.taskCard.task_id)}`}>
+            Open the result
           </Link>
         </div>
       )}
       {message.workspaceTaskId && (
-        <Link to={`/manager/${encodeURIComponent(message.workspaceTaskId)}`}>
-          Open Manager workspace
+        <Link to={`/task/${encodeURIComponent(message.workspaceTaskId)}`}>
+          Open the result
         </Link>
       )}
       {message.task && (
