@@ -144,70 +144,125 @@ Docker startup and the backend build. Edit `scripts/dev-status.mjs` to customize
 panel. Use `npm run --silent dev` to also hide npm's initial script header. Vite
 options still work, for example `npm run dev -- --port 5174`.
 
-Zetaris is a separate service for external evidence retrieval. The root dev command
-starts the included local platform automatically. To start Zetaris independently,
-configure root `.env` as described below, start Docker Desktop and then run:
+### Zetaris and the PM2.5 data flow
 
-```sh
-docker compose up -d
+Zetaris is the authenticated SQL/query gateway to the SmokeLedger PostgreSQL
+evidence store. It is **not** the service that fetches PM2.5 from Open-Meteo or
+OpenAQ.
+
+```text
+MODELED DATA
+Open-Meteo Air Quality API
+    -> PM2.5 fetcher
+    -> SmokeLedger PostgreSQL (pm25 table)
+    -> Zetaris registered PostgreSQL datasource (sl_pg)
+    -> Haze PM2.5 tool queries Zetaris REST
+    -> bounded, provenance-retaining evidence capture
+
+LIVE STATION OBSERVATIONS (separate path)
+OpenAQ v3 API
+    -> HazeOps OpenAQ watcher
+    -> station evidence
+    (does not pass through Zetaris or SmokeLedger's PM2.5 table)
 ```
 
-Allow Zetaris to finish starting before making requests that use it. See the
-[platform setup guide](app/adapters/zetaris/zetaris-platform/README.md) for its
-first-time image registry and configuration requirements. The root
-[compose.yaml](compose.yaml) starts Zetaris, including its metastore database.
-The separate legacy SmokeLedger database and its tooling have been removed.
+#### Modeled PM2.5: Open-Meteo through Zetaris
 
-Copy [.env.example](.env.example) to root `.env`. This gitignored file holds
-the server-side Haze, Zetaris deployment and ingestion settings. For a local
-Zetaris deployment, fill in the issued image references, `POSTGRES_PASSWORD` and
-`ZETARIS_ADMIN_PASSWORD` before running Compose. Retain existing values when
-moving an installation; the `zetaris` project name reuses its existing volumes.
-For live agent requests, set your own `NVIDIA_API_KEY` (or use
-`HAZE_PROVIDER=openai-compatible` with `HAZE_PROVIDER_API_KEY`,
-`HAZE_PROVIDER_BASE_URL` and `HAZE_MODEL`). PM2.5 evidence retrieval also
-requires an existing Zetaris instance and your own `ZETARIS_API_KEY`; configure
-its `ZETARIS_REST_URL` and `ZETARIS_ORG_ID` if they differ from the documented
-defaults. Keep credentials out of browser `VITE_*` variables. API keys are
-personal and must never be added to a committed example file.
+1. `smokeledger:fetch:pm25` calls Open-Meteo's Air Quality API for canonical
+   locations, requesting the past day and three forecast days in GMT. It writes
+   returned PM2.5 rows into SmokeLedger PostgreSQL, marking them as modeled and
+   recording the source as `open-meteo-air-quality`; it does not publish to
+   Zetaris FileStore. See the [fetcher endpoint](third_party/zetaris/sources/smokeledger/open_meteo_pm25/fetch.ts#L18),
+   [request window](third_party/zetaris/sources/smokeledger/open_meteo_pm25/fetch.ts#L29),
+   and [database upsert](third_party/zetaris/sources/smokeledger/open_meteo_pm25/fetch.ts#L68).
+   The [PM2.5 table schema](third_party/zetaris/sources/smokeledger/sql/01_schema.sql#L42)
+   separates `kind`, provider issuance time, local ingestion time and source.
+   Its comment uses CAMS as an example of a model, but this fetcher identifies
+   these rows as Open-Meteo in the `source` column.
+2. Zetaris registers the local PostgreSQL database as datasource `sl_pg` using
+   JDBC at `host.docker.internal:5433`, then registers its tables. This lets
+   Zetaris query PostgreSQL; the [registration SQL](third_party/zetaris/sources/smokeledger/sql/02_zetaris_register.sql#L9)
+   does not ask Zetaris to fetch from Open-Meteo.
+3. Haze builds a bounded SQL query for the requested town and start-inclusive,
+   end-exclusive time range. It reads `sl_pg.pm25`, joins `sl_pg.towns` for
+   coordinates, and filters to `kind = 'model'` and
+   `source = 'open-meteo-air-quality'`. The [PM2.5 evidence adapter](app/capabilities/pm25/evidence.ts#L231)
+   sends that SQL through the [Zetaris REST transport](app/adapters/zetaris.ts#L31).
+   The task retains the response and query selection as evidence. This product
+   path queries `sl_pg` directly; it does not depend on the separately activated
+   SmokeLedger USL tables.
 
-The optional data-ingestion scripts need their own keys: `FIRMS_MAP_KEY` for
-NASA FIRMS and `WINDY_API_KEY` for Windy. They belong in root `.env`;
-Open-Meteo and Data.gov.my fetchers do not
-require keys.
+Run commands from the repository root:
 
-The examples provide configuration names and local development defaults, not
-hosted-service credentials. Current PM2.5 ingestion publishes CSV snapshots to
-Zetaris FileStore and exposes `air_quality.hourly_observations`; wind and FIRMS
-have their own source folders alongside air quality. These commands publish
-directly to Zetaris without a separate ingestion database. Preview a bounded
-setup from the repository root before applying it:
-
-```sh
-npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
-npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
+```powershell
+npm run db:init
+npm run smokeledger:fetch:pm25 -- --location kuala-lumpur --dry-run
+npm run smokeledger:fetch:pm25 -- --location kuala-lumpur
 ```
 
-After reviewing the plan, rerun the selected command without `--dry-run` to
-fetch and register the source snapshots. A task reads the published snapshot;
-it does not refresh it. Removing the old SmokeLedger tooling does not delete
-existing Docker volumes or registered Zetaris objects. Historical database rows
-are not migrated automatically; saved task captures remain readable.
+Omit `--location kuala-lumpur` to fetch all canonical locations, or repeat
+`--location` for more than one. The dry run requests and validates Open-Meteo
+data without writing it to PostgreSQL. See the [database init script](package.json#L16),
+[PM2.5 fetch script](package.json#L19)
+and [fetcher instructions](third_party/zetaris/sources/smokeledger/open_meteo_pm25/README.md#L3).
 
-The USL bootstrap also supports a read-only SmokeLedger view over current
-Environmental locations, fire, PM2.5, and wind feeds. It does not require
-PostgreSQL; run `npm run zetaris:bootstrap:smokeledger` after publishing the
-Environmental sources and compiling the Environmental USL.
+To register the PostgreSQL datasource and compile/activate the additional
+SmokeLedger USL tables, preview and then run:
 
-Existing `app/adapters/zetaris/.env.local`
-files remain a fallback for task commands, the frontend task server and Zetaris
-helpers. Process variables take precedence; root `.env` values win over the
-legacy adapter file, including empty values. Move any settings you still use
-into root `.env` without overwriting existing values. The Zetaris helpers also
-look in the main checkout when run from a Git worktree.
-External API keys are not needed for the
-fixture checks (`npm run tasks:verify -- --fixture`), but are needed for live
-model or Zetaris requests.
+```powershell
+npm run zetaris:bootstrap:smokeledger -- --dry-run
+npm run zetaris:bootstrap:smokeledger
+```
+
+The [bootstrap](third_party/zetaris/usl/bootstrap_smokeledger.ts#L114)
+also verifies the USL queries. Rerun it after fetching new rows if you need to
+refresh those activated USL tables. That activation is separate from the Haze
+PM2.5 tool's direct `sl_pg` datasource query. Configure Zetaris credentials
+server-side as `ZETARIS_API_KEY`, `ZETARIS_REST_URL` and numeric
+`ZETARIS_ORG_ID`; the transport requires the key, has a 30-second timeout, and
+limits response size. Never put secrets in source or browser `VITE_*` settings.
+
+#### Observed PM2.5: separate live OpenAQ station feed
+
+OpenAQ is a second, separate HazeOps watcher. The [watcher](server/src/hazeops/adapters/openAq.ts#L20)
+calls the OpenAQ v3 API directly for its station catalogue and latest readings;
+the [server registers it independently](server/src/index.ts#L58).
+It requires `OPEN_AQ_KEY`. It does not use Zetaris, does not populate
+`sl_pg.pm25`, and is not an automatic fallback for a failed Zetaris PM2.5 query.
+
+OpenAQ contributes current station observations, not the Open-Meteo modeled
+time series. The watcher filters to eligible Malaysian stations near configured
+locations and excludes stations with no recent readings. Its documented
+limitations matter: many listed Malaysian stations are low-cost sensors, not
+official DOE reference monitors, readings can drift with humidity, stations
+more than 75 km from a configured city or silent for over 48 hours are excluded,
+and station coverage can be incomplete. See the [station description](server/src/hazeops/adapters/openAq.ts#L26)
+and [candidate filtering](server/src/hazeops/adapters/openAq.ts#L105).
+
+#### Evidence and limitations
+
+- Open-Meteo values are model output, not ground observations. The API response
+  does not establish a provider model-issuance time; new rows store issuance as
+  unknown and record local ingestion separately. Town coordinates do not prove
+  the model grid cell represents the whole town. Nulls and missing time slots
+  stay unknown; hourly output is not evidence of an hour-averaged measurement.
+  See the [PM2.5 evidence boundary](docs/evidence/pm25-evidence-source.md#L26).
+- Each Haze Zetaris request is limited to 31 days, 1,500 retained rows, 30
+  seconds and 512 KiB; truncation means coverage may be incomplete. A task
+  queries existing rows and does not fetch or refresh either public provider.
+  See the [query bounds](docs/evidence/pm25-evidence-source.md#L50).
+- The product transport uses the configured `ZETARIS_API_KEY` directly; it
+  does not log in or refresh credentials. A missing or invalid key prevents the
+  Zetaris query from running. See the [transport authentication](app/adapters/zetaris.ts#L31).
+- Live readiness depends on credentials, a reachable Zetaris instance, a
+  registered `sl_pg` datasource and rows for the requested town and period.
+  The evidence note records that these live endpoint/data checks were
+  not verified at the time of its access check. A fixture test proves only the
+  fixture path, not live Zetaris access. See the [access-check qualification](docs/evidence/pm25-evidence-source.md#L55).
+
+For generic setup and SQL helper usage, see the [Zetaris platform guide](third_party/zetaris/zetaris-platform/README.md)
+and [repository script guide](third_party/zetaris/scripts/HOWTO.md).
+For PM2.5 evidence semantics and data provenance, see the [full source note](docs/evidence/pm25-evidence-source.md).
 
 A general request needs only its objective. Import text, Markdown, CSV or JSON when the answer needs your source material. For example:
 
