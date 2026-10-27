@@ -32,6 +32,11 @@ import {
   createPm25Tools,
 } from './capabilities/pm25/index.js';
 import {
+  createSmokeLedgerAssignments,
+  createSmokeLedgerCapability,
+  createSmokeLedgerTools,
+} from './capabilities/smokeledger/index.js';
+import {
   createDamageAccountIntakeAssignments,
   createDamageAccountIntakeCapability,
 } from './capabilities/damage-account-intake/index.js';
@@ -214,6 +219,9 @@ export function createExecutionRegistry(options: {
       (!calculatedDamage.matches(request) ||
         damageAccountScopeSchema.safeParse(request.scope).success),
   });
+  // Before episode-investigation: fixture planning picks the first match, and SmokeLedger
+  // only matches requests with a readable town and window.
+  registry.registerCapability(createSmokeLedgerCapability());
   registry.registerCapability(createEpisodeInvestigationCapability());
   registry.registerCapability(createEvidenceSynthesisCapability());
   // Quantitative answers are rendered from reviewed artifacts, not Manager prose.
@@ -231,6 +239,7 @@ export function createExecutionRegistry(options: {
     ...createPm25Assignments(),
     ...createEvidenceCollectionAssignments(),
     ...createDamageAccountIntakeAssignments(),
+    ...createSmokeLedgerAssignments(),
     ...createEpisodeInvestigationAssignments(),
     ...createEvidenceSynthesisAssignments(),
   ]) {
@@ -261,6 +270,8 @@ export function createExecutionRegistry(options: {
   for (const tool of createDamageEvidenceReviewTools(options))
     registry.registerTool(tool);
   for (const tool of createDamageAppraisalTools(options))
+    registry.registerTool(tool);
+  for (const tool of createSmokeLedgerTools(options))
     registry.registerTool(tool);
   return registry;
 }

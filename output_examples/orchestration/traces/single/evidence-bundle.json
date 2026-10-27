@@ -1,0 +1,2308 @@
+{
+  "schema_version": "haze.evidence-bundle.v1",
+  "manifest": {
+    "schema_version": "haze.trace.manifest.v1",
+    "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+    "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+    "snapshot_cursor": 54,
+    "active_snapshot": false,
+    "status": "completed",
+    "mode": "replay",
+    "capture": { "native": 54, "reconstructed": 0, "omissions": [] },
+    "omissions": [
+      {
+        "subject": "raw model/tool prompts and source copies",
+        "reason": "Raw bodies, copied uploaded text and provider output bodies are withheld by the shared sanitization policy."
+      }
+    ],
+    "sanitization": "haze.trace.sanitization.v1; exported_sha256 hashes UTF-8 JSON plus newline, independently of original_ref.sha256",
+    "created_at": "2026-10-27T19:36:50.809Z"
+  },
+  "records": [
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:1",
+      "cursor": 1,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:48.873Z",
+      "action": "task_admitted",
+      "actor": "Manager",
+      "status": "admitted",
+      "summary": "General objective admitted with bounded resources.",
+      "input_summary": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:2",
+      "cursor": 2,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:48.984Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: hydrate_authority",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "hydrate_authority",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:3",
+      "cursor": 3,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:48.999Z",
+      "action": "assignments_created",
+      "actor": "Manager",
+      "status": "created",
+      "summary": "Admitted 1 assignments.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "assignment_ids": ["abebc349-f1d4-4eac-aadc-a8afc438d59a"]
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:4",
+      "cursor": 4,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.002Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: hydrate_authority",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "hydrate_authority",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 12.304799999999886,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:5",
+      "cursor": 5,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.016Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:6",
+      "cursor": 6,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.025Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 5.285200000000032,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:7",
+      "cursor": 7,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.040Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: assemble_context",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "queued",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "assemble_context",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:8",
+      "cursor": 8,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.051Z",
+      "action": "assignment_started",
+      "actor": "Manager",
+      "status": "started",
+      "summary": "Exact inputs pinned and revised brief acknowledged.",
+      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:9",
+      "cursor": 9,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.070Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: assemble_context",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "assemble_context",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 25.842899999999872,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:10",
+      "cursor": 10,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.081Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: model_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "model_decision",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:11",
+      "cursor": 11,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.111Z",
+      "action": "attempt_charged",
+      "actor": "Manager",
+      "status": "started",
+      "summary": "model attempt charged before dispatch.",
+      "input_summary": "model attempt 9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+      "output_summary": "Receipt not accepted.",
+      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "attempt_number": 1,
+      "execution_status": "started",
+      "execution_accepted": false,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": {
+        "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "kind": "model"
+        },
+        "attempt": {
+          "kind": "model",
+          "status": "started",
+          "accepted": false,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:12",
+      "cursor": 12,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.124Z",
+      "action": "attempt_completed",
+      "actor": "Manager",
+      "status": "completed",
+      "summary": "Current attempt receipt persisted.",
+      "input_summary": "model attempt 9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+      "output_summary": "Receipt accepted by execution fence.",
+      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "attempt_number": 1,
+      "execution_status": "completed",
+      "execution_accepted": true,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": {
+        "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+        "event_ids": ["trace:11"]
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "attempt_id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "accepted": true,
+          "kind": "model",
+          "status": "completed",
+          "started_at": "2026-10-27T19:36:49.110Z",
+          "completed_at": "2026-10-27T19:36:49.124Z",
+          "duration_ms": 14
+        },
+        "attempt": {
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          },
+          "receipt": {
+            "response_model": null,
+            "response_id": null,
+            "input_tokens": null,
+            "output_tokens": null,
+            "synthetic": true
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:13",
+      "cursor": 13,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.151Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: model_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "model_decision",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 64.47939999999994,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:14",
+      "cursor": 14,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.165Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: validate_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "validate_decision",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:15",
+      "cursor": 15,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.179Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: validate_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "validate_decision",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 9.462199999999939,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:16",
+      "cursor": 16,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.195Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: lookup_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "lookup_action",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:17",
+      "cursor": 17,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.205Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: lookup_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "lookup_action",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 5.677999999999884,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:18",
+      "cursor": 18,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.227Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: execute_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "execute_action",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:19",
+      "cursor": 19,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.268Z",
+      "action": "assignments_created",
+      "actor": "Manager",
+      "status": "created",
+      "summary": "Admitted 1 assignments.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 0,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": {
+        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "assignment_ids": ["650c6446-4ed7-49e7-b228-3a15327ef3a8"]
+        },
+        "decision": {
+          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "generation": 1,
+          "objective_revision": 1,
+          "plan_revision": 0,
+          "event_cursor": 1,
+          "explanation": "Follow the frozen scripted case and exact retained evidence.",
+          "references": [],
+          "interpretation": {
+            "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+            "deliverables": ["The frozen case outcome."],
+            "assumptions": [],
+            "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+            "stopping_conditions": ["A supported result or exact question."]
+          },
+          "action": {
+            "type": "apply_plan",
+            "assignments": [
+              {
+                "key": "one",
+                "definition_id": "eval.produce",
+                "brief": "Execute eval.produce for one.",
+                "depends_on": [],
+                "input": "[withheld source body]"
+              }
+            ],
+            "retain_assignment_ids": [],
+            "reason": "Execute the frozen custom plan."
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:20",
+      "cursor": 20,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.275Z",
+      "action": "manager_plan_revised",
+      "actor": "Manager",
+      "status": "revised",
+      "summary": "Follow the frozen scripted case and exact retained evidence.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 0,
+      "artifacts": [],
+      "causes": {
+        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "plan_revision": 1,
+          "created": ["650c6446-4ed7-49e7-b228-3a15327ef3a8"],
+          "revised": []
+        },
+        "decision": {
+          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "generation": 1,
+          "objective_revision": 1,
+          "plan_revision": 0,
+          "event_cursor": 1,
+          "explanation": "Follow the frozen scripted case and exact retained evidence.",
+          "references": [],
+          "interpretation": {
+            "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+            "deliverables": ["The frozen case outcome."],
+            "assumptions": [],
+            "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+            "stopping_conditions": ["A supported result or exact question."]
+          },
+          "action": {
+            "type": "apply_plan",
+            "assignments": [
+              {
+                "key": "one",
+                "definition_id": "eval.produce",
+                "brief": "Execute eval.produce for one.",
+                "depends_on": [],
+                "input": "[withheld source body]"
+              }
+            ],
+            "retain_assignment_ids": [],
+            "reason": "Execute the frozen custom plan."
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:21",
+      "cursor": 21,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.282Z",
+      "action": "manager_decision_applied",
+      "actor": "Manager",
+      "status": "applied",
+      "summary": "Follow the frozen scripted case and exact retained evidence.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": {
+        "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "action": "apply_plan",
+          "plan_revision": 1,
+          "manager_consumed_event_cursor": 1
+        },
+        "decision": {
+          "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "generation": 1,
+          "objective_revision": 1,
+          "plan_revision": 0,
+          "event_cursor": 1,
+          "explanation": "Follow the frozen scripted case and exact retained evidence.",
+          "references": [],
+          "interpretation": {
+            "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+            "deliverables": ["The frozen case outcome."],
+            "assumptions": [],
+            "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+            "stopping_conditions": ["A supported result or exact question."]
+          },
+          "action": {
+            "type": "apply_plan",
+            "assignments": [
+              {
+                "key": "one",
+                "definition_id": "eval.produce",
+                "brief": "Execute eval.produce for one.",
+                "depends_on": [],
+                "input": "[withheld source body]"
+              }
+            ],
+            "retain_assignment_ids": [],
+            "reason": "Execute the frozen custom plan."
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:22",
+      "cursor": 22,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.296Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: execute_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "execute_action",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 64.27819999999997,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:23",
+      "cursor": 23,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.308Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:24",
+      "cursor": 24,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.344Z",
+      "action": "assignment_started",
+      "actor": "HazeOps",
+      "status": "started",
+      "summary": "Exact inputs pinned and revised brief acknowledged.",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:25",
+      "cursor": 25,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.354Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 42.787500000000136,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:26",
+      "cursor": 26,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.381Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: persist_wait",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "persist_wait",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:27",
+      "cursor": 27,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.396Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: persist_wait",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "persist_wait",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 10.834900000000061,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:28",
+      "cursor": 28,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.419Z",
+      "action": "graph_node",
+      "actor": "HazeOps",
+      "status": "node",
+      "summary": "Specialist graph: hydrate",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "node": "hydrate",
+          "topology": "specialist.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:29",
+      "cursor": 29,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.451Z",
+      "action": "graph_node",
+      "actor": "HazeOps",
+      "status": "node",
+      "summary": "Specialist graph: context",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "node": "context",
+          "topology": "specialist.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:30",
+      "cursor": 30,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.490Z",
+      "action": "graph_node",
+      "actor": "HazeOps",
+      "status": "node",
+      "summary": "Specialist graph: deterministic",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "node": "deterministic",
+          "topology": "specialist.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:31",
+      "cursor": 31,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.577Z",
+      "action": "artifact_applicability_checked",
+      "actor": "Runtime",
+      "status": "checked",
+      "summary": "Produced under current objective and acknowledged lease.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "artifact_id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "current": true
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:32",
+      "cursor": 32,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.580Z",
+      "action": "artifact_saved",
+      "actor": "HazeOps",
+      "status": "saved",
+      "summary": "Saved immutable evaluation.finding.",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [
+        {
+          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "version": 1,
+          "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+        }
+      ],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "version": 1,
+          "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844",
+          "kind": "evaluation.finding"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:33",
+      "cursor": 33,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.714Z",
+      "action": "graph_node",
+      "actor": "HazeOps",
+      "status": "node",
+      "summary": "Specialist graph: completion",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:specialist.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1:650c6446-4ed7-49e7-b228-3a15327ef3a8:r1",
+          "node": "completion",
+          "topology": "specialist.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:34",
+      "cursor": 34,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.792Z",
+      "action": "artifact_applicability_checked",
+      "actor": "Runtime",
+      "status": "checked",
+      "summary": "Produced under current objective and acknowledged lease.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "artifact_id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "current": true
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:35",
+      "cursor": 35,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.796Z",
+      "action": "artifact_saved",
+      "actor": "HazeOps",
+      "status": "saved",
+      "summary": "Saved immutable assignment.summary.",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "running",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [
+        {
+          "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "version": 1,
+          "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+        }
+      ],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+          "version": 1,
+          "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c",
+          "kind": "assignment.summary"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:36",
+      "cursor": 36,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.804Z",
+      "action": "assignment_completed",
+      "actor": "HazeOps",
+      "status": "completed",
+      "summary": "Execution state persisted independently of evidence support.",
+      "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "execution_status": "completed",
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:37",
+      "cursor": 37,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.863Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: hydrate_authority",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "hydrate_authority",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:38",
+      "cursor": 38,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.892Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: hydrate_authority",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "hydrate_authority",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 23.33640000000014,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:39",
+      "cursor": 39,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.907Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:40",
+      "cursor": 40,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.921Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: dispatch_assignments",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "dispatch_assignments",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 9.969499999999698,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:41",
+      "cursor": 41,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:49.942Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: assemble_context",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "assemble_context",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:42",
+      "cursor": 42,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.028Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: assemble_context",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "assemble_context",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 80.04889999999978,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:43",
+      "cursor": 43,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.043Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: model_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "model_decision",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:44",
+      "cursor": 44,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.099Z",
+      "action": "attempt_charged",
+      "actor": "Manager",
+      "status": "started",
+      "summary": "model attempt charged before dispatch.",
+      "input_summary": "model attempt 5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+      "output_summary": "Receipt not accepted.",
+      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "attempt_number": 2,
+      "execution_status": "started",
+      "execution_accepted": false,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": {
+        "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "kind": "model"
+        },
+        "attempt": {
+          "kind": "model",
+          "status": "started",
+          "accepted": false,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:45",
+      "cursor": 45,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.118Z",
+      "action": "attempt_completed",
+      "actor": "Manager",
+      "status": "completed",
+      "summary": "Current attempt receipt persisted.",
+      "input_summary": "model attempt 5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+      "output_summary": "Receipt accepted by execution fence.",
+      "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "assignment_revision": 1,
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "attempt_number": 2,
+      "execution_status": "completed",
+      "execution_accepted": true,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": {
+        "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+        "event_ids": ["trace:44"]
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "attempt_id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "accepted": true,
+          "kind": "model",
+          "status": "completed",
+          "started_at": "2026-10-27T19:36:50.098Z",
+          "completed_at": "2026-10-27T19:36:50.117Z",
+          "duration_ms": 19
+        },
+        "attempt": {
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          },
+          "receipt": {
+            "response_model": null,
+            "response_id": null,
+            "input_tokens": null,
+            "output_tokens": null,
+            "synthetic": true
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:46",
+      "cursor": 46,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.140Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: model_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "model_decision",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 92.59479999999985,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:47",
+      "cursor": 47,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.155Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: validate_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "validate_decision",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:48",
+      "cursor": 48,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.171Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: validate_decision",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "validate_decision",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 11.316800000000057,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:49",
+      "cursor": 49,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.187Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: lookup_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "lookup_action",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:50",
+      "cursor": 50,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.201Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: lookup_action",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "lookup_action",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 8.864000000000033,
+          "outcome": "ok"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:51",
+      "cursor": 51,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.215Z",
+      "action": "graph_node",
+      "actor": "Runtime",
+      "status": "node",
+      "summary": "Manager graph: finalize",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "running",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "finalize",
+          "topology": "manager.v3.automatic-chains"
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:52",
+      "cursor": 52,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.297Z",
+      "action": "task_completed",
+      "actor": "Manager",
+      "status": "completed",
+      "summary": "General result committed with exact sources/work products.",
+      "output_summary": "The retained evaluation finding is supported within the synthetic test scope.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "evidence_verdict": "not_required",
+      "task_status": "completed",
+      "manager_consumed_event_cursor": 1,
+      "artifacts": [
+        {
+          "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+          "version": 1,
+          "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+        }
+      ],
+      "reviews": [],
+      "causes": {
+        "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "decision": {
+          "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "generation": 1,
+          "objective_revision": 1,
+          "plan_revision": 1,
+          "event_cursor": 36,
+          "explanation": "Follow the frozen scripted case and exact retained evidence.",
+          "references": [],
+          "interpretation": {
+            "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+            "deliverables": ["The frozen case outcome."],
+            "assumptions": [],
+            "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+            "stopping_conditions": ["A supported result or exact question."]
+          },
+          "action": {
+            "type": "finalize",
+            "answer": "The retained evaluation finding is supported within the synthetic test scope.",
+            "work_products": [
+              {
+                "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                "version": 1,
+                "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+              }
+            ],
+            "sources": [],
+            "uncertainty": [],
+            "unfinished": []
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:53",
+      "cursor": 53,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.320Z",
+      "action": "manager_decision_applied",
+      "actor": "Manager",
+      "status": "applied",
+      "summary": "Follow the frozen scripted case and exact retained evidence.",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "completed",
+      "manager_consumed_event_cursor": 36,
+      "artifacts": [],
+      "causes": {
+        "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+        "event_ids": []
+      },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+          "action": "finalize",
+          "plan_revision": 1,
+          "manager_consumed_event_cursor": 36
+        },
+        "decision": {
+          "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "generation": 1,
+          "objective_revision": 1,
+          "plan_revision": 1,
+          "event_cursor": 36,
+          "explanation": "Follow the frozen scripted case and exact retained evidence.",
+          "references": [],
+          "interpretation": {
+            "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+            "deliverables": ["The frozen case outcome."],
+            "assumptions": [],
+            "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+            "stopping_conditions": ["A supported result or exact question."]
+          },
+          "action": {
+            "type": "finalize",
+            "answer": "The retained evaluation finding is supported within the synthetic test scope.",
+            "work_products": [
+              {
+                "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                "version": 1,
+                "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+              }
+            ],
+            "sources": [],
+            "uncertainty": [],
+            "unfinished": []
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "haze.trace.record.v1",
+      "event_id": "trace:54",
+      "cursor": 54,
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "at": "2026-10-27T19:36:50.349Z",
+      "action": "manager.graph.completed",
+      "actor": "Runtime",
+      "status": "manager.graph.completed",
+      "summary": "Manager graph completed: finalize",
+      "objective_revision": 1,
+      "generation": 1,
+      "plan_revision": 1,
+      "task_status": "completed",
+      "manager_consumed_event_cursor": 36,
+      "artifacts": [],
+      "causes": { "event_ids": [] },
+      "provenance": { "capture": "native", "mode": "replay", "omissions": [] },
+      "details": {
+        "event_data": {
+          "thread_id": "haze.graph.v1:manager.v3.automatic-chains:acc90748-2b5c-4d59-8ce5-785c6eefb15a:g1",
+          "node": "finalize",
+          "topology": "manager.v3.automatic-chains",
+          "duration_ms": 130.29390000000012,
+          "outcome": "ok"
+        }
+      }
+    }
+  ],
+  "summary": "# Execution trace\n\nTask: 7a63bc8a-6801-4772-9ee8-f752f39371b1\nRun: acc90748-2b5c-4d59-8ce5-785c6eefb15a\nCaptured records: 54; snapshot cursor: 54.\nEvidence mode: replay.\n\n## Highlights\n\n- 2026-10-27T19:36:48.873Z [trace:1] Manager: General objective admitted with bounded resources. (admitted)\n- 2026-10-27T19:36:48.999Z [trace:3] Manager: Admitted 1 assignments. (created)\n- 2026-10-27T19:36:49.051Z [trace:8] Manager: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T19:36:49.268Z [trace:19] Manager: Admitted 1 assignments. (created); causes: 9c5fc0cb-99a7-480a-b17a-a72432b516b2\n- 2026-10-27T19:36:49.282Z [trace:21] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: 9c5fc0cb-99a7-480a-b17a-a72432b516b2\n- 2026-10-27T19:36:49.344Z [trace:24] HazeOps: Exact inputs pinned and revised brief acknowledged. (started)\n- 2026-10-27T19:36:49.804Z [trace:36] HazeOps: Execution state persisted independently of evidence support. (completed)\n- 2026-10-27T19:36:50.297Z [trace:52] Manager: General result committed with exact sources/work products. (completed); evidence: not_required; artifacts: eb784225-4d0d-465b-b503-703adf9364c9@1 sha256:b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844; causes: 3e3c28a7-fe25-4415-b600-f39902ff94a2\n- 2026-10-27T19:36:50.320Z [trace:53] Manager: Follow the frozen scripted case and exact retained evidence. (applied); causes: 3e3c28a7-fe25-4415-b600-f39902ff94a2\n\n## Provenance and limitations\n\n- Only saved facts are shown. Missing causal links, confidence, and provider metadata are not inferred.\n- Execution acceptance, evidence verdicts, and task outcomes describe separate facts.\n- Exported content is sanitized; original artifact references identify the saved evidence, not redacted bytes.\n",
+  "input": {
+    "schema_version": "haze.task.request.v3",
+    "objective": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+    "context_refs": [],
+    "constraints": [],
+    "desired_deliverables": []
+  },
+  "output": {
+    "schema_version": "haze.task.result.v3",
+    "answer": "The retained evaluation finding is supported within the synthetic test scope.",
+    "completion": "full",
+    "work_products": [
+      {
+        "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+        "version": 1,
+        "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+      }
+    ],
+    "sources": [],
+    "covered_scope": {
+      "objective": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template."
+    },
+    "uncertainty": [],
+    "review": {
+      "status": "not_required",
+      "scope": "No registered independent review requirement applies to selected material.",
+      "limitations": [
+        "Citation/calculation checks do not mechanically prove all prose or scientific validity."
+      ],
+      "checks": []
+    },
+    "currency": "current",
+    "next_requirements": [],
+    "provenance": {
+      "mode": "replay",
+      "model_calls": 2,
+      "tool_calls": 0,
+      "capabilities": [{ "id": "evaluation", "version": "1" }],
+      "receipts": [
+        {
+          "id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          },
+          "receipt": {
+            "response_model": null,
+            "response_id": null,
+            "input_tokens": null,
+            "output_tokens": null,
+            "synthetic": true
+          }
+        },
+        {
+          "id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+          "kind": "model",
+          "status": "completed",
+          "accepted": true,
+          "details": {
+            "max_output_tokens": 1200,
+            "requested_route": {
+              "route_id": "injected-v1-154480fb468c9fd5",
+              "provider": "injected",
+              "requested_model": "frozen-manager-v1",
+              "capability_contract": {
+                "version": 1,
+                "id": "injected-v1",
+                "hash": "injected-v1"
+              }
+            }
+          },
+          "receipt": {
+            "response_model": null,
+            "response_id": null,
+            "input_tokens": null,
+            "output_tokens": null,
+            "synthetic": true
+          }
+        }
+      ]
+    }
+  },
+  "artifacts": [
+    {
+      "original_ref": {
+        "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+        "version": 1,
+        "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+      },
+      "filename": "artifact-0001.json",
+      "exported_sha256": "82ed79bf8ee88405b278f352c4a5e4367be6130eacaca4611f25da6f9acec84c",
+      "content": { "finding": "A retained synthetic finding." },
+      "provenance": {
+        "kind": "evaluation.finding",
+        "producer": {
+          "kind": "assignment",
+          "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8"
+        },
+        "mode": "replay",
+        "evidence_origin": "derived",
+        "dependencies": [],
+        "created_at": "2026-10-27T19:36:49.548Z"
+      }
+    },
+    {
+      "original_ref": {
+        "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+        "version": 1,
+        "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+      },
+      "filename": "artifact-0002.json",
+      "exported_sha256": "ac534c292414f7760775df0cdef70ea3bead1656c9577844066a65b104e49bc2",
+      "content": {
+        "status": "completed",
+        "summary": "A synthetic finding is retained; it is not an observation.",
+        "support": "supported",
+        "uncertainty": [],
+        "outputs": [
+          {
+            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "version": 1,
+            "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+          }
+        ]
+      },
+      "provenance": {
+        "kind": "assignment.summary",
+        "producer": {
+          "kind": "assignment",
+          "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8"
+        },
+        "mode": "replay",
+        "evidence_origin": "derived",
+        "dependencies": [],
+        "created_at": "2026-10-27T19:36:49.772Z"
+      }
+    }
+  ],
+  "context": {
+    "run": {
+      "id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+      "objective_revision": 1,
+      "generation": 1,
+      "state_revision": 12,
+      "status": "completed",
+      "limits": {
+        "deadline": "2026-10-27T19:38:18.691Z",
+        "max_model_calls": 20,
+        "max_tool_calls": 6,
+        "max_assignments": 16,
+        "max_artifacts": 64,
+        "max_model_input_bytes": 24576,
+        "max_model_output_tokens": 1200,
+        "reserved_model_calls": 2
+      },
+      "usage": {
+        "model_calls": 2,
+        "tool_calls": 0,
+        "artifacts": 2,
+        "assignments": 2
+      },
+      "created_at": "2026-10-27T19:36:48.858Z",
+      "updated_at": "2026-10-27T19:36:50.296Z"
+    },
+    "corrections": [],
+    "assignments": [
+      {
+        "id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "role": "Manager",
+        "definition_id": "core.manager.coordinator",
+        "definition_version": "4",
+        "agent_version": "manager.v16",
+        "capability_version": "4",
+        "capability": "core.manager",
+        "revision": 1,
+        "objective_revision": 1,
+        "generation": 1,
+        "acknowledged_revision": 1,
+        "brief": "Frame, supervise, replan and synthesize the admitted objective.",
+        "dependencies": [],
+        "inputs": [],
+        "tools": ["world.lookup", "world.context", "world.lineage"],
+        "status": "completed",
+        "deadline": "2026-10-27T19:38:18.691Z",
+        "max_model_calls": 20,
+        "usage": { "model_calls": 2, "tool_calls": 0 },
+        "outputs": [],
+        "assumptions": [],
+        "gaps": [],
+        "support": "unknown",
+        "usability": "needs_review"
+      },
+      {
+        "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "role": "HazeOps",
+        "definition_id": "eval.produce",
+        "definition_version": "1",
+        "agent_version": "evaluation.v1",
+        "capability_version": "1",
+        "capability": "evaluation",
+        "input": "[withheld source body]",
+        "revision": 1,
+        "objective_revision": 1,
+        "generation": 1,
+        "acknowledged_revision": 1,
+        "brief": "Execute eval.produce for one.",
+        "dependencies": [],
+        "inputs": [],
+        "tools": ["world.lookup", "world.context", "world.lineage"],
+        "status": "completed",
+        "deadline": "2026-10-27T19:38:18.691Z",
+        "max_model_calls": 8,
+        "usage": { "model_calls": 0, "tool_calls": 0 },
+        "outputs": [
+          {
+            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "version": 1,
+            "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+          },
+          {
+            "id": "16be33eb-50ea-4d0c-b2e9-80d2695f9478",
+            "version": 1,
+            "sha256": "d779b00f7719add46aef36f282f5d554aecc0960a231cccdfb8de60aa74e6f6c"
+          }
+        ],
+        "assumptions": [],
+        "gaps": [],
+        "support": "supported",
+        "usability": "usable"
+      }
+    ],
+    "assignment_history": [],
+    "attempts": [
+      {
+        "id": "9490179d-6a2d-4a65-ba17-5ecb08e4f33e",
+        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+        "objective_revision": 1,
+        "assignment_revision": 1,
+        "generation": 1,
+        "lease_token": "[redacted]",
+        "kind": "model",
+        "status": "completed",
+        "charged_at": "2026-10-27T19:36:49.110Z",
+        "details": {
+          "max_output_tokens": 1200,
+          "requested_route": {
+            "route_id": "injected-v1-154480fb468c9fd5",
+            "provider": "injected",
+            "requested_model": "frozen-manager-v1",
+            "capability_contract": {
+              "version": 1,
+              "id": "injected-v1",
+              "hash": "injected-v1"
+            }
+          }
+        },
+        "accepted": true,
+        "receipt": {
+          "response_model": null,
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "synthetic": true
+        }
+      },
+      {
+        "id": "5270f5e0-b01a-43f7-9d9a-f4d0e14a72a3",
+        "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+        "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+        "assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+        "objective_revision": 1,
+        "assignment_revision": 1,
+        "generation": 1,
+        "lease_token": "[redacted]",
+        "kind": "model",
+        "status": "completed",
+        "charged_at": "2026-10-27T19:36:50.098Z",
+        "details": {
+          "max_output_tokens": 1200,
+          "requested_route": {
+            "route_id": "injected-v1-154480fb468c9fd5",
+            "provider": "injected",
+            "requested_model": "frozen-manager-v1",
+            "capability_contract": {
+              "version": 1,
+              "id": "injected-v1",
+              "hash": "injected-v1"
+            }
+          }
+        },
+        "accepted": true,
+        "receipt": {
+          "response_model": null,
+          "response_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "synthetic": true
+        }
+      }
+    ],
+    "channels": [],
+    "channel_history": [],
+    "peer_messages": [],
+    "manager": {
+      "version": "manager.v4",
+      "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+      "plan_revision": 1,
+      "last_handled_event_cursor": 36,
+      "coordinator_assignment_id": "abebc349-f1d4-4eac-aadc-a8afc438d59a",
+      "interpretation": {
+        "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+        "deliverables": ["The frozen case outcome."],
+        "assumptions": [],
+        "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+        "stopping_conditions": ["A supported result or exact question."]
+      },
+      "plans": [
+        {
+          "revision": 1,
+          "objective_revision": 1,
+          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "reason": "Follow the frozen scripted case and exact retained evidence.",
+          "assignment_revisions": [
+            { "id": "abebc349-f1d4-4eac-aadc-a8afc438d59a", "revision": 1 },
+            { "id": "650c6446-4ed7-49e7-b228-3a15327ef3a8", "revision": 1 }
+          ],
+          "created_at": "2026-10-27T19:36:49.273Z"
+        }
+      ],
+      "decisions": [
+        {
+          "decision": {
+            "id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+            "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+            "generation": 1,
+            "objective_revision": 1,
+            "plan_revision": 0,
+            "event_cursor": 1,
+            "explanation": "Follow the frozen scripted case and exact retained evidence.",
+            "references": [],
+            "interpretation": {
+              "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+              "deliverables": ["The frozen case outcome."],
+              "assumptions": [],
+              "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+              "stopping_conditions": ["A supported result or exact question."]
+            },
+            "action": {
+              "type": "apply_plan",
+              "assignments": [
+                {
+                  "key": "one",
+                  "definition_id": "eval.produce",
+                  "brief": "Execute eval.produce for one.",
+                  "depends_on": [],
+                  "input": "[withheld source body]"
+                }
+              ],
+              "retain_assignment_ids": [],
+              "reason": "Execute the frozen custom plan."
+            }
+          },
+          "created_at": "2026-10-27T19:36:49.240Z"
+        },
+        {
+          "decision": {
+            "id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+            "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+            "generation": 1,
+            "objective_revision": 1,
+            "plan_revision": 1,
+            "event_cursor": 36,
+            "explanation": "Follow the frozen scripted case and exact retained evidence.",
+            "references": [],
+            "interpretation": {
+              "scope": "Use the registered evaluation capability: run eval.produce exactly once to retain one bounded finding, then explain that finding. Use a custom one-assignment plan, not the optional two-assignment template.",
+              "deliverables": ["The frozen case outcome."],
+              "assumptions": [],
+              "intended_use": "Runtime evaluation with explicitly synthetic methods.",
+              "stopping_conditions": ["A supported result or exact question."]
+            },
+            "action": {
+              "type": "finalize",
+              "answer": "The retained evaluation finding is supported within the synthetic test scope.",
+              "work_products": [
+                {
+                  "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+                  "version": 1,
+                  "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844"
+                }
+              ],
+              "sources": [],
+              "uncertainty": [],
+              "unfinished": []
+            }
+          },
+          "created_at": "2026-10-27T19:36:50.230Z"
+        }
+      ],
+      "inspections": [],
+      "pending_events": [
+        {
+          "schema_version": "haze.task.event.v3",
+          "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "objective_revision": 1,
+          "generation": 1,
+          "at": "2026-10-27T19:36:49.580Z",
+          "type": "artifact_saved",
+          "actor": "HazeOps",
+          "message": "Saved immutable evaluation.finding.",
+          "data": {
+            "id": "eb784225-4d0d-465b-b503-703adf9364c9",
+            "version": 1,
+            "sha256": "b6bedb0e250c17cdb2d822a8631f580bd107a8bac3133cae127dc1cc8f59c844",
+            "kind": "evaluation.finding"
+          },
+          "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+          "cursor": 32
+        },
+        {
+          "schema_version": "haze.task.event.v3",
+          "task_id": "7a63bc8a-6801-4772-9ee8-f752f39371b1",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "objective_revision": 1,
+          "generation": 1,
+          "at": "2026-10-27T19:36:49.804Z",
+          "type": "assignment_completed",
+          "actor": "HazeOps",
+          "message": "Execution state persisted independently of evidence support.",
+          "assignment_id": "650c6446-4ed7-49e7-b228-3a15327ef3a8",
+          "cursor": 36
+        }
+      ],
+      "dispatch_receipts": [
+        {
+          "decision_id": "9c5fc0cb-99a7-480a-b17a-a72432b516b2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "objective_revision": 1,
+          "plan_revision": 0,
+          "applied_plan_revision": 1,
+          "status": "applied",
+          "result": { "action": "apply_plan" },
+          "created_at": "2026-10-27T19:36:49.280Z"
+        },
+        {
+          "decision_id": "3e3c28a7-fe25-4415-b600-f39902ff94a2",
+          "run_id": "acc90748-2b5c-4d59-8ce5-785c6eefb15a",
+          "objective_revision": 1,
+          "plan_revision": 1,
+          "applied_plan_revision": 1,
+          "status": "applied",
+          "result": { "action": "finalize" },
+          "created_at": "2026-10-27T19:36:50.318Z"
+        }
+      ]
+    },
+    "historical_context": "saved exact-run manager state"
+  }
+}

@@ -68,12 +68,16 @@ function decisionFeedback(invalid: InvalidOutput) {
     code: invalid.code,
     message:
       invalid.code === 'missing_source_citation'
-        ? 'Return the full decision. Cite selected sources in action.answer with matching [S1]/[E1] markers.'
+        ? invalid.message.startsWith('Citation markers need a number')
+          ? invalid.message
+          : 'Return the full decision. Cite selected sources in action.answer with matching [S1]/[E1] markers.'
         : invalid.code === 'incomplete_artifact_reference'
           ? 'Copy each full artifact ref (id, version, sha256) from supplied canonical refs. Never infer a hash.'
           : [
                 'invalid_decision_schema',
                 'invalid_source_citation',
+                'exact_templates_required',
+                'fixed_plan',
                 'missing_peer_coordination',
               ].includes(invalid.code)
             ? invalid.message
@@ -134,11 +138,140 @@ function incompleteReference(
     : null;
 }
 
+type Ref = { id: string; version: number; sha256: string };
+const listedArtifact = (context: ManagerContext, ref: Ref) =>
+  context.artifacts.find(
+    (artifact) =>
+      artifact.ref.id === ref.id &&
+      artifact.ref.version === ref.version &&
+      artifact.ref.sha256 === ref.sha256,
+  );
+// Same numbering as final synthesis: user-supplied sources are S, every other listed source E.
+const citationLetter = (context: ManagerContext, ref: Ref) => {
+  const artifact = listedArtifact(context, ref);
+  if (!artifact) return undefined;
+  return artifact.citation_letter === 'S' || artifact.kind === 'source.import'
+    ? ('S' as const)
+    : ('E' as const);
+};
+const producedByCritic = (context: ManagerContext, ref: Ref) => {
+  const artifact = listedArtifact(context, ref);
+  const role =
+    artifact?.assignment_index !== undefined
+      ? context.assignments[artifact.assignment_index]?.role
+      : context.assignments.find((a) => a.id === artifact?.assignment_id)?.role;
+  return role === 'EvidenceCritic';
+};
+
+/** Products an EvidenceCritic reference vouches for: its supported review checks. */
+function reviewedProducts(
+  context: ManagerContext,
+  ref: Ref,
+): Ref[] | undefined {
+  const artifact = listedArtifact(context, ref);
+  const reviewer =
+    artifact?.assignment_index !== undefined
+      ? context.assignments[artifact.assignment_index]?.id
+      : artifact?.assignment_id;
+  const products: Ref[] = [];
+  for (const check of context.reviews) {
+    if (
+      check.verdict !== 'supported' ||
+      (check.review_artifact?.id !== ref.id &&
+        check.reviewer_assignment_id !== reviewer)
+    )
+      continue;
+    const full =
+      'sha256' in check.artifact
+        ? check.artifact
+        : context.artifacts.find((a) => a.ref.id === check.artifact.id)?.ref;
+    if (!full) return undefined;
+    if (!products.some((p) => p.id === full.id)) products.push(full);
+  }
+  return products;
+}
+
+/**
+ * Reviews support the products they cover and the runtime rejects them as final
+ * references. Live Managers kept citing them even after a correction, so each one
+ * is replaced by the exact products its supported checks cover and the citation
+ * markers renumbered; a reference that vouches for nothing is dropped.
+ */
+function withoutReviewReferences(
+  decision: ManagerDecision,
+  context: ManagerContext,
+): ManagerDecision {
+  const action = decision.action;
+  if (action.type !== 'finalize') return decision;
+  if (
+    ![...action.sources, ...action.work_products].some((ref) =>
+      producedByCritic(context, ref),
+    )
+  )
+    return decision;
+  const sources: Ref[] = [];
+  const replaced: Ref[][] = [];
+  for (const ref of action.sources) {
+    const products = producedByCritic(context, ref)
+      ? reviewedProducts(context, ref)
+      : [ref];
+    if (!products) return decision;
+    replaced.push(products);
+    for (const product of products)
+      if (!sources.some((s) => s.id === product.id)) sources.push(product);
+  }
+  const marker = (refs: Ref[], target: Ref) => {
+    const counts = { S: 0, E: 0 };
+    for (const ref of refs) {
+      const letter = citationLetter(context, ref);
+      if (!letter) return undefined;
+      counts[letter]++;
+      if (ref.id === target.id) return `[${letter}${counts[letter]}]`;
+    }
+    return undefined;
+  };
+  const renumber = new Map<string, string>();
+  for (const [index, ref] of action.sources.entries()) {
+    const old = marker(action.sources, ref);
+    const next = replaced[index]!.map((product) => marker(sources, product));
+    if (!old || next.includes(undefined)) return decision;
+    renumber.set(old.slice(1, -1), [...new Set(next)].join(''));
+  }
+  return {
+    ...decision,
+    action: {
+      ...action,
+      sources,
+      work_products: action.work_products.filter(
+        (ref) => !producedByCritic(context, ref),
+      ),
+      answer: action.answer
+        .replace(/\[([A-Za-z]+\d+)\]/g, (found, id: string) =>
+          renumber.has(id) ? renumber.get(id)! : found,
+        )
+        // Two removed references to one product collapse to one marker.
+        .replace(/(\[[A-Za-z]+\d+\])\1+/g, '$1')
+        // A dropped marker leaves no space before the punctuation that followed it.
+        .replace(/ +([.,;:])/g, '$1'),
+    },
+  };
+}
+
 function knownInvalidOutput(
   decision: ManagerDecision,
   context: ManagerContext,
 ): InvalidOutput | null {
   const action = decision.action;
+  if (
+    action.type === 'finalize' &&
+    action.sources.length &&
+    /\[[SE]\]/.test(action.answer)
+  )
+    return {
+      code: 'missing_source_citation',
+      message:
+        'Citation markers need a number: [E1] is the first selected external capture, [E2] the second, [S1] the first imported source. Return the complete decision again with numbered markers only; never write a bare [E] or [S].',
+    };
   if (
     action.type === 'finalize' &&
     action.sources.length &&
@@ -190,6 +323,64 @@ function knownInvalidOutput(
       return {
         code: 'invalid_source_citation',
         message: `Return the full decision. Citation markers are assigned only to action.sources, not work_products or retained reviews. Use only ${markers.length ? markers.map((marker) => `[${marker}]`).join(', ') : 'no citation markers'} for the selected sources; preserve exact references and checkpoint values.`,
+      };
+  }
+  if (
+    (action.type === 'apply_plan' ||
+      action.type === 'lookup' ||
+      action.type === 'steer') &&
+    context.plan_objective_revision === context.objective_revision
+  ) {
+    // An exact-template plan is complete as admitted; only a correction re-plans it.
+    // Its specialists already gather the evidence, so extra lookups add nothing citable.
+    const fixed = context.capabilities.find(
+      (capability) =>
+        capability.exact_templates &&
+        context.assignments.some(
+          (assignment) =>
+            assignment.role !== 'Manager' &&
+            (assignment.capability ??
+              context.definitions.find(
+                (definition) => definition.id === assignment.definition_id,
+              )?.capability) === capability.card.id,
+        ),
+    );
+    if (fixed)
+      return {
+        code: 'fixed_plan',
+        message: `The ${fixed.card.id} plan for this objective is fixed. Do not add, re-brief or replace assignments or run lookups: wait for running work, inspect results, or finalize with the reported gaps, rejections and uncertainty.`,
+      };
+  }
+  if (
+    action.type === 'apply_plan' &&
+    context.plan_objective_revision !== context.objective_revision
+  ) {
+    const exact = context.capabilities.find(
+      (capability) =>
+        capability.exact_templates && capability.templates?.length,
+    );
+    const shape = (plan: {
+      key: string;
+      definition_id: string;
+      depends_on: string[];
+      input?: unknown;
+    }) =>
+      JSON.stringify([
+        plan.key,
+        plan.definition_id,
+        [...plan.depends_on].sort(),
+        plan.input ?? null,
+      ]);
+    const expected = (exact?.templates ?? []).map(shape).sort();
+    const proposed = action.assignments.map(shape).sort();
+    if (
+      exact &&
+      (expected.length !== proposed.length ||
+        expected.some((item, index) => item !== proposed[index]))
+    )
+      return {
+        code: 'exact_templates_required',
+        message: `Capability ${exact.card.id} requires its starting templates as the plan. Return the complete decision again with apply_plan.assignments copying every template's key, definition_id, depends_on and input exactly (${exact.templates!.map((t) => t.key).join(', ')}); only brief may be reworded. Add no other assignments.`,
       };
   }
   if (
@@ -267,7 +458,10 @@ function candidate(
   | { ok: false; invalid: InvalidOutput } {
   const value = parseContractJson(text);
   try {
-    const decision = parseDecision(value, context);
+    const decision = withoutReviewReferences(
+      parseDecision(value, context),
+      context,
+    );
     const invalid = knownInvalidOutput(decision, context);
     return invalid ? { ok: false, invalid } : { ok: true, decision };
   } catch (error) {

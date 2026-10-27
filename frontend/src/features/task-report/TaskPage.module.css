@@ -202,6 +202,18 @@
   color: var(--color-muted);
 }
 
+.traceDetails {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.traceDetails pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  font-size: var(--text-xs);
+}
+
 .worldPanel {
   display: grid;
   gap: var(--space-2);

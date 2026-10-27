@@ -1,0 +1,34 @@
+{
+  "name": "smokeledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Haze evidence agent: forward smoke warnings, backward attribution, warn-record-escalate case loop.",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "setup": "node scripts/setup_engines.mjs",
+    "start": "node --import tsx src/server.ts",
+    "sl": "tsx src/cli.ts",
+    "test": "tsx --test test/*.test.ts",
+    "conformance": "cd vendor/hmem-conformance && HMEM_IMPL=$PWD/../hmem/src/index.ts tsx runner.ts && cd ../world-model-conformance && WORLD_MODEL_IMPL=$PWD/../world-model/src/index.ts tsx runner.ts",
+    "typecheck": "tsc --noEmit",
+    "samples": "bash scripts/capture_outputs.sh",
+    "demo:synthetic": "bash scripts/demo_synthetic.sh"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "@langchain/core": "^1.2.20",
+    "@langchain/langgraph": "^1.5.2",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.1.0",
+    "pg": "^8.13.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.0"
+  }
+}

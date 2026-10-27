@@ -1,4 +1,4 @@
-import { Suspense, lazy, useId, useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { Globe2, Hand, Map as MapIcon, RotateCcw } from 'lucide-react';
 import {
   AQI_BANDS,
@@ -7,7 +7,6 @@ import {
   compass,
   type CityReading,
   type FireResult,
-  type SatelliteLayerId,
 } from '../../shared/data/airQuality.ts';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Spinner } from '../../shared/ui/States.tsx';
@@ -39,11 +38,14 @@ export function RegionView({
   fires,
   selectedId,
   onSelect,
+  tableId,
 }: {
   readings: CityReading[];
   fires: FireResult | null;
   selectedId: string;
   onSelect: (id: string) => void;
+  /** Id of the readings table rendered elsewhere, which describes the stage. */
+  tableId: string;
 }) {
   const [mode, setMode] = useState<'globe' | 'map'>(() =>
     prefersFlatMap() ? 'map' : 'globe',
@@ -51,7 +53,6 @@ export function RegionView({
   const [layers, setLayers] = useState<LayerState>(DEFAULT_LAYERS);
   const [resetKey, setResetKey] = useState(0);
   const [interactive, setInteractive] = useState(() => !isCoarsePointer());
-  const tableId = useId();
   const satellite =
     SATELLITE_LAYERS.find((l) => l.id === layers.satellite) ?? null;
   // Freeze "now" per selection so the image URL (and its cache) stays stable.
@@ -59,7 +60,6 @@ export function RegionView({
     () => (satellite ? satellite.time(new Date()) : null),
     [satellite],
   );
-  const firesAvailable = fires?.status === 'ok';
 
   const View = mode === 'globe' ? RegionGlobe : RegionMap;
 
@@ -144,47 +144,6 @@ export function RegionView({
             </label>
           ))}
         </fieldset>
-        <fieldset className={styles.chipGroup}>
-          <legend>Overlays</legend>
-          <label className={styles.chip}>
-            <input
-              type="checkbox"
-              checked={layers.wind}
-              onChange={(e) =>
-                setLayers((l) => ({ ...l, wind: e.target.checked }))
-              }
-            />
-            Wind
-          </label>
-          <label className={styles.chip}>
-            <input
-              type="checkbox"
-              checked={layers.fires && firesAvailable}
-              disabled={!firesAvailable}
-              onChange={(e) =>
-                setLayers((l) => ({ ...l, fires: e.target.checked }))
-              }
-            />
-            Fire hotspots
-          </label>
-          {SATELLITE_LAYERS.map((s) => (
-            <label key={s.id} className={styles.chip}>
-              <input
-                type="checkbox"
-                checked={layers.satellite === s.id}
-                onChange={(e) =>
-                  setLayers((l) => ({
-                    ...l,
-                    satellite: e.target.checked
-                      ? (s.id as SatelliteLayerId)
-                      : null,
-                  }))
-                }
-              />
-              {s.label}
-            </label>
-          ))}
-        </fieldset>
       </div>
 
       <Legend
@@ -193,11 +152,6 @@ export function RegionView({
         satellite={satellite}
         satelliteTime={satelliteTime}
       />
-
-      <details className={styles.tableWrap}>
-        <summary>Readings as a table</summary>
-        <ReadingsTable id={tableId} readings={readings} />
-      </details>
     </div>
   );
 }
@@ -262,11 +216,6 @@ function Legend({
           ))}
         </ul>
       )}
-      <p className={styles.legendNote}>
-        PM2.5 is the primary haze indicator. CO is a combustion tracer for fire
-        smoke, not an air-quality index. Point values are{' '}
-        <strong>modelled by CAMS via Open-Meteo</strong>, not ground sensors.
-      </p>
       {satellite && satelliteTime && (
         <p className={styles.legendNote}>
           <strong>Satellite · {satellite.label}</strong>: observed{' '}
@@ -281,11 +230,6 @@ function Legend({
             satellite detections in 48 h ({fires.source}).{' '}
           </>
         )}
-        {fires?.status === 'no-key' && <>Fire layer needs a FIRMS key. </>}
-        {fires?.status === 'error' && (
-          <>Fire layer unavailable: {fires.message}. </>
-        )}
-        Wind arrows point where air is moving to.
       </p>
       <p className={styles.credits}>
         Data: Open-Meteo.com (CC BY 4.0) · CAMS, Copernicus · NASA GIBS and
@@ -295,12 +239,14 @@ function Legend({
   );
 }
 
-function ReadingsTable({
+export function ReadingsTable({
   id,
   readings,
+  selectedId,
 }: {
   id: string;
   readings: CityReading[];
+  selectedId: string;
 }) {
   return (
     <table className={styles.table} id={id}>
@@ -311,25 +257,35 @@ function ReadingsTable({
       <thead>
         <tr>
           <th scope="col">City</th>
-          <th scope="col">US AQI</th>
+          <th scope="col">AQI</th>
           <th scope="col">PM2.5 µg/m³</th>
-          <th scope="col">CO µg/m³</th>
-          <th scope="col">Temp °C</th>
           <th scope="col">Wind</th>
         </tr>
       </thead>
       <tbody>
         {readings.map((r) => (
-          <tr key={r.city.id}>
+          <tr
+            key={r.city.id}
+            aria-current={r.city.id === selectedId ? 'true' : undefined}
+          >
             <th scope="row">{r.city.name}</th>
             <td>
-              {r.usAqi === null
-                ? 'no data'
-                : `${Math.round(r.usAqi)} · ${aqiBand(r.usAqi).label}`}
+              {r.usAqi === null ? (
+                'no data'
+              ) : (
+                <span className={styles.aqiCell} title={aqiBand(r.usAqi).label}>
+                  <span
+                    className={styles.scaleSwatch}
+                    style={{
+                      background: `var(--band-${aqiBand(r.usAqi).cssVar})`,
+                    }}
+                    aria-hidden="true"
+                  />
+                  {Math.round(r.usAqi)}
+                </span>
+              )}
             </td>
             <td>{r.pm25?.toFixed(1) ?? 'no data'}</td>
-            <td>{r.co === null ? 'no data' : Math.round(r.co)}</td>
-            <td>{r.temperature?.toFixed(1) ?? 'no data'}</td>
             <td>
               {r.windSpeed === null || r.windDirection === null
                 ? 'no data'

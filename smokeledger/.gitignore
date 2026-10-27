@@ -1,0 +1,11 @@
+.env
+node_modules/
+vendor/
+.hmem/
+outbox/
+data/raw/
+data/geo/
+.state/
+.state-demo/
+logs/
+vendor/

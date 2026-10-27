@@ -9,6 +9,7 @@ Plans define scope, delivery order and acceptance criteria. Check their status n
 - [Reusable task engine and separate agent modules](orchestration/general-agent-refactor-plan.md).
 - [Manager completion plan](orchestration/manager-completion-plan.md).
 - [Manager conversation routing and task UI plan](orchestration/manager-conversation-routing-plan.md).
+- [Verifiable execution traces](orchestration/trace-logging-implementation-plan.md): durable capture, causal timelines and sanitized evidence exports.
 - [DamageAccountant implementation plan](damage-accountant-plan.md).
 - [Web search and public-evidence integration for damage accounts](damage-evidence-web-search-plan.md): source discovery, reviewed inputs, three shared-baseline samples and continuous updates.
 - [Sponsor technology hardening](sponsor-technology-hardening-plan.md): grounded numerical answers, verified Nightshift cloud follow-ups and H-MEM product removal.

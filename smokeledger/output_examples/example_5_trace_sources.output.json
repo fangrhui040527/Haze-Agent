@@ -1,0 +1,289 @@
+{
+  "run_id": "judge-005",
+  "status": "success",
+  "mode": "offline_sample",
+  "reasoning_backend": "deterministic",
+  "source_backend": "sample_fixture",
+  "engine_versions": {
+    "hmem": {
+      "engine_name": "meterless-hmem",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/hmem",
+      "path": "engines/hmem/reference",
+      "vendored_to": "vendor/hmem",
+      "src_sha256": "e899794d6db656f91112b953e7c897ccc9354c126a143e953c24f084faee9007"
+    },
+    "world_model": {
+      "engine_name": "meterless-world-model",
+      "engine_version": "reference",
+      "loaded": true,
+      "source": "vendor/world-model",
+      "path": "engines/world-model/reference",
+      "vendored_to": "vendor/world-model",
+      "src_sha256": "52d8ee1bf697a4d309d2053a442fc4bca3b1fad53a2c824ce729a2f7337519e8"
+    },
+    "app": {
+      "name": "smokeledger-haze-harness",
+      "version": "0.7.0",
+      "workflowVersion": "haze-graph-1"
+    }
+  },
+  "workflow_backend": "langgraph",
+  "workflow_version": "haze-graph-1",
+  "thread_id": "judge-005",
+  "checkpoint_id": "1f1ce0da-8904-6580-8008-c27d29153612",
+  "engine_operations_executed": {
+    "world_model.upsertEntity": 4,
+    "world_model.relate": 2,
+    "hmem.query": 2,
+    "world_model.assertFact": 7,
+    "hmem.add": 1
+  },
+  "remote_calls_executed": {},
+  "remote_calls_skipped": {
+    "zetaris.sql": 13
+  },
+  "output": {
+    "summary": "Fires inside mapped concessions: 77% (range 75%-79%) of the smoke signal, from 50 detections [E-c2b0c3cd57]. Fires on peat: 92% (range 92%-92%) of the smoke signal, from 64 detections [E-c2b0c3cd57]. Confidence: high, because the concession share moves between 75% and 79% when the wind speed is varied [E-c2b0c3cd57].",
+    "narrative": null,
+    "proposed_plan": {
+      "top_concessions": [
+        {
+          "concession_id": "concessions:101",
+          "name": "PT Contoh Sawit Lestari",
+          "group_name": "Contoh Agri Group"
+        }
+      ],
+      "confidence": "high",
+      "dossier_file": "/tmp/tmp.SRBqO7Nzmz/outbox/dossiers/bw-batu-pahat-2026100618.md"
+    },
+    "claims": [
+      {
+        "id": "judge-005-p-2",
+        "kind": "calculation",
+        "text": "Window: the 24 hours up to Wed, 07 Oct 2026 02:00 MYT [E-ac53f5bbd7].",
+        "evidence_ids": [
+          "E-ac53f5bbd7"
+        ]
+      },
+      {
+        "id": "judge-005-p-3",
+        "kind": "observation",
+        "text": "Air quality: observed PM2.5 at Batu Pahat averaged 182.2 ug/m3 with a peak of 225.7 ug/m3 [E-ded5b2811e].",
+        "evidence_ids": [
+          "E-ded5b2811e"
+        ]
+      },
+      {
+        "id": "judge-005-p-4",
+        "kind": "calculation",
+        "text": "Method: the air arriving at Batu Pahat was traced backwards with an ensemble of 270 trajectories, and each satellite fire was weighted by its fire radiative power, peat status and closeness to that air in space and time [E-ac53f5bbd7].",
+        "evidence_ids": [
+          "E-ac53f5bbd7"
+        ]
+      },
+      {
+        "id": "judge-005-p-7",
+        "kind": "inference",
+        "text": "Fires inside mapped concessions: 77% (range 75%-79%) of the smoke signal, from 50 detections [E-c2b0c3cd57].",
+        "evidence_ids": [
+          "E-c2b0c3cd57"
+        ]
+      },
+      {
+        "id": "judge-005-p-8",
+        "kind": "inference",
+        "text": "Fires on peat: 92% (range 92%-92%) of the smoke signal, from 64 detections [E-c2b0c3cd57].",
+        "evidence_ids": [
+          "E-c2b0c3cd57"
+        ]
+      },
+      {
+        "id": "judge-005-p-9",
+        "kind": "inference",
+        "text": "Confidence: high, because the concession share moves between 75% and 79% when the wind speed is varied [E-c2b0c3cd57].",
+        "evidence_ids": [
+          "E-c2b0c3cd57"
+        ]
+      },
+      {
+        "id": "judge-005-p-12",
+        "kind": "inference",
+        "text": "Contoh Agri Group: 77% (range 75%-79%), 50 detections [E-a28c0b7638].",
+        "evidence_ids": [
+          "E-a28c0b7638"
+        ]
+      },
+      {
+        "id": "judge-005-p-15",
+        "kind": "inference",
+        "text": "Malaysia: 77% (range 75%-79%) [E-876cedd6ae].",
+        "evidence_ids": [
+          "E-876cedd6ae"
+        ]
+      },
+      {
+        "id": "judge-005-p-18",
+        "kind": "inference",
+        "text": "PT Contoh Sawit Lestari (PT Contoh Sawit Lestari, group Contoh Agri Group): 50 detections, 28 on peat, seen 2026-10-03 17:42 UTC to 2026-10-06 17:42 UTC; boundary from SAMPLE (fictional) map, dated 2026 [E-7099b0d518].",
+        "evidence_ids": [
+          "E-7099b0d518"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "E-ac53f5bbd7",
+        "sha256": "ac53f5bbd718e779fd50ac26951cf7ef79ec5be49b6fd331106c8615616ff1ec",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT run_id, kind, town, center_utc, params FROM runs WHERE run_id = 'bw-batu-pahat-2026100618'"
+      },
+      {
+        "evidence_id": "E-ded5b2811e",
+        "sha256": "ded5b2811e9cd88e33520f23e28dbdcb9457a70e0fe226119499473f24b7c33a",
+        "row_count": 2,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT kind, COUNT(*) AS hours, AVG(pm25) AS mean_pm25, MAX(pm25) AS max_pm25 FROM pm25\n      WHERE town = 'Batu Pahat' AND valid_utc > CAST('2026-10-05T18:00:00.000Z' AS TIMESTAMP) AND valid_utc <= CAST('2026-10-06T18:00:00.000Z' AS TIMESTAMP) GROUP BY kind ORDER BY kind"
+      },
+      {
+        "evidence_id": "E-c2b0c3cd57",
+        "sha256": "c2b0c3cd572c9fdd1f2bbb59fda385e5033054388f7031ca186c0632820d7eb2",
+        "row_count": 3,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT a.scale, SUM(a.weight) AS w_total,\n            SUM(CASE WHEN f.concession_id IS NOT NULL THEN a.weight ELSE 0 END) AS w_concession,\n            SUM(CASE WHEN f.on_peat THEN a.weight ELSE 0 END) AS w_peat,\n            COUNT(*) AS n_fires,\n            SUM(CASE WHEN f.concession_id IS NOT NULL THEN 1 ELSE 0 END) AS n_in_concession,\n            SUM(CASE WHEN f.on_peat THEN 1 ELSE 0 END) AS n_peat\n       FROM attribution a JOIN fires f ON a.fire_id = f.fire_id\n      WHERE a.run_id = 'bw-batu-pahat-2026100618' GROUP BY a.scale ORDER BY a.scale"
+      },
+      {
+        "evidence_id": "E-a28c0b7638",
+        "sha256": "a28c0b7638813acd1d2dea484c14cede955f916e7b33fd241d57813737934a96",
+        "row_count": 3,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT COALESCE(c.group_name, c.company, c.concession_id) AS holder, a.scale, SUM(a.weight) AS w, COUNT(*) AS n_fires\n       FROM attribution a JOIN fires f ON a.fire_id = f.fire_id\n       JOIN concessions c ON f.concession_id = c.concession_id\n      WHERE a.run_id = 'bw-batu-pahat-2026100618' GROUP BY COALESCE(c.group_name, c.company, c.concession_id), a.scale"
+      },
+      {
+        "evidence_id": "E-876cedd6ae",
+        "sha256": "876cedd6ae2170a5a782ce6696f58655f696cccabda0be77730e1dd722b30b22",
+        "row_count": 3,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT COALESCE(co.parent_country, 'not recorded') AS parent_country, a.scale, SUM(a.weight) AS w, COUNT(*) AS n_fires\n       FROM attribution a JOIN fires f ON a.fire_id = f.fire_id\n       JOIN concessions c ON f.concession_id = c.concession_id\n       LEFT JOIN companies co ON co.group_name = c.group_name\n      WHERE a.run_id = 'bw-batu-pahat-2026100618' GROUP BY COALESCE(co.parent_country, 'not recorded'), a.scale"
+      },
+      {
+        "evidence_id": "E-7099b0d518",
+        "sha256": "7099b0d518a5fb4c0b08106f29e0022ba7e333fdb29df3f13667ce77a1674a5d",
+        "row_count": 1,
+        "backend": "postgres",
+        "produced_by": "peatfire",
+        "sql": "SELECT c.concession_id, c.name, c.company, c.group_name, c.map_source, c.map_date,\n            COUNT(*) AS n_fires, SUM(CASE WHEN f.on_peat THEN 1 ELSE 0 END) AS peat_fires, SUM(a.weight) AS w,\n            MIN(CAST(EXTRACT(EPOCH FROM f.acq_utc) AS BIGINT)) AS first_seen_epoch, MAX(CAST(EXTRACT(EPOCH FROM f.acq_utc) AS BIGINT)) AS last_seen_epoch\n       FROM attribution a JOIN fires f ON a.fire_id = f.fire_id\n       JOIN concessions c ON f.concession_id = c.concession_id\n      WHERE a.run_id = 'bw-batu-pahat-2026100618' AND a.scale = 1\n      GROUP BY c.concession_id, c.name, c.company, c.group_name, c.map_source, c.map_date\n      ORDER BY w DESC LIMIT 8"
+      }
+    ],
+    "limitations": [
+      "Fire detections inside a concession show where land burned, not who lit it; names are leads for verification.",
+      "Concession boundaries come from public compilations and may be outdated."
+    ],
+    "validity": {
+      "start": "2026-10-05T18:00:00.000Z",
+      "end": "2026-10-06T18:00:00.000Z",
+      "unserved": []
+    },
+    "messages": {
+      "bound_to": "fact_363b7ab18172aa99",
+      "previews": [],
+      "status": "preview"
+    }
+  },
+  "rationale": "Window: the 24 hours up to Wed, 07 Oct 2026 02:00 MYT [E-ac53f5bbd7].",
+  "guidance_versions": [],
+  "assumptions": [
+    "District conditions are represented by Batu Pahat town-centre data."
+  ],
+  "change_reason": null,
+  "parent_run_id": null,
+  "critic": {
+    "final": {
+      "decision": "approve",
+      "findings": [],
+      "required_evidence": [],
+      "checks_run": [
+        "citations",
+        "independent re-query of cited evidence"
+      ],
+      "independent_queries": [
+        "re-run:E-ac53f5bbd7",
+        "re-run:E-ded5b2811e",
+        "re-run:E-c2b0c3cd57",
+        "re-run:E-a28c0b7638",
+        "re-run:E-876cedd6ae",
+        "re-run:E-7099b0d518"
+      ]
+    },
+    "rounds": 1,
+    "history": [
+      {
+        "decision": "approve",
+        "findings": []
+      }
+    ]
+  },
+  "agents": [
+    {
+      "role": "manager",
+      "version": "manager-1.0",
+      "executions": 5
+    },
+    {
+      "role": "peatfire_sentinel",
+      "version": "peatfire-sentinel-1.0",
+      "executions": 1
+    },
+    {
+      "role": "evidence_critic",
+      "version": "evidence-critic-1.0",
+      "executions": 1
+    },
+    {
+      "role": "communityalert",
+      "version": "communityalert-1.0",
+      "executions": 1
+    }
+  ],
+  "memory": {
+    "recalled": [],
+    "captured": "mem-1",
+    "audit_entries": 1
+  },
+  "snapshot_id": "S-73f510049346",
+  "conclusion_revision_id": "fact_363b7ab18172aa99",
+  "conclusion_status": "current",
+  "trace_id": "judge-005",
+  "log_file": "/tmp/tmp.SRBqO7Nzmz/logs/trace-judge-005.jsonl",
+  "execution_time_seconds": 1.8,
+  "sponsor_integration_evidence": {
+    "zetaris": {
+      "executed": 0,
+      "skipped": 13,
+      "request_ids": []
+    },
+    "meterless_hmem": {
+      "hmem.query": 2,
+      "hmem.add": 1
+    },
+    "meterless_world_model": {
+      "world_model.upsertEntity": 4,
+      "world_model.relate": 2,
+      "world_model.assertFact": 7
+    },
+    "nightshift": {
+      "executed": 0,
+      "skipped": 0,
+      "available": false,
+      "model_route": "meterless/auto"
+    }
+  },
+  "error": null
+}
