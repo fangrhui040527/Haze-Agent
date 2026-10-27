@@ -54,6 +54,7 @@ export function ChatPanel({
   const listRef = useRef<HTMLOListElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messages =
+    conversation.allowDetachedRestore &&
     run.task?.record &&
     !conversation.messages.some(
       (message) => message.taskCard?.task_id === run.task?.id,

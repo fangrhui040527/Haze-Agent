@@ -29,6 +29,13 @@ backend changes to rebuild them. The standalone `tasks:serve` command is an
 alternative API entry point and must not run alongside Vite using the same state
 directory.
 
+Only one server can own a state directory. Vite stops if its port is already in
+use instead of selecting another port. Stop the earlier dev command with `Ctrl+C`
+before restarting. A state ownership conflict reports the owner PID and directory;
+for an independent instance, set `HAZE_TASK_STATE_DIR` to another directory and
+pass a different `--port`. `HAZE_TASK_STATE_DIR` takes precedence over `STATE_DIR`.
+Do not delete the state databases or lock files to resolve a running owner.
+
 After startup, an interactive terminal shows a `haze>` command prompt. The launcher
 leaves the browser closed; use `open` to launch the frontend when needed. It
 initializes the shared API and HazeOps watchers before reporting the app ready;
