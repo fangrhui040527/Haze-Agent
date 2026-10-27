@@ -83,7 +83,7 @@ projections can be rebuilt and are not acceptance authority.
 
 ## World Model and acceptance
 
-The PM2.5, damage-accounting, episode-investigation, and evidence-synthesis
+The PM2.5, damage-account-intake, episode-investigation, and evidence-synthesis
 capabilities have registered World Model adapters. They project references to
 exact immutable artifacts and their review/provenance, not duplicate task
 artifact contents. Final narrative results are not themselves accepted domain

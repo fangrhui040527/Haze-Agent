@@ -53,6 +53,8 @@ export const artifactSchema = z.strictObject({
   producer: producerSchema,
   created_at: timestampSchema,
   dependencies: z.array(artifactRefSchema).max(256),
+  /** Unreviewed generation provenance; these refs never establish applicability. */
+  external_candidates: z.array(artifactRefSchema).max(4).optional(),
   required_tools: z.array(identifierSchema).max(128).default([]),
   content: artifactContentSchema,
   original_byte_sha256: z

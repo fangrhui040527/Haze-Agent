@@ -1,17 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { createDamageAccountTools } from '../../app/capabilities/damage-account/index.js';
-import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-account/fixtures.js';
+import { createDamageAppraisalTools } from '../../app/capabilities/damage-appraisal/index.js';
+import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-appraisal/fixtures.js';
 import {
   DAMAGE_METHODS,
   exactDamageRef,
   normalizeDamageInputs,
-} from '../../app/capabilities/damage-account/inputs.js';
+} from '../../app/capabilities/damage-appraisal/inputs.js';
 import {
   assembleDamageAccount,
   compileDamageAccount,
   DAMAGE_COMPONENT_KINDS,
-} from '../../app/capabilities/damage-account/methods.js';
+} from '../../app/capabilities/damage-appraisal/methods.js';
 import { type DamageComponentKind } from '../../app/contracts/damage-account.js';
 import {
   boundedJsonSchema,
@@ -21,7 +21,7 @@ import {
 import { contractHash } from '../../app/contracts/json.js';
 import { type ToolContext } from '../../app/orchestration/ports.js';
 
-const tools = createDamageAccountTools({ mode: 'fixture' });
+const tools = createDamageAppraisalTools({ mode: 'fixture' });
 const getTool = (id: string) => tools.find((t) => t.id === id)!;
 const context = (inputs: Artifact[]): ToolContext => ({
   taskId: randomUUID(),
@@ -59,7 +59,7 @@ const produced = (
   sha256: contractHash(content),
 });
 
-describe('registered damage-account tool boundary', () => {
+describe('registered damage-appraisal tool boundary', () => {
   it('reads and calculates solely from exact authorized imported artifact bytes', async () => {
     const source = createSyntheticDamageArtifact();
     const normalized = await invoke('damage.read-input', select(source), [

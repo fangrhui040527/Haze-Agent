@@ -1,7 +1,7 @@
 # World Model damage-input adapter
 
 This module connects governed World Model accounting captures to the
-`damage-account` capability. It retrieves exact evidence, selects a compatible
+`damage-appraisal` capability. It retrieves exact evidence, selects a compatible
 capture, persists its snapshot and selection receipt, and rechecks that selection
 when later accounting stages reuse it.
 
@@ -20,7 +20,7 @@ artifact contracts and receipt versions are unchanged.
 | [ports.ts](ports.ts)         | Domain policy interface supplied by composition.                        |
 
 [Composition](../../composition.ts) registers the store-backed tool and injects
-[damage-account's input policy](../../capabilities/damage-account/world-input-policy.ts).
+[damage-appraisal's input policy](../../capabilities/damage-appraisal/world-input-policy.ts).
 That policy owns request/correction scope interpretation, country/date matching
 and reconstruction through the existing accounting normalization and validation
 functions. The adapter imports shared contracts and execution ports; it does not
@@ -30,7 +30,7 @@ Generic access, producer provenance, holds, corrections and durable pin enforcem
 remain in [tasks](../../tasks/README.md) and
 [orchestration](../../orchestration/README.md). Accounting calculations and the
 independent checker stay in
-[damage-account](../../capabilities/damage-account/README.md).
+[damage-appraisal](../../capabilities/damage-appraisal/README.md).
 
 ## Evidence behavior
 

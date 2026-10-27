@@ -28,6 +28,7 @@ async function boot() {
       env: {
         ...process.env,
         STATE_DIR: root,
+        HAZE_TASK_STATE_DIR: root,
         HAZE_TASK_PORT: '0',
         HAZE_WORLD_ACCEPTANCE_POLICY: 'research-v1',
       },
@@ -159,8 +160,9 @@ try {
     await settle(origin, investigationAdmission.task_id),
   );
   const requiredCapabilities = [
+    'damage-appraisal',
     'pm25-evidence-summary',
-    'damage-accounting',
+    'damage-account-intake',
     'episode-investigation',
     'evidence-synthesis',
   ];

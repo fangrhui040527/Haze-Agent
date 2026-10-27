@@ -298,15 +298,54 @@ export function assembleManagerContext(
           ),
         ),
       );
+      if (templated.size) {
+        // A bounded exact starting plan does not need every other phase's
+        // definition/rules just because they share its capability. Keep the
+        // selected dispatch metadata and requirements; runtime registration
+        // still validates every chosen definition, dependency and review.
+        const inactive = context.definitions.filter(
+          (definition) => !templated.has(definition.id),
+        );
+        context.definitions = context.definitions.filter((definition) =>
+          templated.has(definition.id),
+        );
+        for (const capability of context.capabilities) {
+          capability.prerequisites = (capability.prerequisites ?? []).filter(
+            (requirement) => templated.has(requirement.definition_id),
+          );
+          capability.review_requirements = (
+            capability.review_requirements ?? []
+          ).filter(
+            (requirement) =>
+              templated.has(requirement.review_definition_id) ||
+              requirement.producer_definition_ids?.some((id) =>
+                templated.has(id),
+              ),
+          );
+          capability.peer_requirements = (
+            capability.peer_requirements ?? []
+          ).filter((requirement) =>
+            requirement.definitions.some((id) => templated.has(id)),
+          );
+        }
+        if (inactive.length) {
+          status.missing.push(
+            `Inactive details and rules outside exact starting templates omitted (${inactive.length}); all capability/tool IDs, grants and exact evidence remain retained.`,
+          );
+          status.truncated = true;
+        }
+      }
       // Exact starting plans already name these registered definitions. The
       // runtime resolves and validates their agents and grants at dispatch.
-      context.definitions = context.definitions.filter(
-        (definition) => !templated.has(definition.id),
-      );
-      status.missing.push(
-        'Definition details repeated by exact starting templates omitted; runtime registration and plan validation remain authoritative.',
-      );
-      status.truncated = true;
+      if (bytes(context) > limit) {
+        context.definitions = context.definitions.filter(
+          (definition) => !templated.has(definition.id),
+        );
+        status.missing.push(
+          'Definition details repeated by exact starting templates omitted; runtime registration and plan validation remain authoritative.',
+        );
+        status.truncated = true;
+      }
     }
     if (currentPlan) {
       const admitted = new Set(

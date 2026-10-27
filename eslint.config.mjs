@@ -5,6 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'frontend/dist/**',
       'coverage/**',
       '.state/**',
       'tmp/**',

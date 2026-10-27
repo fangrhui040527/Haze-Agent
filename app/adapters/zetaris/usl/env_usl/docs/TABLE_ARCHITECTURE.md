@@ -20,6 +20,11 @@ The physical count depends on which sources and NASA POWER locations are
 registered. Air-quality and wind location coverage changes their snapshot row
 counts, rather than creating a raw REST table per location.
 
+The `open_meteo_pm25_obs` and `open_meteo_wind_obs` entities are compatibility
+names retained for existing clients. They are activated from the current
+Open-Meteo air-quality snapshot and Windy GFS feed; the deprecated per-location
+Open-Meteo REST views are not required.
+
 ## Stable views and task consumption
 
 `air_quality.hourly_observations` exposes the normalized air-quality snapshot.

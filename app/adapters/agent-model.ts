@@ -1,3 +1,5 @@
+import { NIGHTSHIFT_CONTRACT_FAILURE } from './nightshift/runtime.js';
+
 export interface AgentModelInput {
   role: string;
   instruction: string;
@@ -12,10 +14,15 @@ export interface AgentModelInput {
 
 /** Provider-returned metadata; absent fields remain unknown, not inferred. */
 export interface AgentModelReceipt {
+  /** Runtime-injected models and fixtures are never provider verification evidence. */
+  readonly synthetic?: true;
   response_model: string | null;
   response_id: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
+  /** Optional for historical receipts; values come from this response only. */
+  response_status?: string | null;
+  http_status?: number;
 }
 
 export interface AgentModelCompletion {
@@ -189,14 +196,26 @@ function receiptTokens(value: unknown): number | null {
     : null;
 }
 
-function completionReceipt(body: unknown, apiKey: string): AgentModelReceipt {
+function completionReceipt(
+  body: unknown,
+  apiKey: string,
+  httpStatus: number,
+): AgentModelReceipt {
   const response = isRecord(body) ? body : {};
   const usage = isRecord(response.usage) ? response.usage : {};
+  const choice: unknown = Array.isArray(response.choices)
+    ? response.choices[0]
+    : undefined;
   return {
     response_model: receiptText(response.model, apiKey),
     response_id: receiptText(response.id, apiKey),
     input_tokens: receiptTokens(usage.prompt_tokens),
     output_tokens: receiptTokens(usage.completion_tokens),
+    response_status: receiptText(
+      isRecord(choice) ? choice.finish_reason : undefined,
+      apiKey,
+    ),
+    http_status: httpStatus,
   };
 }
 
@@ -211,6 +230,11 @@ export function resolveAgentModel(
     );
   }
   const provider = env.HAZE_PROVIDER?.trim() || 'offline';
+  if (provider === 'nightshift') {
+    // Nightshift requires the registry's authenticated asynchronous negotiation.
+    // Raw resolution must never use its general compatible routing endpoint.
+    throw new Error(NIGHTSHIFT_CONTRACT_FAILURE);
+  }
   if (provider === 'offline') {
     throw new Error(
       'Office agents require HAZE_PROVIDER=nvidia or openai-compatible and a server-side API key; offline mode cannot run model agents.',
@@ -351,12 +375,29 @@ export function resolveAgentModel(
           void response.body?.cancel().catch(() => undefined);
           // The status is the only way to tell a rejected request from an
           // overloaded route; it carries no credential material.
-          throw new ModelError(
+          throw new AgentModelResponseError(
             `Agent model provider request failed (HTTP ${response.status}). Check the server provider configuration.`,
+            completionReceipt(null, apiKey, response.status),
+            null,
           );
         }
-        const responseBody = await readCompletion(response, requestSignal);
-        const receipt = completionReceipt(responseBody, apiKey);
+        let responseBody: unknown;
+        try {
+          responseBody = await readCompletion(response, requestSignal);
+        } catch (error) {
+          if (error instanceof ModelError)
+            throw new AgentModelResponseError(
+              error.message,
+              completionReceipt(null, apiKey, response.status),
+              null,
+            );
+          throw error;
+        }
+        const receipt = completionReceipt(
+          responseBody,
+          apiKey,
+          response.status,
+        );
         let text: string;
         try {
           text = assistantText(responseBody, outputTokens);

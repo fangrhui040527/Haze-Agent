@@ -70,6 +70,15 @@ describe('chat after crew demo retirement', () => {
     expect(markup).not.toContain('Klang crew sample');
     expect(markup).not.toContain('Legacy scheduling demo');
   });
+  it('offers a separate unchecked per-task Nightshift grant without authorizing successors', () => {
+    const markup = renderChat();
+    expect(markup).toContain('Allow Nightshift candidate tools for this task');
+    expect(markup).toContain('separate bounded chain grant');
+    expect(markup).toContain('No automatic successor runs are authorized');
+    const checkbox = markup.match(/<input[^>]*type="checkbox"[^>]*>/u)?.[0];
+    expect(checkbox).toBeDefined();
+    expect(checkbox).not.toContain('checked');
+  });
 
   it('retains saved legacy text and safely ignores retired structured payloads', () => {
     storageKey = 'hazewatch.chat.v1';

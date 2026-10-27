@@ -16,8 +16,8 @@ import {
   damageAccountManifestSchema,
   damageAccountScopeSchema,
   type DamageAccountScope,
-} from '../../app/capabilities/damage-accounting/contracts.js';
-import { damageAccountingWorldModelAdapter } from '../../app/capabilities/damage-accounting/world.js';
+} from '../../app/capabilities/damage-account-intake/contracts.js';
+import { damageAccountIntakeWorldModelAdapter } from '../../app/capabilities/damage-account-intake/world.js';
 
 const identity = {
   principal: 'damage-test-user',
@@ -211,7 +211,7 @@ function buildFixture(options: { omitManifestComponent?: boolean } = {}) {
 }
 
 function worldRecords(artifacts: Artifact[]): WorldRecord[] {
-  return damageAccountingWorldModelAdapter
+  return damageAccountIntakeWorldModelAdapter
     .extract({ request, artifacts })
     .map((record) =>
       worldRecordSchema.parse({
@@ -225,16 +225,16 @@ function worldRecords(artifacts: Artifact[]): WorldRecord[] {
         kind: record.kind,
         external_id: record.external_id,
         payload: record.payload,
-        producer: { kind: 'service', id: 'damage-accounting' },
+        producer: { kind: 'service', id: 'damage-account-intake' },
         recorded_at: at,
       }),
     );
 }
 
-describe('damage-accounting World Model contracts and adapter', () => {
+describe('damage-account-intake World Model contracts and adapter', () => {
   it('registers the capability and strictly validates scoped accounts', () => {
     const registry = createExecutionRegistry({ mode: 'fixture' });
-    expect(registry.capabilities.has('damage-accounting')).toBe(true);
+    expect(registry.capabilities.has('damage-account-intake')).toBe(true);
     expect(registry.definitions.has('damage-accounting.intake')).toBe(true);
     expect(damageAccountScopeSchema.safeParse(scope).success).toBe(true);
     expect(
@@ -265,7 +265,7 @@ describe('damage-accounting World Model contracts and adapter', () => {
       ]),
     );
     const candidate =
-      damageAccountingWorldModelAdapter.buildAcceptanceCandidate({
+      damageAccountIntakeWorldModelAdapter.buildAcceptanceCandidate({
         request,
         records,
         assessments: [],
@@ -281,7 +281,7 @@ describe('damage-accounting World Model contracts and adapter', () => {
       ]),
     );
     expect(
-      damageAccountingWorldModelAdapter.requiredReviewCoverage({
+      damageAccountIntakeWorldModelAdapter.requiredReviewCoverage({
         request,
         assignments: [],
         artifacts,
@@ -301,7 +301,7 @@ describe('damage-accounting World Model contracts and adapter', () => {
       omitManifestComponent: true,
     });
     expect(
-      damageAccountingWorldModelAdapter.buildAcceptanceCandidate({
+      damageAccountIntakeWorldModelAdapter.buildAcceptanceCandidate({
         request,
         records: worldRecords(artifacts),
         assessments: [],
@@ -312,7 +312,7 @@ describe('damage-accounting World Model contracts and adapter', () => {
 
     const valid = buildFixture();
     expect(
-      damageAccountingWorldModelAdapter.buildAcceptanceCandidate({
+      damageAccountIntakeWorldModelAdapter.buildAcceptanceCandidate({
         request,
         records: worldRecords(valid.artifacts),
         assessments: [],

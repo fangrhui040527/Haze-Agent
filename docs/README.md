@@ -4,11 +4,15 @@ Start with the [project README](../README.md) for setup and current behavior.
 
 ## Architecture
 
+- [Nightshift integration roadmap](architecture/nightshift-integration-plan.md) - all four stages have implementation reports; live inference gates and production automatic release remain pending.
+- [Nightshift external waits implementation report](architecture/nightshift-03-external-waits-implementation-report.md) - explicit specialist grants, targeted delivery, durable capacity and FIFO recovery verification.
+- [Nightshift automatic chains implementation report](architecture/nightshift-04-automatic-chains-implementation-report.md) - explicit finite opt-in, shared continuation admission, cumulative grants, delegated inboxes, progress checks and the closed production release gate.
 - [Executable LangGraph runtime](architecture/langgraph-runtime.md) — independent Manager and specialist graphs, receipts, waits, recovery and authority fences.
 - [v0.14 schema catalog and implementation audit](architecture/schema-catalog-v014.md) - schemas by component, fields, source evidence and implementation gaps.
 - [Haze Agent Architecture v0.14](architecture/Haze_Agent_Architecture_v0.14.pdf) — target architecture.
 - [General agent refactor plan](architecture/general-agent-refactor-plan.md) — proposed reusable task engine and separate agent modules.
 - [DamageAccountant implementation plan](architecture/damage-accountant-plan.md) — specialist, linked accounting capability, integration phases and release checks.
+- [Damage-reduction roadmap](architecture/damage-reduction-planning-plan.md) — five bounded plans, beginning with an assessment and conditional-planning preview; shared scientific and lifecycle requirements remain in the linked reference.
 - [Hybrid Architecture v0.1](architecture/Haze_Hybird_Architecture_v0.1.pdf) — supplied architecture reference.
 - [Architecture v0.8](architecture/haze-architecture-v0.8.html) — historical HTML reference.
 
@@ -28,6 +32,11 @@ Start with the [project README](../README.md) for setup and current behavior.
 - [World Model data model](05-world-model-data-model.md) — legacy HazeOps storage and the active v3 model, acceptance, and access boundaries.
 - [General engine verification](orchestration/general-engine-verification.md) - release checks and explicit fixture/live evidence.
 - [DamageAccountant implementation report](orchestration/damage-accountant-implementation-report.md) - imported accounting, independent checks, task integration and empirical release gates.
+- [Imported scenario assessment implementation report](architecture/damage-reduction-01-implementation-report.md) - Plan 01 changes, exact numerical rules, independent checks, retained restart evidence and remaining qualification gates.
+- [Conditional planning preview implementation report](architecture/damage-reduction-02-implementation-report.md) - Plan 02 planning/reviews, dedicated task routes, current support, verification traces and remaining live/scientific gates.
+- [Programme coordination implementation report](architecture/damage-reduction-03-implementation-report.md) - Plan 03 programme persistence, explicit phase admission, cumulative budgets, current and historical results, restart and crash verification.
+- [Pilot and delivery implementation report](architecture/damage-reduction-04-implementation-report.md) - Plan 04 feasibility/protocol drafts, registration, amendments, exact imported delivery evidence, verification and deferred live-service integration.
+- [External evaluation implementation report](architecture/damage-reduction-05-implementation-report.md) - Plan 05 engineering path, independently checked external comparisons, scientific adoption, current claim gates and reviewed learning; non-synthetic operational release remains gated.
 - [World Model damage input adapter](orchestration/world-model-damage-input-adapter-report.md) - request-only accounting, exact evidence selection, provenance checks and the Jev assessment.
 
 The v1/v2 guides below are retained historical records.

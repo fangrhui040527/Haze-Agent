@@ -109,6 +109,10 @@ export interface AskRequest {
   idempotencyKey?: string;
   contextRefs?: ArtifactRef[];
   scope?: JsonValue;
+  /** Explicit per-task candidate tool grant; omitted by default. */
+  nightshiftTools?: (
+    'nightshift.submit' | 'nightshift.result' | 'nightshift.cancel'
+  )[];
 }
 
 export const AGENT_IDS: readonly AgentId[] = [

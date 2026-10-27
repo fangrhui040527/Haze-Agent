@@ -16,22 +16,102 @@ npm --prefix frontend ci
 npm run dev
 ```
 
-`npm run dev` builds the backend, then starts Vite with the frontend and the shared
-dashboard, task and World Model APIs, usually at `http://localhost:5173`. Keep this
-terminal running; stop it with `Ctrl+C`. Run the command again after backend changes
-to rebuild them. The standalone `tasks:serve` command is an alternative API entry
-point and must not run alongside Vite using the same state directory.
+`npm run dev` first runs `docker compose up --detach` to start Zetaris,
+checks its container status, builds the backend, then starts Vite
+with the frontend and the shared dashboard, task and World Model APIs, usually at
+`http://localhost:5173`. Docker Desktop must be running, with root `.env` and image
+registry access configured as described below. A failed startup step stops the
+command before the next step runs.
 
-The root dev command shows a compact Haze Agent banner with the actual app URL
-and total startup time, including the backend build. Build failures and runtime
-warnings remain visible. Edit `frontend/scripts/dev-display-plugin.ts` to customize
-the banner text. Use `npm run --silent dev` to also hide npm's initial script header;
-`npm run build` and `npm --prefix frontend run dev` retain their detailed output.
-Vite options still work, for example `npm run dev -- --port 5174`.
+Keep this terminal running; when the console is idle, `Ctrl+C` stops the app and leaves the Zetaris containers
+running. Use `docker compose stop` to stop Zetaris. Run the dev command again after
+backend changes to rebuild them. The standalone `tasks:serve` command is an
+alternative API entry point and must not run alongside Vite using the same state
+directory.
 
-Zetaris is a separate service for external evidence retrieval. If you use the
-included local platform, configure root `.env` as described below, start Docker
-Desktop and then run:
+After startup, an interactive terminal shows a `haze>` command prompt. The launcher
+leaves the browser closed; use `open` to launch the frontend when needed. It
+initializes the shared API and HazeOps watchers before reporting the app ready;
+registered agents execute when work is admitted. Type `help` or `help tasks` for
+usage. Tab completes commands and setting names; Up/Down recalls this session's
+commands. Configuration writes are excluded from history and credentials are
+redacted from console output.
+Routine Vite optimizer and restart messages are hidden; warnings and errors
+remain visible.
+
+```text
+haze> status
+haze> status agents --watch
+haze> agents show Manager
+haze> tasks run "Explain the evidence needed to investigate a haze episode"
+haze> tasks list --active
+haze> tasks watch TASK_ID
+haze> tasks pause TASK_ID
+haze> tasks resume TASK_ID
+haze> nightshift status
+haze> nightshift jobs
+haze> config get HAZE_MODEL
+haze> config set HAZE_MODEL "your-model"
+haze> config validate
+haze> app restart --rebuild
+haze> logs app --follow
+haze> doctor
+haze> open world
+```
+
+`status` supports `app`, `agents`, `nightshift`, `zetaris`, `world`, `hmem`, and `hazeops`. Task
+commands also support `show`, `cancel`, `continue`, and `reply`; `help tasks`
+explains their arguments. Resume retains the run's deadline and remaining budget;
+Continue creates a fresh linked run. Local cancellation does not establish that a
+remote provider stopped. Nightshift status reports separate job, direct inference,
+and automatic-chain readiness. It does not install models or start Nightshift's
+operating-system service.
+
+`config` shows setup guidance; `config show` lists supported effective settings and
+their sources. `config set` validates and saves to root `.env`, preserves unrelated
+settings, and reports overrides and restart requirements. Existing task routes
+remain pinned. `logs zetaris --follow` streams this project's Compose output;
+`tasks watch` and `nightshift show JOB_ID` inspect durable work history.
+
+During a watch or command, `Ctrl+C` ends that command and returns to the prompt.
+When idle, `Ctrl+C`, `Ctrl+D`, or `exit` stops the app and preserves Zetaris.
+`shutdown --all` stops the app and then this project's Compose services, retaining
+their data. Redirected output keeps plain startup logs without a prompt; use
+`npm run dev -- --console` to explicitly enable command input through a pipe, or
+`npm run dev -- --no-console` to disable the console in a terminal. Other options
+continue to pass through to Vite.
+
+The root dev command names the actual components: Zetaris, the Haze TypeScript
+build, React web app, LangGraph task engine, SQLite World Model, H-MEM, HazeOps
+collectors, agent model routes, and Nightshift runtime, local jobs, inference,
+and automation. They share the Haze process where applicable; these rows do not
+imply separate operating-system services. Each starting or checking component has a live
+elapsed timer that refreshes every 0.1 seconds and freezes when the step finishes.
+Compose progress and successful build output are captured so they do not print repeated status
+lines. Warnings, failure diagnostics and app runtime logs remain visible. Redirected
+output prints each component's final startup status once, without terminal escape
+codes. `BUILT` confirms compilation. `READY` for the web app, task API, and World
+Model requires a successful request, including actual task-store and World Model
+reads. HazeOps reports its scheduler's execution state and enabled source count.
+Model routes stay `UNVERIFIED` until their live-inference readiness reports prove
+otherwise; startup submits no model calls or Nightshift jobs. Optional components
+can be `DISABLED`, `BLOCKED`, `UNCONFIGURED`, or `UNAVAILABLE` while the app starts.
+H-MEM currently reports `DISABLED`: it is not attached to active tasks and its
+historical dashboard memory remains archival. A reachable Nightshift runtime is
+shown separately from usable local-only jobs and released automation. Use
+`status hmem`, `status hazeops`, or `nightshift status` to inspect the current state.
+
+`STARTED` means Compose started the containers; the Zetaris row summarizes their
+current health and completed one-shot jobs. Check `docker compose ps --all` for
+individual container details. Successful `init` and `bootstrap` jobs normally show
+`Exited (0)`. The panel includes the actual app URL and total startup time, including
+Docker startup and the backend build. Edit `scripts/dev-status.mjs` to customize the
+panel. Use `npm run --silent dev` to also hide npm's initial script header. Vite
+options still work, for example `npm run dev -- --port 5174`.
+
+Zetaris is a separate service for external evidence retrieval. The root dev command
+starts the included local platform automatically. To start Zetaris independently,
+configure root `.env` as described below, start Docker Desktop and then run:
 
 ```sh
 docker compose up -d
@@ -71,7 +151,6 @@ setup from the repository root before applying it:
 ```sh
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
 npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
-npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
 ```
 
 After reviewing the plan, rerun the selected command without `--dry-run` to
@@ -79,6 +158,11 @@ fetch and register the source snapshots. A task reads the published snapshot;
 it does not refresh it. Removing the old SmokeLedger tooling does not delete
 existing Docker volumes or registered Zetaris objects. Historical database rows
 are not migrated automatically; saved task captures remain readable.
+
+The USL bootstrap also supports a read-only SmokeLedger view over current
+Environmental locations, fire, PM2.5, and wind feeds. It does not require
+PostgreSQL; run `npm run zetaris:bootstrap:smokeledger` after publishing the
+Environmental sources and compiling the Environmental USL.
 
 Existing `app/adapters/zetaris/.env.local`
 files remain a fallback for task commands, the frontend task server and Zetaris
@@ -97,6 +181,8 @@ A general request needs only its objective. Import text, Markdown, CSV or JSON w
 A PM2.5 investigation additionally needs a domain scope, either explicitly or through a bounded phrase such as:
 
 > Investigate PM2.5 evidence for Klang during 2026-10-24 to 2026-10-25, distinguish modeled values from observations, and identify coverage gaps.
+
+[damage-appraisal](app/capabilities/damage-appraisal/README.md) builds and reviews calculated damage accounts from retained evidence. [damage-account-intake](app/capabilities/damage-account-intake/README.md) validates supplied manifests and component completeness. These capabilities were previously named `damage-account` and `damage-accounting`.
 
 Open `/damage-account` and describe the location, episode and dates; no upload is required. `WorldModelDamageInputAdapter` in [app/adapters/damage-input-adapter](app/adapters/damage-input-adapter/README.md) retrieves compatible retained accounting captures and their exact original evidence. Composition supplies its damage-account scope and reconstruction rules. Saved accounts can be opened at `/damage-account/TASK_ID`. This workspace keeps its own task selection; the dashboard and original office retain their existing presentation. DamageAccountant produces separate physical, financial incidence and selected social welfare views; EvidenceCritic independently reconstructs the exact account and components. Missing evidence produces an explicit backend acquisition gap rather than invented values. The adapter requires accounting-ready World Model evidence: it does not fetch external datasets or estimate health effects from PM2.5. See the [adapter report](docs/orchestration/world-model-damage-input-adapter-report.md) and [original accounting report](docs/orchestration/damage-accountant-implementation-report.md).
 

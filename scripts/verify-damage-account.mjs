@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { createSyntheticDamageImport } from '../dist/capabilities/damage-account/fixtures.js';
+import { createSyntheticDamageImport } from '../dist/capabilities/damage-appraisal/fixtures.js';
 import {
   damageAccountSchema,
   damageReviewSchema,
@@ -132,7 +132,7 @@ try {
   const request = {
     schema_version: 'haze.task.request.v3',
     objective:
-      'Build a damage account from the exact imported quantities and declared unit values using the registered damage-account capability. Produce physical outcomes, financial incidence, selected social welfare, omissions and scenarios, with an independent exact-component accounting review. Keep imported applicability and synthetic evidence limits visible.',
+      'Build a damage account from the exact imported quantities and declared unit values using the registered damage-appraisal capability. Produce physical outcomes, financial incidence, selected social welfare, omissions and scenarios, with an independent exact-component accounting review. Keep imported applicability and synthetic evidence limits visible.',
     context_refs: [{ id: ref.id, version: ref.version, sha256: ref.sha256 }],
   };
   const key = randomUUID();

@@ -73,6 +73,7 @@ export const managerActionSchema = z.discriminatedUnion('type', [
     sources: z.array(artifactRefSchema).max(256),
     uncertainty: z.array(text).max(64),
     unfinished: z.array(text).max(64),
+    nightshift_unresolved_jobs: z.array(z.uuid()).max(4).optional(),
   }),
 ]);
 export const managerDecisionSchema = z.strictObject({

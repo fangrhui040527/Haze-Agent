@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { artifactRefSchema } from '../contracts/artifacts.js';
+import { externalWaitActionSchema } from '../contracts/external-waits.js';
 export const assignmentOutputSchema = z.strictObject({
   status: z.enum(['completed', 'waiting_human', 'waiting_peer']),
   summary: z.string().min(1).max(10000),
@@ -8,6 +9,7 @@ export const assignmentOutputSchema = z.strictObject({
   outputs: z.array(artifactRefSchema).max(256),
 });
 export const agentActionSchema = z.discriminatedUnion('type', [
+  externalWaitActionSchema,
   z.strictObject({
     id: z.string().min(1).max(128),
     type: z.literal('escalate'),

@@ -8,6 +8,7 @@
 --                     (FK: document_id -> law_documents.document_id)
 -- =============================================================================
 
+CREATE NAMESPACE IF NOT EXISTS lightning.metastore;
 CREATE NAMESPACE IF NOT EXISTS lightning.metastore.malaysia_law;
 
 COMPILE USL IF NOT EXISTS malaysia_law_usl DEPLOY NAMESPACE lightning.metastore.malaysia_law DDL

@@ -10,7 +10,7 @@ import {
   damageAccountComponentSchema,
   damageAccountManifestSchema,
   damageAccountScopeSchema,
-} from '../../app/capabilities/damage-accounting/contracts.js';
+} from '../../app/capabilities/damage-account-intake/contracts.js';
 import { synthesisReviewSchema } from '../../app/capabilities/evidence-synthesis/contracts.js';
 import { episodeReviewSchema } from '../../app/capabilities/episode-investigation/contracts.js';
 import { assessArtifactReviews } from '../../app/orchestration/runtime.js';
@@ -164,9 +164,19 @@ describe('merged capability review integration', () => {
     );
     const unscoped = { ...task.original_request };
     delete unscoped.scope;
-    expect(registry.capabilities.get('damage-account')?.matches(unscoped)).toBe(
-      true,
-    );
+    expect(
+      registry.capabilities
+        .get('damage-appraisal')
+        ?.matches(task.original_request),
+    ).toBe(false);
+    expect(
+      registry.capabilities
+        .get('damage-account-intake')
+        ?.matches(task.original_request),
+    ).toBe(true);
+    expect(
+      registry.capabilities.get('damage-appraisal')?.matches(unscoped),
+    ).toBe(true);
   });
 
   it('coordinates source review and preserves exact manager and World Model coverage for PM2.5 report explanations', async () => {

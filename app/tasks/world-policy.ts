@@ -6,13 +6,13 @@ const researchPolicyContent = {
   version: '1',
   allowed_capabilities: [
     'pm25-evidence-summary',
-    'damage-accounting',
+    'damage-account-intake',
     'episode-investigation',
     'evidence-synthesis',
   ],
   allowed_uses: {
     'pm25-evidence-summary': ['pm25-evidence-summary'],
-    'damage-accounting': ['damage-account:*'],
+    'damage-account-intake': ['damage-account:*'],
     'episode-investigation': ['episode-investigation-context'],
     'evidence-synthesis': ['evidence-synthesis'],
   },

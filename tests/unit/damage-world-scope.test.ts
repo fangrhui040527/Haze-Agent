@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-account/fixtures.js';
+import { createSyntheticDamageArtifact } from '../../app/capabilities/damage-appraisal/fixtures.js';
 import {
   normalizeDamageInputs,
   exactDamageRef,
-} from '../../app/capabilities/damage-account/inputs.js';
+} from '../../app/capabilities/damage-appraisal/inputs.js';
 import { WorldModelDamageInputAdapter } from '../../app/adapters/damage-input-adapter/index.js';
-import { damageWorldInputPolicy } from '../../app/capabilities/damage-account/world-input-policy.js';
+import { damageWorldInputPolicy } from '../../app/capabilities/damage-appraisal/world-input-policy.js';
 import {
   DAMAGE_WORLD_ADAPTER_ID,
   DAMAGE_WORLD_TOOL_ID,

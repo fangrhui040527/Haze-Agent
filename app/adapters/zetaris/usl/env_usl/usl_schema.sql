@@ -36,6 +36,20 @@ CREATE TABLE air_quality_obs (
     pm2_5_ug_m3 double,
     pm10_ug_m3 double
 );
+CREATE TABLE open_meteo_pm25_obs (
+    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
+    observation_time timestamp,
+    pm2_5_ug_m3 double
+);
+CREATE TABLE open_meteo_wind_obs (
+    location_index int FOREIGN KEY REFERENCES location_dim(location_index),
+    observation_time timestamp,
+    level varchar(20),
+    wind_speed_ms double,
+    wind_direction_deg double,
+    u_ms double,
+    v_ms double
+);
 CREATE TABLE active_fires (
     location_index int FOREIGN KEY REFERENCES location_dim(location_index),
     acq_utc timestamp,

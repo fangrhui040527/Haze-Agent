@@ -12,6 +12,7 @@ import type {
   TaskRecord,
   TaskEvent,
   TaskIdentity,
+  TaskResult,
 } from '../contracts/tasks.js';
 import type {
   ManagerDecision,
@@ -31,6 +32,57 @@ import type {
 } from '../contracts/world-services.js';
 import type { AgentAction } from './contracts.js';
 import type { ManagerGraphFactory } from './manager-workflow.js';
+import type { TaskStore } from '../tasks/store.js';
+import type {
+  TaskControl,
+  TaskUpdate,
+  ControlReceipt,
+} from '../contracts/controls.js';
+import type {
+  NightshiftJobReadiness,
+  NightshiftSubmitRequest,
+  NightshiftRemoteJob,
+  NightshiftRemoteOutcome,
+  NightshiftRemoteResult,
+} from '../contracts/nightshift.js';
+
+/** External inference only: this port grants no task, effect or evidence authority. */
+export interface NightshiftJobPort {
+  readiness(signal?: AbortSignal): Promise<NightshiftJobReadiness>;
+  submit(
+    request: NightshiftSubmitRequest,
+    signal?: AbortSignal,
+  ): Promise<{ remote_id: string }>;
+  inspect(remoteId: string, signal?: AbortSignal): Promise<NightshiftRemoteJob>;
+  outcome(
+    remoteId: string,
+    signal?: AbortSignal,
+  ): Promise<NightshiftRemoteOutcome>;
+  result(
+    remoteId: string,
+    signal?: AbortSignal,
+  ): Promise<NightshiftRemoteResult>;
+  cancel(
+    remoteId: string,
+    signal?: AbortSignal,
+  ): Promise<{ acknowledged: boolean }>;
+  verifyReconciliation(
+    remoteId: string,
+    request: NightshiftSubmitRequest,
+    signal?: AbortSignal,
+  ): Promise<{ verified: boolean; reason: string | null }>;
+}
+
+/** The outcome classification is safe policy input; arbitrary upstream text is not. */
+export class NightshiftJobTransportError extends Error {
+  constructor(
+    readonly outcome: 'rejected-before-acceptance' | 'unknown' | 'read-failed',
+    readonly diagnostic_code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 /** Narrow host port for governed, store-backed tools; domain factories stay in composition. */
 export interface StatefulToolStore {
@@ -97,6 +149,80 @@ export interface StatefulToolStore {
 }
 
 export type ExecutionMode = 'live' | 'fixture' | 'replay';
+export interface TaskMutationContext {
+  kind: 'update' | 'control';
+  before: TaskRecord;
+  input: TaskUpdate | TaskControl;
+  key: string;
+  identity: TaskIdentity;
+}
+export interface TaskExtensionHttpRequest {
+  method: string;
+  pathname: string;
+  query: URLSearchParams;
+  body: unknown;
+  key?: string;
+  identity: TaskIdentity;
+}
+export interface TaskRuntimeExtensionHost {
+  store: TaskStore;
+  mode: ExecutionMode;
+  atomic<T>(operation: () => T): T;
+  afterCommit(callback: () => void): void;
+  readTask(id: string, identity: TaskIdentity): TaskRecord;
+  readArtifact(ref: ArtifactRef, identity: TaskIdentity): Artifact;
+  artifactReviews(
+    taskId: string,
+    identity: TaskIdentity,
+  ): ArtifactReviewCheck[];
+  readView(taskId: string, viewId: string, identity: TaskIdentity): unknown;
+  runResult(
+    taskId: string,
+    runId: string,
+    identity: TaskIdentity,
+    objectiveRevision?: number,
+  ): TaskResult | undefined;
+  admitTask(
+    request: TaskRequest,
+    key: string,
+    identity: TaskIdentity,
+  ): {
+    task_id: string;
+    status_url: string;
+    events_url: string;
+    reused: boolean;
+  };
+  updateTask(
+    id: string,
+    update: TaskUpdate,
+    key: string,
+    identity: TaskIdentity,
+  ): ControlReceipt;
+  controlTask(
+    id: string,
+    control: TaskControl,
+    key: string,
+    identity: TaskIdentity,
+  ): ControlReceipt;
+}
+export interface TaskRuntimeExtension {
+  id: string;
+  service?: unknown;
+  tools?: ToolDefinition[];
+  taskViews?: Record<
+    string,
+    (taskId: string, identity: TaskIdentity) => unknown
+  >;
+  handlesHttp?(pathname: string): boolean;
+  handleHttp?(request: TaskExtensionHttpRequest): {
+    status: number;
+    body: unknown;
+  };
+  mutateTask?(
+    context: TaskMutationContext,
+    perform: () => ControlReceipt,
+  ): ControlReceipt;
+}
 export interface AssignmentPlan {
   key: string;
   definition_id: string;
@@ -193,6 +319,8 @@ export interface ToolDefinition<I = unknown, O = unknown> {
   manager_read_only?: boolean;
   inputSchema: z.ZodType<I>;
   outputSchema: z.ZodType<O>;
+  /** When declared, a retained result may only be saved as this artifact kind. */
+  output_artifact_kind?: string;
   execute(input: I, context: ToolContext): Promise<O>;
 }
 export interface AssignmentServices {
@@ -202,7 +330,11 @@ export interface AssignmentServices {
   save(
     kind: string,
     content: unknown,
-    metadata?: { evidence_origin?: Artifact['evidence_origin'] },
+    metadata?: {
+      evidence_origin?: Artifact['evidence_origin'];
+      /** Exact material support; defaults to all pinned inputs. */
+      dependencies?: ArtifactRef[];
+    },
   ): Artifact;
   question(prompt: string): void;
   message(recipient: string, purpose: string, text: string): void;
@@ -230,6 +362,8 @@ export interface AssignmentDefinition {
   capability: string;
   agent: AgentRole;
   tools: string[];
+  /** Available only when explicitly granted by the admitted task. */
+  optional_tools?: string[];
   instructions: string;
   /** Registered deterministic implementation; never model-supplied executable code. */
   execute?(
@@ -272,6 +406,13 @@ export interface AgentExecutionServices extends AssignmentServices {
   maxTurns: number;
   history: unknown[];
   toolCards: unknown[];
+  /** Only current, owned or explicitly delegated acknowledged local jobs. */
+  acknowledgedJobs?(): { job_id: string; remote_acknowledged: true }[];
+  artifactKinds?: string[];
+  /** Active parallel work may need Manager coordination before a peer grant exists. */
+  peerWaitAvailable?: boolean;
+  /** Live recipients, separate from descriptive identities used to read prior messages. */
+  messagePeers?: ToolContext['peers'];
   model(context: unknown): Promise<AgentModelCompletion>;
   accept(response: AgentModelCompletion, action: AgentAction): boolean;
   /**
@@ -284,6 +425,36 @@ export interface AgentExecutionServices extends AssignmentServices {
 
 /** Registration describes implementations. Task grants are checked separately at every boundary. */
 export class ExecutionRegistry {
+  readonly extensionFactories: ((
+    host: TaskRuntimeExtensionHost,
+  ) => TaskRuntimeExtension)[] = [];
+  registerExtension(
+    factory: (host: TaskRuntimeExtensionHost) => TaskRuntimeExtension,
+  ): this {
+    this.extensionFactories.push(factory);
+    return this;
+  }
+  readonly taskViews = new Map<
+    string,
+    (
+      store: StatefulToolStore,
+      mode: ExecutionMode,
+      taskId: string,
+      identity: TaskIdentity,
+    ) => unknown
+  >();
+  registerTaskView(
+    id: string,
+    reader: (
+      store: StatefulToolStore,
+      mode: ExecutionMode,
+      taskId: string,
+      identity: TaskIdentity,
+    ) => unknown,
+  ): this {
+    this.unique(this.taskViews, id, reader);
+    return this;
+  }
   readonly storeToolFactories: ((
     store: StatefulToolStore,
     mode: ExecutionMode,
@@ -300,6 +471,7 @@ export class ExecutionRegistry {
   readonly capabilities = new Map<string, CapabilityDefinition>();
   readonly definitions = new Map<string, AssignmentDefinition>();
   readonly tools = new Map<string, ToolDefinition>();
+  private readonly extensionToolOwners = new Map<string, string>();
   readonly agents = new Map<AgentRole, AgentDefinition>();
   registerCapability(value: CapabilityDefinition): this {
     this.unique(this.capabilities, value.card.id, value);
@@ -311,6 +483,34 @@ export class ExecutionRegistry {
   }
   registerTool<I, O>(value: ToolDefinition<I, O>): this {
     this.unique(this.tools, value.id, value);
+    return this;
+  }
+  /** Rebind store-backed tools when the same registry is reused by its owner. */
+  registerExtensionTools(
+    owner: string,
+    tools: readonly ToolDefinition[],
+  ): this {
+    const selected = new Set<string>();
+    for (const tool of tools) {
+      if (
+        selected.has(tool.id) ||
+        (this.tools.has(tool.id) &&
+          this.extensionToolOwners.get(tool.id) !== owner)
+      )
+        throw new Error(`Duplicate registration: ${tool.id}`);
+      selected.add(tool.id);
+    }
+    // Validate the complete replacement before removing or overwriting any
+    // existing registrations, so a collision cannot leave a partial tool set.
+    for (const [id, registeredOwner] of this.extensionToolOwners)
+      if (registeredOwner === owner && !selected.has(id)) {
+        this.tools.delete(id);
+        this.extensionToolOwners.delete(id);
+      }
+    for (const tool of tools) {
+      this.tools.set(tool.id, tool);
+      this.extensionToolOwners.set(tool.id, owner);
+    }
     return this;
   }
   registerAgent(value: AgentDefinition): this {

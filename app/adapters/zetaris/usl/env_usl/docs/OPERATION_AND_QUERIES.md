@@ -7,17 +7,26 @@ Operational execution guide and cross-source SQL queries for the Zetaris Unified
 ## 1. Operational Playbook
 
 ### Cold Start / Day-0 Bootstrap
-For the current PM2.5 task, publish its base sources first; environmental USL
-compilation is optional:
+Register the live per-location sources for a selected location before querying:
 
 ```powershell
-npm run zetaris:bootstrap:sources -- --location kuala-lumpur --dry-run
+npm run zetaris:fetch:pm25 -- --location kuala-lumpur --dry-run
+npm run zetaris:fetch:wind -- --location kuala-lumpur --dry-run
 ```
 
 Review the plan before rerunning without `--dry-run`. This publishes air-quality
 and wind FileStore snapshots plus the FIRMS source, without a separate ingestion
-database. The legacy SmokeLedger tooling has been removed. Existing database
+database. The optional SmokeLedger USL is a read-only semantic view over the
+Environmental sources; it does not require PostgreSQL. Existing database
 volumes and registered objects are not deleted or migrated automatically.
+
+After publishing the source snapshots and compiling the Environmental USL,
+bootstrap its SmokeLedger view:
+
+```powershell
+npm run zetaris:bootstrap:smokeledger -- --dry-run
+npm run zetaris:bootstrap:smokeledger
+```
 
 The broader environmental and law models have their own lifecycle. When
 setting up those models on a fresh environment:
@@ -49,15 +58,13 @@ node --experimental-strip-types app/adapters/zetaris/usl/bootstrap_usl.ts --env-
 ---
 
 ### Daily Morning Routine
-Run when you need to collect newer source snapshots or roll NASA POWER date-keyed views forward:
+Run when you need to register provider sources or roll NASA POWER date-keyed
+views forward:
 
 ```bash
-# Refresh Open-Meteo snapshots for a selected location:
+# Register Open-Meteo REST tables for a selected location:
 npm run zetaris:fetch:pm25 -- --location kuala-lumpur
 npm run zetaris:fetch:wind -- --location kuala-lumpur
-
-# Refresh air quality through the daily updater (test mode selects Kuala Lumpur):
-node --experimental-strip-types app/adapters/zetaris/usl/daily_update.ts --air-quality --test
 
 # Refresh NASA FIRMS Active Fires (past 5 days):
 node --experimental-strip-types app/adapters/zetaris/sources/nasa_firms/fetch_nasa_firms.ts --day-range 5
@@ -70,13 +77,12 @@ node --experimental-strip-types app/adapters/zetaris/sources/windy/fetch_windy.t
 ```
 
 > **Note on Weather & Air Quality:**
-> Data.gov.my retains a live REST table. Open-Meteo air quality and wind now
-> use published FileStore CSV snapshots. Queries do not fetch newer API data;
-> rerun their source commands to publish updates. `--skip-api` republishes cached
-> data and keeps its original ingestion timestamps. Snapshot publication updates
-> the base views; do not assume it also refreshes an already activated USL copy.
-> The daily updater includes air-quality publication in its default run; use
-> `--air-quality` for that step alone and `--test` to select Kuala Lumpur.
+> Data.gov.my retains a live REST table. Open-Meteo air quality and wind use
+> per-location live REST tables. Queries through Zetaris may contact the
+> provider; registration or view activation may also validate endpoints. Use
+> `--test` to limit setup to Kuala Lumpur, and verify predicate pushdown and
+> provider usage before querying across all locations. Registering source views
+> does not refresh an already activated USL copy.
 >
 > **Note on Windy:**
 > The two `windy_*` tables read from a FileStore CSV snapshot, not a live REST feed, so they do **not** update on query. Refresh them with `fetch_windy.ts` on demand; `daily_update.ts` excludes Windy because its Testing-tier key allows only 500 requests/day.

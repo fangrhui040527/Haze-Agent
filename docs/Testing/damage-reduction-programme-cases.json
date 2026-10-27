@@ -1,0 +1,65 @@
+{
+  "schema_version": "haze.reduction.programme-verification-cases.v1",
+  "frozen_on": "2026-10-27",
+  "origin": "synthetic",
+  "scientific_qualification": "unqualified",
+  "achieved_reduction": false,
+  "reference": {
+    "baseline": "1000",
+    "intervention": "880",
+    "initial_target": "0.1",
+    "corrected_target": "0.15",
+    "phases": ["assessment", "planning"],
+    "start_policy": "Each agent phase or replacement requires an explicit operator action."
+  },
+  "ceilings": {
+    "active_phases": 1,
+    "attempts_per_phase": 3,
+    "runs": 12,
+    "model_calls": 400,
+    "tool_calls": 400,
+    "reservation": "Reserve the admitted maxima; terminal reconciliation retains authoritative charged usage, including unknown attempts."
+  },
+  "cases": [
+    {
+      "id": "two-explicit-phases",
+      "expected": "An assessment and explicitly started planning run bind exact programme revision, task/run/objective, source and input fingerprint; both reopen after restart."
+    },
+    {
+      "id": "notes-and-material-revision",
+      "expected": "Unrelated notes retain current results. A material target change stales affected assessment/planning descendants without erasing history or starting work."
+    },
+    {
+      "id": "identity-and-mode-isolation",
+      "expected": "Programme list/read/history/attachment access respects principal, workspace and execution mode."
+    },
+    {
+      "id": "idempotency-and-concurrency",
+      "expected": "Duplicate mutation keys reuse the durable operation; competing expected revisions allow only one write."
+    },
+    {
+      "id": "atomic-rollback",
+      "expected": "An error before outer commit rolls back programme mutation, task, phase link, reservation and receipt, and discards dispatch callbacks."
+    },
+    {
+      "id": "committed-dispatch-failure",
+      "expected": "A dispatch callback failure preserves the admitted queued task and receipt. Restart recovers that exact task instead of admitting another."
+    },
+    {
+      "id": "exact-run-reconstruction",
+      "expected": "Terminal task runs are read directly; projections never silently follow a task current_run_id or inherit acceptance from a later run."
+    },
+    {
+      "id": "source-currency",
+      "expected": "Source holds, withdrawal, stale applicability or revoked access withhold current claims without requiring a programme edit."
+    },
+    {
+      "id": "resource-and-generic-route-guards",
+      "expected": "One-active, per-phase attempts, total runs and reserved maxima apply before admission, including generic task corrections/Continue attempts."
+    },
+    {
+      "id": "cancel-and-late-output",
+      "expected": "Cancellation remains terminal, charged calls remain charged, late outputs cannot become current and no replacement starts automatically."
+    }
+  ]
+}

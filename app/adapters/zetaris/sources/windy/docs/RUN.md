@@ -46,6 +46,7 @@ node --experimental-strip-types sources/windy/fetch_windy.ts --all --json windy_
 | `--levels` | `surface` | Comma-separated geopotential levels |
 | `--all` | off | Run the GFS weather call and the CAMS air-quality call |
 | `--json` | off | Write the raw response(s) to a file |
+| `--prepare-only` | off | Write the CSVs locally without publishing or registering them in Zetaris; used by the USL bootstrap |
 
 To allow the script to run (TypeScript type stripping), Node 22 or later is
 required. Check with `node --version`.

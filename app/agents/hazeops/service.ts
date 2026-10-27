@@ -310,6 +310,25 @@ export class HazeOpsService {
       state: structuredClone(this.states.get(spec.id)!),
     }));
   }
+
+  status(): {
+    scheduler: 'running' | 'starting' | 'disabled' | 'stopped';
+    reason: string | null;
+  } {
+    if (this.closed)
+      return { scheduler: 'stopped', reason: 'Collector service is closed' };
+    if (this.options.mode !== 'live')
+      return {
+        scheduler: 'disabled',
+        reason: `${this.options.mode} execution does not start network polling`,
+      };
+    if (!this.config.schedulerEnabled)
+      return { scheduler: 'disabled', reason: 'HAZEOPS_SCHEDULER=off' };
+    return {
+      scheduler: this.timer ? 'running' : this.started ? 'starting' : 'stopped',
+      reason: null,
+    };
+  }
   lastRunMs(): Map<string, number> {
     return new Map(
       this.watchers().map(({ spec, state }) => [

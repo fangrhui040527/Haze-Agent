@@ -15,6 +15,8 @@ import { worldLineageInputSchema } from '../contracts/world-services.js';
 import {
   createDashboardServices,
   createExecutionRegistry,
+  createModelRouteRegistry,
+  createNightshiftJobAdapter,
 } from '../composition.js';
 import {
   TaskRuntime,
@@ -22,6 +24,7 @@ import {
   type TaskRuntimeOptions,
 } from './runtime.js';
 import { browseWorldRecords } from './world-control-plane.js';
+import { handleNightshiftHttp } from './nightshift-http.js';
 
 const loopback = (value: string | undefined) =>
   ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(value ?? '');
@@ -121,6 +124,12 @@ export function createTaskHandler(
 ) {
   const runtime = new TaskRuntime({
     ...options,
+    modelRoutes:
+      options.modelRoutes ??
+      createModelRouteRegistry(options.env ?? process.env),
+    nightshiftJobs:
+      options.nightshiftJobs ??
+      createNightshiftJobAdapter(options.env ?? process.env),
     registry:
       options.registry ??
       createExecutionRegistry({
@@ -148,6 +157,41 @@ export function createTaskHandler(
           'The application is closing.',
         );
       const { url, identity } = authorize(request);
+      if (runtime.handlesExtensionHttp(url.pathname)) {
+        const mutation = request.method === 'POST';
+        const handled = runtime.handleExtensionHttp({
+          method: request.method ?? 'GET',
+          pathname: url.pathname,
+          query: url.searchParams,
+          body: mutation ? await readBody(request, 65536) : undefined,
+          ...(mutation ? { key: idempotencyKey(request) } : {}),
+          identity,
+        });
+        send(handled.status, handled.body);
+        return;
+      }
+      if (url.pathname === '/api/nightshift/readiness') {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size > 0)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        send(200, await runtime.modelReadiness(identity));
+        return;
+      }
+      if (
+        await handleNightshiftHttp({
+          request,
+          url,
+          identity,
+          service: runtime.nightshift,
+          externalWaitView: (id, owner) =>
+            runtime.store.externalWaits.view(id, owner),
+          readBody,
+          idempotencyKey,
+          send,
+        })
+      )
+        return;
       if (
         /^\/api\/(?:health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:\/|$)/.test(
           url.pathname,
@@ -201,6 +245,57 @@ export function createTaskHandler(
       }
       if (url.pathname === '/api/capabilities' && request.method === 'GET') {
         send(200, runtime.capabilities(identity));
+        return;
+      }
+      if (url.pathname === '/api/agents') {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size)
+          throw new TaskError(400, 'invalid_query', 'Unsupported query key.');
+        send(200, await runtime.agentStatus(identity));
+        return;
+      }
+      if (url.pathname === '/api/tasks' && request.method === 'GET') {
+        for (const key of url.searchParams.keys())
+          if (
+            !['limit', 'cursor', 'status'].includes(key) ||
+            url.searchParams.getAll(key).length !== 1
+          )
+            throw new TaskError(
+              400,
+              'invalid_query',
+              'Unsupported or duplicate query key.',
+            );
+        send(
+          200,
+          runtime.store.listTaskSummaries(identity, {
+            ...(url.searchParams.has('limit')
+              ? { limit: Number(url.searchParams.get('limit')) }
+              : {}),
+            ...(url.searchParams.has('cursor')
+              ? { cursor: url.searchParams.get('cursor')! }
+              : {}),
+            ...(url.searchParams.has('status')
+              ? { status: url.searchParams.get('status')! }
+              : {}),
+          }),
+        );
+        return;
+      }
+      const taskView =
+        /^\/api\/tasks\/([A-Za-z0-9-]+)\/views\/([A-Za-z0-9-]+)$/.exec(
+          url.pathname,
+        );
+      if (taskView) {
+        if (request.method !== 'GET')
+          throw new TaskError(405, 'method_not_allowed', 'Method not allowed.');
+        if (url.searchParams.size)
+          throw new TaskError(
+            400,
+            'invalid_query',
+            'Task views accept no query parameters.',
+          );
+        send(200, runtime.readTaskView(taskView[1]!, taskView[2]!, identity));
         return;
       }
       if (url.pathname === '/api/tasks' && request.method === 'POST') {

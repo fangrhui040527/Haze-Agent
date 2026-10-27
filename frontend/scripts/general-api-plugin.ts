@@ -25,7 +25,7 @@ export function generalApiPlugin(): Plugin {
     next: () => void,
   ) => {
     if (
-      !/^\/api\/(?:tasks|artifacts|capabilities|world|health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:[/?]|$)/.test(
+      !/^\/api\/(?:tasks|agents|artifacts|capabilities|reduction-programmes|world|nightshift|health|snapshot|items|evidence|stream|hazeops|manager|runtime|heartbeat|runs|reports)(?:[/?]|$)/.test(
         request.url ?? '',
       )
     ) {

@@ -1,0 +1,67 @@
+{
+  "schema_version": "haze.reduction.evaluation-verification-cases.v1",
+  "frozen_on": "2026-10-27",
+  "origin": "synthetic",
+  "milestone": "Engineering implementation of reviewed external evaluation and explicit human qualification records; operational release requires a complete reviewed non-synthetic reference trace.",
+  "operational_release": "blocked",
+  "cases": [
+    {
+      "id": "supported-point-estimate",
+      "baseline": "1000",
+      "intervention": "880",
+      "expected": "Exact imported residual reconstruction gives 120 absolute reduction and 3/25 relative reduction; its point estimate meets an at-least one-tenth criterion, with uncertainty limits preserved."
+    },
+    {
+      "id": "below-target",
+      "baseline": "1000",
+      "intervention": "950",
+      "expected": "A supported exact 1/20 relative reduction does not meet the registered target. Below-target completion is retained without relabelling the criterion."
+    },
+    {
+      "id": "insufficient-evidence",
+      "baseline": "1000",
+      "intervention": null,
+      "expected": "Unknown supplied damage remains a precise gap, independently reviewed and persisted; no causal or uncertainty inputs are invented."
+    },
+    {
+      "id": "unsupported-uncertainty",
+      "expected": "Bound/probability criteria unsupported by the registered source method remain gaps; point estimates cannot be substituted."
+    },
+    {
+      "id": "foreign-delivery-and-incompatible-method",
+      "expected": "Another programme's action, incompatible physical scope, protocol/design or source-method version cannot establish this programme's achieved effect."
+    },
+    {
+      "id": "unaccounted-material-deviations",
+      "expected": "Material deviations must be accounted for by the external design and review. Missing coverage blocks an unconditional claim."
+    },
+    {
+      "id": "independent-technical-review",
+      "expected": "An independent registered assignment reconstructs exact arithmetic and product bindings; self-review, forged output flags and imported qualification labels cannot grant qualification."
+    },
+    {
+      "id": "synthetic-proof-wrappers",
+      "expected": "Synthetic physical sources, supplied wrappers, simulated delivery and synthetic review/dossier proofs cannot become an actual programme-effect claim."
+    },
+    {
+      "id": "explicit-qualification-history",
+      "expected": "Human attestation records adoption, conditional qualification, withdrawal and exact reviewed versions separately; arithmetic agreement never grants scientific qualification."
+    },
+    {
+      "id": "registration-and-target-currency",
+      "expected": "Unknown/late outcome timing and post-outcome target changes cannot pass a prespecified-target gate; new arithmetic or review does not reset retained outcome access."
+    },
+    {
+      "id": "current-source-revalidation",
+      "expected": "Held, revoked, stale or superseded sources, required reviews and withdrawn/conditional qualification withhold the current conclusion while retaining historical originals."
+    },
+    {
+      "id": "governed-evaluation-admission",
+      "expected": "Explicit registration, one active phase, three attempts per phase, twelve total runs and four-hundred-call ceilings apply; generic task admission/update/continue cannot adopt unbound products or bypass programme budgets."
+    },
+    {
+      "id": "idempotency-rollback-and-restart",
+      "expected": "Duplicate operations preserve exact receipts, optimistic revisions and atomic rollback; a fresh process reopens the complete assessment/planning/pilot/registration/delivery/evaluation/review/qualification/learning lineage."
+    }
+  ]
+}
