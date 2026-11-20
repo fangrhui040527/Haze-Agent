@@ -391,6 +391,7 @@ export function resolveAgentModel(
       await prepareSampleModel(sampleEnvironment, fetcher, signal);
     const deadline = new AbortController();
     const timer = setTimeout(() => deadline.abort(), timeoutMs);
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const requestSignal = AbortSignal.any([signal, deadline.signal]);
     let onAbort: (() => void) | undefined;
     const aborted = new Promise<never>((_resolve, reject) => {
@@ -400,17 +401,35 @@ export function resolveAgentModel(
     });
     try {
       const request = async () => {
-        requestSignal.throwIfAborted();
-        const response = await fetcher(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-          },
-          body,
-          signal: requestSignal,
-          redirect: 'error',
-        });
+        const send = () => {
+          requestSignal.throwIfAborted();
+          return fetcher(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            },
+            body,
+            signal: requestSignal,
+            redirect: 'error',
+          });
+        };
+        let response = await send();
+        for (
+          let retry = 1;
+          retry <= overloadRetries && OVERLOAD_STATUSES.has(response.status);
+          retry++
+        ) {
+          void response.body?.cancel().catch(() => undefined);
+          requestSignal.throwIfAborted();
+          await Promise.race([
+            aborted,
+            new Promise<void>((resolve) => {
+              retryTimer = setTimeout(resolve, OVERLOAD_BACKOFF_MS * retry);
+            }),
+          ]);
+          response = await send();
+        }
         if (!response.ok) {
           void response.body?.cancel().catch(() => undefined);
           // The status is the only way to tell a rejected request from an
@@ -490,6 +509,7 @@ export function resolveAgentModel(
       );
     } finally {
       clearTimeout(timer);
+      clearTimeout(retryTimer);
       if (onAbort) requestSignal.removeEventListener('abort', onAbort);
     }
   };

@@ -15,6 +15,7 @@ import {
   runDevTool,
   terminateDevChild,
   composeServiceState,
+  parseComposeStatus,
 } from './dev-process.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -261,43 +262,54 @@ async function main() {
         'Sample evidence from data/; Docker and Zetaris are not required',
       );
     } else {
-      // Capture Compose progress so the panel is the only terminal renderer.
-      // Whole-project --wait does not handle the standalone bootstrap job.
-      const docker = await runCommand('docker', [
-        'compose',
-        '--progress',
-        'plain',
-        'up',
-        '--detach',
-      ]);
-      if (stopping) return;
-      const status = await runCommand('docker', [
-        'compose',
-        'ps',
-        '--all',
-        '--format',
-        'json',
-      ]);
-      if (stopping) return;
-      const text = status.stdout.trim();
-      const containers = !text
-        ? []
-        : text.startsWith('[')
-          ? JSON.parse(text)
-          : text.split(/\r?\n/).map((line) => JSON.parse(line));
-      const counts = new Map();
-      for (const container of containers) {
-        const state = container.Health || composeServiceState(container);
-        if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+      try {
+        // Capture Compose progress so the panel is the only terminal renderer.
+        // Whole-project --wait does not handle the standalone bootstrap job.
+        const docker = await runCommand('docker', [
+          'compose',
+          '--progress',
+          'plain',
+          'up',
+          '--detach',
+        ]);
+        if (stopping) return;
+        const inspection = await runCommand('docker', [
+          'compose',
+          'ps',
+          '--all',
+          '--format',
+          'json',
+        ]);
+        if (stopping) return;
+        const counts = new Map();
+        for (const container of parseComposeStatus(inspection.stdout)) {
+          if (container.Service === 'smokeledger-db') continue;
+          const exited = container.State === 'exited';
+          const state = exited
+            ? composeServiceState(container)
+            : container.Health || container.State;
+          if (state === 'unhealthy' || (exited && container.ExitCode !== 0)) {
+            throw new Error(
+              `Zetaris container ${container.Service ?? container.Name} reported "${state}".`,
+            );
+          }
+          if (state) counts.set(state, (counts.get(state) ?? 0) + 1);
+        }
+        finished(
+          'STARTED',
+          [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
+        );
+        const warnings = docker.stderr
+          .split(/\r?\n/)
+          .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
+        if (warnings.length) log(warnings.join('\n'));
+      } catch (error) {
+        if (stopping) return;
+        finished('SKIPPED', 'Continuing Haze startup');
+        log(
+          [error.output?.trimEnd(), error.message].filter(Boolean).join('\n'),
+        );
       }
-      finished(
-        'STARTED',
-        [...counts].map(([state, count]) => `${count} ${state}`).join(', '),
-      );
-      const warnings = docker.stderr
-        .split(/\r?\n/)
-        .filter((line) => /\bwarn(?:ing)?\b/i.test(line));
-      if (warnings.length) log(warnings.join('\n'));
     }
 
     // Starts alongside the build; its row reports independently of the stages below.
@@ -446,10 +458,6 @@ async function main() {
     display.close();
     if (error.output && (stage !== 2 || !frontendReady)) log(error.output);
     log(error.message);
-    if (stage === 0)
-      log(
-        '  Check Docker Desktop is running and root .env / image registry access are configured.\n  Inspect Zetaris with: docker compose ps --all / docker compose logs --tail 100',
-      );
     process.exitCode = error.exitCode ?? 1;
   } finally {
     probeController.abort();
