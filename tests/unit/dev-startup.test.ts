@@ -125,12 +125,12 @@ childProcess.spawn = (command, args, options) => {
       child.emit('close', -2, null);
       return;
     }
-    const viteIndex = ['true', '1'].includes(scenario.sampleMode) ? 1 : 3;
-    if (index === viteIndex && scenario.failAt !== index && !scenario.noReady) child.emit('message', {
+    const isVite = args[0]?.endsWith('vite.js');
+    if (isVite && scenario.failAt !== index && !scenario.noReady) child.emit('message', {
       type: 'haze-dev-ready', local: ['http://localhost:5174/'], network: [],
     });
     if (scenario.afterReady) emitOutput();
-    if (index === viteIndex && scenario.consoleCommands) {
+    if (isVite && scenario.consoleCommands) {
       keepAlive = setInterval(() => {}, 1000);
       scenario.consoleCommands.forEach((line, offset) => setTimeout(() => {
         process.stdin.emit('data', Buffer.from(line + '\\n'));
@@ -265,33 +265,69 @@ describe('root development startup', () => {
       expect(result.output.split(name)).toHaveLength(2);
   });
 
-  it('stops before the build when Docker startup fails', async () => {
-    const result = await launch({ failAt: 0, exitCode: 17 });
+  it.each([
+    {
+      failure: 'Docker Compose startup fails',
+      scenario: {
+        failAt: 0,
+        exitCode: 17,
+        outputAt: 0,
+        stderr: 'The Zetaris driver failed to start\n',
+      },
+      dockerCalls: 1,
+      diagnostic: 'The Zetaris driver failed to start',
+    },
+    {
+      failure: 'Docker is missing',
+      scenario: { errorAt: 0 },
+      dockerCalls: 1,
+      diagnostic: 'spawn docker ENOENT',
+    },
+    {
+      failure: 'Compose status inspection fails',
+      scenario: { failAt: 1, exitCode: 19 },
+      dockerCalls: 2,
+      diagnostic: 'docker exited with code 19.',
+    },
+    {
+      failure: 'a Zetaris container is unhealthy',
+      scenario: {
+        outputAt: 1,
+        stdout: JSON.stringify({
+          Service: 'api',
+          State: 'running',
+          Health: 'unhealthy',
+        }),
+      },
+      dockerCalls: 2,
+      diagnostic: 'api reported "unhealthy"',
+    },
+    {
+      failure: 'the Zetaris bootstrap job fails',
+      scenario: {
+        outputAt: 1,
+        stdout: JSON.stringify([
+          { Service: 'bootstrap', State: 'exited', ExitCode: 1 },
+        ]),
+      },
+      dockerCalls: 2,
+      diagnostic: 'bootstrap reported "failed (exit 1)"',
+    },
+  ])(
+    'skips Zetaris and starts the app when $failure',
+    async ({ scenario, dockerCalls, diagnostic }) => {
+      const result = await launch(scenario);
 
-    expect(result.status).toBe(17);
-    expect(result.calls).toHaveLength(1);
-    expect(result.output).toContain('FAILED');
-    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
-  });
-
-  it('reports a missing Docker executable without starting later stages', async () => {
-    const result = await launch({ errorAt: 0 });
-
-    expect(result.status).not.toBe(0);
-    expect(result.calls).toHaveLength(1);
-    expect(result.output).toContain('FAILED');
-    expect(result.output).toContain('ENOENT');
-    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
-  });
-
-  it('stops before the build when Docker status inspection fails', async () => {
-    const result = await launch({ failAt: 1, exitCode: 19 });
-
-    expect(result.status).toBe(19);
-    expect(result.calls).toHaveLength(2);
-    expect(result.output).toContain('FAILED');
-    expect(result.output).not.toContain('Haze TypeScript build: STARTING');
-  });
+      expect(result.status).toBe(0);
+      expect(result.calls).toHaveLength(dockerCalls + 2);
+      expect(result.calls.at(-1)?.sampleMode).toBe('false');
+      expect(result.output).toMatch(/Zetaris platform[^\n]*SKIPPED/);
+      expect(result.output).toContain(diagnostic);
+      expect(result.output).toMatch(/Haze TypeScript build[^\n]*BUILT/);
+      expect(result.output).toMatch(/Haze web app[^\n]*READY/);
+      expect(result.output).toContain('http://localhost:5174/');
+    },
+  );
 
   it('does not launch Vite after a failed backend build', async () => {
     const result = await launch({ failAt: 2, exitCode: 23 });
@@ -375,6 +411,11 @@ describe('root development startup', () => {
       stdout: [
         JSON.stringify({ Service: 'api', State: 'running', Health: 'healthy' }),
         JSON.stringify({ Service: 'bootstrap', State: 'exited', ExitCode: 0 }),
+        JSON.stringify({
+          Service: 'smokeledger-db',
+          State: 'exited',
+          ExitCode: 1,
+        }),
       ].join('\n'),
     });
 
